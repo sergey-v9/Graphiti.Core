@@ -205,15 +205,18 @@ shorter than the old working plans; expand items only when they become active.
 - Identity cross-encoder ranking now avoids LINQ projection/sort chains in the default reranker by
   using explicit scored buffers and stable score/index comparers. Tests pin score ordering,
   equal-score input order, and duplicate-passage indexed rank preservation.
+- `TextUtilities.ConcatenateEpisodes` now builds multi-episode saga prompt text with capacity-aware
+  `StringBuilder` loops instead of LINQ projection plus `string.Join`, and the tuple overload no
+  longer allocates intermediate `SagaEpisodeContent` records. Tests pin timestamp/separator shape,
+  single-episode pass-through, null timestamp fallback, and tuple overload parity.
 - Direct ranked-list composition in `SearchResultComposer`/`SearchUtilities` now avoids the small
   `IReadOnlyList[]` allocations that previously connected `SearchEngine` branches to fusion/merge.
   Tests pin one-list RRF, two-list RRF/merge, three-list parity, and the existing RRF/merge ordering
   semantics.
 - Good next allocation slice from the 2026-06-01 scans: continue with a fresh targeted scan before
-  editing. Concrete candidates from the latest scan are `TextUtilities.ConcatenateEpisodes`
-  capacity-aware prompt construction, `LlmClient.PrepareMessages` / `CleanInput` clean-input fast
-  paths, Neo4j bulk-save parameter loop projection, or memory LLM cache clone/parse coalescing. Move
-  back to LadybugDB package proof when provider work is the higher-leverage slice.
+  editing. Concrete candidates from the latest scan are `LlmClient.PrepareMessages` / `CleanInput`
+  clean-input fast paths, Neo4j bulk-save parameter loop projection, or memory LLM cache clone/parse
+  coalescing. Move back to LadybugDB package proof when provider work is the higher-leverage slice.
 
 ## Graphiti Decomposition
 

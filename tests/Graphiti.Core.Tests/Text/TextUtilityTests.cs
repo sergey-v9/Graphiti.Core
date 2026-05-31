@@ -153,6 +153,22 @@ public class TextUtilityTests
         Assert.Contains("(timestamp: unknown)", result);
     }
 
+    [Fact]
+    public void ConcatenateEpisodes_TupleOverloadMatchesSagaEpisodeContentForMultipleEpisodes()
+    {
+        var timestamp = new DateTime(2025, 6, 15, 8, 0, 0, DateTimeKind.Utc);
+        var episodes = new[] { new SagaEpisodeContent("A", timestamp), new SagaEpisodeContent("B", null) };
+        (string Content, DateTime? ValidAt)[] tupleEpisodes =
+        [
+            ("A", timestamp),
+            ("B", null)
+        ];
+
+        Assert.Equal(
+            TextUtilities.ConcatenateEpisodes(episodes),
+            TextUtilities.ConcatenateEpisodes(tupleEpisodes));
+    }
+
     private static string FormatExpectedOffset(TimeSpan offset)
     {
         var absolute = offset.Duration();

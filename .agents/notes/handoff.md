@@ -279,6 +279,11 @@ improving those providers unless it directly supports shared abstractions or Lad
   allocating a regex split array, while preserving Python's raw previous-word sentence detection,
   ASCII punctuation trimming, all-caps exclusion, supplied-token denominator, and strict threshold
   comparison.
+- `TextUtilities.ConcatenateEpisodes` now builds multi-episode saga prompt text with capacity-aware
+  `StringBuilder` loops instead of LINQ projection plus `string.Join`. The tuple overload also uses
+  the same direct construction path instead of allocating intermediate `SagaEpisodeContent` records.
+  Tests pin single-episode content-as-is behavior, timestamp formatting, blank-line separators,
+  unknown timestamps, and tuple overload parity.
 - `HybridCacheLlmResponseCache.GetOrCreateAsync` now coalesces the whole per-key get/create path
   through Graphiti's `AsyncSingleFlight`, so corrupt or sentinel cache payload repair shares one
   cancellation-isolated factory call instead of fanning out late repair callers. Cache-key inputs and
@@ -292,14 +297,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after identity cross-encoder ranking shaping:
+Latest checkpoint on 2026-06-01 after episode concatenation shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused identity cross-encoder/search-reranker test filter passed with 53 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 779
+- The focused text/workflow test filter passed with 92 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 780
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -427,6 +432,9 @@ These were previously audited and found faithful or intentionally different:
 - Embedding text newline replacement
 - Search config constants
 - `TruncateAtSentence`
+- `TextUtilities.ConcatenateEpisodes`, including single-episode content preservation,
+  multi-episode header/separator shape, Python-style timestamp formatting, null timestamp fallback,
+  and tuple overload parity without intermediate record allocation
 - `ContentChunking.TextLikelyDense` whitespace splitting, raw previous-word sentence boundary
   behavior, Python punctuation trimming, all-caps exclusion, long sparse/entity-rich text behavior,
   supplied-token denominator, and strict threshold comparison
