@@ -52,9 +52,10 @@ public sealed class MicrosoftExtensionsAIEmbedderClient : EmbedderClient
                     cancellationToken).ConfigureAwait(false);
 
             activity?.SetTag("graphiti.embedding.output_count", embeddings.Count);
-            var vectors = ToValidatedVectors(embeddings, expectedCount: 1);
+            ValidateEmbeddingCount(embeddings.Count, expectedCount: 1);
+            var vector = MaterializeEmbeddingVector(embeddings[0], startIndex: 0);
             GraphitiTelemetry.SetOk(activity);
-            return vectors[0];
+            return vector;
 
             async ValueTask<GeneratedEmbeddings<Embedding<float>>> ExecuteProviderCallAsync(CancellationToken token)
             {
@@ -109,13 +110,11 @@ public sealed class MicrosoftExtensionsAIEmbedderClient : EmbedderClient
                             pipelineToken => ExecuteProviderCallAsync(chunk, pipelineToken),
                             token).ConfigureAwait(false);
 
-                    var vectors = ToValidatedVectors(
-                        embeddings,
-                        expectedCount: chunk.Inputs.Length,
-                        startIndex: chunk.StartIndex);
-                    for (var i = 0; i < vectors.Count; i++)
+                    ValidateEmbeddingCount(embeddings.Count, chunk.Inputs.Length);
+                    for (var i = 0; i < embeddings.Count; i++)
                     {
-                        orderedVectors[chunk.StartIndex + i] = vectors[i];
+                        orderedVectors[chunk.StartIndex + i] =
+                            MaterializeEmbeddingVector(embeddings[i], chunk.StartIndex + i);
                     }
                 }).ConfigureAwait(false);
 
@@ -185,28 +184,21 @@ public sealed class MicrosoftExtensionsAIEmbedderClient : EmbedderClient
         }
     }
 
-    private List<IReadOnlyList<float>> ToValidatedVectors(
-        GeneratedEmbeddings<Embedding<float>> embeddings,
-        int expectedCount,
-        int startIndex = 0)
+    private static void ValidateEmbeddingCount(int actualCount, int expectedCount)
     {
-        if (embeddings.Count != expectedCount)
+        if (actualCount != expectedCount)
         {
             throw new InvalidOperationException(
-                $"Embedding provider returned {embeddings.Count} embedding(s) for {expectedCount} input(s).");
+                $"Embedding provider returned {actualCount} embedding(s) for {expectedCount} input(s).");
         }
+    }
 
-        var vectors = new List<IReadOnlyList<float>>(expectedCount);
-        for (var i = 0; i < embeddings.Count; i++)
-        {
-            var vector = embeddings[i].Vector;
-            vectors.Add(EmbeddingVectorValidation.MaterializeSingle(
-                vector.ToArray(),
-                EmbeddingDimension,
-                $"provider embedding at index {startIndex + i}"));
-        }
-
-        return vectors;
+    private List<float> MaterializeEmbeddingVector(Embedding<float> embedding, int startIndex)
+    {
+        return EmbeddingVectorValidation.MaterializeSingle(
+            embedding.Vector,
+            EmbeddingDimension,
+            $"provider embedding at index {startIndex}");
     }
 
     private static List<EmbeddingBatchChunk> CreateBatchChunks(

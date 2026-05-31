@@ -481,6 +481,28 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
+    public async Task MicrosoftExtensionsAIEmbedderClient_CopiesProviderVectorsBeforeReturning()
+    {
+        var generator = new MutableEmbeddingGenerator();
+        var embedder = new MicrosoftExtensionsAIEmbedderClient(
+            generator,
+            embeddingDimension: 3,
+            batchSize: 2,
+            batchConcurrency: 1);
+
+        var vector = await embedder.CreateAsync("abc");
+        generator.MutateLastVectors(999f);
+
+        Assert.Equal(new[] { 3f, 6f, 9f }, vector);
+
+        var batch = await embedder.CreateBatchAsync(new[] { "a", "bb" });
+        generator.MutateLastVectors(777f);
+
+        Assert.Equal(new[] { 1f, 2f, 3f }, batch[0]);
+        Assert.Equal(new[] { 2f, 4f, 6f }, batch[1]);
+    }
+
+    [Fact]
     public async Task MicrosoftExtensionsAIEmbedderClient_UsesOptionalResiliencePipeline()
     {
         var generator = new FakeEmbeddingGenerator(failuresBeforeSuccess: 1);
@@ -1636,6 +1658,44 @@ public class ModernInfrastructureTests
             EmbeddingGenerationOptions? options = null,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(new GeneratedEmbeddings<Embedding<float>>(_embeddings));
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class MutableEmbeddingGenerator : IEmbeddingGenerator<string, Embedding<float>>
+    {
+        public List<float[]> LastVectors { get; } = new();
+
+        public Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(
+            IEnumerable<string> values,
+            EmbeddingGenerationOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            LastVectors.Clear();
+            var dimensions = options?.Dimensions ?? 3;
+            var embeddings = new List<Embedding<float>>();
+            foreach (var value in values)
+            {
+                var vector = CreateEmbeddingVector(value.Length, dimensions);
+                LastVectors.Add(vector);
+                embeddings.Add(new Embedding<float>(vector));
+            }
+
+            return Task.FromResult(new GeneratedEmbeddings<Embedding<float>>(embeddings));
+        }
+
+        public void MutateLastVectors(float value)
+        {
+            for (var i = 0; i < LastVectors.Count; i++)
+            {
+                LastVectors[i][0] = value;
+            }
+        }
 
         public object? GetService(Type serviceType, object? serviceKey = null) => null;
 

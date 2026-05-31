@@ -11,6 +11,15 @@ internal static class EmbeddingVectorValidation
         return MaterializeVector(embedding, expectedDimension, itemDescription);
     }
 
+    public static List<float> MaterializeSingle(
+        ReadOnlyMemory<float> embedding,
+        int expectedDimension,
+        string itemDescription)
+    {
+        ValidateExpectedDimension(expectedDimension);
+        return MaterializeVector(embedding.Span, expectedDimension, itemDescription);
+    }
+
     public static List<List<float>> MaterializeBatch(
         IReadOnlyList<IReadOnlyList<float>>? embeddings,
         int expectedCount,
@@ -71,6 +80,33 @@ internal static class EmbeddingVectorValidation
 
         var materialized = new List<float>(embedding.Count);
         for (var i = 0; i < embedding.Count; i++)
+        {
+            var value = embedding[i];
+            if (!float.IsFinite(value))
+            {
+                throw new InvalidOperationException(
+                    $"Embedding provider returned non-finite value at dimension {i} for {itemDescription}.");
+            }
+
+            materialized.Add(value);
+        }
+
+        return materialized;
+    }
+
+    private static List<float> MaterializeVector(
+        ReadOnlySpan<float> embedding,
+        int expectedDimension,
+        string itemDescription)
+    {
+        if (embedding.Length != expectedDimension)
+        {
+            throw new InvalidOperationException(
+                $"Embedding provider returned dimension {embedding.Length} for {itemDescription}; expected {expectedDimension}.");
+        }
+
+        var materialized = new List<float>(embedding.Length);
+        for (var i = 0; i < embedding.Length; i++)
         {
             var value = embedding[i];
             if (!float.IsFinite(value))

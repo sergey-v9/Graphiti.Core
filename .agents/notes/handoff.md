@@ -125,6 +125,14 @@ improving those providers unless it directly supports shared abstractions or Lad
   lookups, seen sets, and rank buckets instead of LINQ grouping/distinct/order pipelines,
   preserving shortest first traversal hits, origin-group filtering, stable first-seen
   de-duplication, node-distance buckets, episode-mention sort semantics, and final hit cloning.
+- Microsoft.Extensions.AI embedding vectors now validate and copy directly from provider
+  `ReadOnlyMemory<float>` into Graphiti-owned lists, avoiding the previous `ToArray()` plus second
+  validation copy while preserving dimension checks, non-finite rejection, rate-limit lease disposal,
+  retry telemetry, batch ordering, and returned-vector isolation.
+- Extraction JSON parsing now reuses stable entity-array keys and explicit `JsonArray` loops instead
+  of per-call key arrays, `OfType` iterators, and entity-type LINQ projections. This preserves key
+  order, non-object skipping, numeric/string `entity_type_id` coercion, JSON text fallback, optional
+  timestamp parsing, and heuristic entity de-duplication while avoiding ignored-name string copies.
 - Search fallback in-memory snapshot projection now uses explicit typed loops over cloned driver
   snapshots instead of `OfType`/`Select` chains, preserving clone isolation, type filtering,
   embedding stripping flags, and stable order. Edge endpoint lookup now accepts
@@ -255,13 +263,13 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after allocation-light in-memory BFS/ranker shaping:
+Latest checkpoint on 2026-06-01 after embedding vector and extraction parser allocation shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 763
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 764
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -439,6 +447,12 @@ These were previously audited and found faithful or intentionally different:
 - In-memory BFS/ranker shaping, including shortest first traversal hit retention, origin-group
   filtering, first-seen input de-duplication, stable ranker ties, node-distance score buckets,
   episode-mention count ranking, and final hit cloning
+- Microsoft.Extensions.AI embedding vector materialization, including direct `ReadOnlyMemory<float>`
+  validation/copying, dimension and non-finite checks, batch ordering, retry/rate-limit behavior, and
+  returned-vector isolation
+- Extraction JSON parser allocation shaping, including entity array key order, non-object skipping,
+  numeric-string `entity_type_id` coercion, JSON text fallback, optional date parsing, and heuristic
+  ignored-name handling
 - In-memory fallback snapshot projection, including typed filtering from cloned snapshots,
   embedding stripping flags, stable projection order, and read-only edge endpoint lookup inputs
 - Content chunking tests that mutate the static token counter are serialized through a shared test

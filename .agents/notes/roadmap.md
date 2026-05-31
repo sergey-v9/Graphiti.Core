@@ -119,6 +119,10 @@ shorter than the old working plans; expand items only when they become active.
 - `SearchEngine` now derives implicit BFS origins only when BFS is enabled. Explicit origin lists are
   still passed through as provided, while implicit node/edge origins preserve text-before-vector,
   first-seen distinct ordering over node UUIDs and edge source-node UUIDs.
+- Microsoft.Extensions.AI embedding vector materialization now copies directly from provider
+  `ReadOnlyMemory<float>` into validated Graphiti-owned lists. Preserve dimension/non-finite checks,
+  returned-vector isolation, batch ordering, retry telemetry, and rate-limit lease behavior if this
+  path changes again.
 - Materialized fallback BFS/ranker shaping now avoids grouping/distinct/order LINQ chains on the
   hot path. Node and edge BFS results are accumulated in one pass with first traversal hit
   de-duplication, node-distance ranking uses score buckets over first-seen distinct inputs, episode-
@@ -132,6 +136,10 @@ shorter than the old working plans; expand items only when they become active.
 - Search fallback in-memory snapshot projection now uses explicit typed loops over cloned driver
   snapshots instead of `OfType`/`Select` chains. Preserve the clone isolation, type filtering,
   embedding stripping flags, stable order, and `IReadOnlyList<EntityEdge>` endpoint lookup shape.
+- Extraction JSON parsing now uses stable key arrays and explicit `JsonArray` loops in
+  `Graphiti.ExtractionParsing`. Future parser cleanup can continue into `NodeResolutionService`, but
+  must preserve key priority, non-object skipping, JSON text fallback, numeric-string coercion, and
+  DTO/cache identity.
 - Add provider boundaries only where they preserve Graphiti semantics and help LadybugDB or parity
   testing.
 - Optional search provider candidates include Neo4j indexes and Azure AI Search behind explicit
@@ -174,6 +182,11 @@ shorter than the old working plans; expand items only when they become active.
 - Do not chase micro-optimizations in cold code or change public behavior for performance. Preserve
   Python parity, deterministic ordering, cancellation points, telemetry safety, and maintainability;
   add focused tests or benchmarks when a performance-sensitive rewrite could regress behavior.
+- Good next allocation slices from the 2026-06-01 sidecar scan: attribute extraction
+  target/context construction (`AttributeExtractionService`, `EntityTypeResolver`,
+  `ExtractionContextBuilder`), bulk edge invalidation snapshots (`Graphiti.Ingestion`,
+  `EdgeResolutionService`, `EdgeMergeHelpers`), and search orchestration plumbing
+  (`SearchEngine`, `SearchRetrievalRunner`). Keep each slice disjoint and parity-tested.
 
 ## Graphiti Decomposition
 

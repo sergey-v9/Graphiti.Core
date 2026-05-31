@@ -6,18 +6,26 @@ namespace Graphiti.Core;
 
 public sealed partial class Graphiti
 {
+    private static readonly string[] EntityExtractionArrayKeys = ["extracted_entities", "entities"];
+    private static readonly string[] DefaultEntityTypeNamesById = ["Entity"];
+
     internal static List<(string Name, string Type)> ExtractEntityNames(
         JsonObject response,
         IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
     {
         var results = new List<(string Name, string Type)>();
         var entityTypeNamesById = BuildEntityTypeNamesById(entityTypes);
-        foreach (var key in new[] { "extracted_entities", "entities" })
+        foreach (var key in EntityExtractionArrayKeys)
         {
             if (response.TryGetPropertyValue(key, out var node) && node is JsonArray array)
             {
-                foreach (var item in array.OfType<JsonObject>())
+                for (var i = 0; i < array.Count; i++)
                 {
+                    if (array[i] is not JsonObject item)
+                    {
+                        continue;
+                    }
+
                     var name = ReadString(item, "name")
                                ?? ReadString(item, "entity")
                                ?? ReadString(item, "entity_name");
@@ -38,20 +46,24 @@ public sealed partial class Graphiti
         return results;
     }
 
-    private static List<string> BuildEntityTypeNamesById(
+    private static IReadOnlyList<string> BuildEntityTypeNamesById(
         IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
     {
-        var names = new List<string> { "Entity" };
-        if (entityTypes is null)
+        if (entityTypes is null || entityTypes.Count == 0)
         {
-            return names;
+            return DefaultEntityTypeNamesById;
         }
 
-        names.AddRange(entityTypes.Select(pair => pair.Value.Name));
+        var names = new List<string>(entityTypes.Count + 1) { "Entity" };
+        foreach (var pair in entityTypes)
+        {
+            names.Add(pair.Value.Name);
+        }
+
         return names;
     }
 
-    private static string? ReadEntityTypeById(JsonObject item, List<string> entityTypeNamesById)
+    private static string? ReadEntityTypeById(JsonObject item, IReadOnlyList<string> entityTypeNamesById)
     {
         if (!item.TryGetPropertyValue("entity_type_id", out var node) || node is null)
         {
@@ -88,14 +100,19 @@ public sealed partial class Graphiti
 
     internal static List<ExtractedEdge> ExtractEdges(JsonObject response)
     {
-        var results = new List<ExtractedEdge>();
         if (!response.TryGetPropertyValue("edges", out var node) || node is not JsonArray array)
         {
-            return results;
+            return [];
         }
 
-        foreach (var item in array.OfType<JsonObject>())
+        var results = new List<ExtractedEdge>(array.Count);
+        for (var i = 0; i < array.Count; i++)
         {
+            if (array[i] is not JsonObject item)
+            {
+                continue;
+            }
+
             var source = ReadString(item, "source_entity_name") ?? ReadString(item, "source") ?? string.Empty;
             var target = ReadString(item, "target_entity_name") ?? ReadString(item, "target") ?? string.Empty;
             var relation = ReadString(item, "relation_type") ?? ReadString(item, "name") ?? "RELATES_TO";
@@ -120,8 +137,14 @@ public sealed partial class Graphiti
 
         foreach (var match in HeuristicEntityRegex().EnumerateMatches(sourceSpan))
         {
-            var name = sourceSpan.Slice(match.Index, match.Length).ToString();
-            if (IsIgnoredHeuristicEntityName(name) || !seen.Add(name))
+            var nameSpan = sourceSpan.Slice(match.Index, match.Length);
+            if (IsIgnoredHeuristicEntityName(nameSpan))
+            {
+                continue;
+            }
+
+            var name = nameSpan.ToString();
+            if (!seen.Add(name))
             {
                 continue;
             }
@@ -136,7 +159,7 @@ public sealed partial class Graphiti
         return results;
     }
 
-    private static bool IsIgnoredHeuristicEntityName(string name) =>
+    private static bool IsIgnoredHeuristicEntityName(ReadOnlySpan<char> name) =>
         name is "I" or "The" or "A" or "An";
 
     [GeneratedRegex("\\b[A-Z][a-zA-Z0-9_'-]*\\b", RegexOptions.CultureInvariant)]
