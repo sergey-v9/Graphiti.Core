@@ -138,6 +138,12 @@ improving those providers unless it directly supports shared abstractions or Lad
   loop-based type-map checks instead of `GroupBy`/`Select`/`Where`/`Distinct`/`OrderBy` pipelines.
   It preserves prompt JSON shape, type-map matching, sorted attribute/schema order, schema reuse,
   bounded concurrency, and case-insensitive ontology lookup.
+- Bulk edge resolution now treats the in-batch edge snapshot as authoritative when graph/search
+  results return stale copies of the same UUID. `MergeEdgeOverrides` replaces source-position
+  matches with snapshot overrides, invalidation candidate shaping substitutes graph-ranked matches
+  with snapshot instances before de-duplication, and override filtering avoids LINQ projection
+  chains. This preserves graph ranking, same-pair `existing_edges`, cross-pair invalidation
+  offsets, ordered bulk episode semantics, and canonical edge coalescing.
 - Search fallback in-memory snapshot projection now uses explicit typed loops over cloned driver
   snapshots instead of `OfType`/`Select` chains, preserving clone isolation, type filtering,
   embedding stripping flags, and stable order. Edge endpoint lookup now accepts
@@ -268,13 +274,13 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after attribute extraction allocation shaping:
+Latest checkpoint on 2026-06-01 after bulk edge snapshot override shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 764
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 766
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -461,6 +467,10 @@ These were previously audited and found faithful or intentionally different:
 - Attribute extraction target/context construction, including first-wins node UUID maps, loop-built
   extraction targets, shared JSON string-array construction, schema reuse, sorted schema/attribute
   order, type-map matching, and bounded concurrency
+- Bulk edge invalidation snapshots, including snapshot override replacement by UUID, graph-ranked
+  invalidation candidate substitution, same-pair `existing_edges`, cross-pair invalidation offsets,
+  duplicate fact collapse across bulk episodes, and no re-invalidation of already invalidated
+  in-batch edges
 - In-memory fallback snapshot projection, including typed filtering from cloned snapshots,
   embedding stripping flags, stable projection order, and read-only edge endpoint lookup inputs
 - Content chunking tests that mutate the static token counter are serialized through a shared test

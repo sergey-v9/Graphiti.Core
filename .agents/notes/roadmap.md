@@ -187,14 +187,16 @@ shorter than the old working plans; expand items only when they become active.
 - Do not chase micro-optimizations in cold code or change public behavior for performance. Preserve
   Python parity, deterministic ordering, cancellation points, telemetry safety, and maintainability;
   add focused tests or benchmarks when a performance-sensitive rewrite could regress behavior.
-- Good next allocation slices from the 2026-06-01 sidecar scans: bulk edge invalidation snapshots
-  (`Graphiti.Ingestion`, `EdgeResolutionService`, `EdgeMergeHelpers`) and search orchestration
-  plumbing (`SearchEngine`, `SearchRetrievalRunner`). Keep each slice disjoint and parity-tested.
-  For the bulk edge slice, preserve bulk-as-ordered-repeated-episode semantics, let snapshot
-  overrides replace stale graph/search copies by UUID without reversing graph ranking, keep related
-  same-pair edges in `existing_edges`, keep cross-pair invalidation candidate offsets, and add the
-  sidecar-proposed tests for snapshot override replacement and no re-invalidation of already
-  invalidated in-batch edges.
+- Bulk edge invalidation snapshots now replace stale graph/search copies with in-batch snapshot
+  overrides by UUID while preserving graph-first ranking/limit behavior, related-edge offsets,
+  ordered repeated-episode semantics, and canonical coalescing.
+- Good next allocation slice from the 2026-06-01 sidecar scans: search orchestration plumbing in
+  `SearchEngine` / `SearchRetrievalRunner`. Add focused tests first for first-fault rethrow plus
+  sibling cancellation, cancellation-only behavior, disabled methods avoiding driver calls, and
+  top-level scope cancellation. Then replace disabled `Task.FromResult(new List<...>())` placeholders
+  with nullable task locals and empty ranked results, introduce a one/two-task await helper where it
+  simplifies active retrieval branches, and leave `SearchRetrievalRunner` telemetry boundaries
+  intact.
 
 ## Graphiti Decomposition
 

@@ -158,7 +158,12 @@ internal sealed class EdgeResolutionService(
         IReadOnlyList<EntityEdge>? existingEdgesOverride,
         CancellationToken cancellationToken)
     {
-        var relatedUuids = relatedEdges.Select(edge => edge.Uuid).ToHashSet(StringComparer.Ordinal);
+        var relatedUuids = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < relatedEdges.Count; i++)
+        {
+            relatedUuids.Add(relatedEdges[i].Uuid);
+        }
+
         var searchConfig = SearchConfigRecipes.EdgeHybridSearchRrf;
         searchConfig.Limit = SearchUtilities.RelevantSchemaLimit;
         var searchResults = await SearchEngine.SearchAsync(
@@ -169,20 +174,49 @@ internal sealed class EdgeResolutionService(
             new SearchFilters(),
             driver: driverAccessor(),
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        var graphCandidates = searchResults.Edges
-            .Where(edge => !relatedUuids.Contains(edge.Uuid))
-            .ToList();
+        var overrideLookup = EdgeMergeHelpers.BuildOverrideLookup(existingEdgesOverride, relatedUuids);
+        var candidates = new List<EntityEdge>(SearchUtilities.RelevantSchemaLimit);
+        var seenUuids = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < searchResults.Edges.Count; i++)
+        {
+            var edge = searchResults.Edges[i];
+            if (relatedUuids.Contains(edge.Uuid))
+            {
+                continue;
+            }
+
+            var candidate = overrideLookup.TryGetValue(edge.Uuid, out var overrideEdge)
+                ? overrideEdge
+                : edge;
+            if (seenUuids.Add(candidate.Uuid))
+            {
+                candidates.Add(candidate);
+                if (candidates.Count >= SearchUtilities.RelevantSchemaLimit)
+                {
+                    return candidates;
+                }
+            }
+        }
+
         var overrideCandidates = EdgeMergeHelpers.RankOverrideInvalidationCandidates(
             extractedEdge.Fact,
             existingEdgesOverride,
             relatedUuids,
             SearchUtilities.RelevantSchemaLimit);
+        for (var i = 0; i < overrideCandidates.Count; i++)
+        {
+            var candidate = overrideCandidates[i];
+            if (seenUuids.Add(candidate.Uuid))
+            {
+                candidates.Add(candidate);
+                if (candidates.Count >= SearchUtilities.RelevantSchemaLimit)
+                {
+                    break;
+                }
+            }
+        }
 
-        return graphCandidates
-            .Concat(overrideCandidates)
-            .DistinctBy(edge => edge.Uuid, StringComparer.Ordinal)
-            .Take(SearchUtilities.RelevantSchemaLimit)
-            .ToList();
+        return candidates;
     }
 
     public async Task<(EntityEdge ResolvedEdge, IReadOnlyList<EntityEdge> InvalidatedEdges)> ResolveEdgeWithLlmAsync(

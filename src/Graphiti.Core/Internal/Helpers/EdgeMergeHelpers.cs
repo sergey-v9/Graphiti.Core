@@ -16,15 +16,43 @@ internal static class EdgeMergeHelpers
             return Array.Empty<EntityEdge>();
         }
 
-        return SearchUtilities
-            .TopByScore(
-                existingEdgesOverride.Where(edge => !excludedUuids.Contains(edge.Uuid)),
-                edge => SearchUtilities.TextScore(fact, $"{edge.Name} {edge.Fact}"),
-                limit,
-                minScore: 0,
-                includeMinScore: false)
-            .Select(candidate => candidate.Item)
-            .ToList();
+        var ranked = SearchUtilities.TopByScore(
+            existingEdgesOverride,
+            edge => excludedUuids.Contains(edge.Uuid)
+                ? 0
+                : SearchUtilities.TextScore(fact, $"{edge.Name} {edge.Fact}"),
+            limit,
+            minScore: 0,
+            includeMinScore: false);
+        var candidates = new List<EntityEdge>(ranked.Count);
+        for (var i = 0; i < ranked.Count; i++)
+        {
+            candidates.Add(ranked[i].Item);
+        }
+
+        return candidates;
+    }
+
+    internal static Dictionary<string, EntityEdge> BuildOverrideLookup(
+        IReadOnlyList<EntityEdge>? overrides,
+        HashSet<string> excludedUuids)
+    {
+        var lookup = new Dictionary<string, EntityEdge>(StringComparer.Ordinal);
+        if (overrides is null || overrides.Count == 0)
+        {
+            return lookup;
+        }
+
+        for (var i = 0; i < overrides.Count; i++)
+        {
+            var edge = overrides[i];
+            if (!excludedUuids.Contains(edge.Uuid))
+            {
+                lookup.TryAdd(edge.Uuid, edge);
+            }
+        }
+
+        return lookup;
     }
 
     internal static List<EntityEdge> ResolveEdgeContradictions(
@@ -111,15 +139,39 @@ internal static class EdgeMergeHelpers
         IReadOnlyList<EntityEdge>? overrides,
         Func<EntityEdge, bool> predicate)
     {
-        var merged = source.ToList();
         if (overrides is null || overrides.Count == 0)
         {
-            return merged;
+            return source.ToList();
         }
 
-        var seen = merged.Select(edge => edge.Uuid).ToHashSet(StringComparer.Ordinal);
-        foreach (var edge in overrides)
+        var overridesByUuid = new Dictionary<string, EntityEdge>(StringComparer.Ordinal);
+        for (var i = 0; i < overrides.Count; i++)
         {
+            var edge = overrides[i];
+            if (predicate(edge))
+            {
+                overridesByUuid.TryAdd(edge.Uuid, edge);
+            }
+        }
+
+        var merged = new List<EntityEdge>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var edge in source)
+        {
+            if (!seen.Add(edge.Uuid))
+            {
+                merged.Add(edge);
+                continue;
+            }
+
+            merged.Add(overridesByUuid.TryGetValue(edge.Uuid, out var overrideEdge)
+                ? overrideEdge
+                : edge);
+        }
+
+        for (var i = 0; i < overrides.Count; i++)
+        {
+            var edge = overrides[i];
             if (predicate(edge) && seen.Add(edge.Uuid))
             {
                 merged.Add(edge);
@@ -149,9 +201,16 @@ internal static class EdgeMergeHelpers
             return new List<EntityEdge>();
         }
 
-        return edges
-            .Where(edge => uuids.Contains(edge.Uuid))
-            .ToList();
+        var filtered = new List<EntityEdge>(uuids.Count);
+        foreach (var edge in edges)
+        {
+            if (uuids.Contains(edge.Uuid))
+            {
+                filtered.Add(edge);
+            }
+        }
+
+        return filtered;
     }
 
     internal static void UpsertCanonicalEdges(

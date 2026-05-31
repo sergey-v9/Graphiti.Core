@@ -2383,6 +2383,60 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisodeBulk_DoesNotReinvalidateAlreadyInvalidatedSnapshotEdge()
+    {
+        var driver = new InMemoryGraphDriver();
+        var fixedNow = new DateTimeOffset(2026, 4, 1, 12, 0, 0, TimeSpan.Zero);
+        var alice = new EntityNode { Name = "Alice", GroupId = "group" };
+        var acme = new EntityNode { Name = "Acme", GroupId = "group", Labels = new List<string> { "Entity", "Organization" } };
+        await alice.SaveAsync(driver);
+        await acme.SaveAsync(driver);
+        var oldEdge = new EntityEdge
+        {
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = acme.Uuid,
+            GroupId = "group",
+            Name = "WORKS_AT",
+            Fact = "Alice works at Acme.",
+            ValidAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+        await oldEdge.SaveAsync(driver);
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: new BulkReinvalidationLlmClient(),
+            timeProvider: new FixedTimeProvider(fixedNow));
+
+        var result = await graphiti.AddEpisodeBulkAsync(
+            new[]
+            {
+                new RawEpisode
+                {
+                    Name = "first",
+                    Content = "Alice left Acme.",
+                    SourceDescription = "message",
+                    ReferenceTime = new DateTime(2026, 2, 1, 12, 0, 0, DateTimeKind.Utc)
+                },
+                new RawEpisode
+                {
+                    Name = "second",
+                    Content = "Alice rejoined Acme.",
+                    SourceDescription = "message",
+                    ReferenceTime = new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc)
+                }
+            },
+            groupId: "group");
+
+        var invalidated = Assert.Single(result.Edges, edge => edge.Uuid == oldEdge.Uuid);
+        Assert.Equal(new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), invalidated.InvalidAt);
+        Assert.Equal(fixedNow.UtcDateTime, invalidated.ExpiredAt);
+
+        var first = Assert.Single(result.Episodes, episode => episode.Name == "first");
+        var second = Assert.Single(result.Episodes, episode => episode.Name == "second");
+        Assert.Contains(oldEdge.Uuid, first.EntityEdges);
+        Assert.DoesNotContain(oldEdge.Uuid, second.EntityEdges);
+    }
+
+    [Fact]
     public async Task AddEpisode_ReusesExistingExactDuplicateEdgeAndAppendsEpisode()
     {
         var driver = new InMemoryGraphDriver();
@@ -3793,6 +3847,66 @@ public class GraphitiWorkflowTests
                         ["episode_indices"] = new JsonArray { 0 }
                     })
             };
+        }
+    }
+
+    private sealed class BulkReinvalidationLlmClient : ILlmClient
+    {
+        public TokenUsageTracker TokenTracker { get; } = new();
+
+        public Task<JsonObject> GenerateResponseAsync(
+            IReadOnlyList<Message> messages,
+            Type? responseModel = null,
+            StructuredResponseSchema? responseSchema = null,
+            int? maxTokens = null,
+            ModelSize modelSize = ModelSize.Medium,
+            string? groupId = null,
+            string? promptName = null,
+            bool attributeExtraction = false,
+            CancellationToken cancellationToken = default)
+        {
+            if (IsNodeExtractionPrompt(promptName))
+            {
+                return Task.FromResult(new JsonObject
+                {
+                    ["extracted_entities"] = new JsonArray
+                    {
+                        new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                        new JsonObject { ["name"] = "Acme", ["entity_type"] = "Organization" }
+                    }
+                });
+            }
+
+            if (string.Equals(promptName, "extract_edges.edge", StringComparison.Ordinal))
+            {
+                var content = ReadEpisodeContent(messages);
+                var left = content.Contains("left", StringComparison.OrdinalIgnoreCase);
+                return Task.FromResult(new JsonObject
+                {
+                    ["edges"] = new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["source"] = "Alice",
+                            ["target"] = "Acme",
+                            ["relation_type"] = left ? "LEFT" : "REJOINED",
+                            ["fact"] = left ? "Alice left Acme." : "Alice rejoined Acme.",
+                            ["valid_at"] = left ? "2026-02-01T00:00:00Z" : "2026-03-01T00:00:00Z"
+                        }
+                    }
+                });
+            }
+
+            if (string.Equals(promptName, "dedupe_edges.resolve_edge", StringComparison.Ordinal))
+            {
+                return Task.FromResult(new JsonObject
+                {
+                    ["duplicate_facts"] = new JsonArray(),
+                    ["contradicted_facts"] = new JsonArray { 0 }
+                });
+            }
+
+            return Task.FromResult(new JsonObject());
         }
     }
 

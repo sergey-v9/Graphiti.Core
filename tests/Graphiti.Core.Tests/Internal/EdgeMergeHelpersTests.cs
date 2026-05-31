@@ -27,4 +27,48 @@ public class EdgeMergeHelpersTests
         Assert.Empty(EdgeMergeHelpers.ReadIntArray(response, "missing"));
         Assert.Empty(EdgeMergeHelpers.ReadIntArray(new JsonObject { ["duplicate_facts"] = "1" }, "duplicate_facts"));
     }
+
+    [Fact]
+    public void MergeEdgeOverrides_ReplacesSourceEdgeWithSnapshotOverride()
+    {
+        var stale = new EntityEdge
+        {
+            Uuid = "same",
+            SourceNodeUuid = "source",
+            TargetNodeUuid = "target",
+            Fact = "stale copy"
+        };
+        var unrelated = new EntityEdge
+        {
+            Uuid = "unrelated",
+            SourceNodeUuid = "source",
+            TargetNodeUuid = "other",
+            Fact = "unrelated"
+        };
+        var snapshot = new EntityEdge
+        {
+            Uuid = "same",
+            SourceNodeUuid = "source",
+            TargetNodeUuid = "target",
+            Fact = "snapshot copy",
+            InvalidAt = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var appended = new EntityEdge
+        {
+            Uuid = "appended",
+            SourceNodeUuid = "source",
+            TargetNodeUuid = "target",
+            Fact = "snapshot only"
+        };
+
+        var merged = EdgeMergeHelpers.MergeEdgeOverrides(
+            new[] { stale, unrelated },
+            new[] { snapshot, appended },
+            edge => edge.SourceNodeUuid == "source" && edge.TargetNodeUuid == "target");
+
+        Assert.Equal(3, merged.Count);
+        Assert.Same(snapshot, merged[0]);
+        Assert.Same(unrelated, merged[1]);
+        Assert.Same(appended, merged[2]);
+    }
 }
