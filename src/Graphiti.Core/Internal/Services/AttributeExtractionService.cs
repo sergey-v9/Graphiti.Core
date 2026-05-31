@@ -32,27 +32,11 @@ internal sealed class AttributeExtractionService(
                 return;
             }
 
-            var nodesByUuid = nodes
-                .GroupBy(node => node.Uuid, StringComparer.Ordinal)
-                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-            var extractionTargets = edges
-                .Select(edge => (Edge: edge, EdgeType: EntityTypeResolver.FindEdgeTypeDefinition(edge, nodesByUuid, edgeTypes, edgeTypeMap)))
-                .Where(target => target.EdgeType is not null && target.EdgeType.Attributes.Count > 0)
-                .Select(target => new EdgeAttributeExtractionTarget(
-                    target.Edge,
-                    target.EdgeType!,
-                    AttributeSchema: null!))
-                .ToList();
+            var nodesByUuid = BuildNodesByUuid(nodes);
+            var extractionTargets = BuildEdgeExtractionTargets(edges, nodesByUuid, edgeTypes, edgeTypeMap);
             activity?.SetTag("graphiti.extraction.targets", extractionTargets.Count);
             activity?.SetTag("graphiti.extraction.skipped", extractionTargets.Count == 0);
-            var schemas = ExtractionContextBuilder.CreateAttributeResponseSchemas(
-                extractionTargets.Select(target => target.EdgeType),
-                "EdgeAttributeResponse");
-            for (var i = 0; i < extractionTargets.Count; i++)
-            {
-                var target = extractionTargets[i];
-                extractionTargets[i] = target with { AttributeSchema = schemas[target.EdgeType] };
-            }
+            ApplyEdgeAttributeSchemas(extractionTargets);
 
             await ThrottledWork.ForEachAsync(
                 extractionTargets,
@@ -117,24 +101,10 @@ internal sealed class AttributeExtractionService(
             }
 
             var edgesByNode = EntityTypeResolver.BuildEdgesByNode(edges);
-            var extractionTargets = nodes
-                .Select(node => (Node: node, EntityType: EntityTypeResolver.FindEntityTypeDefinition(node, entityTypes)))
-                .Where(target => target.EntityType is not null && target.EntityType.Attributes.Count > 0)
-                .Select(target => new NodeAttributeExtractionTarget(
-                    target.Node,
-                    target.EntityType!,
-                    AttributeSchema: null!))
-                .ToList();
+            var extractionTargets = BuildNodeExtractionTargets(nodes, entityTypes);
             activity?.SetTag("graphiti.extraction.targets", extractionTargets.Count);
             activity?.SetTag("graphiti.extraction.skipped", extractionTargets.Count == 0);
-            var schemas = ExtractionContextBuilder.CreateAttributeResponseSchemas(
-                extractionTargets.Select(target => target.EntityType),
-                "NodeAttributeResponse");
-            for (var i = 0; i < extractionTargets.Count; i++)
-            {
-                var target = extractionTargets[i];
-                extractionTargets[i] = target with { AttributeSchema = schemas[target.EntityType] };
-            }
+            ApplyNodeAttributeSchemas(extractionTargets);
 
             await ThrottledWork.ForEachAsync(
                 extractionTargets,
@@ -175,6 +145,101 @@ internal sealed class AttributeExtractionService(
         }
     }
 
+    private static Dictionary<string, EntityNode> BuildNodesByUuid(List<EntityNode> nodes)
+    {
+        var nodesByUuid = new Dictionary<string, EntityNode>(nodes.Count, StringComparer.Ordinal);
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            nodesByUuid.TryAdd(nodes[i].Uuid, nodes[i]);
+        }
+
+        return nodesByUuid;
+    }
+
+    private static List<EdgeAttributeExtractionTarget> BuildEdgeExtractionTargets(
+        List<EntityEdge> edges,
+        Dictionary<string, EntityNode> nodesByUuid,
+        IReadOnlyDictionary<string, EntityTypeDefinition> edgeTypes,
+        IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap)
+    {
+        var extractionTargets = new List<EdgeAttributeExtractionTarget>(edges.Count);
+        for (var i = 0; i < edges.Count; i++)
+        {
+            var edge = edges[i];
+            var edgeType = EntityTypeResolver.FindEdgeTypeDefinition(
+                edge,
+                nodesByUuid,
+                edgeTypes,
+                edgeTypeMap);
+            if (edgeType is not null && edgeType.Attributes.Count > 0)
+            {
+                extractionTargets.Add(new EdgeAttributeExtractionTarget(
+                    edge,
+                    edgeType,
+                    AttributeSchema: null!));
+            }
+        }
+
+        return extractionTargets;
+    }
+
+    private static List<NodeAttributeExtractionTarget> BuildNodeExtractionTargets(
+        List<EntityNode> nodes,
+        IReadOnlyDictionary<string, EntityTypeDefinition> entityTypes)
+    {
+        var extractionTargets = new List<NodeAttributeExtractionTarget>(nodes.Count);
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            var node = nodes[i];
+            var entityType = EntityTypeResolver.FindEntityTypeDefinition(node, entityTypes);
+            if (entityType is not null && entityType.Attributes.Count > 0)
+            {
+                extractionTargets.Add(new NodeAttributeExtractionTarget(
+                    node,
+                    entityType,
+                    AttributeSchema: null!));
+            }
+        }
+
+        return extractionTargets;
+    }
+
+    private static void ApplyEdgeAttributeSchemas(List<EdgeAttributeExtractionTarget> targets)
+    {
+        var schemas = new Dictionary<EntityTypeDefinition, StructuredResponseSchema>();
+        for (var i = 0; i < targets.Count; i++)
+        {
+            var target = targets[i];
+            if (!schemas.TryGetValue(target.EdgeType, out var schema))
+            {
+                schema = ExtractionContextBuilder.BuildAttributeResponseSchema(
+                    target.EdgeType,
+                    "EdgeAttributeResponse");
+                schemas[target.EdgeType] = schema;
+            }
+
+            targets[i] = target with { AttributeSchema = schema };
+        }
+    }
+
+    private static void ApplyNodeAttributeSchemas(List<NodeAttributeExtractionTarget> targets)
+    {
+        var schemas = new Dictionary<EntityTypeDefinition, StructuredResponseSchema>();
+        for (var i = 0; i < targets.Count; i++)
+        {
+            var target = targets[i];
+            if (!schemas.TryGetValue(target.EntityType, out var schema))
+            {
+                schema = ExtractionContextBuilder.BuildAttributeResponseSchema(
+                    target.EntityType,
+                    "NodeAttributeResponse");
+                schemas[target.EntityType] = schema;
+            }
+
+            targets[i] = target with { AttributeSchema = schema };
+        }
+    }
+
     private static JsonObject BuildEdgeAttributeExtractionContext(
         EntityEdge edge,
         EntityTypeDefinition edgeType,
@@ -205,9 +270,8 @@ internal sealed class AttributeExtractionService(
         {
             ["uuid"] = uuid,
             ["name"] = node?.Name ?? string.Empty,
-            ["entity_types"] = new JsonArray((node?.Labels ?? new List<string> { "Entity" })
-                .Select(label => JsonValue.Create(label))
-                .ToArray())
+            ["entity_types"] = ExtractionContextBuilder.BuildStringArray(
+                node is null ? ExtractionContextBuilder.DefaultEntityLabels : node.Labels)
         };
 
     private static JsonObject BuildAttributeExtractionContext(
@@ -239,7 +303,7 @@ internal sealed class AttributeExtractionService(
             ["entity"] = new JsonObject
             {
                 ["name"] = node.Name,
-                ["entity_types"] = new JsonArray(node.Labels.Select(label => JsonValue.Create(label)).ToArray()),
+                ["entity_types"] = ExtractionContextBuilder.BuildStringArray(node.Labels),
                 ["attributes"] = JsonSerializer.SerializeToNode(node.Attributes, GraphitiJsonSerializer.Options)
             },
             ["entity_type"] = new JsonObject

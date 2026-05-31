@@ -30,7 +30,7 @@ internal static class EntityTypeResolver
 
     internal static Dictionary<string, List<EntityEdge>> BuildEdgesByNode(IReadOnlyList<EntityEdge> edges)
     {
-        var edgesByNode = new Dictionary<string, List<EntityEdge>>(StringComparer.Ordinal);
+        var edgesByNode = new Dictionary<string, List<EntityEdge>>(edges.Count * 2, StringComparer.Ordinal);
         foreach (var edge in edges)
         {
             if (!edgesByNode.TryGetValue(edge.SourceNodeUuid, out var sourceEdges))
@@ -56,8 +56,14 @@ internal static class EntityTypeResolver
         EntityNode node,
         IReadOnlyDictionary<string, EntityTypeDefinition> entityTypes)
     {
-        foreach (var label in node.Labels.Where(label => !string.Equals(label, "Entity", StringComparison.OrdinalIgnoreCase)))
+        for (var i = 0; i < node.Labels.Count; i++)
         {
+            var label = node.Labels[i];
+            if (string.Equals(label, "Entity", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             var matched = FindTypeDefinition(label, entityTypes);
             if (matched is not null)
             {
@@ -85,17 +91,15 @@ internal static class EntityTypeResolver
         EntityNode target,
         IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>> edgeTypeMap)
     {
-        var sourceLabels = EffectiveEntityLabels(source);
-        var targetLabels = EffectiveEntityLabels(target);
         foreach (var pair in edgeTypeMap)
         {
-            if (!sourceLabels.Contains(pair.Key.SourceType)
-                || !targetLabels.Contains(pair.Key.TargetType))
+            if (!NodeHasEffectiveLabel(source, pair.Key.SourceType)
+                || !NodeHasEffectiveLabel(target, pair.Key.TargetType))
             {
                 continue;
             }
 
-            if (pair.Value.Any(type => string.Equals(type, edgeName, StringComparison.OrdinalIgnoreCase)))
+            if (ContainsEdgeTypeName(pair.Value, edgeName))
             {
                 return true;
             }
@@ -104,11 +108,35 @@ internal static class EntityTypeResolver
         return false;
     }
 
-    private static HashSet<string> EffectiveEntityLabels(EntityNode node)
+    private static bool NodeHasEffectiveLabel(EntityNode node, string label)
     {
-        var labels = node.Labels.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        labels.Add("Entity");
-        return labels;
+        if (string.Equals(label, "Entity", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        for (var i = 0; i < node.Labels.Count; i++)
+        {
+            if (string.Equals(node.Labels[i], label, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool ContainsEdgeTypeName(IReadOnlyList<string> edgeTypeNames, string edgeName)
+    {
+        for (var i = 0; i < edgeTypeNames.Count; i++)
+        {
+            if (string.Equals(edgeTypeNames[i], edgeName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static EntityTypeDefinition? FindTypeDefinition(
@@ -120,9 +148,15 @@ internal static class EntityTypeResolver
             return direct;
         }
 
-        var matched = typeDefinitions.FirstOrDefault(pair =>
-            string.Equals(pair.Key, typeName, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(pair.Value.Name, typeName, StringComparison.OrdinalIgnoreCase));
-        return matched.Value;
+        foreach (var pair in typeDefinitions)
+        {
+            if (string.Equals(pair.Key, typeName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(pair.Value.Name, typeName, StringComparison.OrdinalIgnoreCase))
+            {
+                return pair.Value;
+            }
+        }
+
+        return null;
     }
 }

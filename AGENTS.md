@@ -75,7 +75,7 @@ Verified build/test command from this folder:
 dotnet test "Graphiti.Core.CSharp.slnx" --verbosity minimal
 ```
 
-Verified on 2026-06-01 after embedding vector and extraction parser allocation shaping:
+Verified on 2026-06-01 after attribute extraction allocation shaping:
 restore/format/build succeeded with 0 warnings and 764 tests passed.
 
 Port contract:

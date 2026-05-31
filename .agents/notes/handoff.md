@@ -133,6 +133,11 @@ improving those providers unless it directly supports shared abstractions or Lad
   of per-call key arrays, `OfType` iterators, and entity-type LINQ projections. This preserves key
   order, non-object skipping, numeric/string `entity_type_id` coercion, JSON text fallback, optional
   timestamp parsing, and heuristic entity de-duplication while avoiding ignored-name string copies.
+- Attribute extraction target/context construction now uses first-wins node UUID maps, loop-built
+  node/edge target lists, direct schema caches, shared JSON string-array construction, and
+  loop-based type-map checks instead of `GroupBy`/`Select`/`Where`/`Distinct`/`OrderBy` pipelines.
+  It preserves prompt JSON shape, type-map matching, sorted attribute/schema order, schema reuse,
+  bounded concurrency, and case-insensitive ontology lookup.
 - Search fallback in-memory snapshot projection now uses explicit typed loops over cloned driver
   snapshots instead of `OfType`/`Select` chains, preserving clone isolation, type filtering,
   embedding stripping flags, and stable order. Edge endpoint lookup now accepts
@@ -263,7 +268,7 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after embedding vector and extraction parser allocation shaping:
+Latest checkpoint on 2026-06-01 after attribute extraction allocation shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
@@ -453,6 +458,9 @@ These were previously audited and found faithful or intentionally different:
 - Extraction JSON parser allocation shaping, including entity array key order, non-object skipping,
   numeric-string `entity_type_id` coercion, JSON text fallback, optional date parsing, and heuristic
   ignored-name handling
+- Attribute extraction target/context construction, including first-wins node UUID maps, loop-built
+  extraction targets, shared JSON string-array construction, schema reuse, sorted schema/attribute
+  order, type-map matching, and bounded concurrency
 - In-memory fallback snapshot projection, including typed filtering from cloned snapshots,
   embedding stripping flags, stable projection order, and read-only edge endpoint lookup inputs
 - Content chunking tests that mutate the static token counter are serialized through a shared test

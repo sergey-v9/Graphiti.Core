@@ -140,6 +140,11 @@ shorter than the old working plans; expand items only when they become active.
   `Graphiti.ExtractionParsing`. Future parser cleanup can continue into `NodeResolutionService`, but
   must preserve key priority, non-object skipping, JSON text fallback, numeric-string coercion, and
   DTO/cache identity.
+- Attribute extraction target/context construction now uses loop-built first-wins maps, target
+  buffers, schema caches, JSON string arrays, and type-map membership checks. Preserve prompt JSON
+  shape, sorted schema/attribute order, schema reuse, bounded concurrency, and case-insensitive
+  ontology lookup if changing `AttributeExtractionService`, `EntityTypeResolver`, or
+  `ExtractionContextBuilder`.
 - Add provider boundaries only where they preserve Graphiti semantics and help LadybugDB or parity
   testing.
 - Optional search provider candidates include Neo4j indexes and Azure AI Search behind explicit
@@ -182,11 +187,14 @@ shorter than the old working plans; expand items only when they become active.
 - Do not chase micro-optimizations in cold code or change public behavior for performance. Preserve
   Python parity, deterministic ordering, cancellation points, telemetry safety, and maintainability;
   add focused tests or benchmarks when a performance-sensitive rewrite could regress behavior.
-- Good next allocation slices from the 2026-06-01 sidecar scan: attribute extraction
-  target/context construction (`AttributeExtractionService`, `EntityTypeResolver`,
-  `ExtractionContextBuilder`), bulk edge invalidation snapshots (`Graphiti.Ingestion`,
-  `EdgeResolutionService`, `EdgeMergeHelpers`), and search orchestration plumbing
-  (`SearchEngine`, `SearchRetrievalRunner`). Keep each slice disjoint and parity-tested.
+- Good next allocation slices from the 2026-06-01 sidecar scans: bulk edge invalidation snapshots
+  (`Graphiti.Ingestion`, `EdgeResolutionService`, `EdgeMergeHelpers`) and search orchestration
+  plumbing (`SearchEngine`, `SearchRetrievalRunner`). Keep each slice disjoint and parity-tested.
+  For the bulk edge slice, preserve bulk-as-ordered-repeated-episode semantics, let snapshot
+  overrides replace stale graph/search copies by UUID without reversing graph ranking, keep related
+  same-pair edges in `existing_edges`, keep cross-pair invalidation candidate offsets, and add the
+  sidecar-proposed tests for snapshot override replacement and no re-invalidation of already
+  invalidated in-batch edges.
 
 ## Graphiti Decomposition
 

@@ -4,6 +4,9 @@ namespace Graphiti.Core.Internal.Helpers;
 
 internal static class ExtractionContextBuilder
 {
+    internal static readonly IReadOnlyList<string> DefaultEntityLabels =
+        Array.AsReadOnly(new[] { "Entity" });
+
     private const string DefaultEntityTypeDescription =
         "A specific, identifiable entity that does not fit any of the other listed types. " +
         "Must still be a concrete, meaningful thing - specific enough to be uniquely identifiable. " +
@@ -44,9 +47,7 @@ internal static class ExtractionContextBuilder
             ["previous_episodes"] = previous,
             ["nodes"] = BuildExtractedNodeContext(nodes),
             ["entity_types"] = BuildTypeContext(entityTypes),
-            ["excluded_entity_types"] = new JsonArray((excludedEntityTypes ?? Array.Empty<string>())
-                .Select(type => JsonValue.Create(type))
-                .ToArray()),
+            ["excluded_entity_types"] = BuildStringArray(excludedEntityTypes ?? Array.Empty<string>()),
             ["edge_types"] = BuildEdgeTypeContext(edgeTypes, edgeTypeMap),
             ["custom_extraction_instructions"] = customExtractionInstructions ?? string.Empty
         };
@@ -57,8 +58,10 @@ internal static class ExtractionContextBuilder
     internal static JsonObject BuildAttributeSchema(EntityTypeDefinition typeDefinition)
     {
         var schema = new JsonObject();
-        foreach (var pair in typeDefinition.Attributes.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+        var attributes = GetSortedAttributes(typeDefinition);
+        for (var i = 0; i < attributes.Count; i++)
         {
+            var pair = attributes[i];
             schema[pair.Key] = new JsonObject
             {
                 ["type"] = pair.Value.Type,
@@ -69,17 +72,15 @@ internal static class ExtractionContextBuilder
         return schema;
     }
 
-    internal static Dictionary<EntityTypeDefinition, StructuredResponseSchema> CreateAttributeResponseSchemas(
-        IEnumerable<EntityTypeDefinition> typeDefinitions,
-        string name)
+    internal static JsonArray BuildStringArray(IReadOnlyList<string> values)
     {
-        var schemas = new Dictionary<EntityTypeDefinition, StructuredResponseSchema>();
-        foreach (var typeDefinition in typeDefinitions.Distinct())
+        var result = new JsonArray();
+        for (var i = 0; i < values.Count; i++)
         {
-            schemas[typeDefinition] = BuildAttributeResponseSchema(typeDefinition, name);
+            result.Add(JsonValue.Create(values[i]));
         }
 
-        return schemas;
+        return result;
     }
 
     private static JsonArray BuildExtractedNodeContext(IReadOnlyList<EntityNode>? nodes)
@@ -95,7 +96,7 @@ internal static class ExtractionContextBuilder
             result.Add(new JsonObject
             {
                 ["name"] = node.Name,
-                ["entity_types"] = new JsonArray(node.Labels.Select(label => JsonValue.Create(label)).ToArray())
+                ["entity_types"] = BuildStringArray(node.Labels)
             });
         }
 
@@ -148,8 +149,10 @@ internal static class ExtractionContextBuilder
             return result;
         }
 
-        foreach (var pair in edgeTypes.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+        var sortedEdgeTypes = GetSortedTypeDefinitions(edgeTypes);
+        for (var i = 0; i < sortedEdgeTypes.Count; i++)
         {
+            var pair = sortedEdgeTypes[i];
             result.Add(new JsonObject
             {
                 ["fact_type_name"] = pair.Value.Name,
@@ -180,11 +183,29 @@ internal static class ExtractionContextBuilder
             return signatures;
         }
 
-        foreach (var pair in edgeTypeMap
-                     .Where(pair => pair.Value.Any(name => string.Equals(name, edgeTypeName, StringComparison.OrdinalIgnoreCase)))
-                     .OrderBy(pair => pair.Key.SourceType, StringComparer.OrdinalIgnoreCase)
-                     .ThenBy(pair => pair.Key.TargetType, StringComparer.OrdinalIgnoreCase))
+        var matchingSignatures =
+            new List<KeyValuePair<(string SourceType, string TargetType), IReadOnlyList<string>>>(edgeTypeMap.Count);
+        foreach (var pair in edgeTypeMap)
         {
+            if (ContainsEdgeTypeName(pair.Value, edgeTypeName))
+            {
+                matchingSignatures.Add(pair);
+            }
+        }
+
+        matchingSignatures.Sort(static (left, right) =>
+        {
+            var sourceComparison = StringComparer.OrdinalIgnoreCase.Compare(
+                left.Key.SourceType,
+                right.Key.SourceType);
+            return sourceComparison != 0
+                ? sourceComparison
+                : StringComparer.OrdinalIgnoreCase.Compare(left.Key.TargetType, right.Key.TargetType);
+        });
+
+        for (var i = 0; i < matchingSignatures.Count; i++)
+        {
+            var pair = matchingSignatures[i];
             signatures.Add(new JsonObject
             {
                 ["source"] = pair.Key.SourceType,
@@ -195,14 +216,29 @@ internal static class ExtractionContextBuilder
         return signatures;
     }
 
-    private static StructuredResponseSchema BuildAttributeResponseSchema(
+    private static bool ContainsEdgeTypeName(IReadOnlyList<string> edgeTypeNames, string edgeTypeName)
+    {
+        for (var i = 0; i < edgeTypeNames.Count; i++)
+        {
+            if (string.Equals(edgeTypeNames[i], edgeTypeName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal static StructuredResponseSchema BuildAttributeResponseSchema(
         EntityTypeDefinition typeDefinition,
         string name)
     {
         var attributeProperties = new JsonObject();
         var requiredAttributes = new JsonArray();
-        foreach (var pair in typeDefinition.Attributes.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+        var attributes = GetSortedAttributes(typeDefinition);
+        for (var i = 0; i < attributes.Count; i++)
         {
+            var pair = attributes[i];
             attributeProperties[pair.Key] = new JsonObject
             {
                 ["type"] = new JsonArray(
@@ -249,5 +285,34 @@ internal static class ExtractionContextBuilder
             "int" or "long" or "short" => "integer",
             _ => "string"
         };
+    }
+
+    private static List<KeyValuePair<string, EntityAttributeDefinition>> GetSortedAttributes(
+        EntityTypeDefinition typeDefinition)
+    {
+        var attributes = new List<KeyValuePair<string, EntityAttributeDefinition>>(
+            typeDefinition.Attributes.Count);
+        foreach (var pair in typeDefinition.Attributes)
+        {
+            attributes.Add(pair);
+        }
+
+        attributes.Sort(static (left, right) =>
+            StringComparer.OrdinalIgnoreCase.Compare(left.Key, right.Key));
+        return attributes;
+    }
+
+    private static List<KeyValuePair<string, EntityTypeDefinition>> GetSortedTypeDefinitions(
+        IReadOnlyDictionary<string, EntityTypeDefinition> typeDefinitions)
+    {
+        var sorted = new List<KeyValuePair<string, EntityTypeDefinition>>(typeDefinitions.Count);
+        foreach (var pair in typeDefinitions)
+        {
+            sorted.Add(pair);
+        }
+
+        sorted.Sort(static (left, right) =>
+            StringComparer.OrdinalIgnoreCase.Compare(left.Key, right.Key));
+        return sorted;
     }
 }
