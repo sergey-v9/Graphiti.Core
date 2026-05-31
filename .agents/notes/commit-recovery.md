@@ -23,6 +23,18 @@ Inspection on 2026-06-01:
   nested `csharp` repo. They are source/recovery input, not generated output to clean from the
   parent repo.
 
+Recovery on 2026-06-01 created a reviewable local submodule sequence:
+
+- `c6904a4` `add C# port project scaffold`
+- `bc6ac55` `add managed Graphiti Core implementation`
+- `4ab9d2e` `add Ladybug Kuzu provider foundation`
+- `eb4f029` `add Graphiti Core parity test suite`
+- `040b4a3` `ignore local agent skill corpus`
+
+After this sequence, the only intentionally untracked/ignored nested content is the optional
+`.agents/skills/` local tooling corpus. Update the parent repo's `csharp` gitlink after deciding how
+to publish or otherwise preserve these submodule commits.
+
 ## Recover The Current Work Into Meaningful Commits
 
 Do not make one giant "port C#" commit for the current tree. The original step-by-step history may be

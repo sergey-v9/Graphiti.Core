@@ -75,7 +75,7 @@ Verified build/test command from this folder:
 dotnet test "Graphiti.Core.CSharp.slnx" --verbosity minimal
 ```
 
-Verified on 2026-06-01 after allocation-light fallback snapshot projection:
+Verified on 2026-06-01 after recovering the C# submodule commit sequence:
 restore/format/build succeeded with 0 warnings and 760 tests passed.
 
 Port contract:
