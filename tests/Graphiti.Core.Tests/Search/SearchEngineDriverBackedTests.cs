@@ -93,6 +93,53 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
+    public async Task SearchAsync_CanceledScopeDoesNotCancelSiblingScopes()
+    {
+        var driver = new DriverBackedSearchDriver
+        {
+            EdgeFulltextWaitsForCancellation = true,
+            NodeFulltextCancelsImmediately = true
+        };
+        var clients = new GraphitiClients(
+            driver,
+            new NoOpLlmClient(),
+            new HashEmbedder(2),
+            new IdentityCrossEncoderClient());
+        using var cancellation = new CancellationTokenSource();
+
+        var searchTask = SearchEngine.SearchAsync(
+            clients,
+            "alpha",
+            new[] { "group" },
+            new SearchConfig
+            {
+                Limit = 3,
+                EdgeConfig = new EdgeSearchConfig
+                {
+                    SearchMethods = { EdgeSearchMethod.Bm25 },
+                    Reranker = EdgeReranker.Rrf
+                },
+                NodeConfig = new NodeSearchConfig
+                {
+                    SearchMethods = { NodeSearchMethod.Bm25 },
+                    Reranker = NodeReranker.Rrf
+                }
+            },
+            new SearchFilters(),
+            cancellationToken: cancellation.Token);
+
+        Assert.True(
+            SpinWait.SpinUntil(() => driver.EdgeFulltextCalls == 1, TimeSpan.FromSeconds(5)));
+        Assert.Equal(1, driver.NodeFulltextCalls);
+        Assert.False(driver.EdgeFulltextCancellationObserved.Task.IsCompleted);
+
+        await cancellation.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            searchTask.WaitAsync(TimeSpan.FromSeconds(5)));
+        await driver.EdgeFulltextCancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task NodeSearch_UsesDriverBackedFulltextAndVectorSearch()
     {
         var textNode = new EntityNode { Uuid = "text", Name = "Alice", GroupId = "group" };
@@ -169,6 +216,99 @@ public class SearchEngineDriverBackedTests
         await driver.NodeVectorCancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Equal(1, driver.NodeFulltextCalls);
         Assert.Equal(1, driver.NodeVectorCalls);
+    }
+
+    [Fact]
+    public async Task NodeSearch_CanceledMethodDoesNotCancelSiblingMethods()
+    {
+        var driver = new DriverBackedSearchDriver
+        {
+            NodeFulltextCancelsImmediately = true,
+            NodeVectorWaitsForCancellation = true
+        };
+        using var cancellation = new CancellationTokenSource();
+
+        var searchTask = SearchEngine.NodeSearchAsync(
+            driver,
+            new IdentityCrossEncoderClient(),
+            "alice",
+            new[] { 1f, 0f },
+            new[] { "group" },
+            new NodeSearchConfig
+            {
+                SearchMethods = { NodeSearchMethod.Bm25, NodeSearchMethod.CosineSimilarity },
+                Reranker = NodeReranker.Rrf
+            },
+            new SearchFilters(),
+            limit: 3,
+            cancellationToken: cancellation.Token);
+
+        Assert.True(SpinWait.SpinUntil(() => driver.NodeVectorCalls == 1, TimeSpan.FromSeconds(5)));
+        Assert.Equal(1, driver.NodeFulltextCalls);
+        Assert.False(driver.NodeVectorCancellationObserved.Task.IsCompleted);
+
+        await cancellation.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            searchTask.WaitAsync(TimeSpan.FromSeconds(5)));
+        await driver.NodeVectorCancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task NodeSearch_Bm25OnlySkipsDisabledVectorAndBfsDriverCalls()
+    {
+        var textNode = new EntityNode { Uuid = "text", Name = "Alice", GroupId = "group" };
+        var driver = new DriverBackedSearchDriver
+        {
+            NodeFulltextHits = { new SearchHit<EntityNode>(textNode, 12) }
+        };
+
+        var ranked = await SearchEngine.NodeSearchAsync(
+            driver,
+            new IdentityCrossEncoderClient(),
+            "alice",
+            queryVector: null,
+            new[] { "group" },
+            new NodeSearchConfig
+            {
+                SearchMethods = { NodeSearchMethod.Bm25 },
+                Reranker = NodeReranker.Rrf
+            },
+            new SearchFilters(),
+            limit: 3);
+
+        Assert.Equal("text", Assert.Single(ranked).Item.Uuid);
+        Assert.Equal(1, driver.NodeFulltextCalls);
+        Assert.Equal(0, driver.NodeVectorCalls);
+        Assert.Equal(0, driver.NodeBfsCalls);
+    }
+
+    [Fact]
+    public async Task NodeSearch_VectorOnlySkipsDisabledFulltextAndBfsDriverCalls()
+    {
+        var vectorNode = new EntityNode { Uuid = "vector", Name = "Alice", GroupId = "group" };
+        var driver = new DriverBackedSearchDriver
+        {
+            NodeVectorHits = { new SearchHit<EntityNode>(vectorNode, 0.9f) }
+        };
+
+        var ranked = await SearchEngine.NodeSearchAsync(
+            driver,
+            new IdentityCrossEncoderClient(),
+            "alice",
+            new[] { 1f, 0f },
+            new[] { "group" },
+            new NodeSearchConfig
+            {
+                SearchMethods = { NodeSearchMethod.CosineSimilarity },
+                Reranker = NodeReranker.Rrf
+            },
+            new SearchFilters(),
+            limit: 3);
+
+        Assert.Equal("vector", Assert.Single(ranked).Item.Uuid);
+        Assert.Equal(0, driver.NodeFulltextCalls);
+        Assert.Equal(1, driver.NodeVectorCalls);
+        Assert.Equal(0, driver.NodeBfsCalls);
     }
 
     [Fact]
@@ -571,6 +711,64 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
+    public async Task EdgeSearch_Bm25OnlySkipsDisabledVectorAndBfsDriverCalls()
+    {
+        var textEdge = new EntityEdge { Uuid = "text", Fact = "Alice likes Bob", GroupId = "group" };
+        var driver = new DriverBackedSearchDriver
+        {
+            EdgeFulltextHits = { new SearchHit<EntityEdge>(textEdge, 8) }
+        };
+
+        var ranked = await SearchEngine.EdgeSearchAsync(
+            driver,
+            new IdentityCrossEncoderClient(),
+            "alice",
+            queryVector: null,
+            new[] { "group" },
+            new EdgeSearchConfig
+            {
+                SearchMethods = { EdgeSearchMethod.Bm25 },
+                Reranker = EdgeReranker.Rrf
+            },
+            new SearchFilters(),
+            limit: 3);
+
+        Assert.Equal("text", Assert.Single(ranked).Item.Uuid);
+        Assert.Equal(1, driver.EdgeFulltextCalls);
+        Assert.Equal(0, driver.EdgeVectorCalls);
+        Assert.Equal(0, driver.EdgeBfsCalls);
+    }
+
+    [Fact]
+    public async Task EdgeSearch_VectorOnlySkipsDisabledFulltextAndBfsDriverCalls()
+    {
+        var vectorEdge = new EntityEdge { Uuid = "vector", Fact = "Alice knows Bob", GroupId = "group" };
+        var driver = new DriverBackedSearchDriver
+        {
+            EdgeVectorHits = { new SearchHit<EntityEdge>(vectorEdge, 0.8f) }
+        };
+
+        var ranked = await SearchEngine.EdgeSearchAsync(
+            driver,
+            new IdentityCrossEncoderClient(),
+            "alice",
+            new[] { 1f, 0f },
+            new[] { "group" },
+            new EdgeSearchConfig
+            {
+                SearchMethods = { EdgeSearchMethod.CosineSimilarity },
+                Reranker = EdgeReranker.Rrf
+            },
+            new SearchFilters(),
+            limit: 3);
+
+        Assert.Equal("vector", Assert.Single(ranked).Item.Uuid);
+        Assert.Equal(0, driver.EdgeFulltextCalls);
+        Assert.Equal(1, driver.EdgeVectorCalls);
+        Assert.Equal(0, driver.EdgeBfsCalls);
+    }
+
+    [Fact]
     public async Task EdgeSearch_CrossEncoderPreservesDuplicateFacts()
     {
         var first = new EntityEdge { Uuid = "edge-first", Fact = "same fact", GroupId = "group" };
@@ -890,6 +1088,33 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
+    public async Task CommunitySearch_Bm25OnlySkipsDisabledVectorDriverCalls()
+    {
+        var textCommunity = new CommunityNode { Uuid = "text", Name = "Planning", GroupId = "group" };
+        var driver = new DriverBackedSearchDriver
+        {
+            CommunityFulltextHits = { new SearchHit<CommunityNode>(textCommunity, 4) }
+        };
+
+        var ranked = await SearchEngine.CommunitySearchAsync(
+            driver,
+            new IdentityCrossEncoderClient(),
+            "planning",
+            queryVector: null,
+            new[] { "group" },
+            new CommunitySearchConfig
+            {
+                SearchMethods = { CommunitySearchMethod.Bm25 },
+                Reranker = CommunityReranker.Rrf
+            },
+            limit: 3);
+
+        Assert.Equal("text", Assert.Single(ranked).Item.Uuid);
+        Assert.Equal(1, driver.CommunityFulltextCalls);
+        Assert.Equal(0, driver.CommunityVectorCalls);
+    }
+
+    [Fact]
     public async Task SearchRetrievalRunner_BfsGuardsSkipDriverCalls()
     {
         var driver = new DriverBackedSearchDriver();
@@ -1090,6 +1315,7 @@ public class SearchEngineDriverBackedTests
         public List<SearchRank> NodeEpisodeMentionRanks { get; } = new();
         public TimeSpan SearchDelay { get; set; }
         public int MaxConcurrentSearchCalls => _maxConcurrentSearchCalls;
+        public bool NodeFulltextCancelsImmediately { get; set; }
         public Exception? NodeFulltextException { get; set; }
         public bool NodeVectorWaitsForCancellation { get; set; }
         public TaskCompletionSource NodeVectorCancellationObserved { get; } =
@@ -1157,6 +1383,11 @@ public class SearchEngineDriverBackedTests
             NodeFulltextCalls++;
             LastNodeFulltextGroupIds = groupIds;
             LastNodeFulltextLimit = limit;
+            if (NodeFulltextCancelsImmediately)
+            {
+                return Task.FromCanceled<IReadOnlyList<SearchHit<EntityNode>>>(new CancellationToken(true));
+            }
+
             if (NodeFulltextException is not null)
             {
                 return Task.FromException<IReadOnlyList<SearchHit<EntityNode>>>(NodeFulltextException);

@@ -116,6 +116,11 @@ improving those providers unless it directly supports shared abstractions or Lad
 - `SearchEngine` now computes implicit BFS origin lists only inside the BFS branch. Explicit
   `bfsOriginNodeUuids` still pass through unchanged, and implicit node/edge origins keep
   text-before-vector, first-seen distinct ordering over node UUIDs and edge source-node UUIDs.
+- `SearchEngine` method-level retrieval orchestration now uses nullable task locals plus a two-task
+  await helper instead of disabled `Task.FromResult(new List<...>())` placeholders and per-method
+  task-list allocations. Empty disabled branches share typed empty arrays, while fault-first sibling
+  cancellation, cancellation-only behavior, disabled driver-call skipping, BFS origin derivation, and
+  `SearchRetrievalRunner` telemetry boundaries remain unchanged.
 - Materialized fallback BFS and ranker shaping now uses allocation-light loops instead of
   grouping/distinct/order LINQ chains. Node/edge BFS results keep the first traversal hit per target,
   node-distance ranks use the known 10/1/0 score buckets over first-seen distinct inputs, episode-
@@ -274,13 +279,13 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after bulk edge snapshot override shaping:
+Latest checkpoint on 2026-06-01 after search orchestration allocation shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 766
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 773
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -452,6 +457,9 @@ These were previously audited and found faithful or intentionally different:
 - Search driver-backed retrieval forwarding, including vector/fulltext argument propagation, BFS
   empty-origin/max-depth guards, explicit BFS-origin pass-through, and implicit node/source-origin
   first-seen distinct ordering
+- SearchEngine method-level retrieval task shaping, including first fault rethrow, sibling
+  cancellation on faults, cancellation-only behavior without internal sibling cancellation, disabled
+  node/edge/community driver-call skipping, and avoiding disabled completed-list task placeholders
 - Materialized fallback BFS/ranker shaping, including shortest first traversal hit retention,
   origin-group filtering, first-seen input de-duplication, stable ranker ties, node-distance score
   buckets, and episode-mention count ranking

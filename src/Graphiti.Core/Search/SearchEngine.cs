@@ -249,6 +249,61 @@ public static class SearchEngine
         await Task.WhenAll(tasks).ConfigureAwait(false);
     }
 
+    private static async Task<(
+        IReadOnlyList<(TItem Item, float Score)> First,
+        IReadOnlyList<(TItem Item, float Score)> Second)> AwaitOptionalSearchMethodsAsync<TItem>(
+        Task<List<(TItem Item, float Score)>>? firstTask,
+        Task<List<(TItem Item, float Score)>>? secondTask,
+        CancellationTokenSource cancellationSource)
+    {
+        if (firstTask is null)
+        {
+            return (
+                EmptyRanked<TItem>(),
+                secondTask is null
+                    ? EmptyRanked<TItem>()
+                    : await secondTask.ConfigureAwait(false));
+        }
+
+        if (secondTask is null)
+        {
+            return (
+                await firstTask.ConfigureAwait(false),
+                EmptyRanked<TItem>());
+        }
+
+        await AwaitSearchPairAsync(firstTask, secondTask, cancellationSource).ConfigureAwait(false);
+        return (
+            await firstTask.ConfigureAwait(false),
+            await secondTask.ConfigureAwait(false));
+    }
+
+    private static (TItem Item, float Score)[] EmptyRanked<TItem>() =>
+        Array.Empty<(TItem Item, float Score)>();
+
+    private static async Task AwaitSearchPairAsync(
+        Task firstTask,
+        Task secondTask,
+        CancellationTokenSource cancellationSource)
+    {
+        var completed = await Task.WhenAny(firstTask, secondTask).ConfigureAwait(false);
+        if (completed.IsFaulted)
+        {
+            cancellationSource.Cancel();
+            try
+            {
+                await Task.WhenAll(firstTask, secondTask).ConfigureAwait(false);
+            }
+            catch
+            {
+            }
+
+            await completed.ConfigureAwait(false);
+        }
+
+        await Task.WhenAll(firstTask, secondTask).ConfigureAwait(false);
+    }
+
     public static async Task<IReadOnlyList<(EntityEdge Item, float Score)>> EdgeSearchAsync(
         IGraphDriver driver,
         ICrossEncoderClient crossEncoder,
@@ -322,7 +377,7 @@ public static class SearchEngine
         var searchDriver = CreateSearchDriver(driver, groupIds, needsEmbeddings);
         using var methodCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var methodCancellationToken = methodCancellation.Token;
-        var textTask = hasBm25
+        Task<List<(EntityEdge Item, float Score)>>? textTask = hasBm25
             ? SearchRetrievalRunner.GetEdgeFulltextRankedAsync(
                 searchDriver,
                 query,
@@ -330,8 +385,8 @@ public static class SearchEngine
                 searchFilter,
                 limit * 2,
                 methodCancellationToken)
-            : Task.FromResult(new List<(EntityEdge Item, float Score)>());
-        var vectorTask = hasCosine && queryVector is not null
+            : null;
+        Task<List<(EntityEdge Item, float Score)>>? vectorTask = hasCosine && queryVector is not null
             ? SearchRetrievalRunner.GetEdgeVectorRankedAsync(
                 searchDriver,
                 queryVector,
@@ -340,13 +395,12 @@ public static class SearchEngine
                 limit * 2,
                 (float)config.SimMinScore,
                 methodCancellationToken)
-            : Task.FromResult(new List<(EntityEdge Item, float Score)>());
-        await AwaitSearchScopesAsync(
-            new List<Task> { textTask, vectorTask },
+            : null;
+        var (textRanked, vectorRanked) = await AwaitOptionalSearchMethodsAsync(
+            textTask,
+            vectorTask,
             methodCancellation).ConfigureAwait(false);
-        var textRanked = await textTask.ConfigureAwait(false);
-        var vectorRanked = await vectorTask.ConfigureAwait(false);
-        var bfsRanked = config.SearchMethods.Contains(EdgeSearchMethod.Bfs)
+        IReadOnlyList<(EntityEdge Item, float Score)> bfsRanked = config.SearchMethods.Contains(EdgeSearchMethod.Bfs)
             ? await SearchRetrievalRunner.EdgeBfsSearchAsync(
                 searchDriver,
                 EdgeBfsOrigins(bfsOriginNodeUuids, textRanked, vectorRanked),
@@ -355,7 +409,7 @@ public static class SearchEngine
                 searchFilter,
                 limit * 2,
                 cancellationToken).ConfigureAwait(false)
-            : new List<(EntityEdge Item, float Score)>();
+            : EmptyRanked<EntityEdge>();
 
         var fusionLimit = config.Reranker == EdgeReranker.Rrf ? limit : int.MaxValue;
         var rankedLists = new IReadOnlyList<(EntityEdge Item, float Score)>[] { textRanked, vectorRanked, bfsRanked };
@@ -483,7 +537,7 @@ public static class SearchEngine
         var searchDriver = CreateSearchDriver(driver, groupIds, needsEmbeddings);
         using var methodCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var methodCancellationToken = methodCancellation.Token;
-        var textTask = hasBm25
+        Task<List<(EntityNode Item, float Score)>>? textTask = hasBm25
             ? SearchRetrievalRunner.GetNodeFulltextRankedAsync(
                 searchDriver,
                 query,
@@ -491,8 +545,8 @@ public static class SearchEngine
                 searchFilter,
                 limit * 2,
                 methodCancellationToken)
-            : Task.FromResult(new List<(EntityNode Item, float Score)>());
-        var vectorTask = hasCosine && queryVector is not null
+            : null;
+        Task<List<(EntityNode Item, float Score)>>? vectorTask = hasCosine && queryVector is not null
             ? SearchRetrievalRunner.GetNodeVectorRankedAsync(
                 searchDriver,
                 queryVector,
@@ -501,13 +555,12 @@ public static class SearchEngine
                 limit * 2,
                 (float)config.SimMinScore,
                 methodCancellationToken)
-            : Task.FromResult(new List<(EntityNode Item, float Score)>());
-        await AwaitSearchScopesAsync(
-            new List<Task> { textTask, vectorTask },
+            : null;
+        var (textRanked, vectorRanked) = await AwaitOptionalSearchMethodsAsync(
+            textTask,
+            vectorTask,
             methodCancellation).ConfigureAwait(false);
-        var textRanked = await textTask.ConfigureAwait(false);
-        var vectorRanked = await vectorTask.ConfigureAwait(false);
-        var bfsRanked = config.SearchMethods.Contains(NodeSearchMethod.Bfs)
+        IReadOnlyList<(EntityNode Item, float Score)> bfsRanked = config.SearchMethods.Contains(NodeSearchMethod.Bfs)
             ? await SearchRetrievalRunner.NodeBfsSearchAsync(
                 searchDriver,
                 NodeBfsOrigins(bfsOriginNodeUuids, textRanked, vectorRanked),
@@ -516,7 +569,7 @@ public static class SearchEngine
                 searchFilter,
                 limit * 2,
                 cancellationToken).ConfigureAwait(false)
-            : new List<(EntityNode Item, float Score)>();
+            : EmptyRanked<EntityNode>();
 
         var fusionLimit = config.Reranker == NodeReranker.Rrf ? limit : int.MaxValue;
         var rankedLists = new IReadOnlyList<(EntityNode Item, float Score)>[] { textRanked, vectorRanked, bfsRanked };
@@ -730,13 +783,13 @@ public static class SearchEngine
             hasCosine || config.Reranker == CommunityReranker.Mmr);
         using var methodCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var methodCancellationToken = methodCancellation.Token;
-        var textTask = SearchRetrievalRunner.GetCommunityFulltextRankedAsync(
+        Task<List<(CommunityNode Item, float Score)>> textTask = SearchRetrievalRunner.GetCommunityFulltextRankedAsync(
             searchDriver,
             query,
             groupIds,
             limit * 2,
             methodCancellationToken);
-        var vectorTask = hasCosine && queryVector is not null
+        Task<List<(CommunityNode Item, float Score)>>? vectorTask = hasCosine && queryVector is not null
             ? SearchRetrievalRunner.GetCommunityVectorRankedAsync(
                 searchDriver,
                 queryVector,
@@ -744,12 +797,11 @@ public static class SearchEngine
                 limit * 2,
                 (float)config.SimMinScore,
                 methodCancellationToken)
-            : Task.FromResult(new List<(CommunityNode Item, float Score)>());
-        await AwaitSearchScopesAsync(
-            new List<Task> { textTask, vectorTask },
+            : null;
+        var (textRanked, vectorRanked) = await AwaitOptionalSearchMethodsAsync(
+            textTask,
+            vectorTask,
             methodCancellation).ConfigureAwait(false);
-        var textRanked = await textTask.ConfigureAwait(false);
-        var vectorRanked = await vectorTask.ConfigureAwait(false);
 
         var fusionLimit = config.Reranker == CommunityReranker.Rrf ? limit : int.MaxValue;
         var rankedLists = new IReadOnlyList<(CommunityNode Item, float Score)>[] { textRanked, vectorRanked };

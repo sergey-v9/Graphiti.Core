@@ -190,13 +190,17 @@ shorter than the old working plans; expand items only when they become active.
 - Bulk edge invalidation snapshots now replace stale graph/search copies with in-batch snapshot
   overrides by UUID while preserving graph-first ranking/limit behavior, related-edge offsets,
   ordered repeated-episode semantics, and canonical coalescing.
-- Good next allocation slice from the 2026-06-01 sidecar scans: search orchestration plumbing in
-  `SearchEngine` / `SearchRetrievalRunner`. Add focused tests first for first-fault rethrow plus
-  sibling cancellation, cancellation-only behavior, disabled methods avoiding driver calls, and
-  top-level scope cancellation. Then replace disabled `Task.FromResult(new List<...>())` placeholders
-  with nullable task locals and empty ranked results, introduce a one/two-task await helper where it
-  simplifies active retrieval branches, and leave `SearchRetrievalRunner` telemetry boundaries
-  intact.
+- Search orchestration method plumbing now avoids disabled `Task.FromResult(new List<...>())`
+  placeholders and per-method two-task list allocations by using nullable task locals, typed empty
+  ranked arrays, and a two-task await helper. Focused driver-backed tests pin first-fault rethrow,
+  sibling cancellation on faults, cancellation-only behavior without internal sibling cancellation,
+  disabled node/edge/community driver calls, and the existing `SearchRetrievalRunner` telemetry
+  boundary.
+- Good next allocation slices from the 2026-06-01 scans: direct ranked-list composition in
+  `SearchResultComposer`/`SearchUtilities` to avoid the small `IReadOnlyList[]` allocations that
+  still connect search branches to fusion/merge, or carefully tested top-level `SearchAsync` scope
+  orchestration cleanup. Keep either slice disjoint, preserve search result ordering and cancellation
+  semantics, and add focused tests before changing behavior-sensitive async coordination.
 
 ## Graphiti Decomposition
 
