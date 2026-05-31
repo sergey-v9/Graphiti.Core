@@ -104,6 +104,12 @@ improving those providers unless it directly supports shared abstractions or Lad
 - `SearchResultComposer.MergeRankedCandidates` now sorts a concrete merged buffer and projects the
   final ranked tuple list with a pre-sized loop. It still keeps the first candidate object for a key,
   carries the maximum score across duplicates, and breaks score ties by first-seen order.
+- `SearchResultComposer` and `SearchUtilities` now have direct one/two/three ranked-list RRF and
+  two/three-list merge paths so `SearchEngine` no longer allocates small `IReadOnlyList[]` buffers
+  just to compose edge, node, episode, or community ranked branches. The enumerable overloads remain
+  for compatibility/tests, and focused tests pin the direct one-list episode RRF path, two-list
+  community RRF/merge paths, three-list edge/node parity, ignored input scores, inclusive min-score
+  filtering, first-seen item retention, max-score duplicate merging, and stable tie ordering.
 - `SearchEngine` now delegates final ranked tuple splitting to
   `SearchResultComposer.SplitRankedResults`, building result lists and reranker-score lists in one
   pass per search scope while preserving order, score conversion to `double`, and the public
@@ -279,13 +285,13 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after search orchestration allocation shaping:
+Latest checkpoint on 2026-06-01 after direct ranked-list composition shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 773
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 778
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -379,6 +385,10 @@ These were previously audited and found faithful or intentionally different:
   oracles
 - Non-RRF ranked-candidate merging in `SearchResultComposer`, including first-seen item retention,
   maximum-score duplicate merging, and first-seen tie ordering
+- Direct ranked-list composition in `SearchResultComposer` / `SearchUtilities`, including direct
+  one-list RRF, two-list RRF/merge, three-list RRF/merge parity with enumerable composition, ignored
+  input scores for RRF, inclusive minimum-score filtering, first-seen item retention, max-score
+  duplicate merging, and stable tie ordering without `SearchEngine` ranked-list array allocation
 - Final search result list splitting in `SearchResultComposer`, including item order preservation and
   score conversion to public `double` score lists
 - Maximal marginal relevance

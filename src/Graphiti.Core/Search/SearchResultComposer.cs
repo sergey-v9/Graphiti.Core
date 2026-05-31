@@ -86,27 +86,120 @@ internal static class SearchResultComposer
         return fused;
     }
 
+    internal static List<(T Item, float Score)> FuseRanks<T>(
+        IReadOnlyList<(T Item, float Score)> first,
+        Func<T, string> keySelector,
+        int limit,
+        float minScore = 0) =>
+        SearchUtilities.ReciprocalRankFusionFromRankedItems(
+            first,
+            keySelector,
+            limit,
+            minScore: minScore);
+
+    internal static List<(T Item, float Score)> FuseRanks<T>(
+        IReadOnlyList<(T Item, float Score)> first,
+        IReadOnlyList<(T Item, float Score)> second,
+        Func<T, string> keySelector,
+        int limit,
+        float minScore = 0) =>
+        SearchUtilities.ReciprocalRankFusionFromRankedItems(
+            first,
+            second,
+            keySelector,
+            limit,
+            minScore: minScore);
+
+    internal static List<(T Item, float Score)> FuseRanks<T>(
+        IReadOnlyList<(T Item, float Score)> first,
+        IReadOnlyList<(T Item, float Score)> second,
+        IReadOnlyList<(T Item, float Score)> third,
+        Func<T, string> keySelector,
+        int limit,
+        float minScore = 0) =>
+        SearchUtilities.ReciprocalRankFusionFromRankedItems(
+            first,
+            second,
+            third,
+            keySelector,
+            limit,
+            minScore: minScore);
+
     internal static List<(T Item, float Score)> MergeRankedCandidates<T>(
         IEnumerable<IReadOnlyList<(T Item, float Score)>> rankedLists,
         Func<T, string> keySelector)
     {
+        ArgumentNullException.ThrowIfNull(rankedLists);
+        ArgumentNullException.ThrowIfNull(keySelector);
+
         var merged = new Dictionary<string, (T Item, float Score, int Index)>(StringComparer.Ordinal);
         var index = 0;
         foreach (var rankedList in rankedLists)
         {
-            foreach (var item in rankedList)
-            {
-                var key = keySelector(item.Item);
-                if (merged.TryGetValue(key, out var existing))
-                {
-                    merged[key] = (existing.Item, Math.Max(existing.Score, item.Score), existing.Index);
-                    continue;
-                }
-
-                merged[key] = (item.Item, item.Score, index++);
-            }
+            AddMergedCandidates(rankedList, keySelector, merged, ref index);
         }
 
+        return ProjectMergedCandidates(merged);
+    }
+
+    internal static List<(T Item, float Score)> MergeRankedCandidates<T>(
+        IReadOnlyList<(T Item, float Score)> first,
+        IReadOnlyList<(T Item, float Score)> second,
+        Func<T, string> keySelector)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(second);
+        ArgumentNullException.ThrowIfNull(keySelector);
+
+        var merged = new Dictionary<string, (T Item, float Score, int Index)>(StringComparer.Ordinal);
+        var index = 0;
+        AddMergedCandidates(first, keySelector, merged, ref index);
+        AddMergedCandidates(second, keySelector, merged, ref index);
+        return ProjectMergedCandidates(merged);
+    }
+
+    internal static List<(T Item, float Score)> MergeRankedCandidates<T>(
+        IReadOnlyList<(T Item, float Score)> first,
+        IReadOnlyList<(T Item, float Score)> second,
+        IReadOnlyList<(T Item, float Score)> third,
+        Func<T, string> keySelector)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(second);
+        ArgumentNullException.ThrowIfNull(third);
+        ArgumentNullException.ThrowIfNull(keySelector);
+
+        var merged = new Dictionary<string, (T Item, float Score, int Index)>(StringComparer.Ordinal);
+        var index = 0;
+        AddMergedCandidates(first, keySelector, merged, ref index);
+        AddMergedCandidates(second, keySelector, merged, ref index);
+        AddMergedCandidates(third, keySelector, merged, ref index);
+        return ProjectMergedCandidates(merged);
+    }
+
+    private static void AddMergedCandidates<T>(
+        IReadOnlyList<(T Item, float Score)> rankedList,
+        Func<T, string> keySelector,
+        Dictionary<string, (T Item, float Score, int Index)> merged,
+        ref int index)
+    {
+        for (var i = 0; i < rankedList.Count; i++)
+        {
+            var item = rankedList[i];
+            var key = keySelector(item.Item);
+            if (merged.TryGetValue(key, out var existing))
+            {
+                merged[key] = (existing.Item, Math.Max(existing.Score, item.Score), existing.Index);
+                continue;
+            }
+
+            merged[key] = (item.Item, item.Score, index++);
+        }
+    }
+
+    private static List<(T Item, float Score)> ProjectMergedCandidates<T>(
+        Dictionary<string, (T Item, float Score, int Index)> merged)
+    {
         var ordered = new List<(T Item, float Score, int Index)>(merged.Values);
         ordered.Sort(static (left, right) =>
         {

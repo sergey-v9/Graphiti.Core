@@ -52,6 +52,72 @@ public class SearchResultComposerTests
     }
 
     [Fact]
+    public void FuseRanks_DirectSingleListUsesRrfScoresAndLimit()
+    {
+        var a = new ComposerCandidate("a", "a");
+        var b = new ComposerCandidate("b", "b");
+        var c = new ComposerCandidate("c", "c");
+
+        var fused = SearchResultComposer.FuseRanks(
+            new[] { (a, 100f), (b, -100f), (c, 50f) },
+            candidate => candidate.Key,
+            limit: 2,
+            minScore: 0.5f);
+
+        Assert.Equal(new[] { "a", "b" }, fused.Select(item => item.Item.Key));
+        Assert.Equal(new[] { 1f, 0.5f }, fused.Select(item => item.Score));
+    }
+
+    [Fact]
+    public void FuseRanks_DirectTwoListsIgnoresInputScoresAndKeepsFirstSeenTieOrder()
+    {
+        var firstA = new ComposerCandidate("a", "first-a");
+        var secondA = new ComposerCandidate("a", "second-a");
+        var b = new ComposerCandidate("b", "b");
+        var c = new ComposerCandidate("c", "c");
+
+        var fused = SearchResultComposer.FuseRanks(
+            new[] { (firstA, -100f), (b, 100f) },
+            new[] { (c, 100f), (secondA, -100f) },
+            candidate => candidate.Key,
+            limit: 10);
+
+        Assert.Equal(new[] { "a", "c", "b" }, fused.Select(item => item.Item.Key));
+        Assert.Equal("first-a", fused[0].Item.Label);
+        Assert.Equal(new[] { 1.5f, 1f, 0.5f }, fused.Select(item => item.Score));
+    }
+
+    [Fact]
+    public void FuseRanks_DirectListsMatchEnumerableComposition()
+    {
+        var firstA = new ComposerCandidate("a", "first-a");
+        var secondA = new ComposerCandidate("a", "second-a");
+        var b = new ComposerCandidate("b", "b");
+        var c = new ComposerCandidate("c", "c");
+        var d = new ComposerCandidate("d", "d");
+        var first = new[] { (firstA, -100f), (b, 100f) };
+        var second = new[] { (c, 100f), (secondA, -100f) };
+        var third = new[] { (d, 50f), (b, 10f) };
+
+        var expected = SearchResultComposer.FuseRanks(
+            new IReadOnlyList<(ComposerCandidate Item, float Score)>[] { first, second, third },
+            candidate => candidate.Key,
+            limit: 10,
+            minScore: 0.75f);
+        var actual = SearchResultComposer.FuseRanks(
+            first,
+            second,
+            third,
+            candidate => candidate.Key,
+            limit: 10,
+            minScore: 0.75f);
+
+        Assert.Equal(expected.Select(item => item.Item.Key), actual.Select(item => item.Item.Key));
+        Assert.Equal(expected.Select(item => item.Item.Label), actual.Select(item => item.Item.Label));
+        Assert.Equal(expected.Select(item => item.Score), actual.Select(item => item.Score));
+    }
+
+    [Fact]
     public void MergeRankedCandidates_KeepsFirstItemAndMaxScoreWithStableTies()
     {
         var firstA = new ComposerCandidate("a", "first-a");
@@ -71,6 +137,50 @@ public class SearchResultComposerTests
         Assert.Equal(new[] { "a", "b", "c" }, merged.Select(item => item.Item.Key));
         Assert.Equal("first-a", merged[0].Item.Label);
         Assert.Equal(new[] { 0.9f, 0.8f, 0.8f }, merged.Select(item => item.Score));
+    }
+
+    [Fact]
+    public void MergeRankedCandidates_DirectTwoListsKeepsFirstItemAndMaxScoreWithStableTies()
+    {
+        var firstA = new ComposerCandidate("a", "first-a");
+        var secondA = new ComposerCandidate("a", "second-a");
+        var b = new ComposerCandidate("b", "b");
+        var c = new ComposerCandidate("c", "c");
+
+        var merged = SearchResultComposer.MergeRankedCandidates(
+            new[] { (firstA, 0.4f), (b, 0.8f) },
+            new[] { (secondA, 0.9f), (c, 0.8f) },
+            candidate => candidate.Key);
+
+        Assert.Equal(new[] { "a", "b", "c" }, merged.Select(item => item.Item.Key));
+        Assert.Equal("first-a", merged[0].Item.Label);
+        Assert.Equal(new[] { 0.9f, 0.8f, 0.8f }, merged.Select(item => item.Score));
+    }
+
+    [Fact]
+    public void MergeRankedCandidates_DirectListsMatchEnumerableComposition()
+    {
+        var firstA = new ComposerCandidate("a", "first-a");
+        var secondA = new ComposerCandidate("a", "second-a");
+        var b = new ComposerCandidate("b", "b");
+        var c = new ComposerCandidate("c", "c");
+        var d = new ComposerCandidate("d", "d");
+        var first = new[] { (firstA, 0.4f), (b, 0.8f) };
+        var second = new[] { (secondA, 0.9f), (c, 0.8f) };
+        var third = new[] { (d, 0.8f), (b, 1f) };
+
+        var expected = SearchResultComposer.MergeRankedCandidates(
+            new IReadOnlyList<(ComposerCandidate Item, float Score)>[] { first, second, third },
+            candidate => candidate.Key);
+        var actual = SearchResultComposer.MergeRankedCandidates(
+            first,
+            second,
+            third,
+            candidate => candidate.Key);
+
+        Assert.Equal(expected.Select(item => item.Item.Key), actual.Select(item => item.Item.Key));
+        Assert.Equal(expected.Select(item => item.Item.Label), actual.Select(item => item.Item.Label));
+        Assert.Equal(expected.Select(item => item.Score), actual.Select(item => item.Score));
     }
 
     [Fact]

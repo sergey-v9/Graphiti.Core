@@ -518,20 +518,7 @@ public static partial class SearchUtilities
         var nextIndex = 0;
         foreach (var rankedList in rankedLists)
         {
-            for (var i = 0; i < rankedList.Count; i++)
-            {
-                var item = rankedList[i].Item;
-                var key = keySelector(item);
-                var score = (float)(1.0 / (i + rankConstant));
-                if (scores.TryGetValue(key, out var existing))
-                {
-                    scores[key] = (existing.Item, existing.Score + score, existing.Index);
-                }
-                else
-                {
-                    scores[key] = (item, score, nextIndex++);
-                }
-            }
+            AddRankedItemScores(rankedList, keySelector, rankConstant, scores, ref nextIndex);
         }
 
         return ProjectIndexedScores(
@@ -543,6 +530,117 @@ public static partial class SearchUtilities
                 minScore,
                 includeMinScore: true));
     }
+
+    internal static List<(T Item, float Score)> ReciprocalRankFusionFromRankedItems<T>(
+        IReadOnlyList<(T Item, float Score)> first,
+        Func<T, string> keySelector,
+        int limit,
+        int rankConstant = 1,
+        float minScore = 0)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(keySelector);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(rankConstant);
+
+        if (limit <= 0)
+        {
+            return [];
+        }
+
+        var scores = new Dictionary<string, (T Item, float Score, int Index)>(StringComparer.Ordinal);
+        var nextIndex = 0;
+        AddRankedItemScores(first, keySelector, rankConstant, scores, ref nextIndex);
+        return ProjectRankedItemScores(scores, limit, minScore);
+    }
+
+    internal static List<(T Item, float Score)> ReciprocalRankFusionFromRankedItems<T>(
+        IReadOnlyList<(T Item, float Score)> first,
+        IReadOnlyList<(T Item, float Score)> second,
+        Func<T, string> keySelector,
+        int limit,
+        int rankConstant = 1,
+        float minScore = 0)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(second);
+        ArgumentNullException.ThrowIfNull(keySelector);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(rankConstant);
+
+        if (limit <= 0)
+        {
+            return [];
+        }
+
+        var scores = new Dictionary<string, (T Item, float Score, int Index)>(StringComparer.Ordinal);
+        var nextIndex = 0;
+        AddRankedItemScores(first, keySelector, rankConstant, scores, ref nextIndex);
+        AddRankedItemScores(second, keySelector, rankConstant, scores, ref nextIndex);
+        return ProjectRankedItemScores(scores, limit, minScore);
+    }
+
+    internal static List<(T Item, float Score)> ReciprocalRankFusionFromRankedItems<T>(
+        IReadOnlyList<(T Item, float Score)> first,
+        IReadOnlyList<(T Item, float Score)> second,
+        IReadOnlyList<(T Item, float Score)> third,
+        Func<T, string> keySelector,
+        int limit,
+        int rankConstant = 1,
+        float minScore = 0)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(second);
+        ArgumentNullException.ThrowIfNull(third);
+        ArgumentNullException.ThrowIfNull(keySelector);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(rankConstant);
+
+        if (limit <= 0)
+        {
+            return [];
+        }
+
+        var scores = new Dictionary<string, (T Item, float Score, int Index)>(StringComparer.Ordinal);
+        var nextIndex = 0;
+        AddRankedItemScores(first, keySelector, rankConstant, scores, ref nextIndex);
+        AddRankedItemScores(second, keySelector, rankConstant, scores, ref nextIndex);
+        AddRankedItemScores(third, keySelector, rankConstant, scores, ref nextIndex);
+        return ProjectRankedItemScores(scores, limit, minScore);
+    }
+
+    private static void AddRankedItemScores<T>(
+        IReadOnlyList<(T Item, float Score)> rankedList,
+        Func<T, string> keySelector,
+        int rankConstant,
+        Dictionary<string, (T Item, float Score, int Index)> scores,
+        ref int nextIndex)
+    {
+        for (var i = 0; i < rankedList.Count; i++)
+        {
+            var item = rankedList[i].Item;
+            var key = keySelector(item);
+            var score = (float)(1.0 / (i + rankConstant));
+            if (scores.TryGetValue(key, out var existing))
+            {
+                scores[key] = (existing.Item, existing.Score + score, existing.Index);
+            }
+            else
+            {
+                scores[key] = (item, score, nextIndex++);
+            }
+        }
+    }
+
+    private static List<(T Item, float Score)> ProjectRankedItemScores<T>(
+        Dictionary<string, (T Item, float Score, int Index)> scores,
+        int limit,
+        float minScore) =>
+        ProjectIndexedScores(
+            TopByScoreCore(
+                scores.Values,
+                item => item.Score,
+                static (item, _) => item.Index,
+                limit,
+                minScore,
+                includeMinScore: true));
 
     private static List<(T Item, float Score)> ProjectIndexedScores<T>(
         IReadOnlyList<((T Item, float Score, int Index) Item, float Score)> ranked)
