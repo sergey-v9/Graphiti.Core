@@ -93,7 +93,6 @@ public static class SearchEngine
             using var scopeCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var scopeCancellationToken = scopeCancellation.Token;
 
-            var scopeTasks = new List<Task>(4);
             Task<IReadOnlyList<(EntityEdge Item, float Score)>>? edgeTask = null;
             Task<IReadOnlyList<(EntityNode Item, float Score)>>? nodeTask = null;
             Task<IReadOnlyList<(EpisodicNode Item, float Score)>>? episodeTask = null;
@@ -114,7 +113,6 @@ public static class SearchEngine
                     centerNodeUuid,
                     bfsOriginNodeUuids,
                     scopeCancellationToken);
-                scopeTasks.Add(edgeTask);
             }
 
             if (config.NodeConfig is not null)
@@ -132,7 +130,6 @@ public static class SearchEngine
                     centerNodeUuid,
                     bfsOriginNodeUuids,
                     scopeCancellationToken);
-                scopeTasks.Add(nodeTask);
             }
 
             if (config.EpisodeConfig is not null)
@@ -147,7 +144,6 @@ public static class SearchEngine
                     config.RerankerMinScore,
                     searchFilter,
                     scopeCancellationToken);
-                scopeTasks.Add(episodeTask);
             }
 
             if (config.CommunityConfig is not null)
@@ -162,12 +158,20 @@ public static class SearchEngine
                     config.Limit,
                     config.RerankerMinScore,
                     scopeCancellationToken);
-                scopeTasks.Add(communityTask);
             }
 
-            if (scopeTasks.Count > 0)
+            if (edgeTask is not null ||
+                nodeTask is not null ||
+                episodeTask is not null ||
+                communityTask is not null)
             {
-                await AwaitSearchScopesAsync(scopeTasks, scopeCancellation).ConfigureAwait(false);
+                await AwaitSearchScopesAsync(
+                        edgeTask,
+                        nodeTask,
+                        episodeTask,
+                        communityTask,
+                        scopeCancellation)
+                    .ConfigureAwait(false);
             }
 
             if (edgeTask is not null)
@@ -221,20 +225,39 @@ public static class SearchEngine
             rankGroupIds,
             materializeEmbeddingsForFulltext);
 
+    private const int EdgeSearchScope = 1;
+    private const int NodeSearchScope = 1 << 1;
+    private const int EpisodeSearchScope = 1 << 2;
+    private const int CommunitySearchScope = 1 << 3;
+
     private static async Task AwaitSearchScopesAsync(
-        List<Task> tasks,
+        Task? edgeTask,
+        Task? nodeTask,
+        Task? episodeTask,
+        Task? communityTask,
         CancellationTokenSource cancellationSource)
     {
-        var remaining = new List<Task>(tasks);
-        while (remaining.Count > 0)
+        var activeScopes = SearchScopeMask(edgeTask, nodeTask, episodeTask, communityTask);
+        while (activeScopes != 0)
         {
-            var completed = await Task.WhenAny(remaining).ConfigureAwait(false);
+            var completed = await AwaitAnySearchScopeAsync(
+                    edgeTask,
+                    nodeTask,
+                    episodeTask,
+                    communityTask,
+                    activeScopes)
+                .ConfigureAwait(false);
             if (completed.IsFaulted)
             {
                 cancellationSource.Cancel();
                 try
                 {
-                    await Task.WhenAll(tasks).ConfigureAwait(false);
+                    await AwaitAllSearchScopesAsync(
+                            edgeTask,
+                            nodeTask,
+                            episodeTask,
+                            communityTask)
+                        .ConfigureAwait(false);
                 }
                 catch
                 {
@@ -243,10 +266,270 @@ public static class SearchEngine
                 await completed.ConfigureAwait(false);
             }
 
-            remaining.Remove(completed);
+            activeScopes = RemoveCompletedSearchScope(
+                activeScopes,
+                completed,
+                edgeTask,
+                nodeTask,
+                episodeTask,
+                communityTask);
         }
 
-        await Task.WhenAll(tasks).ConfigureAwait(false);
+        await AwaitAllSearchScopesAsync(edgeTask, nodeTask, episodeTask, communityTask)
+            .ConfigureAwait(false);
+    }
+
+    private static int SearchScopeMask(
+        Task? edgeTask,
+        Task? nodeTask,
+        Task? episodeTask,
+        Task? communityTask)
+    {
+        var mask = 0;
+        if (edgeTask is not null)
+        {
+            mask |= EdgeSearchScope;
+        }
+
+        if (nodeTask is not null)
+        {
+            mask |= NodeSearchScope;
+        }
+
+        if (episodeTask is not null)
+        {
+            mask |= EpisodeSearchScope;
+        }
+
+        if (communityTask is not null)
+        {
+            mask |= CommunitySearchScope;
+        }
+
+        return mask;
+    }
+
+    private static int RemoveCompletedSearchScope(
+        int activeScopes,
+        Task completed,
+        Task? edgeTask,
+        Task? nodeTask,
+        Task? episodeTask,
+        Task? communityTask)
+    {
+        if ((activeScopes & EdgeSearchScope) != 0 && ReferenceEquals(completed, edgeTask))
+        {
+            return activeScopes & ~EdgeSearchScope;
+        }
+
+        if ((activeScopes & NodeSearchScope) != 0 && ReferenceEquals(completed, nodeTask))
+        {
+            return activeScopes & ~NodeSearchScope;
+        }
+
+        if ((activeScopes & EpisodeSearchScope) != 0 && ReferenceEquals(completed, episodeTask))
+        {
+            return activeScopes & ~EpisodeSearchScope;
+        }
+
+        if ((activeScopes & CommunitySearchScope) != 0 && ReferenceEquals(completed, communityTask))
+        {
+            return activeScopes & ~CommunitySearchScope;
+        }
+
+        throw new UnreachableException("Completed search scope was not active.");
+    }
+
+    private static Task<Task> AwaitAnySearchScopeAsync(
+        Task? edgeTask,
+        Task? nodeTask,
+        Task? episodeTask,
+        Task? communityTask,
+        int activeScopes)
+    {
+        var count = SelectSearchScopes(
+            edgeTask,
+            nodeTask,
+            episodeTask,
+            communityTask,
+            activeScopes,
+            out var firstTask,
+            out var secondTask,
+            out var thirdTask,
+            out var fourthTask);
+
+        return count switch
+        {
+            1 => AwaitCompletedSearchScopeAsync(firstTask!),
+            2 => Task.WhenAny(firstTask!, secondTask!),
+            3 => WhenAny(firstTask!, secondTask!, thirdTask!),
+            4 => WhenAny(firstTask!, secondTask!, thirdTask!, fourthTask!),
+            _ => throw new UnreachableException("No active search scopes were selected."),
+        };
+    }
+
+    private static async Task<Task> AwaitCompletedSearchScopeAsync(Task task)
+    {
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch
+        {
+        }
+
+        return task;
+    }
+
+    private static Task AwaitAllSearchScopesAsync(
+        Task? edgeTask,
+        Task? nodeTask,
+        Task? episodeTask,
+        Task? communityTask)
+    {
+        var count = SelectSearchScopes(
+            edgeTask,
+            nodeTask,
+            episodeTask,
+            communityTask,
+            SearchScopeMask(edgeTask, nodeTask, episodeTask, communityTask),
+            out var firstTask,
+            out var secondTask,
+            out var thirdTask,
+            out var fourthTask);
+
+        return count switch
+        {
+            0 => Task.CompletedTask,
+            1 => firstTask!,
+            2 => WhenAll(firstTask!, secondTask!),
+            3 => WhenAll(firstTask!, secondTask!, thirdTask!),
+            4 => WhenAll(firstTask!, secondTask!, thirdTask!, fourthTask!),
+            _ => throw new UnreachableException("Too many search scopes were selected."),
+        };
+    }
+
+    private static int SelectSearchScopes(
+        Task? edgeTask,
+        Task? nodeTask,
+        Task? episodeTask,
+        Task? communityTask,
+        int activeScopes,
+        out Task? firstTask,
+        out Task? secondTask,
+        out Task? thirdTask,
+        out Task? fourthTask)
+    {
+        var count = 0;
+        firstTask = null;
+        secondTask = null;
+        thirdTask = null;
+        fourthTask = null;
+
+        if ((activeScopes & EdgeSearchScope) != 0)
+        {
+            AddSearchScope(
+                edgeTask,
+                ref count,
+                ref firstTask,
+                ref secondTask,
+                ref thirdTask,
+                ref fourthTask);
+        }
+
+        if ((activeScopes & NodeSearchScope) != 0)
+        {
+            AddSearchScope(
+                nodeTask,
+                ref count,
+                ref firstTask,
+                ref secondTask,
+                ref thirdTask,
+                ref fourthTask);
+        }
+
+        if ((activeScopes & EpisodeSearchScope) != 0)
+        {
+            AddSearchScope(
+                episodeTask,
+                ref count,
+                ref firstTask,
+                ref secondTask,
+                ref thirdTask,
+                ref fourthTask);
+        }
+
+        if ((activeScopes & CommunitySearchScope) != 0)
+        {
+            AddSearchScope(
+                communityTask,
+                ref count,
+                ref firstTask,
+                ref secondTask,
+                ref thirdTask,
+                ref fourthTask);
+        }
+
+        return count;
+    }
+
+    private static void AddSearchScope(
+        Task? task,
+        ref int count,
+        ref Task? firstTask,
+        ref Task? secondTask,
+        ref Task? thirdTask,
+        ref Task? fourthTask)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+
+        switch (count++)
+        {
+            case 0:
+                firstTask = task;
+                break;
+            case 1:
+                secondTask = task;
+                break;
+            case 2:
+                thirdTask = task;
+                break;
+            case 3:
+                fourthTask = task;
+                break;
+            default:
+                throw new UnreachableException("Too many search scopes were selected.");
+        }
+    }
+
+    private static Task<Task> WhenAny(Task firstTask, Task secondTask, Task thirdTask)
+    {
+        ReadOnlySpan<Task> tasks = [firstTask, secondTask, thirdTask];
+        return Task.WhenAny(tasks);
+    }
+
+    private static Task<Task> WhenAny(Task firstTask, Task secondTask, Task thirdTask, Task fourthTask)
+    {
+        ReadOnlySpan<Task> tasks = [firstTask, secondTask, thirdTask, fourthTask];
+        return Task.WhenAny(tasks);
+    }
+
+    private static Task WhenAll(Task firstTask, Task secondTask)
+    {
+        ReadOnlySpan<Task> tasks = [firstTask, secondTask];
+        return Task.WhenAll(tasks);
+    }
+
+    private static Task WhenAll(Task firstTask, Task secondTask, Task thirdTask)
+    {
+        ReadOnlySpan<Task> tasks = [firstTask, secondTask, thirdTask];
+        return Task.WhenAll(tasks);
+    }
+
+    private static Task WhenAll(Task firstTask, Task secondTask, Task thirdTask, Task fourthTask)
+    {
+        ReadOnlySpan<Task> tasks = [firstTask, secondTask, thirdTask, fourthTask];
+        return Task.WhenAll(tasks);
     }
 
     private static async Task<(
@@ -292,7 +575,7 @@ public static class SearchEngine
             cancellationSource.Cancel();
             try
             {
-                await Task.WhenAll(firstTask, secondTask).ConfigureAwait(false);
+                await WhenAll(firstTask, secondTask).ConfigureAwait(false);
             }
             catch
             {
@@ -301,7 +584,7 @@ public static class SearchEngine
             await completed.ConfigureAwait(false);
         }
 
-        await Task.WhenAll(firstTask, secondTask).ConfigureAwait(false);
+        await WhenAll(firstTask, secondTask).ConfigureAwait(false);
     }
 
     public static async Task<IReadOnlyList<(EntityEdge Item, float Score)>> EdgeSearchAsync(

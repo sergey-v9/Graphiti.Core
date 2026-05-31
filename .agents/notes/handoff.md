@@ -127,6 +127,12 @@ improving those providers unless it directly supports shared abstractions or Lad
   task-list allocations. Empty disabled branches share typed empty arrays, while fault-first sibling
   cancellation, cancellation-only behavior, disabled driver-call skipping, BFS origin derivation, and
   `SearchRetrievalRunner` telemetry boundaries remain unchanged.
+- `SearchEngine.SearchAsync` top-level scope orchestration now awaits nullable edge/node/episode/
+  community scope tasks directly instead of allocating `List<Task>(4)` plus a copied remaining list.
+  It preserves fixed startup and result-assignment order, first-fault rethrow, fault-driven sibling
+  cancellation and drain, cancellation-only behavior, telemetry boundaries, and query-vector
+  materialization timing. The shared two-task await helper now also uses the span-based `WhenAll`
+  helper for final and drain waits.
 - Materialized fallback BFS and ranker shaping now uses allocation-light loops instead of
   grouping/distinct/order LINQ chains. Node/edge BFS results keep the first traversal hit per target,
   node-distance ranks use the known 10/1/0 score buckets over first-seen distinct inputs, episode-
@@ -285,12 +291,15 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after direct ranked-list composition shaping:
+Latest checkpoint on 2026-06-01 after top-level search scope orchestration shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --filter
+  "FullyQualifiedName~SearchEngineDriverBackedTests|FullyQualifiedName~SearchEngineRrfTests"
+  --verbosity minimal` passed with 56 tests.
 - `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 778
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
@@ -470,6 +479,10 @@ These were previously audited and found faithful or intentionally different:
 - SearchEngine method-level retrieval task shaping, including first fault rethrow, sibling
   cancellation on faults, cancellation-only behavior without internal sibling cancellation, disabled
   node/edge/community driver-call skipping, and avoiding disabled completed-list task placeholders
+- SearchEngine top-level scope orchestration, including direct nullable edge/node/episode/community
+  scope task coordination without task-list allocation, four-scope concurrent startup/result
+  assignment, first fault rethrow, sibling cancellation on faults, cancellation-only behavior without
+  internal sibling cancellation, and final/drain waits through the span-based `WhenAll` helper
 - Materialized fallback BFS/ranker shaping, including shortest first traversal hit retention,
   origin-group filtering, first-seen input de-duplication, stable ranker ties, node-distance score
   buckets, and episode-mention count ranking

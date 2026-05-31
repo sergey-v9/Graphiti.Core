@@ -75,7 +75,7 @@ Verified build/test command from this folder:
 dotnet test "Graphiti.Core.CSharp.slnx" --verbosity minimal
 ```
 
-Verified on 2026-06-01 after direct ranked-list composition shaping:
+Verified on 2026-06-01 after top-level search scope orchestration shaping:
 restore/format/build succeeded with 0 warnings and 778 tests passed.
 
 Port contract:

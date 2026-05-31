@@ -10,12 +10,14 @@ public class SearchEngineDriverBackedTests
         var edge = new EntityEdge { Uuid = "edge", Fact = "alpha edge", GroupId = "group" };
         var node = new EntityNode { Uuid = "node", Name = "Alpha", GroupId = "group" };
         var episode = new EpisodicNode { Uuid = "episode", Name = "Episode", Content = "alpha episode", GroupId = "group" };
+        var community = new CommunityNode { Uuid = "community", Name = "Community", Summary = "alpha community", GroupId = "group" };
         var driver = new DriverBackedSearchDriver
         {
             SearchDelay = TimeSpan.FromMilliseconds(50),
             EdgeFulltextHits = { new SearchHit<EntityEdge>(edge, 2) },
             NodeFulltextHits = { new SearchHit<EntityNode>(node, 2) },
-            EpisodeFulltextHits = { new SearchHit<EpisodicNode>(episode, 2) }
+            EpisodeFulltextHits = { new SearchHit<EpisodicNode>(episode, 2) },
+            CommunityFulltextHits = { new SearchHit<CommunityNode>(community, 2) }
         };
         var clients = new GraphitiClients(
             driver,
@@ -40,14 +42,20 @@ public class SearchEngineDriverBackedTests
                     SearchMethods = { NodeSearchMethod.Bm25 },
                     Reranker = NodeReranker.Rrf
                 },
-                EpisodeConfig = new EpisodeSearchConfig()
+                EpisodeConfig = new EpisodeSearchConfig(),
+                CommunityConfig = new CommunitySearchConfig
+                {
+                    SearchMethods = { CommunitySearchMethod.Bm25 },
+                    Reranker = CommunityReranker.Rrf
+                }
             },
             new SearchFilters());
 
-        Assert.True(driver.MaxConcurrentSearchCalls > 1);
+        Assert.Equal(4, driver.MaxConcurrentSearchCalls);
         Assert.Equal("edge", Assert.Single(results.Edges).Uuid);
         Assert.Equal("node", Assert.Single(results.Nodes).Uuid);
         Assert.Equal("episode", Assert.Single(results.Episodes).Uuid);
+        Assert.Equal("community", Assert.Single(results.Communities).Uuid);
     }
 
     [Fact]

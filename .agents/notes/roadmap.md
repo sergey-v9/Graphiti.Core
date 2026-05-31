@@ -196,14 +196,19 @@ shorter than the old working plans; expand items only when they become active.
   sibling cancellation on faults, cancellation-only behavior without internal sibling cancellation,
   disabled node/edge/community driver calls, and the existing `SearchRetrievalRunner` telemetry
   boundary.
+- Top-level `SearchAsync` scope orchestration now avoids the `List<Task>(4)` and copied remaining
+  list by coordinating nullable edge/node/episode/community scope tasks directly. Focused
+  driver-backed tests pin four-scope concurrent startup and result assignment, first-fault rethrow,
+  sibling cancellation on faults, and cancellation-only behavior without internal sibling
+  cancellation.
 - Direct ranked-list composition in `SearchResultComposer`/`SearchUtilities` now avoids the small
   `IReadOnlyList[]` allocations that previously connected `SearchEngine` branches to fusion/merge.
   Tests pin one-list RRF, two-list RRF/merge, three-list parity, and the existing RRF/merge ordering
   semantics.
-- Good next allocation slice from the 2026-06-01 scans: carefully tested top-level `SearchAsync`
-  scope orchestration cleanup. Preserve first-fault rethrow, sibling scope cancellation on faults,
-  cancellation-only behavior, result assignment order, telemetry boundaries, and query-vector
-  materialization timing before changing behavior-sensitive async coordination.
+- Good next allocation slice from the 2026-06-01 scans: continue with a fresh targeted scan before
+  editing. Prefer remaining measurable search/telemetry hot spots or move back to LadybugDB package
+  proof; avoid behavior-sensitive async coordination changes unless a focused test can pin the exact
+  parity contract first.
 
 ## Graphiti Decomposition
 
