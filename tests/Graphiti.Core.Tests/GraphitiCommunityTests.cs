@@ -1,0 +1,748 @@
+using System.Text.Json.Nodes;
+using Graphiti.Core;
+
+namespace Graphiti.Core.Tests;
+
+public class GraphitiCommunityTests
+{
+    [Fact]
+    public void CommunityClustering_UsesSynchronousPythonSemantics()
+    {
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var a = Entity("A", "group", now, "a");
+        var b = Entity("B", "group", now, "b");
+        var c = Entity("C", "group", now, "c");
+        var d = Entity("D", "group", now, "d");
+        var e = Entity("E", "group", now, "e");
+
+        var clusters = CommunityClustering.BuildClusters(
+            new[] { a, b, c, d, e },
+            new[]
+            {
+                Relates(a, c, "group", now),
+                Relates(b, c, "group", now),
+                Relates(c, d, "group", now)
+            });
+
+        Assert.Equal(
+            new[] { new[] { "a", "b", "c", "d" }, new[] { "e" } },
+            ClusterUuids(clusters));
+    }
+
+    [Fact]
+    public void CommunityClustering_MatchesSynchronousOracleForDeterministicGraph()
+    {
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var nodes = Enumerable.Range(0, 8)
+            .Select(index => Entity($"Node {index}", "group", now, $"node-{index}"))
+            .ToArray();
+        var edges = new[]
+        {
+            Relates(nodes[0], nodes[2], "group", now),
+            Relates(nodes[1], nodes[2], "group", now),
+            Relates(nodes[2], nodes[3], "group", now),
+            Relates(nodes[4], nodes[5], "group", now),
+            Relates(nodes[5], nodes[6], "group", now),
+            Relates(nodes[6], nodes[4], "group", now),
+            Relates(nodes[6], nodes[7], "group", now)
+        };
+
+        var actual = ClusterUuids(CommunityClustering.BuildClusters(nodes, edges));
+        var expected = SynchronousLabelPropagationOracle(nodes, edges);
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void CommunityClustering_UsesInputOrderForInitialCommunityIds()
+    {
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var a = Entity("A", "group", now, "a");
+        var b = Entity("B", "group", now, "b");
+        var c = Entity("C", "group", now, "c");
+        var d = Entity("D", "group", now, "d");
+        var e = Entity("E", "group", now, "e");
+        var nodes = new[] { b, d, e, a, c };
+        var edges = new[]
+        {
+            Relates(a, b, "group", now),
+            Relates(a, d, "group", now),
+            Relates(a, e, "group", now),
+            Relates(b, c, "group", now)
+        };
+
+        var actual = ClusterUuids(CommunityClustering.BuildClusters(nodes, edges));
+
+        Assert.Equal(new[] { new[] { "a", "d", "e" }, new[] { "b", "c" } }, actual);
+        Assert.Equal(SynchronousLabelPropagationOracle(nodes, edges), actual);
+    }
+
+    [Fact]
+    public async Task BuildCommunities_LabelPropagationUsesSynchronousPythonSemantics()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var a = Entity("A", "group", now, "a");
+        var b = Entity("B", "group", now, "b");
+        var c = Entity("C", "group", now, "c");
+        var d = Entity("D", "group", now, "d");
+        var e = Entity("E", "group", now, "e");
+        foreach (var node in new[] { a, b, c, d, e })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        await Relates(a, c, "group", now).SaveAsync(driver);
+        await Relates(b, c, "group", now).SaveAsync(driver);
+        await Relates(c, d, "group", now).SaveAsync(driver);
+
+        var (communities, communityEdges) = await graphiti.BuildCommunitiesAsync(new[] { "group" });
+
+        Assert.Equal(2, communities.Count);
+        Assert.Equal(5, communityEdges.Count);
+        var communityByEntity = communityEdges.ToDictionary(edge => edge.TargetNodeUuid, edge => edge.SourceNodeUuid);
+        Assert.Equal(communityByEntity[a.Uuid], communityByEntity[b.Uuid]);
+        Assert.Equal(communityByEntity[a.Uuid], communityByEntity[c.Uuid]);
+        Assert.Equal(communityByEntity[a.Uuid], communityByEntity[d.Uuid]);
+        Assert.NotEqual(communityByEntity[a.Uuid], communityByEntity[e.Uuid]);
+    }
+
+    [Fact]
+    public async Task BuildCommunities_CreatesGroupScopedCommunitiesAndIgnoresCrossGroupEdges()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group-a", now);
+        var bob = Entity("Bob", "group-a", now);
+        var carol = Entity("Carol", "group-b", now);
+        var dana = Entity("Dana", "group-b", now);
+
+        foreach (var node in new[] { alice, bob, carol, dana })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        await Relates(alice, bob, "group-a", now).SaveAsync(driver);
+        await Relates(carol, dana, "group-b", now).SaveAsync(driver);
+        await Relates(bob, carol, "cross-group", now).SaveAsync(driver);
+
+        var (communities, communityEdges) = await graphiti.BuildCommunitiesAsync();
+
+        Assert.Equal(2, communities.Count);
+        Assert.Equal(4, communityEdges.Count);
+
+        var communityByEntity = communityEdges.ToDictionary(edge => edge.TargetNodeUuid, edge => edge.SourceNodeUuid);
+        Assert.Equal(communityByEntity[alice.Uuid], communityByEntity[bob.Uuid]);
+        Assert.Equal(communityByEntity[carol.Uuid], communityByEntity[dana.Uuid]);
+        Assert.NotEqual(communityByEntity[alice.Uuid], communityByEntity[carol.Uuid]);
+
+        Assert.Single(await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group-a" }));
+        Assert.Single(await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group-b" }));
+    }
+
+    [Fact]
+    public async Task BuildCommunities_RemovesExistingCommunitiesBeforeRebuild()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group", now);
+        var bob = Entity("Bob", "group", now);
+        await alice.SaveAsync(driver);
+        await bob.SaveAsync(driver);
+        await Relates(alice, bob, "group", now).SaveAsync(driver);
+
+        await graphiti.BuildCommunitiesAsync(new[] { "group" });
+        await graphiti.BuildCommunitiesAsync(new[] { "group" });
+
+        var storedCommunities = await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group" });
+        var storedCommunityEdges = await CommunityEdge.GetByGroupIdsAsync(driver, new[] { "group" });
+
+        Assert.Single(storedCommunities);
+        Assert.Equal(2, storedCommunityEdges.Count);
+        Assert.All(storedCommunityEdges, edge => Assert.Equal(storedCommunities[0].Uuid, edge.SourceNodeUuid));
+    }
+
+    [Fact]
+    public async Task BuildCommunities_UsesStructuredSummaryAndNameResponses()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new CapturingCommunityLlmClient();
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group", now);
+        var bob = Entity("Bob", "group", now);
+        await alice.SaveAsync(driver);
+        await bob.SaveAsync(driver);
+        await Relates(alice, bob, "group", now).SaveAsync(driver);
+
+        var (communities, _) = await graphiti.BuildCommunitiesAsync(new[] { "group" });
+
+        var community = Assert.Single(communities);
+        Assert.Equal("Team community", community.Name);
+        Assert.Equal("combined team", community.Summary);
+        Assert.Equal(
+            "CommunitySummaryResponse",
+            llm.ResponseModelsByPrompt["summarize_nodes.summarize_pair"].Single()?.Name);
+        Assert.Equal(
+            "CommunityNameResponse",
+            llm.ResponseModelsByPrompt["summarize_nodes.summary_description"].Single()?.Name);
+    }
+
+    [Fact]
+    public async Task BuildCommunities_RebuildRemovesCommunitiesAcrossAllGroups()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group-a", now);
+        var bob = Entity("Bob", "group-a", now);
+        var carol = Entity("Carol", "group-b", now);
+        var dana = Entity("Dana", "group-b", now);
+        foreach (var node in new[] { alice, bob, carol, dana })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        await Relates(alice, bob, "group-a", now).SaveAsync(driver);
+        await Relates(carol, dana, "group-b", now).SaveAsync(driver);
+        await graphiti.BuildCommunitiesAsync();
+
+        await graphiti.BuildCommunitiesAsync(new[] { "group-a" });
+
+        Assert.Single(await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group-a" }));
+        Assert.Empty(await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group-b" }));
+        Assert.Empty(await CommunityEdge.GetByGroupIdsAsync(driver, new[] { "group-b" }));
+    }
+
+    [Fact]
+    public async Task BuildCommunities_NoGroupIdsUsesDriverDiscoveredEntityGroups()
+    {
+        var inner = new InMemoryGraphDriver();
+        var driver = new DelegatingGraphDriver(inner);
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group-a", now);
+        var bob = Entity("Bob", "group-a", now);
+        var carol = Entity("Carol", "group-b", now);
+        var dana = Entity("Dana", "group-b", now);
+        foreach (var node in new[] { alice, bob, carol, dana })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        await Relates(alice, bob, "group-a", now).SaveAsync(driver);
+        await Relates(carol, dana, "group-b", now).SaveAsync(driver);
+
+        var (communities, communityEdges) = await graphiti.BuildCommunitiesAsync();
+
+        Assert.Equal(2, communities.Count);
+        Assert.Equal(4, communityEdges.Count);
+        Assert.Single(await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group-a" }));
+        Assert.Single(await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group-b" }));
+    }
+
+    [Fact]
+    public async Task BuildCommunities_GeneratesIndependentClustersConcurrentlyAndPreservesOrder()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new DelayedCommunityLlmClient();
+        var embedder = new DelayedCommunityEmbedder();
+        var graphiti = new Graphiti(
+            llmClient: llm,
+            embedder: embedder,
+            graphDriver: driver,
+            maxCoroutines: 2);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alpha = Entity("Alpha", "group", now, "alpha");
+        var beta = Entity("Beta", "group", now, "beta");
+        var gamma = Entity("Gamma", "group", now, "gamma");
+        foreach (var node in new[] { alpha, beta, gamma })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        var (communities, communityEdges) = await graphiti.BuildCommunitiesAsync(new[] { "group" });
+
+        Assert.Equal(new[] { "Community Alpha", "Community Beta", "Community Gamma" }, communities.Select(community => community.Name));
+        Assert.Equal(new[] { "alpha", "beta", "gamma" }, communityEdges.Select(edge => edge.TargetNodeUuid));
+        Assert.Equal(3, llm.TrackedPromptCalls);
+        Assert.InRange(llm.MaxObservedConcurrency, 2, 2);
+        Assert.InRange(embedder.MaxObservedConcurrency, 2, 2);
+        Assert.Equal(3, llm.CompletedNames.Count);
+        Assert.Equal("Beta", llm.CompletedNames[0]);
+        Assert.All(llm.ResponseModels, responseModel => Assert.Equal("CommunityNameResponse", responseModel?.Name));
+    }
+
+    [Fact]
+    public async Task AddEpisode_WithUpdateCommunities_AttachesResolvedNodeToNeighborCommunity()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new StaticJsonLlmClient(messages =>
+        {
+            var user = messages.Count > 0 ? messages[^1].Content : string.Empty;
+            var system = messages.Count > 0 ? messages[0].Content : string.Empty;
+            if (user.Contains("Carol works with Alice", StringComparison.Ordinal))
+            {
+                return new JsonObject
+                {
+                    ["entities"] = new JsonArray(
+                        new JsonObject { ["name"] = "Carol", ["type"] = "Person" },
+                        new JsonObject { ["name"] = "Alice", ["type"] = "Person" }),
+                    ["edges"] = new JsonArray(
+                        new JsonObject
+                        {
+                            ["source"] = "Carol",
+                            ["target"] = "Alice",
+                            ["name"] = "WORKS_WITH",
+                            ["fact"] = "Carol works with Alice"
+                        })
+                };
+            }
+
+            if (system.Contains("Summarize", StringComparison.Ordinal))
+            {
+                return new JsonObject { ["summary"] = "People who work together" };
+            }
+
+            if (system.Contains("Name", StringComparison.Ordinal))
+            {
+                return new JsonObject { ["description"] = "Work group" };
+            }
+
+            return new JsonObject();
+        });
+        var graphiti = new Graphiti(llmClient: llm, graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group", now);
+        var bob = Entity("Bob", "group", now);
+        await alice.SaveAsync(driver);
+        await bob.SaveAsync(driver);
+        await Relates(alice, bob, "group", now).SaveAsync(driver);
+        await graphiti.BuildCommunitiesAsync(new[] { "group" });
+
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Carol works with Alice",
+            "message",
+            now.AddMinutes(1),
+            groupId: "group",
+            updateCommunities: true);
+        var carol = Assert.Single(result.Nodes, node => node.Name == "Carol");
+        var aliceResult = Assert.Single(result.Nodes, node => node.Name == "Alice");
+
+        Assert.Equal(alice.Uuid, aliceResult.Uuid);
+        Assert.Single(result.CommunityEdges);
+        Assert.Equal(carol.Uuid, result.CommunityEdges[0].TargetNodeUuid);
+        Assert.NotEmpty(result.Communities);
+
+        var carolCommunities = await driver.GetCommunitiesByNodesAsync(new[] { carol });
+        Assert.Single(carolCommunities);
+        var storedCommunityEdges = await CommunityEdge.GetByGroupIdsAsync(driver, new[] { "group" });
+        Assert.Equal(3, storedCommunityEdges.Count);
+    }
+
+    private static EntityNode Entity(string name, string groupId, DateTime createdAt) =>
+        new()
+        {
+            Name = name,
+            GroupId = groupId,
+            Labels = new List<string> { "Entity" },
+            CreatedAt = createdAt,
+            Summary = $"{name} summary"
+        };
+
+    private static EntityNode Entity(string name, string groupId, DateTime createdAt, string uuid)
+    {
+        var node = Entity(name, groupId, createdAt);
+        node.Uuid = uuid;
+        return node;
+    }
+
+    private static EntityEdge Relates(EntityNode source, EntityNode target, string groupId, DateTime createdAt) =>
+        new()
+        {
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = target.Uuid,
+            GroupId = groupId,
+            CreatedAt = createdAt,
+            Name = "RELATES_TO",
+            Fact = $"{source.Name} relates to {target.Name}"
+        };
+
+    private static string[][] ClusterUuids(IReadOnlyList<List<EntityNode>> clusters) =>
+        clusters
+            .Select(cluster => cluster.Select(node => node.Uuid).ToArray())
+            .ToArray();
+
+    private static string[][] SynchronousLabelPropagationOracle(
+        IReadOnlyList<EntityNode> nodes,
+        IReadOnlyList<EntityEdge> edges)
+    {
+        var nodesByUuid = nodes
+            .GroupBy(node => node.Uuid, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        var orderedUuids = nodes
+            .GroupBy(node => node.Uuid, StringComparer.Ordinal)
+            .Select(group => group.Key)
+            .ToArray();
+        var projection = orderedUuids.ToDictionary(
+            uuid => uuid,
+            _ => new Dictionary<string, int>(StringComparer.Ordinal),
+            StringComparer.Ordinal);
+        foreach (var edge in edges)
+        {
+            if (!projection.ContainsKey(edge.SourceNodeUuid) || !projection.ContainsKey(edge.TargetNodeUuid))
+            {
+                continue;
+            }
+
+            Increment(projection[edge.SourceNodeUuid], edge.TargetNodeUuid);
+            Increment(projection[edge.TargetNodeUuid], edge.SourceNodeUuid);
+        }
+
+        var communityByUuid = orderedUuids
+            .Select((uuid, index) => (uuid, index))
+            .ToDictionary(item => item.uuid, item => item.index, StringComparer.Ordinal);
+        for (var iteration = 0; iteration < Math.Max(100, orderedUuids.Length * orderedUuids.Length); iteration++)
+        {
+            var noChange = true;
+            var newCommunityByUuid = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var uuid in orderedUuids)
+            {
+                var currentCommunity = communityByUuid[uuid];
+                var candidates = new Dictionary<int, int>();
+                foreach (var neighbor in projection[uuid])
+                {
+                    var community = communityByUuid[neighbor.Key];
+                    candidates.TryGetValue(community, out var edgeCount);
+                    candidates[community] = edgeCount + neighbor.Value;
+                }
+
+                var selected = currentCommunity;
+                if (candidates.Count > 0)
+                {
+                    var best = candidates
+                        .OrderByDescending(pair => pair.Value)
+                        .ThenByDescending(pair => pair.Key)
+                        .First();
+                    selected = best.Value > 1 ? best.Key : Math.Max(best.Key, currentCommunity);
+                }
+
+                newCommunityByUuid[uuid] = selected;
+                noChange &= selected == currentCommunity;
+            }
+
+            if (noChange)
+            {
+                break;
+            }
+
+            communityByUuid = newCommunityByUuid;
+        }
+
+        return communityByUuid
+            .GroupBy(pair => pair.Value)
+            .Select(group => group
+                .Select(pair => nodesByUuid[pair.Key])
+                .OrderBy(node => node.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(node => node.Uuid, StringComparer.Ordinal)
+                .Select(node => node.Uuid)
+                .ToArray())
+            .OrderBy(cluster => nodesByUuid[cluster[0]].Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(cluster => cluster[0], StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static void Increment(Dictionary<string, int> neighbors, string uuid)
+    {
+        neighbors.TryGetValue(uuid, out var count);
+        neighbors[uuid] = count + 1;
+    }
+
+    private sealed class CapturingCommunityLlmClient : LlmClient
+    {
+        private readonly Lock _gate = new();
+
+        public CapturingCommunityLlmClient()
+            : base(config: null, cache: false)
+        {
+        }
+
+        public Dictionary<string, List<Type?>> ResponseModelsByPrompt { get; } = new(StringComparer.Ordinal);
+
+        protected override Task<JsonObject> GenerateResponseCoreAsync(
+            IReadOnlyList<Message> messages,
+            Type? responseModel,
+            StructuredResponseSchema? responseSchema,
+            int maxTokens,
+            ModelSize modelSize,
+            string? promptName,
+            CancellationToken cancellationToken)
+        {
+            if (promptName is not null)
+            {
+                lock (_gate)
+                {
+                    if (!ResponseModelsByPrompt.TryGetValue(promptName, out var responseModels))
+                    {
+                        responseModels = new List<Type?>();
+                        ResponseModelsByPrompt[promptName] = responseModels;
+                    }
+
+                    responseModels.Add(responseModel);
+                }
+            }
+
+            return Task.FromResult(promptName switch
+            {
+                "summarize_nodes.summarize_pair" => new JsonObject { ["summary"] = "combined team" },
+                "summarize_nodes.summary_description" => new JsonObject { ["description"] = "Team community" },
+                _ => new JsonObject()
+            });
+        }
+    }
+
+    private sealed class DelayedCommunityLlmClient : ILlmClient
+    {
+        private readonly Lock _gate = new();
+        private int _activeCalls;
+        private int _maxObservedConcurrency;
+        private int _trackedPromptCalls;
+
+        public TokenUsageTracker TokenTracker { get; } = new();
+        public int TrackedPromptCalls => Volatile.Read(ref _trackedPromptCalls);
+        public int MaxObservedConcurrency => Volatile.Read(ref _maxObservedConcurrency);
+        public List<string> CompletedNames { get; } = new();
+        public List<Type?> ResponseModels { get; } = new();
+
+        public async Task<JsonObject> GenerateResponseAsync(
+            IReadOnlyList<Message> messages,
+            Type? responseModel = null,
+            StructuredResponseSchema? responseSchema = null,
+            int? maxTokens = null,
+            ModelSize modelSize = ModelSize.Medium,
+            string? groupId = null,
+            string? promptName = null,
+            bool attributeExtraction = false,
+            CancellationToken cancellationToken = default)
+        {
+            if (!string.Equals(promptName, "summarize_nodes.summary_description", StringComparison.Ordinal))
+            {
+                return new JsonObject();
+            }
+
+            var name = ReadCommunityName(messages);
+            Interlocked.Increment(ref _trackedPromptCalls);
+            var active = Interlocked.Increment(ref _activeCalls);
+            UpdateMax(ref _maxObservedConcurrency, active);
+            try
+            {
+                await Task.Delay(DelayFor(name), cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _activeCalls);
+            }
+
+            lock (_gate)
+            {
+                CompletedNames.Add(name);
+                ResponseModels.Add(responseModel);
+            }
+
+            return new JsonObject { ["description"] = $"Community {name}" };
+        }
+
+        private static string ReadCommunityName(IReadOnlyList<Message> messages)
+        {
+            var content = messages.Count == 0 ? string.Empty : messages[^1].Content;
+            var separator = content.IndexOf(':', StringComparison.Ordinal);
+            return separator > 0
+                ? content[..separator]
+                : content.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "Unknown";
+        }
+
+        private static TimeSpan DelayFor(string name) =>
+            string.Equals(name, "Alpha", StringComparison.Ordinal)
+                ? TimeSpan.FromMilliseconds(150)
+                : TimeSpan.FromMilliseconds(15);
+    }
+
+    private sealed class DelayedCommunityEmbedder : EmbedderClient
+    {
+        private int _activeCalls;
+        private int _maxObservedConcurrency;
+
+        public DelayedCommunityEmbedder()
+            : base(new EmbedderConfig(embeddingDimension: 2))
+        {
+        }
+
+        public int MaxObservedConcurrency => Volatile.Read(ref _maxObservedConcurrency);
+
+        public override async Task<IReadOnlyList<float>> CreateAsync(
+            string input,
+            CancellationToken cancellationToken = default)
+        {
+            var active = Interlocked.Increment(ref _activeCalls);
+            UpdateMax(ref _maxObservedConcurrency, active);
+            try
+            {
+                await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _activeCalls);
+            }
+
+            return new[] { 1f, 0f };
+        }
+    }
+
+    private static void UpdateMax(ref int target, int value)
+    {
+        while (true)
+        {
+            var current = Volatile.Read(ref target);
+            if (value <= current)
+            {
+                return;
+            }
+
+            if (Interlocked.CompareExchange(ref target, value, current) == current)
+            {
+                return;
+            }
+        }
+    }
+
+    private sealed class DelegatingGraphDriver : GraphDriverBase
+    {
+        private readonly InMemoryGraphDriver _inner;
+
+        public DelegatingGraphDriver(InMemoryGraphDriver inner) : base(GraphProvider.Neo4j) => _inner = inner;
+
+        public override Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, CancellationToken cancellationToken = default) =>
+            _inner.BuildIndicesAndConstraintsAsync(deleteExisting, cancellationToken);
+
+        public override Task CloseAsync(CancellationToken cancellationToken = default) =>
+            _inner.CloseAsync(cancellationToken);
+
+        public override IGraphDriver Clone(string database) => new DelegatingGraphDriver(_inner);
+
+        public override Task<IReadOnlyList<string>> GetEntityGroupIdsAsync(CancellationToken cancellationToken = default) =>
+            _inner.GetEntityGroupIdsAsync(cancellationToken);
+
+        public override Task<IReadOnlyList<string>> GetCommunityGroupIdsAsync(CancellationToken cancellationToken = default) =>
+            _inner.GetCommunityGroupIdsAsync(cancellationToken);
+
+        public override Task SaveNodeAsync(Node node, CancellationToken cancellationToken = default) =>
+            _inner.SaveNodeAsync(node, cancellationToken);
+
+        public override Task SaveEdgeAsync(Edge edge, CancellationToken cancellationToken = default) =>
+            _inner.SaveEdgeAsync(edge, cancellationToken);
+
+        public override Task DeleteNodeAsync(string uuid, CancellationToken cancellationToken = default) =>
+            _inner.DeleteNodeAsync(uuid, cancellationToken);
+
+        public override Task DeleteNodesByGroupIdAsync(string groupId, int batchSize = 100, CancellationToken cancellationToken = default) =>
+            _inner.DeleteNodesByGroupIdAsync(groupId, batchSize, cancellationToken);
+
+        public override Task DeleteNodesByUuidsAsync(IEnumerable<string> uuids, int batchSize = 100, CancellationToken cancellationToken = default) =>
+            _inner.DeleteNodesByUuidsAsync(uuids, batchSize, cancellationToken);
+
+        public override Task DeleteEdgeAsync(string uuid, CancellationToken cancellationToken = default) =>
+            _inner.DeleteEdgeAsync(uuid, cancellationToken);
+
+        public override Task DeleteEdgesByUuidsAsync(IEnumerable<string> uuids, CancellationToken cancellationToken = default) =>
+            _inner.DeleteEdgesByUuidsAsync(uuids, cancellationToken);
+
+        public override Task ClearDataAsync(IReadOnlyList<string>? groupIds = null, CancellationToken cancellationToken = default) =>
+            _inner.ClearDataAsync(groupIds, cancellationToken);
+
+        public override Task<TNode> GetNodeByUuidAsync<TNode>(string uuid, CancellationToken cancellationToken = default) =>
+            _inner.GetNodeByUuidAsync<TNode>(uuid, cancellationToken);
+
+        public override Task<IReadOnlyList<TNode>> GetNodesByUuidsAsync<TNode>(
+            IEnumerable<string> uuids,
+            string? groupId = null,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetNodesByUuidsAsync<TNode>(uuids, groupId, cancellationToken);
+
+        public override Task<IReadOnlyList<TNode>> GetNodesByGroupIdsAsync<TNode>(
+            IEnumerable<string> groupIds,
+            int? limit = null,
+            string? uuidCursor = null,
+            bool withEmbeddings = false,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetNodesByGroupIdsAsync<TNode>(groupIds, limit, uuidCursor, withEmbeddings, cancellationToken);
+
+        public override Task<T> GetEdgeByUuidAsync<T>(string uuid, CancellationToken cancellationToken = default) =>
+            _inner.GetEdgeByUuidAsync<T>(uuid, cancellationToken);
+
+        public override Task<IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(IEnumerable<string> uuids, CancellationToken cancellationToken = default) =>
+            _inner.GetEdgesByUuidsAsync<T>(uuids, cancellationToken);
+
+        public override Task<IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(
+            IEnumerable<string> groupIds,
+            int? limit = null,
+            string? uuidCursor = null,
+            bool withEmbeddings = false,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetEdgesByGroupIdsAsync<T>(groupIds, limit, uuidCursor, withEmbeddings, cancellationToken);
+
+        public override Task<IReadOnlyList<EntityEdge>> GetEntityEdgesBetweenNodesAsync(
+            string sourceNodeUuid,
+            string targetNodeUuid,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetEntityEdgesBetweenNodesAsync(sourceNodeUuid, targetNodeUuid, cancellationToken);
+
+        public override Task<IReadOnlyList<EntityEdge>> GetEntityEdgesByNodeUuidAsync(
+            string nodeUuid,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetEntityEdgesByNodeUuidAsync(nodeUuid, cancellationToken);
+
+        public override Task<IReadOnlyList<EpisodicNode>> GetEpisodesByEntityNodeUuidAsync(
+            string entityNodeUuid,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetEpisodesByEntityNodeUuidAsync(entityNodeUuid, cancellationToken);
+
+        public override Task<IReadOnlyList<EpisodicNode>> RetrieveEpisodesAsync(
+            DateTime referenceTime,
+            int lastN,
+            IReadOnlyList<string>? groupIds = null,
+            EpisodeType? source = null,
+            string? saga = null,
+            CancellationToken cancellationToken = default) =>
+            _inner.RetrieveEpisodesAsync(referenceTime, lastN, groupIds, source, saga, cancellationToken);
+
+        public override Task<IReadOnlyList<EntityNode>> GetMentionedNodesAsync(
+            IReadOnlyList<EpisodicNode> episodes,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetMentionedNodesAsync(episodes, cancellationToken);
+
+        public override Task<IReadOnlyList<CommunityNode>> GetCommunitiesByNodesAsync(
+            IReadOnlyList<EntityNode> nodes,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetCommunitiesByNodesAsync(nodes, cancellationToken);
+
+        public override Task<SagaNode?> FindSagaByNameAsync(string name, string groupId, CancellationToken cancellationToken = default) =>
+            _inner.FindSagaByNameAsync(name, groupId, cancellationToken);
+
+        public override Task<string?> GetSagaPreviousEpisodeUuidAsync(
+            string sagaUuid,
+            string currentEpisodeUuid,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetSagaPreviousEpisodeUuidAsync(sagaUuid, currentEpisodeUuid, cancellationToken);
+
+        public override Task<IReadOnlyList<SagaEpisodeContent>> GetSagaEpisodeContentsAsync(
+            string sagaUuid,
+            DateTime? since = null,
+            int limit = 200,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetSagaEpisodeContentsAsync(sagaUuid, since, limit, cancellationToken);
+    }
+}

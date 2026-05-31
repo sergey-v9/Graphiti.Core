@@ -1,0 +1,437 @@
+using System.Collections;
+using Graphiti.Core;
+
+namespace Graphiti.Core.Tests.Namespaces;
+
+public class NamespaceTests
+{
+    [Fact]
+    public async Task EntityNodeNamespace_ProvidesBulkLookupEmbeddingAndTypedDeletion()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver, embedder: new HashEmbedder(8));
+        var createdAt = new DateTime(2026, 2, 1, 12, 0, 0, DateTimeKind.Utc);
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode-1",
+            Name = "episode",
+            GroupId = "group",
+            SourceDescription = "source",
+            Content = "Alice met Bob.",
+            CreatedAt = createdAt,
+            ValidAt = createdAt
+        };
+        await graphiti.Nodes.Episode.SaveAsync(episode);
+
+        var alice = new EntityNode
+        {
+            Uuid = "entity-alice",
+            Name = "Alice",
+            GroupId = "group",
+            Labels = new List<string> { "Person" },
+            CreatedAt = createdAt
+        };
+        var bob = new EntityNode
+        {
+            Uuid = "entity-bob",
+            Name = "Bob",
+            GroupId = "other",
+            Labels = new List<string> { "Person" },
+            CreatedAt = createdAt
+        };
+
+        await graphiti.Nodes.Entity.SaveBulkAsync(new[] { alice, bob });
+
+        Assert.NotNull(alice.NameEmbedding);
+        Assert.NotNull(bob.NameEmbedding);
+        var fetched = await graphiti.Nodes.Entity.GetByUuidsAsync(new[] { alice.Uuid, bob.Uuid });
+        Assert.Equal(new[] { alice.Uuid, bob.Uuid }, fetched.Select(node => node.Uuid).OrderBy(uuid => uuid));
+
+        var byGroup = await graphiti.Nodes.Entity.GetByGroupIdsAsync(new[] { "group" });
+        var grouped = Assert.Single(byGroup);
+        Assert.Equal(alice.Uuid, grouped.Uuid);
+
+        var shell = new EntityNode { Uuid = alice.Uuid, Name = "shell", GroupId = "group" };
+        await graphiti.Nodes.Entity.LoadEmbeddingsBulkAsync(new[] { shell });
+        Assert.Equal(alice.NameEmbedding, shell.NameEmbedding);
+
+        await graphiti.Nodes.Entity.DeleteByGroupIdAsync("group");
+
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => graphiti.Nodes.Entity.GetByUuidAsync(alice.Uuid));
+        Assert.Equal(episode.Uuid, (await graphiti.Nodes.Episode.GetByUuidAsync(episode.Uuid)).Uuid);
+        Assert.Equal(bob.Uuid, (await graphiti.Nodes.Entity.GetByUuidAsync(bob.Uuid)).Uuid);
+    }
+
+    [Fact]
+    public async Task NodeNamespaces_ValidateDeleteBatchArgumentsBeforeLookup()
+    {
+        var graphiti = new Graphiti(graphDriver: new InMemoryGraphDriver());
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            graphiti.Nodes.Entity.DeleteByGroupIdAsync("missing", batchSize: 0));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            graphiti.Nodes.Episode.DeleteByUuidsAsync(Array.Empty<string>(), batchSize: -1));
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            graphiti.Nodes.Community.DeleteByUuidsAsync(null!));
+    }
+
+    [Fact]
+    public async Task NamespaceSaveBulk_ValidatesBatchSizeBeforeEnumeration()
+    {
+        var driver = new DelayedNamespaceSaveDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            graphiti.Nodes.Entity.SaveBulkAsync(new ThrowingEnumerable<EntityNode>(), batchSize: 0));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            graphiti.Nodes.Episode.SaveBulkAsync(new ThrowingEnumerable<EpisodicNode>(), batchSize: 0));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            graphiti.Nodes.Community.SaveBulkAsync(new ThrowingEnumerable<CommunityNode>(), batchSize: 0));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            graphiti.Edges.Entity.SaveBulkAsync(new ThrowingEnumerable<EntityEdge>(), batchSize: 0));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            graphiti.Edges.Episode.SaveBulkAsync(new ThrowingEnumerable<EpisodicEdge>(), batchSize: 0));
+
+        Assert.Equal(0, driver.SavedNodeCount);
+        Assert.Equal(0, driver.SavedEdgeCount);
+    }
+
+    [Fact]
+    public async Task NamespaceSaveBulk_UsesBoundedConcurrentSavesForSequentialNamespaces()
+    {
+        var driver = new DelayedNamespaceSaveDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var episodes = Enumerable.Range(0, 6)
+            .Select(index => new EpisodicNode
+            {
+                Uuid = $"episode-{index}",
+                Name = $"episode-{index}",
+                GroupId = "group"
+            })
+            .ToList();
+        var edges = Enumerable.Range(0, 6)
+            .Select(index => new EpisodicEdge
+            {
+                Uuid = $"edge-{index}",
+                SourceNodeUuid = episodes[0].Uuid,
+                TargetNodeUuid = $"entity-{index}",
+                GroupId = "group"
+            })
+            .ToList();
+
+        await graphiti.Nodes.Episode.SaveBulkAsync(episodes, batchSize: 3);
+
+        Assert.Equal(episodes.Count, driver.SavedNodeCount);
+        Assert.InRange(driver.MaxConcurrentSaves, 2, 3);
+
+        driver.ResetMaxConcurrentSaves();
+        await graphiti.Edges.Episode.SaveBulkAsync(edges, batchSize: 2);
+
+        Assert.Equal(edges.Count, driver.SavedEdgeCount);
+        Assert.Equal(2, driver.MaxConcurrentSaves);
+    }
+
+    [Fact]
+    public async Task EntityNamespaces_SaveBulkHonorsBatchSize()
+    {
+        var driver = new DelayedNamespaceSaveDriver();
+        var graphiti = new Graphiti(graphDriver: driver, embedder: new HashEmbedder(4));
+        var nodes = Enumerable.Range(0, 5)
+            .Select(index => new EntityNode
+            {
+                Uuid = $"entity-{index}",
+                Name = $"Entity {index}",
+                GroupId = "group"
+            })
+            .ToList();
+        var edges = Enumerable.Range(0, 5)
+            .Select(index => new EntityEdge
+            {
+                Uuid = $"edge-{index}",
+                SourceNodeUuid = nodes[index % nodes.Count].Uuid,
+                TargetNodeUuid = nodes[(index + 1) % nodes.Count].Uuid,
+                GroupId = "group",
+                Name = "RELATED_TO",
+                Fact = $"Entity {index} relates to Entity {(index + 1) % nodes.Count}"
+            })
+            .ToList();
+
+        await graphiti.Nodes.Entity.SaveBulkAsync(nodes, batchSize: 2);
+        await graphiti.Edges.Entity.SaveBulkAsync(edges, batchSize: 2);
+
+        Assert.Equal(new[] { 2, 2, 1 }, driver.EntityNodeBulkBatchSizes);
+        Assert.Equal(new[] { 2, 2, 1 }, driver.EntityEdgeBulkBatchSizes);
+        Assert.All(nodes, node => Assert.NotNull(node.NameEmbedding));
+        Assert.All(edges, edge => Assert.NotNull(edge.FactEmbedding));
+    }
+
+    [Fact]
+    public async Task EdgeNamespaces_ValidateDeleteUuidsBeforeLookup()
+    {
+        var graphiti = new Graphiti(graphDriver: new InMemoryGraphDriver());
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            graphiti.Edges.Entity.DeleteByUuidsAsync(null!));
+    }
+
+    [Fact]
+    public async Task EpisodeNamespace_ProvidesMentionLookupAndTemporalRetrieval()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var validAt = new DateTime(2026, 2, 2, 12, 0, 0, DateTimeKind.Utc);
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode-1",
+            Name = "episode",
+            GroupId = "group",
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Alice met Bob.",
+            ValidAt = validAt
+        };
+        var alice = new EntityNode { Uuid = "entity-alice", Name = "Alice", GroupId = "group" };
+        var mention = new EpisodicEdge
+        {
+            Uuid = "mention-1",
+            SourceNodeUuid = episode.Uuid,
+            TargetNodeUuid = alice.Uuid,
+            GroupId = "group"
+        };
+
+        await graphiti.Nodes.Episode.SaveBulkAsync(new[] { episode });
+        await graphiti.Nodes.Entity.SaveAsync(alice);
+        await graphiti.Edges.Episode.SaveBulkAsync(new[] { mention });
+
+        var mentionedEpisodes = await graphiti.Nodes.Episode.GetByEntityNodeUuidAsync(alice.Uuid);
+        Assert.Equal(episode.Uuid, Assert.Single(mentionedEpisodes).Uuid);
+
+        var retrieved = await graphiti.Nodes.Episode.RetrieveEpisodesAsync(
+            validAt.AddMinutes(1),
+            lastN: 3,
+            groupIds: new[] { "group" },
+            source: EpisodeType.Message);
+        Assert.Equal(episode.Uuid, Assert.Single(retrieved).Uuid);
+    }
+
+    [Fact]
+    public async Task EntityEdgeNamespace_ProvidesRelationshipLookupEmbeddingAndTypedDeletion()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver, embedder: new HashEmbedder(8));
+        var alice = new EntityNode { Uuid = "entity-alice", Name = "Alice", GroupId = "group" };
+        var bob = new EntityNode { Uuid = "entity-bob", Name = "Bob", GroupId = "group" };
+        var carol = new EntityNode { Uuid = "entity-carol", Name = "Carol", GroupId = "group" };
+        await graphiti.Nodes.Entity.SaveBulkAsync(new[] { alice, bob, carol });
+
+        var knows = new EntityEdge
+        {
+            Uuid = "rel-1",
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            GroupId = "group",
+            Name = "KNOWS",
+            Fact = "Alice knows Bob."
+        };
+        var worksWith = new EntityEdge
+        {
+            Uuid = "rel-2",
+            SourceNodeUuid = carol.Uuid,
+            TargetNodeUuid = alice.Uuid,
+            GroupId = "group",
+            Name = "WORKS_WITH",
+            Fact = "Carol works with Alice."
+        };
+        var mention = new EpisodicEdge
+        {
+            Uuid = "mention-1",
+            SourceNodeUuid = "episode-1",
+            TargetNodeUuid = alice.Uuid,
+            GroupId = "group"
+        };
+        await graphiti.Edges.Episode.SaveAsync(mention);
+
+        await graphiti.Edges.Entity.SaveBulkAsync(new[] { knows, worksWith });
+
+        Assert.NotNull(knows.FactEmbedding);
+        var between = await graphiti.Edges.Entity.GetBetweenNodesAsync(alice.Uuid, bob.Uuid);
+        Assert.Equal(knows.Uuid, Assert.Single(between).Uuid);
+        var byNode = await graphiti.Edges.Entity.GetByNodeUuidAsync(alice.Uuid);
+        Assert.Equal(new[] { knows.Uuid, worksWith.Uuid }, byNode.Select(edge => edge.Uuid).OrderBy(uuid => uuid));
+
+        var shell = new EntityEdge { Uuid = knows.Uuid };
+        await graphiti.Edges.Entity.LoadEmbeddingsBulkAsync(new[] { shell });
+        Assert.Equal(knows.FactEmbedding, shell.FactEmbedding);
+
+        await graphiti.Edges.Entity.DeleteByUuidsAsync(new[] { knows.Uuid, mention.Uuid });
+
+        await Assert.ThrowsAsync<EdgeNotFoundException>(() => graphiti.Edges.Entity.GetByUuidAsync(knows.Uuid));
+        Assert.Equal(mention.Uuid, (await graphiti.Edges.Episode.GetByUuidAsync(mention.Uuid)).Uuid);
+        Assert.Equal(worksWith.Uuid, (await graphiti.Edges.Entity.GetByUuidAsync(worksWith.Uuid)).Uuid);
+    }
+
+    [Fact]
+    public async Task CommunityNamespace_RejectsInvalidGeneratedEmbeddingBeforeSave()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            embedder: new FixedBatchEmbedder(embeddingDimension: 2, new[] { (IReadOnlyList<float>)new[] { 1f } }));
+        var community = new CommunityNode { Uuid = "community", Name = "Community", GroupId = "group" };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => graphiti.Nodes.Community.SaveBulkAsync(new[] { community }));
+
+        Assert.Contains("community node", exception.Message, StringComparison.Ordinal);
+        Assert.Null(community.NameEmbedding);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => graphiti.Nodes.Community.GetByUuidAsync(community.Uuid));
+    }
+
+    private sealed class FixedBatchEmbedder : EmbedderClient
+    {
+        private readonly IReadOnlyList<IReadOnlyList<float>> _embeddings;
+
+        public FixedBatchEmbedder(int embeddingDimension, IReadOnlyList<IReadOnlyList<float>> embeddings)
+            : base(new EmbedderConfig(embeddingDimension))
+        {
+            _embeddings = embeddings;
+        }
+
+        public override Task<IReadOnlyList<float>> CreateAsync(
+            string input,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(_embeddings[0]);
+
+        public override Task<IReadOnlyList<IReadOnlyList<float>>> CreateBatchAsync(
+            IReadOnlyList<string> input,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(_embeddings);
+    }
+
+    private sealed class ThrowingEnumerable<T> : IEnumerable<T>
+    {
+        public IEnumerator<T> GetEnumerator() =>
+            throw new InvalidOperationException("The sequence should not be enumerated.");
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    private sealed class DelayedNamespaceSaveDriver : GraphDriverBase
+    {
+        private int _activeSaves;
+        private int _maxConcurrentSaves;
+        private int _savedNodeCount;
+        private int _savedEdgeCount;
+
+        public DelayedNamespaceSaveDriver()
+            : base(GraphProvider.InMemory)
+        {
+        }
+
+        public int MaxConcurrentSaves => Volatile.Read(ref _maxConcurrentSaves);
+        public int SavedNodeCount => Volatile.Read(ref _savedNodeCount);
+        public int SavedEdgeCount => Volatile.Read(ref _savedEdgeCount);
+        public List<int> EntityNodeBulkBatchSizes { get; } = new();
+        public List<int> EntityEdgeBulkBatchSizes { get; } = new();
+
+        public void ResetMaxConcurrentSaves() =>
+            Interlocked.Exchange(ref _maxConcurrentSaves, 0);
+
+        public override Task SaveBulkAsync(
+            IEnumerable<EpisodicNode> episodicNodes,
+            IEnumerable<EpisodicEdge> episodicEdges,
+            IEnumerable<EntityNode> entityNodes,
+            IEnumerable<EntityEdge> entityEdges,
+            IEmbedderClient embedder,
+            CancellationToken cancellationToken = default)
+        {
+            var entityNodeList = entityNodes.ToList();
+            var entityEdgeList = entityEdges.ToList();
+            if (entityNodeList.Count > 0)
+            {
+                EntityNodeBulkBatchSizes.Add(entityNodeList.Count);
+            }
+
+            if (entityEdgeList.Count > 0)
+            {
+                EntityEdgeBulkBatchSizes.Add(entityEdgeList.Count);
+            }
+
+            return base.SaveBulkAsync(
+                episodicNodes,
+                episodicEdges,
+                entityNodeList,
+                entityEdgeList,
+                embedder,
+                cancellationToken);
+        }
+
+        public override async Task SaveNodeAsync(Node node, CancellationToken cancellationToken = default)
+        {
+            await DelaySaveAsync(cancellationToken).ConfigureAwait(false);
+            Interlocked.Increment(ref _savedNodeCount);
+        }
+
+        public override async Task SaveEdgeAsync(Edge edge, CancellationToken cancellationToken = default)
+        {
+            await DelaySaveAsync(cancellationToken).ConfigureAwait(false);
+            Interlocked.Increment(ref _savedEdgeCount);
+        }
+
+        private async Task DelaySaveAsync(CancellationToken cancellationToken)
+        {
+            var active = Interlocked.Increment(ref _activeSaves);
+            UpdateMax(ref _maxConcurrentSaves, active);
+            try
+            {
+                await Task.Delay(40, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _activeSaves);
+            }
+        }
+
+        private static void UpdateMax(ref int target, int value)
+        {
+            while (true)
+            {
+                var current = Volatile.Read(ref target);
+                if (value <= current)
+                {
+                    return;
+                }
+
+                if (Interlocked.CompareExchange(ref target, value, current) == current)
+                {
+                    return;
+                }
+            }
+        }
+
+        public override Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public override Task CloseAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public override IGraphDriver Clone(string database) => throw new NotSupportedException();
+        public override Task DeleteNodeAsync(string uuid, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task DeleteNodesByGroupIdAsync(string groupId, int batchSize = 100, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task DeleteNodesByUuidsAsync(IEnumerable<string> uuids, int batchSize = 100, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task DeleteEdgeAsync(string uuid, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task DeleteEdgesByUuidsAsync(IEnumerable<string> uuids, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task ClearDataAsync(IReadOnlyList<string>? groupIds = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<TNode> GetNodeByUuidAsync<TNode>(string uuid, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<IReadOnlyList<TNode>> GetNodesByUuidsAsync<TNode>(IEnumerable<string> uuids, string? groupId = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<IReadOnlyList<TNode>> GetNodesByGroupIdsAsync<TNode>(IEnumerable<string> groupIds, int? limit = null, string? uuidCursor = null, bool withEmbeddings = false, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<T> GetEdgeByUuidAsync<T>(string uuid, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(IEnumerable<string> uuids, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(IEnumerable<string> groupIds, int? limit = null, string? uuidCursor = null, bool withEmbeddings = false, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<IReadOnlyList<EntityEdge>> GetEntityEdgesBetweenNodesAsync(string sourceNodeUuid, string targetNodeUuid, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<IReadOnlyList<EntityEdge>> GetEntityEdgesByNodeUuidAsync(string nodeUuid, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<IReadOnlyList<EpisodicNode>> GetEpisodesByEntityNodeUuidAsync(string entityNodeUuid, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<IReadOnlyList<EpisodicNode>> RetrieveEpisodesAsync(DateTime referenceTime, int lastN, IReadOnlyList<string>? groupIds = null, EpisodeType? source = null, string? saga = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<IReadOnlyList<EntityNode>> GetMentionedNodesAsync(IReadOnlyList<EpisodicNode> episodes, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<IReadOnlyList<CommunityNode>> GetCommunitiesByNodesAsync(IReadOnlyList<EntityNode> nodes, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<SagaNode?> FindSagaByNameAsync(string name, string groupId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<string?> GetSagaPreviousEpisodeUuidAsync(string sagaUuid, string currentEpisodeUuid, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public override Task<IReadOnlyList<SagaEpisodeContent>> GetSagaEpisodeContentsAsync(string sagaUuid, DateTime? since = null, int limit = 200, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+}
