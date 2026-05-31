@@ -125,6 +125,10 @@ shorter than the old working plans; expand items only when they become active.
   mentions ranking uses a counting dictionary and explicit stable sort, and traversal graph/endpoint
   lookup construction uses first-wins loops while preserving existing BFS and group-filter
   semantics.
+- `InMemoryGraphDriver` BFS/ranker shaping now mirrors that allocation-light approach with loop-built
+  candidate lookups, seen sets, and rank buckets. Preserve shortest first traversal hits,
+  origin-group filtering, stable first-seen de-duplication, node-distance buckets, episode-mention
+  sort semantics, and final hit cloning when changing those reference-backend paths.
 - Search fallback in-memory snapshot projection now uses explicit typed loops over cloned driver
   snapshots instead of `OfType`/`Select` chains. Preserve the clone isolation, type filtering,
   embedding stripping flags, stable order, and `IReadOnlyList<EntityEdge>` endpoint lookup shape.

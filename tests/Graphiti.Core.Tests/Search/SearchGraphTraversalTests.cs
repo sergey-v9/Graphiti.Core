@@ -135,6 +135,36 @@ public class SearchGraphTraversalTests
     }
 
     [Fact]
+    public async Task InMemoryNodeBfs_KeepsShortestFirstTraversalHit()
+    {
+        var driver = new InMemoryGraphDriver();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var origin = Entity("origin", now);
+        var target = Entity("target", now);
+        var middle = Entity("middle", now);
+
+        foreach (var node in new[] { origin, target, middle })
+        {
+            await driver.SaveNodeAsync(node);
+        }
+
+        await driver.SaveEdgeAsync(Edge(origin, middle, "origin middle", now));
+        await driver.SaveEdgeAsync(Edge(origin, target, "origin target", now));
+        await driver.SaveEdgeAsync(Edge(middle, target, "middle target", now));
+
+        var searchDriver = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
+        var hits = await searchDriver.SearchEntityNodesBfsAsync(
+            new[] { origin.Uuid },
+            NodeFilter(),
+            maxDepth: 2,
+            groupIds: new[] { "group" },
+            limit: 10);
+
+        var targetHit = Assert.Single(hits, hit => hit.Item.Uuid == target.Uuid);
+        Assert.Equal(1f, targetHit.Score);
+    }
+
+    [Fact]
     public async Task MaterializedNodeDistanceRanker_DeduplicatesInputsAndKeepsStableTies()
     {
         var driver = new InMemoryGraphDriver();
@@ -145,6 +175,26 @@ public class SearchGraphTraversalTests
         var farB = Entity("far-b", now);
         await driver.SaveEdgeAsync(Edge(center, near, "center near", now));
         var searchDriver = new MaterializingSearchGraphDriver(driver);
+
+        var ranks = await searchDriver.RankNodeDistanceAsync(
+            new[] { farB.Uuid, near.Uuid, farA.Uuid, near.Uuid, center.Uuid },
+            center.Uuid);
+
+        Assert.Equal(new[] { center.Uuid, near.Uuid, farB.Uuid, farA.Uuid }, ranks.Select(rank => rank.Uuid));
+        Assert.Equal(new[] { 10f, 1f, 0f, 0f }, ranks.Select(rank => rank.Score));
+    }
+
+    [Fact]
+    public async Task InMemoryNodeDistanceRanker_DeduplicatesInputsAndKeepsStableTies()
+    {
+        var driver = new InMemoryGraphDriver();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var center = Entity("center", now);
+        var near = Entity("near", now);
+        var farA = Entity("far-a", now);
+        var farB = Entity("far-b", now);
+        await driver.SaveEdgeAsync(Edge(center, near, "center near", now));
+        var searchDriver = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
 
         var ranks = await searchDriver.RankNodeDistanceAsync(
             new[] { farB.Uuid, near.Uuid, farA.Uuid, near.Uuid, center.Uuid },
@@ -167,6 +217,31 @@ public class SearchGraphTraversalTests
         await driver.SaveEdgeAsync(EpisodicMention("episode-2", once.Uuid, now));
         await driver.SaveEdgeAsync(EpisodicMention("episode-3", twice.Uuid, now));
         var searchDriver = new MaterializingSearchGraphDriver(driver);
+
+        var ranks = await searchDriver.RankNodeEpisodeMentionsAsync(
+            new[] { unmentionedA.Uuid, twice.Uuid, once.Uuid, unmentionedB.Uuid, twice.Uuid });
+
+        Assert.Equal(
+            new[] { once.Uuid, twice.Uuid, unmentionedA.Uuid, unmentionedB.Uuid },
+            ranks.Select(rank => rank.Uuid));
+        Assert.Equal(
+            new[] { 1f, 2f, float.PositiveInfinity, float.PositiveInfinity },
+            ranks.Select(rank => rank.Score));
+    }
+
+    [Fact]
+    public async Task InMemoryEpisodeMentionsRanker_CountsMentionsAndKeepsStableTies()
+    {
+        var driver = new InMemoryGraphDriver();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var once = Entity("once", now);
+        var twice = Entity("twice", now);
+        var unmentionedA = Entity("unmentioned-a", now);
+        var unmentionedB = Entity("unmentioned-b", now);
+        await driver.SaveEdgeAsync(EpisodicMention("episode-1", twice.Uuid, now));
+        await driver.SaveEdgeAsync(EpisodicMention("episode-2", once.Uuid, now));
+        await driver.SaveEdgeAsync(EpisodicMention("episode-3", twice.Uuid, now));
+        var searchDriver = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
 
         var ranks = await searchDriver.RankNodeEpisodeMentionsAsync(
             new[] { unmentionedA.Uuid, twice.Uuid, once.Uuid, unmentionedB.Uuid, twice.Uuid });

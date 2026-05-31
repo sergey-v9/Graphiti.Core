@@ -819,24 +819,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var candidateByUuid = candidates
-            .Where(node => SearchFilterMatcher.NodeMatches(node, compiledFilter))
-            .ToDictionary(node => node.Uuid, StringComparer.Ordinal);
-        IReadOnlyList<SearchHit<EntityNode>> results = TraverseBreadthFirst(originNodeUuids, maxDepth, graph)
-            .Where(step =>
-                step.TargetNodeUuid is not null
-                && step.TargetMatchesOriginGroup
-                && candidateByUuid.ContainsKey(step.TargetNodeUuid))
-            .GroupBy(step => step.TargetNodeUuid!, StringComparer.Ordinal)
-            .Select(group =>
-            {
-                var step = group.First();
-                return new SearchHit<EntityNode>(
-                    (EntityNode)CloneNode(candidateByUuid[step.TargetNodeUuid!]),
-                    1f / step.Depth);
-            })
-            .Take(limit)
-            .ToList();
+        var candidateByUuid = BuildNodeCandidateLookup(candidates, compiledFilter);
+        IReadOnlyList<SearchHit<EntityNode>> results =
+            BuildNodeBfsHits(originNodeUuids, maxDepth, limit, graph, candidateByUuid);
         return Task.FromResult(results);
     }
 
@@ -866,21 +851,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var candidateByUuid = candidates
-            .Where(edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid))
-            .ToDictionary(edge => edge.Uuid, StringComparer.Ordinal);
-        IReadOnlyList<SearchHit<EntityEdge>> results = TraverseBreadthFirst(originNodeUuids, maxDepth, graph)
-            .Where(step => step.Edge is not null && candidateByUuid.ContainsKey(step.Edge.Uuid))
-            .GroupBy(step => step.Edge!.Uuid, StringComparer.Ordinal)
-            .Select(group =>
-            {
-                var step = group.First();
-                return new SearchHit<EntityEdge>(
-                    (EntityEdge)CloneEdge(candidateByUuid[step.Edge!.Uuid]),
-                    1f / step.Depth);
-            })
-            .Take(limit)
-            .ToList();
+        var candidateByUuid = BuildEdgeCandidateLookup(candidates, compiledFilter, nodesByUuid);
+        IReadOnlyList<SearchHit<EntityEdge>> results =
+            BuildEdgeBfsHits(originNodeUuids, maxDepth, limit, graph, candidateByUuid);
         return Task.FromResult(results);
     }
 
@@ -974,25 +947,15 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         HashSet<string> adjacentNodeUuids;
         lock (_gate)
         {
-            adjacentNodeUuids = GetIndexedUuids(_entityEdgeUuidsByNodeUuid, centerNodeUuid)
-                .Select(uuid => _edges.GetValueOrDefault(uuid))
-                .OfType<EntityEdge>()
-                .Select(edge => edge.SourceNodeUuid == centerNodeUuid ? edge.TargetNodeUuid : edge.SourceNodeUuid)
-                .ToHashSet(StringComparer.Ordinal);
+            adjacentNodeUuids = BuildAdjacentNodeLookup(centerNodeUuid);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var inputOrder = nodeUuids
-            .Select((uuid, index) => (uuid, index))
-            .GroupBy(item => item.uuid, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First().index, StringComparer.Ordinal);
-        IReadOnlyList<SearchRank> results = nodeUuids
-            .Distinct(StringComparer.Ordinal)
-            .Select(uuid => new SearchRank(uuid, NodeDistanceScore(adjacentNodeUuids, uuid, centerNodeUuid)))
-            .Where(rank => rank.Score >= minScore)
-            .OrderByDescending(rank => rank.Score)
-            .ThenBy(rank => inputOrder.GetValueOrDefault(rank.Uuid, int.MaxValue))
-            .ToList();
+        IReadOnlyList<SearchRank> results = BuildNodeDistanceRanks(
+            nodeUuids,
+            centerNodeUuid,
+            adjacentNodeUuids,
+            minScore);
         return Task.FromResult(results);
     }
 
@@ -1005,26 +968,11 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         Dictionary<string, int> mentionCounts;
         lock (_gate)
         {
-            mentionCounts = _episodicEdgeUuidsByTargetNodeUuid
-                .ToDictionary(pair => pair.Key, pair => pair.Value.Count, StringComparer.Ordinal);
+            mentionCounts = BuildMentionCountLookup();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var inputOrder = nodeUuids
-            .Select((uuid, index) => (uuid, index))
-            .GroupBy(item => item.uuid, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First().index, StringComparer.Ordinal);
-        IReadOnlyList<SearchRank> results = nodeUuids
-            .Distinct(StringComparer.Ordinal)
-            .Select(uuid =>
-            {
-                var mentions = mentionCounts.GetValueOrDefault(uuid);
-                return new SearchRank(uuid, mentions > 0 ? mentions : float.PositiveInfinity);
-            })
-            .Where(rank => rank.Score >= minScore)
-            .OrderBy(rank => rank.Score)
-            .ThenBy(rank => inputOrder.GetValueOrDefault(rank.Uuid, int.MaxValue))
-            .ToList();
+        IReadOnlyList<SearchRank> results = BuildEpisodeMentionRanks(nodeUuids, mentionCounts, minScore);
         return Task.FromResult(results);
     }
 
@@ -1307,6 +1255,215 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         GetNodesFromIndex<EntityNode>(null, allWhenNoGroups: true)
             .ToDictionary(node => node.Uuid, StringComparer.Ordinal);
 
+    private static Dictionary<string, EntityNode> BuildNodeCandidateLookup(
+        List<EntityNode> candidates,
+        CompiledSearchFilter compiledFilter)
+    {
+        var candidateByUuid = new Dictionary<string, EntityNode>(candidates.Count, StringComparer.Ordinal);
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            var node = candidates[i];
+            if (SearchFilterMatcher.NodeMatches(node, compiledFilter))
+            {
+                candidateByUuid.Add(node.Uuid, node);
+            }
+        }
+
+        return candidateByUuid;
+    }
+
+    private static Dictionary<string, EntityEdge> BuildEdgeCandidateLookup(
+        List<EntityEdge> candidates,
+        CompiledSearchFilter compiledFilter,
+        IReadOnlyDictionary<string, EntityNode> nodesByUuid)
+    {
+        var candidateByUuid = new Dictionary<string, EntityEdge>(candidates.Count, StringComparer.Ordinal);
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            var edge = candidates[i];
+            if (SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid))
+            {
+                candidateByUuid.Add(edge.Uuid, edge);
+            }
+        }
+
+        return candidateByUuid;
+    }
+
+    private static List<SearchHit<EntityNode>> BuildNodeBfsHits(
+        IReadOnlyList<string> originNodeUuids,
+        int maxDepth,
+        int limit,
+        TraversalGraph graph,
+        Dictionary<string, EntityNode> candidateByUuid)
+    {
+        var results = new List<SearchHit<EntityNode>>(ResultCapacity(limit, candidateByUuid.Count));
+        if (limit <= 0)
+        {
+            return results;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var step in TraverseBreadthFirst(originNodeUuids, maxDepth, graph))
+        {
+            if (step.TargetNodeUuid is null
+                || !step.TargetMatchesOriginGroup
+                || !candidateByUuid.TryGetValue(step.TargetNodeUuid, out var node)
+                || !seen.Add(step.TargetNodeUuid))
+            {
+                continue;
+            }
+
+            results.Add(new SearchHit<EntityNode>((EntityNode)CloneNode(node), 1f / step.Depth));
+            if (results.Count >= limit)
+            {
+                break;
+            }
+        }
+
+        return results;
+    }
+
+    private static List<SearchHit<EntityEdge>> BuildEdgeBfsHits(
+        IReadOnlyList<string> originNodeUuids,
+        int maxDepth,
+        int limit,
+        TraversalGraph graph,
+        Dictionary<string, EntityEdge> candidateByUuid)
+    {
+        var results = new List<SearchHit<EntityEdge>>(ResultCapacity(limit, candidateByUuid.Count));
+        if (limit <= 0)
+        {
+            return results;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var step in TraverseBreadthFirst(originNodeUuids, maxDepth, graph))
+        {
+            if (step.Edge is null
+                || !candidateByUuid.TryGetValue(step.Edge.Uuid, out var edge)
+                || !seen.Add(step.Edge.Uuid))
+            {
+                continue;
+            }
+
+            results.Add(new SearchHit<EntityEdge>((EntityEdge)CloneEdge(edge), 1f / step.Depth));
+            if (results.Count >= limit)
+            {
+                break;
+            }
+        }
+
+        return results;
+    }
+
+    private HashSet<string> BuildAdjacentNodeLookup(string centerNodeUuid)
+    {
+        var adjacentNodeUuids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var edgeUuid in GetIndexedUuids(_entityEdgeUuidsByNodeUuid, centerNodeUuid))
+        {
+            if (!_edges.TryGetValue(edgeUuid, out var stored) || stored is not EntityEdge edge)
+            {
+                continue;
+            }
+
+            adjacentNodeUuids.Add(edge.SourceNodeUuid == centerNodeUuid
+                ? edge.TargetNodeUuid
+                : edge.SourceNodeUuid);
+        }
+
+        return adjacentNodeUuids;
+    }
+
+    private static List<SearchRank> BuildNodeDistanceRanks(
+        IReadOnlyList<string> nodeUuids,
+        string centerNodeUuid,
+        HashSet<string> adjacentNodeUuids,
+        float minScore)
+    {
+        var centerRanks = new List<SearchRank>(1);
+        var adjacentRanks = new List<SearchRank>(nodeUuids.Count);
+        var distantRanks = new List<SearchRank>(nodeUuids.Count);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < nodeUuids.Count; i++)
+        {
+            var uuid = nodeUuids[i];
+            if (!seen.Add(uuid))
+            {
+                continue;
+            }
+
+            var score = NodeDistanceScore(adjacentNodeUuids, uuid, centerNodeUuid);
+            if (score < minScore)
+            {
+                continue;
+            }
+
+            AddNodeDistanceRank(centerRanks, adjacentRanks, distantRanks, uuid, score);
+        }
+
+        var results = new List<SearchRank>(
+            centerRanks.Count + adjacentRanks.Count + distantRanks.Count);
+        results.AddRange(centerRanks);
+        results.AddRange(adjacentRanks);
+        results.AddRange(distantRanks);
+        return results;
+    }
+
+    private Dictionary<string, int> BuildMentionCountLookup()
+    {
+        var mentionCounts = new Dictionary<string, int>(_episodicEdgeUuidsByTargetNodeUuid.Count, StringComparer.Ordinal);
+        foreach (var pair in _episodicEdgeUuidsByTargetNodeUuid)
+        {
+            mentionCounts[pair.Key] = pair.Value.Count;
+        }
+
+        return mentionCounts;
+    }
+
+    private static List<SearchRank> BuildEpisodeMentionRanks(
+        IReadOnlyList<string> nodeUuids,
+        Dictionary<string, int> mentionCounts,
+        float minScore)
+    {
+        var ranks = new List<(SearchRank Rank, int Index)>(nodeUuids.Count);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < nodeUuids.Count; i++)
+        {
+            var uuid = nodeUuids[i];
+            if (!seen.Add(uuid))
+            {
+                continue;
+            }
+
+            var mentions = mentionCounts.GetValueOrDefault(uuid);
+            var score = mentions > 0 ? mentions : float.PositiveInfinity;
+            if (score >= minScore)
+            {
+                ranks.Add((new SearchRank(uuid, score), i));
+            }
+        }
+
+        ranks.Sort(static (left, right) =>
+        {
+            var scoreComparison = left.Rank.Score.CompareTo(right.Rank.Score);
+            return scoreComparison != 0
+                ? scoreComparison
+                : left.Index.CompareTo(right.Index);
+        });
+
+        var results = new List<SearchRank>(ranks.Count);
+        for (var i = 0; i < ranks.Count; i++)
+        {
+            results.Add(ranks[i].Rank);
+        }
+
+        return results;
+    }
+
+    private static int ResultCapacity(int limit, int maximum) =>
+        limit <= 0 ? 0 : Math.Min(limit, maximum);
+
     private static float NodeDistanceScore(
         HashSet<string> adjacentNodeUuids,
         string nodeUuid,
@@ -1318,6 +1475,28 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
 
         return adjacentNodeUuids.Contains(nodeUuid) ? 1 : 0;
+    }
+
+    private static void AddNodeDistanceRank(
+        List<SearchRank> centerRanks,
+        List<SearchRank> adjacentRanks,
+        List<SearchRank> distantRanks,
+        string uuid,
+        float score)
+    {
+        var rank = new SearchRank(uuid, score);
+        if (score >= 10)
+        {
+            centerRanks.Add(rank);
+        }
+        else if (score >= 1)
+        {
+            adjacentRanks.Add(rank);
+        }
+        else
+        {
+            distantRanks.Add(rank);
+        }
     }
 
     private static IEnumerable<TraversalStep> TraverseBreadthFirst(
