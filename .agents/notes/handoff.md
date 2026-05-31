@@ -77,8 +77,9 @@ improving those providers unless it directly supports shared abstractions or Lad
   the shared token visitor to build the distinct term list and lookup in one pass, and final
   document score projection uses a pre-sized loop.
 - The default `IdentityCrossEncoderClient` now creates one reusable `TextScorer` per rank call
-  instead of tokenizing the query once per passage. Direct tests pin score ordering and duplicate
-  passage index preservation for the indexed rank path.
+  instead of tokenizing the query once per passage, and its public/indexed rank paths use pre-sized
+  loops plus explicit stable score/index sorting instead of LINQ projection/sort chains. Direct tests
+  pin score ordering, equal-score input order, and duplicate passage index preservation.
 - `SearchResultComposer.FuseRanks` now calls an internal direct RRF helper for ranked tuple inputs,
   avoiding per-list item-only materialization while preserving rank-position-only scores, inclusive
   min-score filtering, first-seen item retention, and stable tie order. The shared RRF projection
@@ -291,16 +292,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after top-level search scope orchestration shaping:
+Latest checkpoint on 2026-06-01 after identity cross-encoder ranking shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --filter
-  "FullyQualifiedName~SearchEngineDriverBackedTests|FullyQualifiedName~SearchEngineRrfTests"
-  --verbosity minimal` passed with 56 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 778
+- The focused identity cross-encoder/search-reranker test filter passed with 53 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 779
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -413,7 +412,8 @@ These were previously audited and found faithful or intentionally different:
   non-query tokens still counted for length normalization
 - Node-distance reranker
 - Episode-mentions reranker
-- Identity cross-encoder lexical scoring and indexed duplicate-passage rank preservation
+- Identity cross-encoder lexical scoring, equal-score input-order preservation, and indexed
+  duplicate-passage rank preservation
 - `SearchResultComposer` cross-encoder reranking, including candidate passage order, invalid/duplicate
   indexed rank suppression, inclusive minimum-score filtering, and score/original-index ordering
 - `SearchResultComposer` node-distance/episode-mentions rank mapping, including missing ranks,

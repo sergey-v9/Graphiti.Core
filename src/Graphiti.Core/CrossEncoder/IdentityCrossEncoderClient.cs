@@ -14,13 +14,27 @@ public sealed class IdentityCrossEncoderClient : CrossEncoderClient
     {
         cancellationToken.ThrowIfCancellationRequested();
         var scorer = SearchUtilities.CreateTextScorer(query);
-        IReadOnlyList<(string Passage, float Score)> results = passages
-            .Select(passage => (passage, scorer.Score(passage)))
-            .OrderByDescending(item => item.Item2)
-            .ToList();
-        return Task.FromResult(results);
+
+        var scored = new List<(string Passage, float Score, int Index)>(passages.Count);
+        for (var i = 0; i < passages.Count; i++)
+        {
+            var passage = passages[i];
+            scored.Add((passage, scorer.Score(passage), i));
+        }
+
+        scored.Sort(CompareScoredPassages);
+
+        var results = new List<(string Passage, float Score)>(scored.Count);
+        for (var i = 0; i < scored.Count; i++)
+        {
+            var item = scored[i];
+            results.Add((item.Passage, item.Score));
+        }
+
+        return Task.FromResult<IReadOnlyList<(string Passage, float Score)>>(results);
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<CrossEncoderRank>> RankIndexedAsync(
         string query,
         IReadOnlyList<string> passages,
@@ -28,14 +42,33 @@ public sealed class IdentityCrossEncoderClient : CrossEncoderClient
     {
         cancellationToken.ThrowIfCancellationRequested();
         var scorer = SearchUtilities.CreateTextScorer(query);
-        IReadOnlyList<CrossEncoderRank> results = passages
-            .Select((passage, index) => new CrossEncoderRank(
-                index,
-                passage,
-                scorer.Score(passage)))
-            .OrderByDescending(item => item.Score)
-            .ThenBy(item => item.Index)
-            .ToList();
-        return Task.FromResult(results);
+
+        var results = new List<CrossEncoderRank>(passages.Count);
+        for (var i = 0; i < passages.Count; i++)
+        {
+            var passage = passages[i];
+            results.Add(new CrossEncoderRank(i, passage, scorer.Score(passage)));
+        }
+
+        results.Sort(CompareIndexedRanks);
+        return Task.FromResult<IReadOnlyList<CrossEncoderRank>>(results);
+    }
+
+    private static int CompareScoredPassages(
+        (string Passage, float Score, int Index) left,
+        (string Passage, float Score, int Index) right)
+    {
+        var scoreComparison = right.Score.CompareTo(left.Score);
+        return scoreComparison != 0
+            ? scoreComparison
+            : left.Index.CompareTo(right.Index);
+    }
+
+    private static int CompareIndexedRanks(CrossEncoderRank left, CrossEncoderRank right)
+    {
+        var scoreComparison = right.Score.CompareTo(left.Score);
+        return scoreComparison != 0
+            ? scoreComparison
+            : left.Index.CompareTo(right.Index);
     }
 }

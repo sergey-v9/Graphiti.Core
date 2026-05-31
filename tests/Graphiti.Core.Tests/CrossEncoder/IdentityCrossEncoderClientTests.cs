@@ -22,6 +22,24 @@ public class IdentityCrossEncoderClientTests
     }
 
     [Fact]
+    public async Task RankAsync_PreservesInputOrderForEqualScores()
+    {
+        var client = new IdentityCrossEncoderClient();
+        var passages = new[]
+        {
+            "alpha first",
+            "alpha second",
+            "gamma"
+        };
+
+        var ranked = await client.RankAsync("alpha", passages);
+
+        Assert.Equal(new[] { "alpha first", "alpha second", "gamma" }, ranked.Select(item => item.Passage));
+        Assert.Equal(ranked[0].Score, ranked[1].Score);
+        Assert.True(ranked[1].Score > ranked[2].Score);
+    }
+
+    [Fact]
     public async Task RankIndexedAsync_PreservesOriginalIndexesForDuplicatePassages()
     {
         var client = new IdentityCrossEncoderClient();

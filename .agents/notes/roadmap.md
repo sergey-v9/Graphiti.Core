@@ -84,9 +84,10 @@ shorter than the old working plans; expand items only when they become active.
   shared token visitor to build the distinct term list and lookup in one pass, and final document
   score projection uses a pre-sized loop. Keep provider-backed full-text delegated to each graph
   backend.
-- The default identity cross-encoder now reuses one query `TextScorer` per ranking call, preserving
-  deterministic lexical reranking and duplicate-passage index handling while avoiding repeated query
-  tokenization.
+- The default identity cross-encoder now reuses one query `TextScorer` per ranking call and uses
+  pre-sized loop projection plus explicit stable score/index sorting. This preserves deterministic
+  lexical reranking, equal-score input order, and duplicate-passage index handling while avoiding
+  repeated query tokenization and LINQ projection/sort chains.
 - RRF fusion from `SearchResultComposer` now runs directly over ranked `(Item, Score)` tuples instead
   of materializing item-only lists, while preserving rank-position scoring, inclusive min-score
   filtering, and first-seen tie order. The shared RRF projection path now uses a pre-sized loop and
@@ -201,14 +202,18 @@ shorter than the old working plans; expand items only when they become active.
   driver-backed tests pin four-scope concurrent startup and result assignment, first-fault rethrow,
   sibling cancellation on faults, and cancellation-only behavior without internal sibling
   cancellation.
+- Identity cross-encoder ranking now avoids LINQ projection/sort chains in the default reranker by
+  using explicit scored buffers and stable score/index comparers. Tests pin score ordering,
+  equal-score input order, and duplicate-passage indexed rank preservation.
 - Direct ranked-list composition in `SearchResultComposer`/`SearchUtilities` now avoids the small
   `IReadOnlyList[]` allocations that previously connected `SearchEngine` branches to fusion/merge.
   Tests pin one-list RRF, two-list RRF/merge, three-list parity, and the existing RRF/merge ordering
   semantics.
 - Good next allocation slice from the 2026-06-01 scans: continue with a fresh targeted scan before
-  editing. Prefer remaining measurable search/telemetry hot spots or move back to LadybugDB package
-  proof; avoid behavior-sensitive async coordination changes unless a focused test can pin the exact
-  parity contract first.
+  editing. Concrete candidates from the latest scan are `TextUtilities.ConcatenateEpisodes`
+  capacity-aware prompt construction, `LlmClient.PrepareMessages` / `CleanInput` clean-input fast
+  paths, Neo4j bulk-save parameter loop projection, or memory LLM cache clone/parse coalescing. Move
+  back to LadybugDB package proof when provider work is the higher-leverage slice.
 
 ## Graphiti Decomposition
 
