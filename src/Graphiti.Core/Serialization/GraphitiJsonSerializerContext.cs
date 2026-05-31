@@ -1,0 +1,55 @@
+using System.Text.Json.Serialization;
+
+namespace Graphiti.Core.Serialization;
+
+/// <summary>
+/// The System.Text.Json source-generation context that supplies compile-time serialization metadata for
+/// the library's serializable model and configuration types, enabling trim/AOT-friendly serialization.
+/// </summary>
+[JsonSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower,
+    GenerationMode = JsonSourceGenerationMode.Metadata)]
+[JsonSerializable(typeof(AddBulkEpisodeResults))]
+[JsonSerializable(typeof(AddEpisodeResults))]
+[JsonSerializable(typeof(AddTripletResults))]
+[JsonSerializable(typeof(CommunityEdge))]
+[JsonSerializable(typeof(CommunityNode))]
+[JsonSerializable(typeof(CommunitySearchConfig))]
+[JsonSerializable(typeof(DateFilter))]
+[JsonSerializable(typeof(Dictionary<string, object?>))]
+[JsonSerializable(typeof(EdgeSearchConfig))]
+[JsonSerializable(typeof(EntityEdge))]
+[JsonSerializable(typeof(EntityNode))]
+[JsonSerializable(typeof(EpisodeSearchConfig))]
+[JsonSerializable(typeof(EpisodicEdge))]
+[JsonSerializable(typeof(EpisodicNode))]
+[JsonSerializable(typeof(Graphiti.CommunityNameResponse))]
+[JsonSerializable(typeof(Graphiti.CommunitySummaryResponse))]
+[JsonSerializable(typeof(Graphiti.EdgeResolutionResponse))]
+[JsonSerializable(typeof(Graphiti.EdgeTimestampResponse))]
+[JsonSerializable(typeof(Graphiti.EpisodeEdgeExtractionResponse))]
+[JsonSerializable(typeof(Graphiti.EpisodeGraphExtractedEdgeResponse))]
+[JsonSerializable(typeof(Graphiti.EpisodeGraphExtractedEntityResponse))]
+[JsonSerializable(typeof(Graphiti.EpisodeNodeExtractionResponse))]
+[JsonSerializable(typeof(Graphiti.NodeDuplicateResponse))]
+[JsonSerializable(typeof(Graphiti.NodeResolutionsResponse))]
+[JsonSerializable(typeof(Graphiti.SagaSummaryResponse))]
+[JsonSerializable(typeof(HasEpisodeEdge))]
+[JsonSerializable(typeof(List<Graphiti.EpisodeGraphExtractedEdgeResponse>))]
+[JsonSerializable(typeof(List<Graphiti.EpisodeGraphExtractedEntityResponse>))]
+[JsonSerializable(typeof(List<Graphiti.NodeDuplicateResponse>))]
+[JsonSerializable(typeof(List<int>))]
+[JsonSerializable(typeof(LlmCacheKeyPayload))]
+[JsonSerializable(typeof(Message))]
+[JsonSerializable(typeof(NextEpisodeEdge))]
+[JsonSerializable(typeof(NodeSearchConfig))]
+[JsonSerializable(typeof(PropertyFilter))]
+[JsonSerializable(typeof(PromptTokenUsage))]
+[JsonSerializable(typeof(RawEpisode))]
+[JsonSerializable(typeof(SagaEpisodeContent))]
+[JsonSerializable(typeof(SagaNode))]
+[JsonSerializable(typeof(SearchConfig))]
+[JsonSerializable(typeof(SearchFilters))]
+[JsonSerializable(typeof(SearchResults))]
+[JsonSerializable(typeof(TokenUsage))]
+internal sealed partial class GraphitiJsonSerializerContext : JsonSerializerContext;

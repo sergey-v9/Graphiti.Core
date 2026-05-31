@@ -1,0 +1,538 @@
+using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging;
+
+namespace Graphiti.Core.Internal.Services;
+
+internal sealed class NodeResolutionService(
+    Func<IGraphDriver> driverAccessor,
+    ILlmClient llmClient,
+    IEmbedderClient embedder,
+    ILogger logger)
+{
+    private const int NodeDedupCandidateLimit = 15;
+    private const float NodeDedupCosineMinScore = 0.6f;
+
+    private IGraphDriver Driver => driverAccessor();
+
+    public async Task<EntityNodeResolution> ResolveExtractedNodesAsync(
+        IReadOnlyList<EntityNode> extractedNodes,
+        string groupId,
+        EpisodicNode? episode,
+        IReadOnlyList<EpisodicNode>? previousEpisodes,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes,
+        IReadOnlyList<EntityNode>? existingNodesOverride,
+        CancellationToken cancellationToken)
+    {
+        using var activity = GraphitiTelemetry.StartActivity("Resolution.Nodes");
+        activity?.SetTag("graphiti.group_id", groupId);
+        activity?.SetTag("graphiti.input.nodes", extractedNodes.Count);
+        activity?.SetTag("graphiti.previous_episodes.count", previousEpisodes?.Count ?? 0);
+        activity?.SetTag("graphiti.extraction.entity_types.count", entityTypes?.Count ?? 0);
+        activity?.SetTag("graphiti.existing_nodes.override", existingNodesOverride is not null);
+
+        try
+        {
+            if (extractedNodes.Count == 0)
+            {
+                var emptyResolution = new EntityNodeResolution(
+                    new List<EntityNode>(),
+                    new Dictionary<string, EntityNode>(StringComparer.OrdinalIgnoreCase));
+                activity?.SetTag("graphiti.existing.nodes", 0);
+                activity?.SetTag("graphiti.result.nodes", 0);
+                GraphitiTelemetry.SetOk(activity);
+                return emptyResolution;
+            }
+
+            var existingNodes = existingNodesOverride ?? await Driver.GetNodesByGroupIdsAsync<EntityNode>(
+                new[] { groupId },
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            activity?.SetTag("graphiti.existing.nodes", existingNodes.Count);
+            var deterministicResolution = EntityNodeDeduplicator.Resolve(extractedNodes, existingNodes, MergeExtractedNode);
+            activity?.SetTag("graphiti.resolution.deterministic_nodes", deterministicResolution.Nodes.Count);
+            var resolution = await ResolveUnresolvedNodesWithLlmAsync(
+                deterministicResolution,
+                extractedNodes,
+                existingNodes,
+                groupId,
+                episode,
+                previousEpisodes,
+                entityTypes,
+                cancellationToken).ConfigureAwait(false);
+            activity?.SetTag("graphiti.result.nodes", resolution.Nodes.Count);
+            GraphitiTelemetry.SetOk(activity);
+            return resolution;
+        }
+        catch (Exception exception)
+        {
+            GraphitiTelemetry.RecordException(activity, exception);
+            throw;
+        }
+    }
+
+    private async Task<EntityNodeResolution> ResolveUnresolvedNodesWithLlmAsync(
+        EntityNodeResolution deterministicResolution,
+        IReadOnlyList<EntityNode> extractedNodes,
+        IReadOnlyList<EntityNode> existingNodes,
+        string groupId,
+        EpisodicNode? episode,
+        IReadOnlyList<EpisodicNode>? previousEpisodes,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes,
+        CancellationToken cancellationToken)
+    {
+        var unresolvedNodes = FindLlmNodeDedupTargets(deterministicResolution, extractedNodes);
+        if (unresolvedNodes.Count == 0 || existingNodes.Count == 0)
+        {
+            return deterministicResolution;
+        }
+
+        var candidateContext = await CollectNodeDedupCandidatesAsync(
+            unresolvedNodes,
+            existingNodes,
+            groupId,
+            cancellationToken).ConfigureAwait(false);
+        unresolvedNodes = candidateContext.UnresolvedNodes;
+        var candidates = candidateContext.Candidates;
+        if (candidates.Count == 0)
+        {
+            return deterministicResolution;
+        }
+
+        var response = await llmClient.GenerateResponseAsync(
+            BuildNodeDeduplicationMessages(unresolvedNodes, candidates, episode, previousEpisodes, entityTypes),
+            responseModel: typeof(Graphiti.NodeResolutionsResponse),
+            modelSize: ModelSize.Small,
+            groupId: groupId,
+            promptName: "dedupe_nodes.nodes",
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        var nodesByExtractedName = new Dictionary<string, EntityNode>(
+            deterministicResolution.NodesByExtractedName,
+            StringComparer.OrdinalIgnoreCase);
+
+        var processedIds = new HashSet<int>();
+        foreach (var resolution in ReadNodeResolutions(response))
+        {
+            if (resolution.Id < 0
+                || resolution.Id >= unresolvedNodes.Count
+                || !processedIds.Add(resolution.Id))
+            {
+                continue;
+            }
+
+            var extractedNode = unresolvedNodes[resolution.Id];
+            if (resolution.DuplicateCandidateId < 0
+                || resolution.DuplicateCandidateId >= candidates.Count)
+            {
+                nodesByExtractedName[extractedNode.Name] = extractedNode;
+                continue;
+            }
+
+            var resolvedNode = MergeExtractedNode(candidates[resolution.DuplicateCandidateId], extractedNode);
+            nodesByExtractedName[extractedNode.Name] = resolvedNode;
+        }
+
+        foreach (var extractedNode in unresolvedNodes)
+        {
+            nodesByExtractedName.TryAdd(extractedNode.Name, extractedNode);
+        }
+
+        return new EntityNodeResolution(
+            BuildResolvedNodeList(extractedNodes, nodesByExtractedName),
+            nodesByExtractedName);
+    }
+
+    private static List<EntityNode> FindLlmNodeDedupTargets(
+        EntityNodeResolution resolution,
+        IReadOnlyList<EntityNode> extractedNodes)
+    {
+        var unresolved = new List<EntityNode>();
+        var seenUuids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var node in extractedNodes)
+        {
+            if (!resolution.NodesByExtractedName.TryGetValue(node.Name, out var resolved)
+                || !string.Equals(resolved.Uuid, node.Uuid, StringComparison.Ordinal)
+                || !seenUuids.Add(node.Uuid))
+            {
+                continue;
+            }
+
+            unresolved.Add(node);
+        }
+
+        return unresolved;
+    }
+
+    private sealed record NodeDedupCandidateContext(
+        List<EntityNode> UnresolvedNodes,
+        List<EntityNode> Candidates);
+
+    private async Task<NodeDedupCandidateContext> CollectNodeDedupCandidatesAsync(
+        List<EntityNode> unresolvedNodes,
+        IReadOnlyList<EntityNode> existingNodes,
+        string groupId,
+        CancellationToken cancellationToken)
+    {
+        var candidates = new List<EntityNode>();
+        var eligibleNodes = new List<EntityNode>();
+        var eligibleUuids = new HashSet<string>(StringComparer.Ordinal);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        void AddCandidate(EntityNode candidate)
+        {
+            if (seen.Add(candidate.Uuid))
+            {
+                candidates.Add(candidate);
+            }
+        }
+
+        void MarkEligible(EntityNode node)
+        {
+            if (eligibleUuids.Add(node.Uuid))
+            {
+                eligibleNodes.Add(node);
+            }
+        }
+
+        if (Driver is ISearchGraphDriver searchDriver)
+        {
+            try
+            {
+                var queryVectors = await embedder
+                    .CreateBatchAsync(
+                        unresolvedNodes.Select(node => node.Name.Replace('\n', ' ')).ToList(),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                for (var i = 0; i < unresolvedNodes.Count; i++)
+                {
+                    var hits = await searchDriver.SearchEntityNodesByEmbeddingAsync(
+                        queryVectors[i],
+                        new SearchFilters(),
+                        new[] { groupId },
+                        NodeDedupCandidateLimit,
+                        NodeDedupCosineMinScore,
+                        cancellationToken).ConfigureAwait(false);
+                    if (hits.Count > 0)
+                    {
+                        MarkEligible(unresolvedNodes[i]);
+                    }
+
+                    foreach (var hit in hits)
+                    {
+                        AddCandidate(hit.Item);
+                    }
+                }
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                GraphitiLog.NodeDedupCandidateSearchFailed(logger, exception, groupId);
+            }
+        }
+
+        var maxCandidates = Math.Max(NodeDedupCandidateLimit, NodeDedupCandidateLimit * unresolvedNodes.Count);
+        foreach (var unresolvedNode in unresolvedNodes)
+        {
+            var fallbackCandidates = RankFallbackNodeDedupCandidates(
+                new[] { unresolvedNode },
+                existingNodes,
+                NodeDedupCandidateLimit);
+            if (fallbackCandidates.Count > 0)
+            {
+                MarkEligible(unresolvedNode);
+            }
+
+            foreach (var candidate in fallbackCandidates)
+            {
+                AddCandidate(candidate);
+            }
+        }
+
+        return new NodeDedupCandidateContext(
+            eligibleNodes,
+            candidates.Take(maxCandidates).ToList());
+    }
+
+    private static List<EntityNode> RankFallbackNodeDedupCandidates(
+        IReadOnlyList<EntityNode> unresolvedNodes,
+        IReadOnlyList<EntityNode> existingNodes,
+        int limit)
+    {
+        if (limit <= 0)
+        {
+            return [];
+        }
+
+        return existingNodes
+            .Select((node, index) => (
+                Node: node,
+                Index: index,
+                Score: unresolvedNodes.Max(unresolved =>
+                    SearchUtilities.TextScore(unresolved.Name, $"{node.Name} {node.Summary}"))))
+            .Where(candidate => candidate.Score > 0)
+            .OrderByDescending(candidate => candidate.Score)
+            .ThenBy(candidate => candidate.Index)
+            .Take(limit)
+            .Select(candidate => candidate.Node)
+            .ToList();
+    }
+
+    private static Message[] BuildNodeDeduplicationMessages(
+        IReadOnlyList<EntityNode> unresolvedNodes,
+        IReadOnlyList<EntityNode> candidates,
+        EpisodicNode? episode,
+        IReadOnlyList<EpisodicNode>? previousEpisodes,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
+    {
+        return
+        [
+            new Message(
+                "system",
+                "You are an entity deduplication assistant. NEVER fabricate entity names or mark distinct entities as duplicates."),
+            new Message(
+                "user",
+                BuildNodeDeduplicationContext(
+                    unresolvedNodes,
+                    candidates,
+                    episode,
+                    previousEpisodes,
+                    entityTypes))
+        ];
+    }
+
+    private static string BuildNodeDeduplicationContext(
+        IReadOnlyList<EntityNode> unresolvedNodes,
+        IReadOnlyList<EntityNode> candidates,
+        EpisodicNode? episode,
+        IReadOnlyList<EpisodicNode>? previousEpisodes,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
+    {
+        var previousMessages = new JsonArray();
+        foreach (var previousEpisode in previousEpisodes ?? Array.Empty<EpisodicNode>())
+        {
+            previousMessages.Add(new JsonObject
+            {
+                ["content"] = previousEpisode.Content,
+                ["timestamp"] = GraphitiHelpers.EnsureUtc(previousEpisode.ValidAt).ToString("O")
+            });
+        }
+
+        var extractedNodes = new JsonArray();
+        for (var i = 0; i < unresolvedNodes.Count; i++)
+        {
+            var node = unresolvedNodes[i];
+            extractedNodes.Add(new JsonObject
+            {
+                ["id"] = i,
+                ["name"] = node.Name,
+                ["entity_type"] = new JsonArray(node.Labels.Select(label => JsonValue.Create(label)).ToArray()),
+                ["entity_type_description"] = EntityTypeDescription(node, entityTypes)
+            });
+        }
+
+        var existingNodes = new JsonArray();
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            existingNodes.Add(BuildNodeDedupCandidateContext(candidates[i], i));
+        }
+
+        return $"""
+<PREVIOUS MESSAGES>
+{previousMessages.ToJsonString(GraphitiJsonSerializer.Options)}
+</PREVIOUS MESSAGES>
+
+<CURRENT MESSAGE>
+{episode?.Content ?? string.Empty}
+</CURRENT MESSAGE>
+
+<ENTITIES>
+{extractedNodes.ToJsonString(GraphitiJsonSerializer.Options)}
+</ENTITIES>
+
+<EXISTING ENTITIES>
+{existingNodes.ToJsonString(GraphitiJsonSerializer.Options)}
+</EXISTING ENTITIES>
+
+Each of the above ENTITIES was extracted from the CURRENT MESSAGE.
+For each entity, determine if it is a duplicate of any EXISTING ENTITY.
+Entities should only be considered duplicates if they refer to the same real-world object or concept.
+
+NEVER mark entities as duplicates if:
+- They are related but distinct.
+- They have similar names or purposes but refer to separate instances or concepts.
+
+Task:
+ENTITIES contains {unresolvedNodes.Count} entities with IDs 0 through {unresolvedNodes.Count - 1}.
+Your response MUST include EXACTLY {unresolvedNodes.Count} resolutions with IDs 0 through {unresolvedNodes.Count - 1}. Do not skip or add IDs.
+
+For every entity, provide:
+- id: integer id from ENTITIES
+- name: the best full name for the entity
+- duplicate_candidate_id: the candidate_id of the EXISTING ENTITY that is the best duplicate match, or -1 if there is no duplicate
+""";
+    }
+
+    private static JsonObject BuildNodeDedupCandidateContext(EntityNode candidate, int candidateId)
+    {
+        var context = JsonSerializer.SerializeToNode(candidate.Attributes, GraphitiJsonSerializer.Options) as JsonObject
+                      ?? new JsonObject();
+        context["candidate_id"] = candidateId;
+        context["name"] = candidate.Name;
+        context["entity_types"] = new JsonArray(candidate.Labels.Select(label => JsonValue.Create(label)).ToArray());
+        context["summary"] = string.IsNullOrEmpty(candidate.Summary)
+            ? string.Empty
+            : candidate.Summary.Length > 120
+                ? candidate.Summary[..120]
+                : candidate.Summary;
+        return context;
+    }
+
+    private static string EntityTypeDescription(
+        EntityNode node,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
+    {
+        if (entityTypes is null)
+        {
+            return "Default Entity Type";
+        }
+
+        return node.Labels
+            .Where(label => !string.Equals(label, "Entity", StringComparison.Ordinal))
+            .Select(label => entityTypes.TryGetValue(label, out var definition) ? definition.Description : string.Empty)
+            .FirstOrDefault(description => !string.IsNullOrWhiteSpace(description)) ?? "Default Entity Type";
+    }
+
+    private static IReadOnlyList<Graphiti.NodeDuplicateResponse> ReadNodeResolutions(JsonObject response)
+    {
+        if (!response.TryGetPropertyValue("entity_resolutions", out var node) || node is not JsonArray array)
+        {
+            return Array.Empty<Graphiti.NodeDuplicateResponse>();
+        }
+
+        var resolutions = new List<Graphiti.NodeDuplicateResponse>();
+        foreach (var item in array.OfType<JsonObject>())
+        {
+            resolutions.Add(new Graphiti.NodeDuplicateResponse(
+                ReadInt(item, "id") ?? -1,
+                ReadString(item, "name") ?? string.Empty,
+                ReadInt(item, "duplicate_candidate_id") ?? -1));
+        }
+
+        return resolutions;
+    }
+
+    private static int? ReadInt(JsonObject item, string key)
+    {
+        if (!item.TryGetPropertyValue(key, out var node) || node is null)
+        {
+            return null;
+        }
+
+        if (node is JsonValue value)
+        {
+            if (value.TryGetValue<int>(out var id))
+            {
+                return id;
+            }
+
+            if (value.TryGetValue<string>(out var text)
+                && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out id))
+            {
+                return id;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ReadString(JsonObject item, string key)
+    {
+        if (!item.TryGetPropertyValue(key, out var node) || node is null)
+        {
+            return null;
+        }
+
+        if (node is JsonValue value && value.TryGetValue<string>(out var text))
+        {
+            return text;
+        }
+
+        return node.ToJsonString(GraphitiJsonSerializer.Options);
+    }
+
+    private static List<EntityNode> BuildResolvedNodeList(
+        IReadOnlyList<EntityNode> extractedNodes,
+        Dictionary<string, EntityNode> nodesByExtractedName)
+    {
+        var nodes = new List<EntityNode>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var extractedNode in extractedNodes)
+        {
+            if (!nodesByExtractedName.TryGetValue(extractedNode.Name, out var resolvedNode)
+                || !seen.Add(resolvedNode.Uuid))
+            {
+                continue;
+            }
+
+            nodes.Add(resolvedNode);
+        }
+
+        return nodes;
+    }
+
+    private static EntityNode MergeExtractedNode(EntityNode existing, EntityNode extracted)
+    {
+        existing.Labels = existing.Labels
+            .Concat(extracted.Labels)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(extracted.Summary))
+        {
+            existing.Summary = extracted.Summary;
+        }
+
+        foreach (var pair in extracted.Attributes)
+        {
+            existing.Attributes[pair.Key] = pair.Value;
+        }
+
+        return existing;
+    }
+
+    public async Task<EntityNode> ResolveTripletNodeAsync(EntityNode input, CancellationToken cancellationToken)
+    {
+        EntityNode resolved;
+        try
+        {
+            resolved = await EntityNode.GetByUuidAsync(Driver, input.Uuid, cancellationToken).ConfigureAwait(false);
+        }
+        catch (NodeNotFoundException)
+        {
+            var groupId = string.IsNullOrWhiteSpace(input.GroupId)
+                ? Driver.DefaultGroupId
+                : input.GroupId;
+            var resolution = await ResolveExtractedNodesAsync(
+                new[] { input },
+                groupId,
+                episode: null,
+                previousEpisodes: null,
+                entityTypes: null,
+                existingNodesOverride: null,
+                cancellationToken).ConfigureAwait(false);
+            resolved = resolution.Nodes.Count == 0 ? input : resolution.Nodes[0];
+        }
+
+        foreach (var pair in input.Attributes)
+        {
+            resolved.Attributes[pair.Key] = pair.Value;
+        }
+
+        if (!string.IsNullOrEmpty(input.Summary))
+        {
+            resolved.Summary = input.Summary;
+        }
+
+        resolved.Labels = resolved.Labels.Union(input.Labels).Distinct(StringComparer.Ordinal).ToList();
+        return resolved;
+    }
+}
