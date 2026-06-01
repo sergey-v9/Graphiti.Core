@@ -340,6 +340,168 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_SearchExecutorRunsNonEmptySearchFilters()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var search = new LadybugSearchExecutor(executor);
+        var createdAt = new DateTime(2026, 7, 8, 9, 10, 11, DateTimeKind.Utc);
+        var source = new EntityNode
+        {
+            Uuid = "entity-filter-source",
+            Name = "Filtered Alice",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [1.0f, 0.0f],
+            Summary = "Graphiti filter person source"
+        };
+        var target = new EntityNode
+        {
+            Uuid = "entity-filter-target",
+            Name = "Filtered Bob",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [0.95f, 0.05f],
+            Summary = "Graphiti filter person target"
+        };
+        var organization = new EntityNode
+        {
+            Uuid = "entity-filter-organization",
+            Name = "Filtered Company",
+            GroupId = "tenant",
+            Labels = ["Organization"],
+            CreatedAt = createdAt,
+            NameEmbedding = [0.99f, 0.01f],
+            Summary = "Graphiti filter organization"
+        };
+        var otherGroup = new EntityNode
+        {
+            Uuid = "entity-filter-other-group",
+            Name = "Other Group Person",
+            GroupId = "other",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [1.0f, 0.0f],
+            Summary = "Graphiti filter other group"
+        };
+        var keepEdge = new EntityEdge
+        {
+            Uuid = "edge-filter-keep",
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = target.Uuid,
+            GroupId = "tenant",
+            Name = "KNOWS",
+            Fact = "Filtered Alice knows Filtered Bob",
+            FactEmbedding = [1.0f, 0.0f],
+            Episodes = ["episode-filter"],
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = createdAt
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(source);
+        await driver.SaveNodeAsync(target);
+        await driver.SaveNodeAsync(organization);
+        await driver.SaveNodeAsync(otherGroup);
+        await driver.SaveEdgeAsync(keepEdge);
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-filter-wrong-type",
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = target.Uuid,
+            GroupId = "tenant",
+            Name = "MENTORS",
+            Fact = "Filtered Alice mentors Filtered Bob",
+            FactEmbedding = [1.0f, 0.0f],
+            Episodes = ["episode-filter"],
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = createdAt
+        });
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-filter-wrong-uuid",
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = target.Uuid,
+            GroupId = "tenant",
+            Name = "KNOWS",
+            Fact = "Filtered Alice knows Filtered Bob by another fact",
+            FactEmbedding = [1.0f, 0.0f],
+            Episodes = ["episode-filter"],
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = createdAt
+        });
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-filter-wrong-label",
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = organization.Uuid,
+            GroupId = "tenant",
+            Name = "KNOWS",
+            Fact = "Filtered Alice knows Filtered Company",
+            FactEmbedding = [1.0f, 0.0f],
+            Episodes = ["episode-filter"],
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = createdAt
+        });
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-filter-wrong-group",
+            SourceNodeUuid = otherGroup.Uuid,
+            TargetNodeUuid = otherGroup.Uuid,
+            GroupId = "other",
+            Name = "KNOWS",
+            Fact = "Other group person knows themselves",
+            FactEmbedding = [1.0f, 0.0f],
+            Episodes = ["episode-filter"],
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = createdAt
+        });
+        await InstallFtsAndCreateSearchIndexesAsync(executor);
+
+        var nodeFilters = new SearchFilters { NodeLabels = new List<string> { "Person" } };
+        var edgeFilters = new SearchFilters
+        {
+            NodeLabels = new List<string> { "Person" },
+            EdgeTypes = new List<string> { "KNOWS" },
+            EdgeUuids = new List<string> { keepEdge.Uuid }
+        };
+
+        var nodeVector = await search.SearchEntityNodesByEmbeddingAsync(
+            [1.0f, 0.0f],
+            nodeFilters,
+            ["tenant"],
+            limit: 10,
+            minScore: 0.8f);
+        var edgeVector = await search.SearchEntityEdgesByEmbeddingAsync(
+            [1.0f, 0.0f],
+            edgeFilters,
+            ["tenant"],
+            limit: 10,
+            minScore: 0.8f);
+        var edgeFulltext = await search.SearchEntityEdgesFulltextAsync(
+            "Filtered",
+            edgeFilters,
+            ["tenant"],
+            limit: 10);
+
+        var nodeUuids = nodeVector.Select(hit => hit.Item.Uuid).ToHashSet(StringComparer.Ordinal);
+        Assert.Contains(source.Uuid, nodeUuids);
+        Assert.Contains(target.Uuid, nodeUuids);
+        Assert.DoesNotContain(organization.Uuid, nodeUuids);
+        Assert.DoesNotContain(otherGroup.Uuid, nodeUuids);
+        Assert.All(nodeVector, hit => Assert.Contains("Person", hit.Item.Labels));
+        Assert.Equal(keepEdge.Uuid, Assert.Single(edgeVector).Item.Uuid);
+        Assert.Equal(keepEdge.Uuid, Assert.Single(edgeFulltext).Item.Uuid);
+    }
+
+    [Fact]
     public async Task PackageRuntime_SearchExecutorRunsBfsAndRankerStatements()
     {
         await using var executor = new PackageLadybugExecutor();

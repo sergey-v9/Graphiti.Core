@@ -31,6 +31,9 @@ name. Existing Neo4j/FalkorDB work may remain as reference coverage, but do not 
 improving those providers unless it directly supports shared abstractions or LadybugDB validation.
 When LadybugDB driver work reveals behavior that appears to be a package/backend bug, mark it
 separately from C# port gaps so it can be fixed in LadybugDB later or worked around deliberately.
+If a confirmed package bug blocks the port, `W:\code\ladybug` may be patched locally without pushing;
+commit that repo separately, add a nearby markdown draft for the upstream `ladybug-dotnet` request,
+pack a local NuGet, and wire Graphiti to the repaired package only as part of that explicit repair.
 
 ## Current Layout
 
@@ -251,8 +254,9 @@ separately from C# port gaps so it can be fixed in LadybugDB later or worked aro
   That proof pins the Python Kuzu entity-origin edge BFS shape where a depth-2 origin returns the
   second logical `RELATES_TO` fact edge through `RelatesToNode_`. The package path now also proves
   community-edge `UNION` saves, normalized list-backed edge/node deletes, grouped clear, and full
-  clear through the internal driver. Next provider work should move toward a concrete executor
-  adapter before provider wiring.
+  clear through the internal driver. Non-empty Kuzu search filters are now package-proved for
+  `list_has_all(...)`, edge type lists, edge UUID lists, and group filters. Next provider work should
+  move toward a concrete executor adapter before provider wiring.
 - DI-created graph drivers now consistently receive `GraphitiOptions.Database` for both supported
   providers, InMemory and Neo4j. For InMemory this sets the driver `Database` label but intentionally
   does not change the provider default group id.
@@ -352,14 +356,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after LadybugDB package graph-maintenance runtime expansion:
+Latest checkpoint on 2026-06-01 after LadybugDB package search-filter runtime expansion:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused Ladybug package runtime test filter passed with 9 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 815
+- The focused Ladybug package runtime test filter passed with 10 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 816
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -601,8 +605,8 @@ fork while preserving Kuzu behavior for Python parity. Keep the separate `kuzu-d
 visible for agents working on driver/provider work. The schema/statement/mapper foundation exists;
 the internal executor-backed non-search driver core exists; the internal search statement foundation
 now has fake-executor execution/mapping coverage plus focused real-package proof for FTS/vector,
-BFS, ranker, and graph-maintenance statements, but it is not exposed by `LadybugGraphDriver`. The
-next safe provider increment is deciding package/native dependency shape, adding a concrete
-LadybugDB executor adapter, and keeping `GraphProvider.Kuzu` unsupported until behavior is proved
-end to end. If implementation uncovers behavior that appears to be a LadybugDB package bug, record it
-separately from Graphiti port TODOs so it can be fixed or patched later.
+BFS, ranker, search-filter, and graph-maintenance statements, but it is not exposed by
+`LadybugGraphDriver`. The next safe provider increment is deciding package/native dependency shape,
+adding a concrete LadybugDB executor adapter, and keeping `GraphProvider.Kuzu` unsupported until
+behavior is proved end to end. If implementation uncovers behavior that appears to be a LadybugDB
+package bug, record it separately from Graphiti port TODOs so it can be fixed or patched later.

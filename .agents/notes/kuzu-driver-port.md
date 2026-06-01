@@ -53,6 +53,10 @@ being ported.
 - If driver implementation uncovers behavior that looks like a LadybugDB package/backend bug rather
   than a C# port bug, mark it separately in this note or a focused issue. The port may work around
   proven backend limitations, but should not blur them with Graphiti parity gaps.
+- Local LadybugDB package repair is allowed when a confirmed backend/package bug blocks Graphiti:
+  use `W:\code\ladybug`, do not push remotely, keep those edits/commits separate from Graphiti
+  commits, add a nearby markdown draft describing the upstream `ladybug-dotnet` request, pack a
+  local NuGet, and connect Graphiti to that local package source only for the repaired package path.
 - Neo4j and FalkorDB can stay as reference/confirmation paths if already working, but they are not
   where future provider improvements should go.
 - Neptune is a separate provider decision and remains not implemented.
@@ -84,7 +88,9 @@ being ported.
   package. The entity-origin edge BFS proof currently pins the Python Kuzu shape where a depth-2
   origin reaches the second logical `RELATES_TO` fact edge through `RelatesToNode_`. Graph
   maintenance proof now covers community-edge `UNION` saves, normalized list-backed edge/node
-  deletes, grouped clear, and full clear through the internal driver.
+  deletes, grouped clear, and full clear through the internal driver. Non-empty Kuzu search filters
+  are also package-proved for `list_has_all(...)`, `e.name in $edge_types`, `e.uuid in $edge_uuids`,
+  and grouped entity/edge search.
 - Current package binding does not accept the list/array and null parameter shapes Graphiti
   statements use today. `List<string>`, `string[]`, `float[]`, and `object[]` throw
   `NotSupportedException`; `null` throws `ArgumentNullException`. The normalizer handles these by
@@ -104,9 +110,6 @@ being ported.
 
 - Whether LadybugDB accepts any Python Kuzu Cypher shapes used by Graphiti that are not represented
   in the current internal-driver and internal-search runtime proofs.
-- Search-runtime proof with non-empty Kuzu filters still needs a focused pass for
-  `list_has_all(...)`, `e.name in $edge_types`, and `e.uuid in $edge_uuids`; current package tests
-  mostly prove empty-filter search execution plus graph/read/delete list predicates.
 - If community-cluster maintenance is ported into the Ladybug driver, prove the `collect(DISTINCT
   ...)` and `WITH count(*)` query shapes against the package before wiring it.
 - Whether the concrete adapter should use prepared execution everywhere or split direct/prepared
@@ -148,9 +151,10 @@ being ported.
    references until this is explicit.
 2. Extend package-runtime proof only when a concrete adapter or newly ported feature introduces a
    Ladybug/Kuzu statement shape not already covered by the current Saga/entity-edge/episode/
-   FTS/vector/BFS/ranker/`UNION`/delete/clear tests. If a proof fails because the LadybugDB package
-   appears to reject valid Kuzu behavior or mishandle binding/projection/materialization, record that
-   as a suspected package bug separately from Graphiti port work.
+   FTS/vector/BFS/ranker/filter/`UNION`/delete/clear tests. If a proof fails because the LadybugDB
+   package appears to reject valid Kuzu behavior or mishandle binding/projection/materialization,
+   record that as a suspected package bug separately from Graphiti port work, and only then use the
+   local `W:\code\ladybug` repair/package workflow.
 3. Add/use the LadybugDB package in the core driver/core boundary selected above and decide how
    its connections/options should be represented in `GraphitiOptions`.
 4. Add a concrete LadybugDB package adapter for `ILadybugQueryExecutor`. Keep `GraphProvider.Kuzu`
