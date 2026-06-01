@@ -34,7 +34,8 @@ being ported.
   edges and saga content retrieval, `SummarizeSagaAsync` summary/watermark persistence, and
   `BuildCommunitiesAsync` community construction/rebuild cleanup with community search. It now also
   proves `AddEpisodeAsync(updateCommunities: true)` attaching a newly ingested entity to an existing
-  community. It still does not make `GraphProvider.Kuzu` valid through core provider validation.
+  community and file-backed `LadybugDbOptions.DatabasePath` persistence across scoped drivers. It
+  still does not make `GraphProvider.Kuzu` valid through core provider validation.
 - `LadybugRecordMapper` uses loop-built attribute/list materialization for Ladybug/Kuzu rows while
   preserving JSON clone semantics, ordinal dictionaries, source ordering, null handling, and
   invariant object conversion.
@@ -203,14 +204,16 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
    record that as a suspected package bug separately from Graphiti port work, and only then use the
    local `W:\code\ladybug` repair/package workflow.
 3. Extend optional-package host options only when real connection/runtime requirements appear; the
-   current optional package exposes `LadybugDbOptions.DatabasePath` and DI helper registration.
+   current optional package exposes `LadybugDbOptions.DatabasePath` and DI helper registration, and
+   the configured file-backed path now has scoped-driver persistence proof.
 4. Keep `GraphProvider.Kuzu` unsupported in core DI/options until broader end-to-end provider
    workflow is proven against the real backend and the driver-facing LadybugDB naming is settled.
    Save/get/delete, bulk paths, saga episode queries, saga summarization, fulltext, vector search,
    BFS, rerankers, graph maintenance, concrete adapter execution, optional-package DI, and the
    first runtime-backed `Graphiti` ingest/search, episode-removal, direct triplet,
    bulk duplicate-fact, saga association/summarization, community build/rebuild/search, and
-   incremental community update workflows now have focused proof. Keep the adapter allocation-aware: avoid unnecessary
+   incremental community update workflows plus file-backed path persistence now have focused proof.
+   Keep the adapter allocation-aware: avoid unnecessary
    per-row dictionaries/lists, closure-heavy query loops, repeated JSON/string conversions, and
    exception-driven type coercion where the package API allows direct mapping.
 5. Prove the full C# Saga schema/save/get projections and entity-edge `reference_time` projections

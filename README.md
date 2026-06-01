@@ -17,7 +17,8 @@ This folder contains the C# port of `graphiti_core/` as a reusable .NET library.
   helpers. Factory-backed Graphiti ingestion, attribution lookup, episode removal, and advanced
   search, plus direct triplet persistence/search, bulk duplicate-fact ingestion, and saga association
   plus summarization, community build/rebuild/search, and incremental community updates have initial
-  end-to-end proof while the core DI provider switch supports LadybugDB.
+  end-to-end proof. Configured file-backed `DatabasePath` persistence is also package-proved, while
+  the core DI provider switch supports LadybugDB.
 
 ## Namespace Layout
 

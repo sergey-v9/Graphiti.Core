@@ -585,6 +585,68 @@ public class LadybugRuntimeDriverTests
         Assert.Equal(GraphProvider.Kuzu, driver.Provider);
     }
 
+    [Fact]
+    public async Task ServiceCollectionExtensionUsesConfiguredDatabasePathAcrossScopes()
+    {
+        var databasePath = Path.Combine(
+            Path.GetTempPath(),
+            "graphiti-ladybugdb-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var services = new ServiceCollection();
+            services.AddGraphitiCore();
+            services.AddLadybugDbGraphDriver(options => options.DatabasePath = databasePath);
+
+            await using (var serviceProvider = services.BuildServiceProvider())
+            {
+                await using (var firstScope = serviceProvider.CreateAsyncScope())
+                {
+                    var firstDriver = firstScope.ServiceProvider.GetRequiredService<IGraphDriver>();
+                    await firstDriver.BuildIndicesAndConstraintsAsync();
+                    await firstDriver.SaveNodeAsync(new EntityNode
+                    {
+                        Uuid = "persistent-ladybug-node",
+                        Name = "Persistent Alice",
+                        GroupId = "tenant",
+                        Labels = ["Person"],
+                        NameEmbedding = [1, 0, 0, 0, 0, 0, 0, 0],
+                        CreatedAt = new DateTime(2026, 9, 18, 10, 11, 12, DateTimeKind.Utc),
+                        Summary = "Persisted through configured LadybugDB path"
+                    });
+                    await firstDriver.CloseAsync();
+                }
+
+                await using (var secondScope = serviceProvider.CreateAsyncScope())
+                {
+                    var secondDriver = secondScope.ServiceProvider.GetRequiredService<IGraphDriver>();
+                    var fetched = await secondDriver.GetNodeByUuidAsync<EntityNode>("persistent-ladybug-node");
+                    await secondDriver.CloseAsync();
+
+                    Assert.Equal(GraphProvider.Kuzu, secondDriver.Provider);
+                    Assert.Equal("Persistent Alice", fetched.Name);
+                    Assert.Equal("tenant", fetched.GroupId);
+                    Assert.Equal("Persisted through configured LadybugDB path", fetched.Summary);
+                    Assert.Equal(new[] { "Person", "Entity" }, fetched.Labels);
+                }
+            }
+
+            Assert.True(
+                Directory.Exists(databasePath) || File.Exists(databasePath),
+                "The configured LadybugDB path should create persistent package storage.");
+        }
+        finally
+        {
+            if (Directory.Exists(databasePath))
+            {
+                Directory.Delete(databasePath, recursive: true);
+            }
+            else if (File.Exists(databasePath))
+            {
+                File.Delete(databasePath);
+            }
+        }
+    }
+
     private static StaticJsonLlmClient CreateAliceAcmeLlmClient() =>
         new(_ => CreateAliceAcmeResponse());
 
