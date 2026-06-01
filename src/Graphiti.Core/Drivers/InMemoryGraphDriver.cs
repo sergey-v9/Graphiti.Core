@@ -796,15 +796,13 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<SearchHit<EntityNode>> results = Bm25TextScorer
-            .Rank(
-                candidates.Where(node => SearchFilterMatcher.NodeMatches(node, compiledFilter)),
-                EntityNodeFulltextText,
-                query,
-                limit)
-            .Select(hit => new SearchHit<EntityNode>((EntityNode)CloneNode(hit.Item), hit.Score))
-            .ToList();
-        return Task.FromResult(results);
+        var ranked = Bm25TextScorer.Rank(
+            candidates,
+            node => SearchFilterMatcher.NodeMatches(node, compiledFilter),
+            EntityNodeFulltextText,
+            query,
+            limit);
+        return Task.FromResult<IReadOnlyList<SearchHit<EntityNode>>>(ProjectNodeSearchHits(ranked));
     }
 
     public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesByEmbeddingAsync(
@@ -825,16 +823,14 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
 
         cancellationToken.ThrowIfCancellationRequested();
         var scorer = SearchUtilities.CreateCosineSimilarityScorer(searchVector);
-        IReadOnlyList<SearchHit<EntityNode>> results = SearchUtilities
-            .TopByScore(
-                candidates.Where(node => SearchFilterMatcher.NodeMatches(node, compiledFilter)),
-                node => scorer.Score(node.NameEmbedding),
-                limit,
-                minScore,
-                includeMinScore: false)
-            .Select(hit => new SearchHit<EntityNode>((EntityNode)CloneNode(hit.Item), hit.Score))
-            .ToList();
-        return Task.FromResult(results);
+        var ranked = SearchUtilities.TopByScore(
+            candidates,
+            node => SearchFilterMatcher.NodeMatches(node, compiledFilter),
+            node => scorer.Score(node.NameEmbedding),
+            limit,
+            minScore,
+            includeMinScore: false);
+        return Task.FromResult<IReadOnlyList<SearchHit<EntityNode>>>(ProjectNodeSearchHits(ranked));
     }
 
     public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesFulltextAsync(
@@ -855,15 +851,13 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<SearchHit<EntityEdge>> results = Bm25TextScorer
-            .Rank(
-                candidates.Where(edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid)),
-                EntityEdgeFulltextText,
-                query,
-                limit)
-            .Select(hit => new SearchHit<EntityEdge>((EntityEdge)CloneEdge(hit.Item), hit.Score))
-            .ToList();
-        return Task.FromResult(results);
+        var ranked = Bm25TextScorer.Rank(
+            candidates,
+            edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid),
+            EntityEdgeFulltextText,
+            query,
+            limit);
+        return Task.FromResult<IReadOnlyList<SearchHit<EntityEdge>>>(ProjectEdgeSearchHits(ranked));
     }
 
     public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesByEmbeddingAsync(
@@ -882,25 +876,23 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         Dictionary<string, EntityNode> nodesByUuid;
         lock (_gate)
         {
-            candidates = GetEdgesFromIndex<EntityEdge>(groupIds, allWhenNoGroups: true)
-                .Where(edge => sourceNodeUuid is null || edge.SourceNodeUuid == sourceNodeUuid)
-                .Where(edge => targetNodeUuid is null || edge.TargetNodeUuid == targetNodeUuid)
-                .ToList();
+            candidates = FilterEdgesByEndpoint(
+                GetEdgesFromIndex<EntityEdge>(groupIds, allWhenNoGroups: true),
+                sourceNodeUuid,
+                targetNodeUuid);
             nodesByUuid = EntityNodeLookup();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         var scorer = SearchUtilities.CreateCosineSimilarityScorer(searchVector);
-        IReadOnlyList<SearchHit<EntityEdge>> results = SearchUtilities
-            .TopByScore(
-                candidates.Where(edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid)),
-                edge => scorer.Score(edge.FactEmbedding),
-                limit,
-                minScore,
-                includeMinScore: false)
-            .Select(hit => new SearchHit<EntityEdge>((EntityEdge)CloneEdge(hit.Item), hit.Score))
-            .ToList();
-        return Task.FromResult(results);
+        var ranked = SearchUtilities.TopByScore(
+            candidates,
+            edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid),
+            edge => scorer.Score(edge.FactEmbedding),
+            limit,
+            minScore,
+            includeMinScore: false);
+        return Task.FromResult<IReadOnlyList<SearchHit<EntityEdge>>>(ProjectEdgeSearchHits(ranked));
     }
 
     public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesBfsAsync(
@@ -981,15 +973,12 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<SearchHit<EpisodicNode>> results = Bm25TextScorer
-            .Rank(
-                candidates,
-                EpisodeFulltextText,
-                query,
-                limit)
-            .Select(hit => new SearchHit<EpisodicNode>((EpisodicNode)CloneNode(hit.Item), hit.Score))
-            .ToList();
-        return Task.FromResult(results);
+        var ranked = Bm25TextScorer.Rank(
+            candidates,
+            EpisodeFulltextText,
+            query,
+            limit);
+        return Task.FromResult<IReadOnlyList<SearchHit<EpisodicNode>>>(ProjectNodeSearchHits(ranked));
     }
 
     public Task<IReadOnlyList<SearchHit<CommunityNode>>> SearchCommunitiesFulltextAsync(
@@ -1006,15 +995,12 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<SearchHit<CommunityNode>> results = Bm25TextScorer
-            .Rank(
-                candidates,
-                CommunityFulltextText,
-                query,
-                limit)
-            .Select(hit => new SearchHit<CommunityNode>((CommunityNode)CloneNode(hit.Item), hit.Score))
-            .ToList();
-        return Task.FromResult(results);
+        var ranked = Bm25TextScorer.Rank(
+            candidates,
+            CommunityFulltextText,
+            query,
+            limit);
+        return Task.FromResult<IReadOnlyList<SearchHit<CommunityNode>>>(ProjectNodeSearchHits(ranked));
     }
 
     public Task<IReadOnlyList<SearchHit<CommunityNode>>> SearchCommunitiesByEmbeddingAsync(
@@ -1033,16 +1019,13 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
 
         cancellationToken.ThrowIfCancellationRequested();
         var scorer = SearchUtilities.CreateCosineSimilarityScorer(searchVector);
-        IReadOnlyList<SearchHit<CommunityNode>> results = SearchUtilities
-            .TopByScore(
-                candidates,
-                node => scorer.Score(node.NameEmbedding),
-                limit,
-                minScore,
-                includeMinScore: false)
-            .Select(hit => new SearchHit<CommunityNode>((CommunityNode)CloneNode(hit.Item), hit.Score))
-            .ToList();
-        return Task.FromResult(results);
+        var ranked = SearchUtilities.TopByScore(
+            candidates,
+            node => scorer.Score(node.NameEmbedding),
+            limit,
+            minScore,
+            includeMinScore: false);
+        return Task.FromResult<IReadOnlyList<SearchHit<CommunityNode>>>(ProjectNodeSearchHits(ranked));
     }
 
     public Task<IReadOnlyList<SearchRank>> RankNodeDistanceAsync(
@@ -1247,6 +1230,51 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
 
         return edges;
+    }
+
+    private static List<EntityEdge> FilterEdgesByEndpoint(
+        List<EntityEdge> candidates,
+        string? sourceNodeUuid,
+        string? targetNodeUuid)
+    {
+        var results = new List<EntityEdge>(candidates.Count);
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            var edge = candidates[i];
+            if ((sourceNodeUuid is null || edge.SourceNodeUuid == sourceNodeUuid)
+                && (targetNodeUuid is null || edge.TargetNodeUuid == targetNodeUuid))
+            {
+                results.Add(edge);
+            }
+        }
+
+        return results;
+    }
+
+    private static List<SearchHit<TNode>> ProjectNodeSearchHits<TNode>(
+        IReadOnlyList<(TNode Item, float Score)> ranked)
+        where TNode : Node
+    {
+        var results = new List<SearchHit<TNode>>(ranked.Count);
+        for (var i = 0; i < ranked.Count; i++)
+        {
+            results.Add(new SearchHit<TNode>((TNode)CloneNode(ranked[i].Item), ranked[i].Score));
+        }
+
+        return results;
+    }
+
+    private static List<SearchHit<TEdge>> ProjectEdgeSearchHits<TEdge>(
+        IReadOnlyList<(TEdge Item, float Score)> ranked)
+        where TEdge : Edge
+    {
+        var results = new List<SearchHit<TEdge>>(ranked.Count);
+        for (var i = 0; i < ranked.Count; i++)
+        {
+            results.Add(new SearchHit<TEdge>((TEdge)CloneEdge(ranked[i].Item), ranked[i].Score));
+        }
+
+        return results;
     }
 
     private SagaNode? FindStoredSagaByName(string groupId, string name)

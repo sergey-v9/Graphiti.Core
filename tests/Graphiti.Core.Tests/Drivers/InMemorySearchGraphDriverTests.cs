@@ -320,6 +320,180 @@ public class InMemorySearchGraphDriverTests
     }
 
     [Fact]
+    public async Task InMemorySearchDriver_ProjectsEdgeEpisodeAndCommunityHitsAsClones()
+    {
+        var driver = new InMemoryGraphDriver();
+        var searchDriver = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var source = Entity("source", now);
+        var target = Entity("target", now);
+        var otherTarget = Entity("other-target", now);
+        var edge = Edge(source, target, "apollo vector fact", now);
+        edge.FactEmbedding = new List<float> { 1f, 0f };
+        var filteredEdge = Edge(source, otherTarget, "apollo vector fact", now);
+        filteredEdge.FactEmbedding = new List<float> { 1f, 0f };
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode",
+            Name = "episode",
+            GroupId = "group",
+            Source = EpisodeType.Message,
+            SourceDescription = "message",
+            Content = "apollo episode content",
+            CreatedAt = now,
+            ValidAt = now
+        };
+        var community = new CommunityNode
+        {
+            Uuid = "community",
+            Name = "Apollo community",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 0f, 1f },
+            CreatedAt = now
+        };
+
+        foreach (var node in new Node[] { source, target, otherTarget, episode, community })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        await edge.SaveAsync(driver);
+        await filteredEdge.SaveAsync(driver);
+
+        var edgeHit = Assert.Single(await searchDriver.SearchEntityEdgesByEmbeddingAsync(
+            new[] { 1f, 0f },
+            new SearchFilters { EdgeTypes = new List<string> { "RELATES_TO" } },
+            new[] { "group" },
+            limit: 10,
+            minScore: 0.5f,
+            sourceNodeUuid: source.Uuid,
+            targetNodeUuid: target.Uuid)).Item;
+        var episodeHit = Assert.Single(await searchDriver.SearchEpisodesFulltextAsync(
+            "apollo",
+            new SearchFilters(),
+            new[] { "group" },
+            limit: 10)).Item;
+        var communityHit = Assert.Single(await searchDriver.SearchCommunitiesByEmbeddingAsync(
+            new[] { 0f, 1f },
+            new[] { "group" },
+            limit: 10,
+            minScore: 0.5f)).Item;
+
+        Assert.Equal(edge.Uuid, edgeHit.Uuid);
+        edgeHit.Fact = "mutated";
+        edgeHit.FactEmbedding![0] = 99f;
+        episodeHit.Content = "mutated";
+        communityHit.Name = "mutated";
+        communityHit.NameEmbedding![1] = 99f;
+
+        var storedEdge = await EntityEdge.GetByUuidAsync(driver, edge.Uuid);
+        var storedEpisode = await EpisodicNode.GetByUuidAsync(driver, episode.Uuid);
+        var storedCommunity = await CommunityNode.GetByUuidAsync(driver, community.Uuid);
+        Assert.Equal("apollo vector fact", storedEdge.Fact);
+        Assert.Equal(new List<float> { 1f, 0f }, storedEdge.FactEmbedding);
+        Assert.Equal("apollo episode content", storedEpisode.Content);
+        Assert.Equal("Apollo community", storedCommunity.Name);
+        Assert.Equal(new List<float> { 0f, 1f }, storedCommunity.NameEmbedding);
+    }
+
+    [Fact]
+    public async Task InMemoryVectorSearch_EdgeAndCommunityThresholdsTiesNullsAndDimensions()
+    {
+        var driver = new InMemoryGraphDriver();
+        var searchDriver = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var source = Entity("source", now);
+        var target = Entity("target", now);
+        await source.SaveAsync(driver);
+        await target.SaveAsync(driver);
+
+        var firstEdge = Edge(source, target, "first vector edge", now);
+        firstEdge.FactEmbedding = new List<float> { 1f, 0f };
+        var secondEdge = Edge(source, target, "second vector edge", now);
+        secondEdge.FactEmbedding = new List<float> { 1f, 0f };
+        var nullEmbeddingEdge = Edge(source, target, "null vector edge", now);
+        var mismatchedEdge = Edge(source, target, "mismatched vector edge", now);
+        mismatchedEdge.FactEmbedding = new List<float> { 1f, 0f, 0f };
+        await firstEdge.SaveAsync(driver);
+        await secondEdge.SaveAsync(driver);
+        await nullEmbeddingEdge.SaveAsync(driver);
+
+        var firstCommunity = new CommunityNode
+        {
+            Uuid = "community-a",
+            Name = "Community A",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 0f, 1f }
+        };
+        var secondCommunity = new CommunityNode
+        {
+            Uuid = "community-b",
+            Name = "Community B",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 0f, 1f }
+        };
+        var nullEmbeddingCommunity = new CommunityNode
+        {
+            Uuid = "community-null",
+            Name = "Community Null",
+            GroupId = "group"
+        };
+        var mismatchedCommunity = new CommunityNode
+        {
+            Uuid = "community-mismatch",
+            Name = "Community Mismatch",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 0f, 1f, 0f }
+        };
+        await firstCommunity.SaveAsync(driver);
+        await secondCommunity.SaveAsync(driver);
+        await nullEmbeddingCommunity.SaveAsync(driver);
+
+        var edgeHits = await searchDriver.SearchEntityEdgesByEmbeddingAsync(
+            new[] { 1f, 0f },
+            new SearchFilters { EdgeTypes = new List<string> { "RELATES_TO" } },
+            new[] { "group" },
+            limit: 10,
+            minScore: 0.5f);
+        var communityHits = await searchDriver.SearchCommunitiesByEmbeddingAsync(
+            new[] { 0f, 1f },
+            new[] { "group" },
+            limit: 10,
+            minScore: 0.5f);
+        var strictEdgeBoundary = await searchDriver.SearchEntityEdgesByEmbeddingAsync(
+            new[] { 1f, 0f },
+            new SearchFilters(),
+            new[] { "group" },
+            limit: 10,
+            minScore: 1f);
+        var strictCommunityBoundary = await searchDriver.SearchCommunitiesByEmbeddingAsync(
+            new[] { 0f, 1f },
+            new[] { "group" },
+            limit: 10,
+            minScore: 1f);
+
+        Assert.Equal(new[] { firstEdge.Uuid, secondEdge.Uuid }, edgeHits.Select(hit => hit.Item.Uuid));
+        Assert.Equal(new[] { firstCommunity.Uuid, secondCommunity.Uuid }, communityHits.Select(hit => hit.Item.Uuid));
+        Assert.Empty(strictEdgeBoundary);
+        Assert.Empty(strictCommunityBoundary);
+
+        await mismatchedEdge.SaveAsync(driver);
+        await Assert.ThrowsAsync<ArgumentException>(() => searchDriver.SearchEntityEdgesByEmbeddingAsync(
+            new[] { 1f, 0f },
+            new SearchFilters(),
+            new[] { "group" },
+            limit: 10,
+            minScore: -1f));
+
+        await mismatchedCommunity.SaveAsync(driver);
+        await Assert.ThrowsAsync<ArgumentException>(() => searchDriver.SearchCommunitiesByEmbeddingAsync(
+            new[] { 0f, 1f },
+            new[] { "group" },
+            limit: 10,
+            minScore: -1f));
+    }
+
+    [Fact]
     public async Task InMemorySearchDriver_UsesGraphTraversalAndRankers()
     {
         var driver = new InMemoryGraphDriver();

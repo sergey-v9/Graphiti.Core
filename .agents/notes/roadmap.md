@@ -174,6 +174,11 @@ shorter than the old working plans; expand items only when they become active.
   returned-window shape, and clone isolation; saga lookup, previous-episode selection, and
   saga-content windows preserve ordinal UUID selection, valid/created timestamp ordering, and
   limit-before-empty-content filtering. Focused tests pin these behaviors.
+- `InMemoryGraphDriver` full-text/vector search paths now use the predicate-aware BM25/top-score
+  overloads and explicit cloned hit projection loops instead of `Where` iterator chains plus LINQ
+  `Select` materialization. Preserve filter order, stable ranking ties, strict vector min-score
+  behavior, endpoint filters, and clone/embedding isolation across node, edge, episode, and community
+  search hits.
 - Search fallback in-memory snapshot projection now uses explicit typed loops over cloned driver
   snapshots instead of `OfType`/`Select` chains. Preserve the clone isolation, type filtering,
   embedding stripping flags, stable order, and `IReadOnlyList<EntityEdge>` endpoint lookup shape.
