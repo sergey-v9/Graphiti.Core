@@ -287,6 +287,11 @@ shorter than the old working plans; expand items only when they become active.
   routes through `ThrottledWork.SelectAsync` instead of allocating one closure per input. Focused
   tests pin bounded concurrency, ordered results, mutable input snapshotting, non-`List<T>`
   `IReadOnlyList<T>` inputs, and pre-canceled throttled selection.
+- Shared concurrency helpers now snapshot gather operations into compact arrays, launch unbounded
+  work through a pre-sized task array, and use indexed `Parallel.ForAsync` for bounded gather/select
+  paths instead of LINQ projection and `Enumerable.Range` iterators. Preserve bounded concurrency,
+  result ordering, pre-canceled no-start behavior, exception/cancellation propagation, and operation
+  snapshot semantics.
 - Memory, SQLite, and HybridCache LLM caches now carry parsed payload snapshots through
   single-flight and clone them per caller instead of reparsing the same payload string for every
   waiter. Tests pin raw string payload storage, `SetAsync`/`GetAsync` clone isolation, distinct

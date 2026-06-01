@@ -339,20 +339,21 @@ public static partial class GraphitiHelpers
         ArgumentNullException.ThrowIfNull(operations);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var opList = operations.ToList();
-        if (opList.Count == 0)
+        var opList = SnapshotOperations(operations);
+        if (opList.Length == 0)
         {
             return Array.Empty<T>();
         }
 
         if (maxConcurrency is null || maxConcurrency <= 0)
         {
-            return await Task.WhenAll(opList.Select(operation => operation(cancellationToken))).ConfigureAwait(false);
+            return await RunUnboundedOperationsAsync(opList, cancellationToken).ConfigureAwait(false);
         }
 
-        var results = new T[opList.Count];
-        await Parallel.ForEachAsync(
-            Enumerable.Range(0, opList.Count),
+        var results = new T[opList.Length];
+        await Parallel.ForAsync(
+            0,
+            opList.Length,
             new ParallelOptions
             {
                 MaxDegreeOfParallelism = maxConcurrency.Value,
@@ -364,6 +365,43 @@ public static partial class GraphitiHelpers
             }).ConfigureAwait(false);
 
         return results;
+    }
+
+    private static Func<CancellationToken, Task<T>>[] SnapshotOperations<T>(
+        IEnumerable<Func<CancellationToken, Task<T>>> operations)
+    {
+        if (operations is ICollection<Func<CancellationToken, Task<T>>> collection)
+        {
+            if (collection.Count == 0)
+            {
+                return Array.Empty<Func<CancellationToken, Task<T>>>();
+            }
+
+            var snapshot = new Func<CancellationToken, Task<T>>[collection.Count];
+            collection.CopyTo(snapshot, 0);
+            return snapshot;
+        }
+
+        var list = new List<Func<CancellationToken, Task<T>>>();
+        foreach (var operation in operations)
+        {
+            list.Add(operation);
+        }
+
+        return list.Count == 0 ? Array.Empty<Func<CancellationToken, Task<T>>>() : list.ToArray();
+    }
+
+    private static async Task<T[]> RunUnboundedOperationsAsync<T>(
+        Func<CancellationToken, Task<T>>[] operations,
+        CancellationToken cancellationToken)
+    {
+        var tasks = new Task<T>[operations.Length];
+        for (var i = 0; i < operations.Length; i++)
+        {
+            tasks[i] = operations[i](cancellationToken);
+        }
+
+        return await Task.WhenAll(tasks).ConfigureAwait(false);
     }
 
     /// <summary>Normalizes text into a comparison key: trimmed, lowercased, whitespace collapsed.</summary>

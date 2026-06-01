@@ -44,8 +44,9 @@ internal static class ThrottledWork
             CancellationToken = cancellationToken,
             MaxDegreeOfParallelism = Math.Min(items.Count, maxDegreeOfParallelism)
         };
-        await Parallel.ForEachAsync(
-            Enumerable.Range(0, items.Count),
+        await Parallel.ForAsync(
+            0,
+            items.Count,
             options,
             async (index, token) =>
             {

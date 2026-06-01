@@ -60,6 +60,23 @@ public class ConcurrencyHelperTests
     }
 
     [Fact]
+    public async Task SemaphoreGatherAsync_SnapshotsOperationsBeforeStarting()
+    {
+        var operations = new List<Func<CancellationToken, Task<int>>>();
+        operations.Add(_ =>
+        {
+            operations.Add(_ => Task.FromResult(99));
+            return Task.FromResult(1);
+        });
+        operations.Add(_ => Task.FromResult(2));
+
+        var results = await GraphitiHelpers.SemaphoreGatherAsync(operations);
+
+        Assert.Equal(new[] { 1, 2 }, results);
+        Assert.Equal(3, operations.Count);
+    }
+
+    [Fact]
     public async Task SemaphoreGatherAsync_PropagatesCancellation()
     {
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
