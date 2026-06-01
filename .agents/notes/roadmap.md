@@ -142,6 +142,10 @@ shorter than the old working plans; expand items only when they become active.
   `ReadOnlyMemory<float>` into validated Graphiti-owned lists. Preserve dimension/non-finite checks,
   returned-vector isolation, batch ordering, retry telemetry, and rate-limit lease behavior if this
   path changes again.
+- `GraphDriverBase` bulk-save embedding backfill now builds missing entity-node and entity-edge
+  embedding inputs with explicit indexed loops instead of LINQ filter/projection materialization.
+  Preserve missing-item order, newline-only normalization, no-op behavior when embeddings already
+  exist, full-batch validation before assignment, and post-provider cancellation checks.
 - Materialized fallback BFS/ranker shaping now avoids grouping/distinct/order LINQ chains on the
   hot path. Node and edge BFS results are accumulated in one pass with first traversal hit
   de-duplication, node-distance ranking uses score buckets over first-seen distinct inputs, episode-

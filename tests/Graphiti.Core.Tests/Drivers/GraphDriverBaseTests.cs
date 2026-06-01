@@ -136,6 +136,7 @@ public class GraphDriverBaseTests
         {
             new EntityNode { Name = "Alice\nA", GroupId = "group" },
             new EntityNode { Name = "Bob", GroupId = "group", NameEmbedding = precomputedNodeEmbedding },
+            new EntityNode { Name = null!, GroupId = "group" },
             new EntityNode { Name = "Carol", GroupId = "group" }
         };
         var edges = new[]
@@ -158,6 +159,13 @@ public class GraphDriverBaseTests
             new EntityEdge
             {
                 SourceNodeUuid = nodes[2].Uuid,
+                TargetNodeUuid = nodes[3].Uuid,
+                GroupId = "group",
+                Fact = null!
+            },
+            new EntityEdge
+            {
+                SourceNodeUuid = nodes[3].Uuid,
                 TargetNodeUuid = nodes[0].Uuid,
                 GroupId = "group",
                 Fact = "Carol knows Alice"
@@ -173,15 +181,76 @@ public class GraphDriverBaseTests
 
         Assert.Equal(2, embedder.BatchCalls.Count);
         Assert.Equal(0, embedder.SingleCallCount);
-        Assert.Equal(new[] { "Alice A", "Carol" }, embedder.BatchCalls[0]);
-        Assert.Equal(new[] { "Alice knows Bob", "Carol knows Alice" }, embedder.BatchCalls[1]);
+        Assert.Equal(new[] { "Alice A", string.Empty, "Carol" }, embedder.BatchCalls[0]);
+        Assert.Equal(new[] { "Alice knows Bob", string.Empty, "Carol knows Alice" }, embedder.BatchCalls[1]);
 
         Assert.Equal(new List<float> { 1, 1 }, nodes[0].NameEmbedding);
         Assert.Same(precomputedNodeEmbedding, nodes[1].NameEmbedding);
         Assert.Equal(new List<float> { 1, 2 }, nodes[2].NameEmbedding);
+        Assert.Equal(new List<float> { 1, 3 }, nodes[3].NameEmbedding);
         Assert.Equal(new List<float> { 2, 1 }, edges[0].FactEmbedding);
         Assert.Same(precomputedEdgeEmbedding, edges[1].FactEmbedding);
         Assert.Equal(new List<float> { 2, 2 }, edges[2].FactEmbedding);
+        Assert.Equal(new List<float> { 2, 3 }, edges[3].FactEmbedding);
+    }
+
+    [Fact]
+    public async Task SaveBulkAsync_SkipsEmbedderWhenNoEmbeddingsAreMissing()
+    {
+        var driver = new InMemoryGraphDriver();
+        var nodeEmbedding = new List<float> { 1, 2 };
+        var edgeEmbedding = new List<float> { 3, 4 };
+        var node = new EntityNode
+        {
+            Name = "Alice",
+            GroupId = "group",
+            NameEmbedding = nodeEmbedding
+        };
+        var edge = new EntityEdge
+        {
+            SourceNodeUuid = node.Uuid,
+            TargetNodeUuid = node.Uuid,
+            GroupId = "group",
+            Fact = "Alice knows Alice",
+            FactEmbedding = edgeEmbedding
+        };
+
+        await driver.SaveBulkAsync(
+            Array.Empty<EpisodicNode>(),
+            Array.Empty<EpisodicEdge>(),
+            new[] { node },
+            new[] { edge },
+            new ThrowingBatchEmbedder());
+
+        Assert.Same(nodeEmbedding, node.NameEmbedding);
+        Assert.Same(edgeEmbedding, edge.FactEmbedding);
+    }
+
+    [Fact]
+    public async Task SaveBulkAsync_CancellationAfterEmbeddingBatchPreventsAssignment()
+    {
+        var driver = new InMemoryGraphDriver();
+        using var cancellation = new CancellationTokenSource();
+        var node = new EntityNode { Name = "Alice", GroupId = "group" };
+        var edge = new EntityEdge
+        {
+            SourceNodeUuid = node.Uuid,
+            TargetNodeUuid = node.Uuid,
+            GroupId = "group",
+            Fact = "Alice knows Alice"
+        };
+        var embedder = new CancelAfterBatchEmbedder(cancellation);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => driver.SaveBulkAsync(
+            Array.Empty<EpisodicNode>(),
+            Array.Empty<EpisodicEdge>(),
+            new[] { node },
+            new[] { edge },
+            embedder,
+            cancellation.Token));
+
+        Assert.Null(node.NameEmbedding);
+        Assert.Null(edge.FactEmbedding);
     }
 
     [Fact]
@@ -324,6 +393,52 @@ public class GraphDriverBaseTests
             IReadOnlyList<IReadOnlyList<float>> embeddings = input
                 .Select((_, index) => (IReadOnlyList<float>)new List<float> { batchNumber, index + 1 })
                 .ToList();
+            return Task.FromResult(embeddings);
+        }
+    }
+
+    private sealed class ThrowingBatchEmbedder : EmbedderClient
+    {
+        public ThrowingBatchEmbedder()
+            : base(new EmbedderConfig(embeddingDimension: 2))
+        {
+        }
+
+        public override Task<IReadOnlyList<float>> CreateAsync(
+            string input,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("No embedding calls should be made.");
+
+        public override Task<IReadOnlyList<IReadOnlyList<float>>> CreateBatchAsync(
+            IReadOnlyList<string> input,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("No embedding calls should be made.");
+    }
+
+    private sealed class CancelAfterBatchEmbedder : EmbedderClient
+    {
+        private readonly CancellationTokenSource _cancellation;
+
+        public CancelAfterBatchEmbedder(CancellationTokenSource cancellation)
+            : base(new EmbedderConfig(embeddingDimension: 2))
+        {
+            _cancellation = cancellation;
+        }
+
+        public override Task<IReadOnlyList<float>> CreateAsync(
+            string input,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("SaveBulkAsync should use batch embedding.");
+
+        public override Task<IReadOnlyList<IReadOnlyList<float>>> CreateBatchAsync(
+            IReadOnlyList<string> input,
+            CancellationToken cancellationToken = default)
+        {
+            _cancellation.Cancel();
+            IReadOnlyList<IReadOnlyList<float>> embeddings = new[]
+            {
+                (IReadOnlyList<float>)new List<float> { 1, 2 }
+            };
             return Task.FromResult(embeddings);
         }
     }

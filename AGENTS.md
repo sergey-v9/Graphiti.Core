@@ -75,8 +75,8 @@ Verified build/test command from this folder:
 dotnet test "Graphiti.Core.CSharp.slnx" --verbosity minimal
 ```
 
-Verified on 2026-06-01 after the in-memory saga episode read allocation/parity slice:
-locked restore, format verification, and no-incremental build succeeded with 0 warnings, 850 tests
+Verified on 2026-06-01 after the bulk-save embedding backfill allocation/parity slice:
+locked restore, format verification, and no-incremental build succeeded with 0 warnings, 852 tests
 passed, and `Graphiti.Core` packed as `2.0.0`.
 
 Port contract:

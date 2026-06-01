@@ -150,17 +150,26 @@ public abstract class GraphDriverBase : IGraphDriver
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(embedder);
         cancellationToken.ThrowIfCancellationRequested();
-        var nodesMissingEmbeddings = nodes
-            .Where(node => node.NameEmbedding is null)
-            .ToList();
+        var nodesMissingEmbeddings = new List<EntityNode>(nodes.Count);
+        var inputs = new List<string>(nodes.Count);
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var node = nodes[i];
+            if (node.NameEmbedding is not null)
+            {
+                continue;
+            }
+
+            nodesMissingEmbeddings.Add(node);
+            inputs.Add((node.Name ?? string.Empty).Replace('\n', ' '));
+        }
+
         if (nodesMissingEmbeddings.Count == 0)
         {
             return;
         }
 
-        var inputs = nodesMissingEmbeddings
-            .Select(node => (node.Name ?? string.Empty).Replace('\n', ' '))
-            .ToList();
         var embeddings = EmbeddingVectorValidation.MaterializeBatch(
             await embedder.CreateBatchAsync(inputs, cancellationToken).ConfigureAwait(false),
             nodesMissingEmbeddings.Count,
@@ -184,17 +193,26 @@ public abstract class GraphDriverBase : IGraphDriver
         ArgumentNullException.ThrowIfNull(edges);
         ArgumentNullException.ThrowIfNull(embedder);
         cancellationToken.ThrowIfCancellationRequested();
-        var edgesMissingEmbeddings = edges
-            .Where(edge => edge.FactEmbedding is null)
-            .ToList();
+        var edgesMissingEmbeddings = new List<EntityEdge>(edges.Count);
+        var inputs = new List<string>(edges.Count);
+        for (var i = 0; i < edges.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var edge = edges[i];
+            if (edge.FactEmbedding is not null)
+            {
+                continue;
+            }
+
+            edgesMissingEmbeddings.Add(edge);
+            inputs.Add((edge.Fact ?? string.Empty).Replace('\n', ' '));
+        }
+
         if (edgesMissingEmbeddings.Count == 0)
         {
             return;
         }
 
-        var inputs = edgesMissingEmbeddings
-            .Select(edge => (edge.Fact ?? string.Empty).Replace('\n', ' '))
-            .ToList();
         var embeddings = EmbeddingVectorValidation.MaterializeBatch(
             await embedder.CreateBatchAsync(inputs, cancellationToken).ConfigureAwait(false),
             edgesMissingEmbeddings.Count,
