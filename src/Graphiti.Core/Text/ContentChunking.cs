@@ -290,7 +290,7 @@ public static partial class ContentChunking
             {
                 if (currentChunk.Count > 0)
                 {
-                    AddNonDuplicateChunk(chunks, string.Join("\n\n", currentChunk));
+                    AddNonDuplicateChunk(chunks, JoinChunkParts(currentChunk, "\n\n"));
                     currentChunk.Clear();
                     currentSize = 0;
                 }
@@ -304,7 +304,7 @@ public static partial class ContentChunking
             {
                 if (currentChunk.Count > 0 && currentSize + paragraphSize + 1 > chunkTokenBudget)
                 {
-                    var joined = string.Join("\n\n", currentChunk);
+                    var joined = JoinChunkParts(currentChunk, "\n\n");
                     AddNonDuplicateChunk(chunks, joined);
 
                     var overlapText = GetOverlapText(joined, overlapTokenBudget, tokenCounter);
@@ -327,7 +327,7 @@ public static partial class ContentChunking
 
         if (currentChunk.Count > 0)
         {
-            AddNonDuplicateChunk(chunks, string.Join("\n\n", currentChunk));
+            AddNonDuplicateChunk(chunks, JoinChunkParts(currentChunk, "\n\n"));
         }
 
         return NormalizeTextChunks(chunks, content, chunkTokenBudget, overlapTokenBudget, tokenCounter);
@@ -650,7 +650,7 @@ public static partial class ContentChunking
             {
                 if (currentChunk.Count > 0)
                 {
-                    chunks.Add(string.Join(" ", currentChunk));
+                    chunks.Add(JoinChunkParts(currentChunk, " "));
                     currentChunk.Clear();
                     currentSize = 0;
                 }
@@ -661,7 +661,7 @@ public static partial class ContentChunking
 
             if (currentChunk.Count > 0 && currentSize + sentenceSize + 1 > chunkTokenBudget)
             {
-                var joined = string.Join(" ", currentChunk);
+                var joined = JoinChunkParts(currentChunk, " ");
                 chunks.Add(joined);
 
                 var overlapText = GetOverlapText(joined, overlapTokenBudget, tokenCounter);
@@ -683,10 +683,44 @@ public static partial class ContentChunking
 
         if (currentChunk.Count > 0)
         {
-            chunks.Add(string.Join(" ", currentChunk));
+            chunks.Add(JoinChunkParts(currentChunk, " "));
         }
 
         return chunks;
+    }
+
+    private static string JoinChunkParts(List<string> parts, string separator)
+    {
+        if (parts.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var length = separator.Length * (parts.Count - 1);
+        for (var i = 0; i < parts.Count; i++)
+        {
+            length += parts[i].Length;
+        }
+
+        return string.Create(length, (Parts: parts, Separator: separator), static (destination, state) =>
+        {
+            var offset = 0;
+            for (var i = 0; i < state.Parts.Count; i++)
+            {
+                var part = state.Parts[i].AsSpan();
+                part.CopyTo(destination.Slice(offset));
+                offset += part.Length;
+
+                if (i == state.Parts.Count - 1)
+                {
+                    continue;
+                }
+
+                var separator = state.Separator.AsSpan();
+                separator.CopyTo(destination.Slice(offset));
+                offset += separator.Length;
+            }
+        });
     }
 
     private static IReadOnlyList<string> NormalizeTextChunks(
