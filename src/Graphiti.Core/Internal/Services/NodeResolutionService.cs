@@ -200,7 +200,7 @@ internal sealed class NodeResolutionService(
             {
                 var queryVectors = await embedder
                     .CreateBatchAsync(
-                        unresolvedNodes.Select(node => node.Name.Replace('\n', ' ')).ToList(),
+                        BuildNodeDedupEmbeddingQueries(unresolvedNodes),
                         cancellationToken)
                     .ConfigureAwait(false);
                 for (var i = 0; i < unresolvedNodes.Count; i++)
@@ -344,7 +344,7 @@ internal sealed class NodeResolutionService(
             {
                 ["id"] = i,
                 ["name"] = node.Name,
-                ["entity_type"] = new JsonArray(node.Labels.Select(label => JsonValue.Create(label)).ToArray()),
+                ["entity_type"] = ExtractionContextBuilder.BuildStringArray(node.Labels),
                 ["entity_type_description"] = EntityTypeDescription(node, entityTypes)
             });
         }
@@ -397,7 +397,7 @@ For every entity, provide:
                       ?? new JsonObject();
         context["candidate_id"] = candidateId;
         context["name"] = candidate.Name;
-        context["entity_types"] = new JsonArray(candidate.Labels.Select(label => JsonValue.Create(label)).ToArray());
+        context["entity_types"] = ExtractionContextBuilder.BuildStringArray(candidate.Labels);
         context["summary"] = string.IsNullOrEmpty(candidate.Summary)
             ? string.Empty
             : candidate.Summary.Length > 120
@@ -415,10 +415,20 @@ For every entity, provide:
             return "Default Entity Type";
         }
 
-        return node.Labels
-            .Where(label => !string.Equals(label, "Entity", StringComparison.Ordinal))
-            .Select(label => entityTypes.TryGetValue(label, out var definition) ? definition.Description : string.Empty)
-            .FirstOrDefault(description => !string.IsNullOrWhiteSpace(description)) ?? "Default Entity Type";
+        for (var i = 0; i < node.Labels.Count; i++)
+        {
+            var label = node.Labels[i];
+            if (string.Equals(label, "Entity", StringComparison.Ordinal)
+                || !entityTypes.TryGetValue(label, out var definition)
+                || string.IsNullOrWhiteSpace(definition.Description))
+            {
+                continue;
+            }
+
+            return definition.Description;
+        }
+
+        return "Default Entity Type";
     }
 
     private static IReadOnlyList<Graphiti.NodeDuplicateResponse> ReadNodeResolutions(JsonObject response)
@@ -428,13 +438,18 @@ For every entity, provide:
             return Array.Empty<Graphiti.NodeDuplicateResponse>();
         }
 
-        var resolutions = new List<Graphiti.NodeDuplicateResponse>();
-        foreach (var item in array.OfType<JsonObject>())
+        var resolutions = new List<Graphiti.NodeDuplicateResponse>(array.Count);
+        foreach (var item in array)
         {
+            if (item is not JsonObject jsonObject)
+            {
+                continue;
+            }
+
             resolutions.Add(new Graphiti.NodeDuplicateResponse(
-                ReadInt(item, "id") ?? -1,
-                ReadString(item, "name") ?? string.Empty,
-                ReadInt(item, "duplicate_candidate_id") ?? -1));
+                ReadInt(jsonObject, "id") ?? -1,
+                ReadString(jsonObject, "name") ?? string.Empty,
+                ReadInt(jsonObject, "duplicate_candidate_id") ?? -1));
         }
 
         return resolutions;
@@ -501,10 +516,7 @@ For every entity, provide:
 
     private static EntityNode MergeExtractedNode(EntityNode existing, EntityNode extracted)
     {
-        existing.Labels = existing.Labels
-            .Concat(extracted.Labels)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
+        existing.Labels = MergeLabels(existing.Labels, extracted.Labels);
 
         if (!string.IsNullOrWhiteSpace(extracted.Summary))
         {
@@ -552,7 +564,42 @@ For every entity, provide:
             resolved.Summary = input.Summary;
         }
 
-        resolved.Labels = resolved.Labels.Union(input.Labels).Distinct(StringComparer.Ordinal).ToList();
+        resolved.Labels = MergeLabels(resolved.Labels, input.Labels);
         return resolved;
+    }
+
+    private static List<string> BuildNodeDedupEmbeddingQueries(List<EntityNode> unresolvedNodes)
+    {
+        var queries = new List<string>(unresolvedNodes.Count);
+        for (var i = 0; i < unresolvedNodes.Count; i++)
+        {
+            queries.Add(unresolvedNodes[i].Name.Replace('\n', ' '));
+        }
+
+        return queries;
+    }
+
+    private static List<string> MergeLabels(List<string> first, List<string> second)
+    {
+        var labels = new List<string>(first.Count + second.Count);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        AddLabels(first, labels, seen);
+        AddLabels(second, labels, seen);
+        return labels;
+    }
+
+    private static void AddLabels(
+        List<string> source,
+        List<string> target,
+        HashSet<string> seen)
+    {
+        for (var i = 0; i < source.Count; i++)
+        {
+            var label = source[i];
+            if (seen.Add(label))
+            {
+                target.Add(label);
+            }
+        }
     }
 }
