@@ -141,7 +141,7 @@ internal static class EdgeMergeHelpers
     {
         if (overrides is null || overrides.Count == 0)
         {
-            return source.ToList();
+            return CopyEdges(source);
         }
 
         var overridesByUuid = new Dictionary<string, EntityEdge>(StringComparer.Ordinal);
@@ -179,6 +179,17 @@ internal static class EdgeMergeHelpers
         }
 
         return merged;
+    }
+
+    private static List<EntityEdge> CopyEdges(IEnumerable<EntityEdge> source)
+    {
+        var edges = new List<EntityEdge>();
+        foreach (var edge in source)
+        {
+            edges.Add(edge);
+        }
+
+        return edges;
     }
 
     internal static void AddResolvedEdge(

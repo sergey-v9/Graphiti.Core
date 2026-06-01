@@ -71,4 +71,23 @@ public class EdgeMergeHelpersTests
         Assert.Same(unrelated, merged[1]);
         Assert.Same(appended, merged[2]);
     }
+
+    [Fact]
+    public void MergeEdgeOverrides_WithoutOverridesCopiesSourceOrderAndDuplicates()
+    {
+        var first = new EntityEdge { Uuid = "first", Fact = "first" };
+        var duplicate = new EntityEdge { Uuid = "first", Fact = "duplicate" };
+        var second = new EntityEdge { Uuid = "second", Fact = "second" };
+
+        var merged = EdgeMergeHelpers.MergeEdgeOverrides(
+            new[] { first, duplicate, second },
+            overrides: null,
+            _ => true);
+
+        Assert.Collection(
+            merged,
+            edge => Assert.Same(first, edge),
+            edge => Assert.Same(duplicate, edge),
+            edge => Assert.Same(second, edge));
+    }
 }
