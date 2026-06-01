@@ -77,6 +77,29 @@ public class ConcurrencyHelperTests
     }
 
     [Fact]
+    public async Task SemaphoreGatherAsync_MaterializesDeferredOperationsOnce()
+    {
+        var enumerations = 0;
+        var operationStarted = false;
+
+        IEnumerable<Func<CancellationToken, Task<int>>> Operations()
+        {
+            enumerations++;
+            yield return _ =>
+            {
+                operationStarted = true;
+                return Task.FromResult(enumerations);
+            };
+            yield return _ => Task.FromResult(operationStarted ? 2 : 0);
+        }
+
+        var results = await GraphitiHelpers.SemaphoreGatherAsync(Operations(), maxConcurrency: 1);
+
+        Assert.Equal(1, enumerations);
+        Assert.Equal(new[] { 1, 2 }, results);
+    }
+
+    [Fact]
     public async Task SemaphoreGatherAsync_PropagatesCancellation()
     {
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));

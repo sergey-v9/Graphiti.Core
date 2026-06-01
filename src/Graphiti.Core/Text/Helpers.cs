@@ -480,7 +480,24 @@ public static partial class GraphitiHelpers
             list.Add(operation);
         }
 
-        return list.Count == 0 ? Array.Empty<Func<CancellationToken, Task<T>>>() : list.ToArray();
+        return CopyOperationList(list);
+    }
+
+    private static Func<CancellationToken, Task<T>>[] CopyOperationList<T>(
+        List<Func<CancellationToken, Task<T>>> operations)
+    {
+        if (operations.Count == 0)
+        {
+            return Array.Empty<Func<CancellationToken, Task<T>>>();
+        }
+
+        var snapshot = new Func<CancellationToken, Task<T>>[operations.Count];
+        for (var i = 0; i < operations.Count; i++)
+        {
+            snapshot[i] = operations[i];
+        }
+
+        return snapshot;
     }
 
     private static async Task<T[]> RunUnboundedOperationsAsync<T>(
