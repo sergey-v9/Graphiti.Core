@@ -1120,7 +1120,7 @@ public static partial class SearchUtilities
                 return;
             }
 
-            _queryVector = queryVector.ToArray();
+            _queryVector = SnapshotVector(queryVector);
             _queryNorm = NormOrZero(_queryVector);
         }
 
@@ -1145,6 +1145,34 @@ public static partial class SearchUtilities
                 }
             }
         }
+    }
+
+    private static float[] SnapshotVector(IReadOnlyList<float> vector)
+    {
+        if (vector.Count == 0)
+        {
+            return Array.Empty<float>();
+        }
+
+        var snapshot = new float[vector.Count];
+        if (vector is float[] array)
+        {
+            array.AsSpan(0, vector.Count).CopyTo(snapshot);
+            return snapshot;
+        }
+
+        if (vector is List<float> list)
+        {
+            CollectionsMarshal.AsSpan(list).Slice(0, vector.Count).CopyTo(snapshot);
+            return snapshot;
+        }
+
+        for (var i = 0; i < vector.Count; i++)
+        {
+            snapshot[i] = vector[i];
+        }
+
+        return snapshot;
     }
 
     [GeneratedRegex("[\\p{L}\\p{N}_]+", RegexOptions.CultureInvariant)]
