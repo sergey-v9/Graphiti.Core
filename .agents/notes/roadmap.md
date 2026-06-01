@@ -306,6 +306,11 @@ shorter than the old working plans; expand items only when they become active.
   Preserve result episode input order, entity-edge UUID order, known-candidate growth, per-episode
   invalidation snapshots, dictionary insertion order for returned nodes/edges, and saga association
   by `ValidAt` with input-order ties.
+- Content chunking JSON and covering-chunk helpers now use explicit loop-built JSON element/property
+  buffers, direct `Utf8JsonWriter` object serialization, sorted pair buffers, and loop-built
+  covering chunk item/index lists instead of LINQ projection/sort chains and small temporary index
+  arrays. Preserve JSON element/property order, null literal handling, escaped key/value round trips,
+  deterministic greedy candidate ordering, fallback pair ordering, and item/index mapping.
 - Materialized fallback full-text/vector search now uses predicate-aware BM25 and top-score overloads
   instead of `Where` iterator chains. This preserves filter order, stable ranking ties, endpoint
   filtering, strict vector min-score behavior, and BM25 document scoring without allocating full

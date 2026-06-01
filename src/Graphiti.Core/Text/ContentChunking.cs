@@ -238,7 +238,7 @@ public static partial class ContentChunking
 
         return data switch
         {
-            JsonArray array => ChunkJsonArray(array.Select(element => element?.ToJsonString(JsonOptions) ?? "null").ToList(), chunkTokenBudget, overlapTokenBudget, tokenCounter),
+            JsonArray array => ChunkJsonArray(MaterializeJsonArrayElements(array), chunkTokenBudget, overlapTokenBudget, tokenCounter),
             JsonObject jsonObject => ChunkJsonObject(jsonObject, chunkTokenBudget, overlapTokenBudget, tokenCounter),
             _ => new[] { content }
         };
@@ -367,7 +367,7 @@ public static partial class ContentChunking
             var node = JsonNode.Parse(content);
             if (node is JsonArray array)
             {
-                return ChunkJsonArray(array.Select(element => element?.ToJsonString(JsonOptions) ?? "null").ToList(), chunkTokenBudget, overlapTokenBudget, tokenCounter);
+                return ChunkJsonArray(MaterializeJsonArrayElements(array), chunkTokenBudget, overlapTokenBudget, tokenCounter);
             }
         }
         catch (JsonException)
@@ -398,7 +398,7 @@ public static partial class ContentChunking
         var n = items.Count;
         if (n <= k)
         {
-            return new[] { new CoveringChunk<T>(items.ToList(), Enumerable.Range(0, n).ToList()) };
+            return new[] { ToCoveringChunkFromRange(items, n) };
         }
 
         if (k == 1)
@@ -408,7 +408,7 @@ public static partial class ContentChunking
             {
                 for (var j = i + 1; j < n; j++)
                 {
-                    pairChunks.Add(ToCoveringChunk(items, new[] { i, j }));
+                    pairChunks.Add(ToCoveringChunk(items, i, j));
                 }
             }
 
@@ -474,12 +474,25 @@ public static partial class ContentChunking
             chunks.Add(ToCoveringChunk(items, bestChunkIndices));
         }
 
-        foreach (var pair in uncoveredPairs.OrderBy(pair => pair.First).ThenBy(pair => pair.Second))
+        var remainingPairs = CopyPairs(uncoveredPairs);
+        remainingPairs.Sort(ComparePairsByFirstThenSecond);
+        foreach (var pair in remainingPairs)
         {
-            chunks.Add(ToCoveringChunk(items, new[] { pair.First, pair.Second }));
+            chunks.Add(ToCoveringChunk(items, pair.First, pair.Second));
         }
 
         return chunks;
+    }
+
+    private static List<string> MaterializeJsonArrayElements(JsonArray array)
+    {
+        var elements = new List<string>(array.Count);
+        for (var i = 0; i < array.Count; i++)
+        {
+            elements.Add(array[i]?.ToJsonString(JsonOptions) ?? "null");
+        }
+
+        return elements;
     }
 
     private static List<string> ChunkJsonArray(
@@ -555,9 +568,7 @@ public static partial class ContentChunking
         int overlapTokenBudget,
         ITokenCounter tokenCounter)
     {
-        var entries = data.Select(property => new KeyValuePair<string, string>(
-            property.Key,
-            property.Value?.ToJsonString(JsonOptions) ?? "null")).ToList();
+        var entries = MaterializeJsonObjectEntries(data);
         if (entries.Count == 0)
         {
             return new[] { "{}" };
@@ -569,7 +580,7 @@ public static partial class ContentChunking
 
         foreach (var entry in entries)
         {
-            var entrySize = MeasureBudgetSize(SerializeObject(new[] { entry }), tokenCounter);
+            var entrySize = MeasureBudgetSize(SerializeObjectEntry(entry), tokenCounter);
             if (currentEntries.Count > 0 && currentSize + entrySize > chunkTokenBudget)
             {
                 chunks.Add(SerializeObject(currentEntries));
@@ -606,7 +617,7 @@ public static partial class ContentChunking
 
         for (var i = entries.Count - 1; i >= 0; i--)
         {
-            var entrySize = MeasureBudgetSize(SerializeObject(new[] { entries[i] }), tokenCounter);
+            var entrySize = MeasureBudgetSize(SerializeObjectEntry(entries[i]), tokenCounter);
             if (currentSize + entrySize > overlapTokenBudget)
             {
                 break;
@@ -1083,13 +1094,47 @@ public static partial class ContentChunking
 
     private static string SerializeObject(IEnumerable<KeyValuePair<string, string>> entries)
     {
-        var jsonObject = new JsonObject();
-        foreach (var entry in entries)
+        var buffer = new ArrayBufferWriter<byte>();
+        using (var writer = new Utf8JsonWriter(buffer))
         {
-            jsonObject[entry.Key] = JsonNode.Parse(entry.Value);
+            writer.WriteStartObject();
+            foreach (var entry in entries)
+            {
+                writer.WritePropertyName(entry.Key);
+                writer.WriteRawValue(entry.Value);
+            }
+
+            writer.WriteEndObject();
         }
 
-        return jsonObject.ToJsonString(JsonOptions);
+        return Encoding.UTF8.GetString(buffer.WrittenSpan);
+    }
+
+    private static string SerializeObjectEntry(KeyValuePair<string, string> entry)
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        using (var writer = new Utf8JsonWriter(buffer))
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName(entry.Key);
+            writer.WriteRawValue(entry.Value);
+            writer.WriteEndObject();
+        }
+
+        return Encoding.UTF8.GetString(buffer.WrittenSpan);
+    }
+
+    private static List<KeyValuePair<string, string>> MaterializeJsonObjectEntries(JsonObject data)
+    {
+        var entries = new List<KeyValuePair<string, string>>(data.Count);
+        foreach (var property in data)
+        {
+            entries.Add(new KeyValuePair<string, string>(
+                property.Key,
+                property.Value?.ToJsonString(JsonOptions) ?? "null"));
+        }
+
+        return entries;
     }
 
     private static bool CombinationCountExceeds(int n, int k, int limit)
@@ -1122,13 +1167,12 @@ public static partial class ContentChunking
         var seenCandidates = new HashSet<string>(StringComparer.Ordinal);
         var emitted = 0;
 
-        foreach (var vertex in Enumerable
-                     .Range(0, n)
-                     .Where(index => uncoveredDegrees[index] > 0)
-                     .OrderByDescending(index => uncoveredDegrees[index])
-                     .ThenBy(index => index)
-                     .Take(DeterministicGreedyVertexSeedLimit))
+        var vertices = BuildGreedySeedVertices(n, uncoveredDegrees);
+        for (var vertexIndex = 0;
+             vertexIndex < vertices.Count && vertexIndex < DeterministicGreedyVertexSeedLimit;
+             vertexIndex++)
         {
+            var vertex = vertices[vertexIndex];
             if (TryCreateDeterministicGreedyCandidate(
                     n,
                     k,
@@ -1148,13 +1192,12 @@ public static partial class ContentChunking
             }
         }
 
-        foreach (var pair in uncoveredPairs
-                     .OrderByDescending(pair => uncoveredDegrees[pair.First] + uncoveredDegrees[pair.Second])
-                     .ThenByDescending(pair => Math.Min(uncoveredDegrees[pair.First], uncoveredDegrees[pair.Second]))
-                     .ThenBy(pair => pair.First)
-                     .ThenBy(pair => pair.Second)
-                     .Take(MaxCombinationsToEvaluate))
+        var seedPairs = BuildGreedySeedPairs(uncoveredPairs, uncoveredDegrees);
+        for (var pairIndex = 0;
+             pairIndex < seedPairs.Count && pairIndex < MaxCombinationsToEvaluate;
+             pairIndex++)
         {
+            var pair = seedPairs[pairIndex];
             if (TryCreateDeterministicGreedyCandidate(
                     n,
                     k,
@@ -1195,7 +1238,7 @@ public static partial class ContentChunking
         int n,
         int k,
         HashSet<(int First, int Second)> uncoveredPairs,
-        IReadOnlyList<int> uncoveredDegrees,
+        int[] uncoveredDegrees,
         int firstSeed,
         int? secondSeed,
         HashSet<string> seenCandidates,
@@ -1217,7 +1260,7 @@ public static partial class ContentChunking
         int n,
         int k,
         HashSet<(int First, int Second)> uncoveredPairs,
-        IReadOnlyList<int> uncoveredDegrees,
+        int[] uncoveredDegrees,
         int firstSeed,
         int? secondSeed)
     {
@@ -1267,7 +1310,7 @@ public static partial class ContentChunking
         }
 
         selected.Sort();
-        return selected.ToArray();
+        return CopyIntList(selected);
 
         void AddSeed(int index)
         {
@@ -1335,10 +1378,15 @@ public static partial class ContentChunking
 
     private static IEnumerable<int[]> GenerateCombinations(int n, int k)
     {
-        var combination = Enumerable.Range(0, k).ToArray();
+        var combination = new int[k];
+        for (var index = 0; index < k; index++)
+        {
+            combination[index] = index;
+        }
+
         while (true)
         {
-            yield return combination.ToArray();
+            yield return CopyIntArray(combination);
 
             var i = k - 1;
             while (i >= 0 && combination[i] == i + n - k)
@@ -1423,8 +1471,121 @@ public static partial class ContentChunking
     private static (int First, int Second) NormalizePair(int first, int second) =>
         first < second ? (first, second) : (second, first);
 
-    private static CoveringChunk<T> ToCoveringChunk<T>(IReadOnlyList<T> items, IReadOnlyList<int> indices) =>
-        new(indices.Select(index => items[index]).ToList(), indices.ToList());
+    private static CoveringChunk<T> ToCoveringChunkFromRange<T>(IReadOnlyList<T> items, int count)
+    {
+        var chunkItems = new List<T>(count);
+        var indices = new List<int>(count);
+        for (var i = 0; i < count; i++)
+        {
+            chunkItems.Add(items[i]);
+            indices.Add(i);
+        }
+
+        return new CoveringChunk<T>(chunkItems, indices);
+    }
+
+    private static CoveringChunk<T> ToCoveringChunk<T>(IReadOnlyList<T> items, int first, int second) =>
+        new(new List<T>(2) { items[first], items[second] }, new List<int>(2) { first, second });
+
+    private static CoveringChunk<T> ToCoveringChunk<T>(IReadOnlyList<T> items, int[] indices)
+    {
+        var chunkItems = new List<T>(indices.Length);
+        var chunkIndices = new List<int>(indices.Length);
+        for (var i = 0; i < indices.Length; i++)
+        {
+            var index = indices[i];
+            chunkItems.Add(items[index]);
+            chunkIndices.Add(index);
+        }
+
+        return new CoveringChunk<T>(chunkItems, chunkIndices);
+    }
+
+    private static List<int> BuildGreedySeedVertices(int n, int[] uncoveredDegrees)
+    {
+        var vertices = new List<int>(Math.Min(n, DeterministicGreedyVertexSeedLimit));
+        for (var index = 0; index < n; index++)
+        {
+            if (uncoveredDegrees[index] > 0)
+            {
+                vertices.Add(index);
+            }
+        }
+
+        vertices.Sort((left, right) =>
+        {
+            var degreeComparison = uncoveredDegrees[right].CompareTo(uncoveredDegrees[left]);
+            return degreeComparison != 0 ? degreeComparison : left.CompareTo(right);
+        });
+
+        return vertices;
+    }
+
+    private static List<(int First, int Second)> BuildGreedySeedPairs(
+        HashSet<(int First, int Second)> uncoveredPairs,
+        int[] uncoveredDegrees)
+    {
+        var pairs = CopyPairs(uncoveredPairs);
+        pairs.Sort((left, right) =>
+        {
+            var leftDegreeTotal = uncoveredDegrees[left.First] + uncoveredDegrees[left.Second];
+            var rightDegreeTotal = uncoveredDegrees[right.First] + uncoveredDegrees[right.Second];
+            var totalComparison = rightDegreeTotal.CompareTo(leftDegreeTotal);
+            if (totalComparison != 0)
+            {
+                return totalComparison;
+            }
+
+            var leftMinimumDegree = Math.Min(uncoveredDegrees[left.First], uncoveredDegrees[left.Second]);
+            var rightMinimumDegree = Math.Min(uncoveredDegrees[right.First], uncoveredDegrees[right.Second]);
+            var minimumComparison = rightMinimumDegree.CompareTo(leftMinimumDegree);
+            if (minimumComparison != 0)
+            {
+                return minimumComparison;
+            }
+
+            return ComparePairsByFirstThenSecond(left, right);
+        });
+
+        return pairs;
+    }
+
+    private static List<(int First, int Second)> CopyPairs(HashSet<(int First, int Second)> pairs)
+    {
+        var copy = new List<(int First, int Second)>(pairs.Count);
+        foreach (var pair in pairs)
+        {
+            copy.Add(pair);
+        }
+
+        return copy;
+    }
+
+    private static int ComparePairsByFirstThenSecond(
+        (int First, int Second) left,
+        (int First, int Second) right)
+    {
+        var firstComparison = left.First.CompareTo(right.First);
+        return firstComparison != 0 ? firstComparison : left.Second.CompareTo(right.Second);
+    }
+
+    private static int[] CopyIntList(List<int> values)
+    {
+        var copy = new int[values.Count];
+        for (var i = 0; i < values.Count; i++)
+        {
+            copy[i] = values[i];
+        }
+
+        return copy;
+    }
+
+    private static int[] CopyIntArray(int[] values)
+    {
+        var copy = new int[values.Length];
+        Array.Copy(values, copy, values.Length);
+        return copy;
+    }
 
     private sealed class TokenCounterScope : IDisposable
     {
