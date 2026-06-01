@@ -2,6 +2,22 @@ namespace Graphiti.Core.Embedding;
 
 internal static class EmbeddingVectorValidation
 {
+    public static List<float>? CopyNullableVector(List<float>? embedding)
+    {
+        if (embedding is null)
+        {
+            return null;
+        }
+
+        var copy = new List<float>(embedding.Count);
+        for (var i = 0; i < embedding.Count; i++)
+        {
+            copy.Add(embedding[i]);
+        }
+
+        return copy;
+    }
+
     public static List<float> MaterializeSingle(
         IReadOnlyList<float>? embedding,
         int expectedDimension,

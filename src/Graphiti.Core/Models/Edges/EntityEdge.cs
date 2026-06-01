@@ -55,7 +55,7 @@ public sealed class EntityEdge : Edge
     public async Task LoadFactEmbeddingAsync(IGraphDriver driver, CancellationToken cancellationToken = default)
     {
         var stored = await GetByUuidAsync(driver, Uuid, cancellationToken).ConfigureAwait(false);
-        FactEmbedding = stored.FactEmbedding?.ToList();
+        FactEmbedding = EmbeddingVectorValidation.CopyNullableVector(stored.FactEmbedding);
     }
 
     public static Task<EntityEdge> GetByUuidAsync(

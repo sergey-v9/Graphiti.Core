@@ -28,7 +28,7 @@ public sealed class CommunityNode : Node
     public async Task LoadNameEmbeddingAsync(IGraphDriver driver, CancellationToken cancellationToken = default)
     {
         var stored = await GetByUuidAsync(driver, Uuid, cancellationToken).ConfigureAwait(false);
-        NameEmbedding = stored.NameEmbedding?.ToList();
+        NameEmbedding = EmbeddingVectorValidation.CopyNullableVector(stored.NameEmbedding);
     }
 
     public static Task<CommunityNode> GetByUuidAsync(

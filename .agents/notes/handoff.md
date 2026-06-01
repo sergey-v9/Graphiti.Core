@@ -76,13 +76,14 @@ no-incremental build, full test runs, and package builds at different points. Hi
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
 Latest checkpoint, 2026-06-02:
-`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.GraphitiWorkflowTests|FullyQualifiedName~Graphiti.Core.Tests.Drivers.Ladybug.LadybugRuntimeDriverTests"`
-succeeded. It ran locked restore, focused workflow/Ladybug runtime coverage (`96` passed), format
-verification, no-incremental build, the full test suite (`869` passed), and `dotnet pack` for
+`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Models.ModelEmbeddingValidationTests|FullyQualifiedName~Graphiti.Core.Tests.Namespaces.NamespaceTests|FullyQualifiedName~Graphiti.Core.Tests.Drivers.GraphDriverBaseTests"`
+succeeded. It ran locked restore, focused model/namespace/driver-base coverage (`26` passed),
+format verification, no-incremental build, the full test suite (`869` passed), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. Recent preceding checkpoints used the same verifier with
-focused namespace coverage (`10` passed), Ladybug mock-driver/runtime coverage (`18` passed),
-Graphiti workflow/telemetry coverage (`98` passed), InMemory delete/cancellation coverage
-(`15` passed), and InMemory clone/read/search coverage (`26` passed).
+focused workflow/Ladybug runtime coverage (`96` passed), namespace coverage (`10` passed), Ladybug
+mock-driver/runtime coverage (`18` passed), Graphiti workflow/telemetry coverage (`98` passed),
+InMemory delete/cancellation coverage (`15` passed), and InMemory clone/read/search coverage
+(`26` passed).
 
 Primary full verification command from the C# repo root:
 

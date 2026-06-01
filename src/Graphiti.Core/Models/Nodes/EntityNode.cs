@@ -37,7 +37,7 @@ public sealed class EntityNode : Node
     public async Task LoadNameEmbeddingAsync(IGraphDriver driver, CancellationToken cancellationToken = default)
     {
         var stored = await GetByUuidAsync(driver, Uuid, cancellationToken).ConfigureAwait(false);
-        NameEmbedding = stored.NameEmbedding?.ToList();
+        NameEmbedding = EmbeddingVectorValidation.CopyNullableVector(stored.NameEmbedding);
     }
 
     /// <summary>Retrieves a single entity node by UUID.</summary>
