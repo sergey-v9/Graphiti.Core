@@ -141,6 +141,57 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
+    public async Task LadybugGraphitiAddsTripletAndSearchesFactEndToEnd()
+    {
+        await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
+        var graphiti = new Graphiti(graphDriver: driver, embedder: new HashEmbedder(8));
+        var referenceTime = new DateTime(2026, 9, 12, 13, 14, 15, DateTimeKind.Utc);
+        var source = new EntityNode
+        {
+            Name = "Alice",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = referenceTime,
+            Summary = "A person in the Ladybug triplet test"
+        };
+        var target = new EntityNode
+        {
+            Name = "Acme",
+            GroupId = "tenant",
+            Labels = ["Organization"],
+            CreatedAt = referenceTime,
+            Summary = "An organization in the Ladybug triplet test"
+        };
+        var edge = new EntityEdge
+        {
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = target.Uuid,
+            GroupId = "tenant",
+            CreatedAt = referenceTime,
+            ValidAt = referenceTime,
+            ReferenceTime = referenceTime,
+            Name = "WORKS_AT",
+            Fact = "Alice works at Acme."
+        };
+
+        await graphiti.BuildIndicesAndConstraintsAsync();
+        var result = await graphiti.AddTripletAsync(source, edge, target);
+        var searchResults = await graphiti.SearchAsync("Alice Acme", groupIds: ["tenant"]);
+        var storedSource = await driver.GetNodeByUuidAsync<EntityNode>(result.Nodes[0].Uuid);
+        var storedTarget = await driver.GetNodeByUuidAsync<EntityNode>(result.Nodes[1].Uuid);
+        var storedEdge = await driver.GetEdgeByUuidAsync<EntityEdge>(result.Edges[0].Uuid);
+
+        Assert.Equal(2, result.Nodes.Count);
+        Assert.Single(result.Edges);
+        Assert.Equal(storedSource.Uuid, storedEdge.SourceNodeUuid);
+        Assert.Equal(storedTarget.Uuid, storedEdge.TargetNodeUuid);
+        Assert.Equal(edge.Fact, storedEdge.Fact);
+        Assert.Equal(edge.ValidAt, storedEdge.ValidAt);
+        Assert.Empty(storedEdge.Episodes);
+        Assert.Equal(storedEdge.Uuid, Assert.Single(searchResults).Uuid);
+    }
+
+    [Fact]
     public async Task ServiceCollectionExtensionRegistersLadybugDriverThroughGraphDriverFactory()
     {
         var services = new ServiceCollection();

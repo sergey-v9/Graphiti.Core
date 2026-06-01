@@ -75,8 +75,8 @@ Verified build/test command from this folder:
 dotnet test "Graphiti.Core.CSharp.slnx" --verbosity minimal
 ```
 
-Verified on 2026-06-01 after broadening the runtime-backed Ladybug Graphiti workflows:
-restore/format/build succeeded with 0 warnings, 825 tests passed, and
+Verified on 2026-06-01 after proving the runtime-backed Ladybug direct triplet workflow:
+restore/format/build succeeded with 0 warnings, 826 tests passed, and
 `Graphiti.Core` packed as `2.0.0-alpha.1`.
 
 Port contract:
