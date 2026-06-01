@@ -218,6 +218,128 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_SearchExecutorRunsFtsAndVectorStatements()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var search = new LadybugSearchExecutor(executor);
+        var createdAt = new DateTime(2026, 4, 5, 6, 7, 8, DateTimeKind.Utc);
+        var source = new EntityNode
+        {
+            Uuid = "entity-search-source",
+            Name = "Alice",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [1.0f, 0.0f],
+            Summary = "Alice likes graph search"
+        };
+        var target = new EntityNode
+        {
+            Uuid = "entity-search-target",
+            Name = "Bob",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [0.0f, 1.0f],
+            Summary = "Bob manages databases"
+        };
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode-search",
+            Name = "search episode",
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Alice likes graph search.",
+            ValidAt = createdAt,
+            EntityEdges = ["edge-search"]
+        };
+        var community = new CommunityNode
+        {
+            Uuid = "community-search",
+            Name = "Graph search community",
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            NameEmbedding = [0.9f, 0.1f],
+            Summary = "People working on graph search"
+        };
+        var edge = new EntityEdge
+        {
+            Uuid = "edge-search",
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = target.Uuid,
+            GroupId = "tenant",
+            Name = "LIKES",
+            Fact = "Alice likes graph search",
+            FactEmbedding = [1.0f, 0.0f],
+            Episodes = [episode.Uuid],
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = createdAt
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(source);
+        await driver.SaveNodeAsync(target);
+        await driver.SaveNodeAsync(episode);
+        await driver.SaveNodeAsync(community);
+        await driver.SaveEdgeAsync(edge);
+        await InstallFtsAndCreateSearchIndexesAsync(executor);
+
+        var nodeVector = await search.SearchEntityNodesByEmbeddingAsync(
+            [1.0f, 0.0f],
+            new SearchFilters(),
+            ["tenant"],
+            limit: 5,
+            minScore: 0.8f);
+        var edgeVector = await search.SearchEntityEdgesByEmbeddingAsync(
+            [1.0f, 0.0f],
+            new SearchFilters(),
+            ["tenant"],
+            limit: 5,
+            minScore: 0.8f);
+        var communityVector = await search.SearchCommunitiesByEmbeddingAsync(
+            [1.0f, 0.0f],
+            ["tenant"],
+            limit: 5,
+            minScore: 0.8f);
+        var nodeFulltext = await search.SearchEntityNodesFulltextAsync(
+            "Alice",
+            new SearchFilters(),
+            ["tenant"],
+            limit: 5);
+        var edgeFulltext = await search.SearchEntityEdgesFulltextAsync(
+            "graph",
+            new SearchFilters(),
+            ["tenant"],
+            limit: 5);
+        var episodeFulltext = await search.SearchEpisodesFulltextAsync(
+            "graph",
+            new SearchFilters(),
+            ["tenant"],
+            limit: 5);
+        var communityFulltext = await search.SearchCommunitiesFulltextAsync(
+            "graph",
+            ["tenant"],
+            limit: 5);
+
+        var nodeVectorHit = Assert.Single(nodeVector);
+        Assert.Equal(source.Uuid, nodeVectorHit.Item.Uuid);
+        Assert.True(nodeVectorHit.Score > 0.99f);
+        var edgeVectorHit = Assert.Single(edgeVector);
+        Assert.Equal(edge.Uuid, edgeVectorHit.Item.Uuid);
+        Assert.Equal(createdAt, edgeVectorHit.Item.ReferenceTime);
+        Assert.True(edgeVectorHit.Score > 0.99f);
+        Assert.Equal(community.Uuid, Assert.Single(communityVector).Item.Uuid);
+        Assert.Equal(source.Uuid, Assert.Single(nodeFulltext).Item.Uuid);
+        Assert.Equal(edge.Uuid, Assert.Single(edgeFulltext).Item.Uuid);
+        Assert.Equal(episode.Uuid, Assert.Single(episodeFulltext).Item.Uuid);
+        Assert.Equal(community.Uuid, Assert.Single(communityFulltext).Item.Uuid);
+    }
+
+    [Fact]
     public void PackageRuntime_DoesNotBindGraphitiListArrayOrNullParametersDirectlyYet()
     {
         using var database = new Database("");
@@ -291,6 +413,20 @@ public class LadybugPackageRuntimeTests
             {
                 ["value"] = value
             });
+    }
+
+    private static async Task InstallFtsAndCreateSearchIndexesAsync(ILadybugQueryExecutor executor)
+    {
+        await executor.ExecuteAsync(new LadybugStatement(
+            "INSTALL FTS;",
+            new Dictionary<string, object?>(StringComparer.Ordinal)));
+        await executor.ExecuteAsync(new LadybugStatement(
+            "LOAD EXTENSION FTS;",
+            new Dictionary<string, object?>(StringComparer.Ordinal)));
+        foreach (var statement in LadybugSearchStatementBuilder.BuildFulltextIndexStatements())
+        {
+            await executor.ExecuteAsync(statement);
+        }
     }
 
     private static string FindCSharpRoot()
