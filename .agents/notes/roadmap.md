@@ -240,6 +240,11 @@ shorter than the old working plans; expand items only when they become active.
 - Bulk edge invalidation snapshots now replace stale graph/search copies with in-batch snapshot
   overrides by UUID while preserving graph-first ranking/limit behavior, related-edge offsets,
   ordered repeated-episode semantics, and canonical coalescing.
+- Episode removal and saga deletion repair now build pruning, deletion, saga-bound, and
+  next-episode repair worklists with explicit loops and named comparers instead of LINQ iterator
+  chains. Preserve all-occurrence episode UUID removal from shared entity edges, retained endpoint
+  protection, first-seen affected-saga de-duplication, chronological saga bounds, existing
+  `NEXT_EPISODE` bypass suppression, and deletion UUID first-seen ordering.
 - Search orchestration method plumbing now avoids disabled `Task.FromResult(new List<...>())`
   placeholders and per-method two-task list allocations by using nullable task locals, typed empty
   ranked arrays, and a two-task await helper. Focused driver-backed tests pin first-fault rethrow,

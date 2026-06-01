@@ -401,7 +401,7 @@ public class GraphitiWorkflowTests
             ValidAt = now.AddMinutes(1),
             EntityEdges = new List<string> { edge.Uuid }
         };
-        edge.Episodes = new List<string> { firstEpisode.Uuid, secondEpisode.Uuid };
+        edge.Episodes = new List<string> { firstEpisode.Uuid, secondEpisode.Uuid, firstEpisode.Uuid };
 
         await SaveEpisodeRemovalFixtureAsync(driver, source, target, edge, firstEpisode, secondEpisode);
 
@@ -484,6 +484,108 @@ public class GraphitiWorkflowTests
         Assert.Equal(last.Uuid, saga.LastEpisodeUuid);
         await Assert.ThrowsAsync<NodeNotFoundException>(() =>
             EpisodicNode.GetByUuidAsync(driver, middle.Uuid));
+    }
+
+    [Fact]
+    public async Task RemoveEpisode_ReusesExistingSagaBypassWhenRemovingMiddleEpisode()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var fixture = await SaveSagaRemovalFixtureAsync(driver, episodeCount: 3);
+        var first = fixture.Episodes[0];
+        var middle = fixture.Episodes[1];
+        var last = fixture.Episodes[2];
+        await new NextEpisodeEdge
+        {
+            Uuid = "next-existing-bypass",
+            SourceNodeUuid = first.Uuid,
+            TargetNodeUuid = last.Uuid,
+            GroupId = "group",
+            CreatedAt = last.CreatedAt
+        }.SaveAsync(driver);
+
+        await graphiti.RemoveEpisodeAsync(middle.Uuid);
+
+        var nextEpisodeEdge = Assert.Single(await NextEpisodeEdge.GetByGroupIdsAsync(driver, new[] { "group" }));
+        var saga = await SagaNode.GetByUuidAsync(driver, fixture.Saga.Uuid);
+
+        Assert.Equal("next-existing-bypass", nextEpisodeEdge.Uuid);
+        Assert.Equal(first.Uuid, nextEpisodeEdge.SourceNodeUuid);
+        Assert.Equal(last.Uuid, nextEpisodeEdge.TargetNodeUuid);
+        Assert.Equal(first.Uuid, saga.FirstEpisodeUuid);
+        Assert.Equal(last.Uuid, saga.LastEpisodeUuid);
+    }
+
+    [Fact]
+    public async Task RemoveEpisode_RepairsSagaBoundsByValidCreatedAndUuidOrder()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var validAt = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var createdAt = new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc);
+        var saga = new SagaNode
+        {
+            Uuid = "saga",
+            Name = "launch",
+            GroupId = "group",
+            CreatedAt = createdAt,
+            FirstEpisodeUuid = "stale-first",
+            LastEpisodeUuid = "stale-last"
+        };
+        var removed = new EpisodicNode
+        {
+            Uuid = "episode-remove",
+            Name = "remove",
+            GroupId = "group",
+            CreatedAt = createdAt.AddMinutes(3),
+            ValidAt = validAt.AddMinutes(1)
+        };
+        var uuidFirst = new EpisodicNode
+        {
+            Uuid = "episode-a",
+            Name = "a",
+            GroupId = "group",
+            CreatedAt = createdAt,
+            ValidAt = validAt
+        };
+        var uuidSecond = new EpisodicNode
+        {
+            Uuid = "episode-b",
+            Name = "b",
+            GroupId = "group",
+            CreatedAt = createdAt,
+            ValidAt = validAt
+        };
+        var validLast = new EpisodicNode
+        {
+            Uuid = "episode-last",
+            Name = "last",
+            GroupId = "group",
+            CreatedAt = createdAt.AddMinutes(1),
+            ValidAt = validAt.AddMinutes(2)
+        };
+
+        await saga.SaveAsync(driver);
+        foreach (var episode in new[] { validLast, removed, uuidSecond, uuidFirst })
+        {
+            await episode.SaveAsync(driver);
+            await new HasEpisodeEdge
+            {
+                Uuid = $"has-{episode.Uuid}",
+                SourceNodeUuid = saga.Uuid,
+                TargetNodeUuid = episode.Uuid,
+                GroupId = "group",
+                CreatedAt = episode.CreatedAt
+            }.SaveAsync(driver);
+        }
+
+        await graphiti.RemoveEpisodeAsync(removed.Uuid);
+
+        var repairedSaga = await SagaNode.GetByUuidAsync(driver, saga.Uuid);
+        Assert.Equal(uuidFirst.Uuid, repairedSaga.FirstEpisodeUuid);
+        Assert.Equal(validLast.Uuid, repairedSaga.LastEpisodeUuid);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() =>
+            EpisodicNode.GetByUuidAsync(driver, removed.Uuid));
     }
 
     [Fact]
