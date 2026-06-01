@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace Graphiti.Core.Drivers.Ladybug;
 
 internal static class LadybugSearchStatementBuilder
@@ -438,10 +440,36 @@ internal static class LadybugSearchStatementBuilder
     }
 
     private static string WhereClause(List<string> filterQueries) =>
-        filterQueries.Count == 0 ? string.Empty : "WHERE " + string.Join(" AND ", filterQueries);
+        BuildFilterClause(filterQueries, "WHERE ");
 
     private static string AndClause(List<string> filterQueries) =>
-        filterQueries.Count == 0 ? string.Empty : "AND " + string.Join(" AND ", filterQueries);
+        BuildFilterClause(filterQueries, "AND ");
+
+    private static string BuildFilterClause(List<string> filterQueries, string prefix)
+    {
+        if (filterQueries.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var length = prefix.Length;
+        for (var i = 0; i < filterQueries.Count; i++)
+        {
+            length += filterQueries[i].Length;
+        }
+
+        length += (filterQueries.Count - 1) * " AND ".Length;
+        var builder = new StringBuilder(length);
+        builder.Append(prefix);
+        builder.Append(filterQueries[0]);
+        for (var i = 1; i < filterQueries.Count; i++)
+        {
+            builder.Append(" AND ");
+            builder.Append(filterQueries[i]);
+        }
+
+        return builder.ToString();
+    }
 
     private static void AddGroupFilter(
         List<string> filterQueries,
