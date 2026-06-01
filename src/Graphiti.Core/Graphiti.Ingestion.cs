@@ -317,19 +317,12 @@ public sealed partial class Graphiti
 
             if (saga is not null)
             {
-                string? previousUuid = null;
-                var episodesByValidAt = BuildStableValidAtOrder(episodes);
-                foreach (var episode in episodesByValidAt)
-                {
-                    await _sagaService.AssociateAsync(
-                        saga,
-                        groupId,
-                        now,
-                        episode,
-                        previousUuid,
-                        cancellationToken).ConfigureAwait(false);
-                    previousUuid = episode.Uuid;
-                }
+                await _sagaService.AssociateBulkAsync(
+                    saga,
+                    groupId,
+                    now,
+                    BuildStableValidAtOrder(episodes),
+                    cancellationToken).ConfigureAwait(false);
             }
 
             var result = new AddBulkEpisodeResults

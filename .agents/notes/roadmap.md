@@ -320,6 +320,12 @@ shorter than the old working plans; expand items only when they become active.
   Preserve result episode input order, entity-edge UUID order, known-candidate growth, per-episode
   invalidation snapshots, dictionary insertion order for returned nodes/edges, and saga association
   by `ValidAt` with input-order ties.
+- Bulk saga association now resolves or creates the saga once, appends ordered episodes through a
+  single previous-episode lookup plus loop-built `HAS_EPISODE` / `NEXT_EPISODE` edges, and saves the
+  saga once instead of routing each episode through the single-episode association path. Preserve
+  input-ordered bulk results, stable `ValidAt` saga ordering, existing first episode retention,
+  latest episode pointer updates, group/created timestamps on edges, and single-episode saga
+  behavior.
 - Content chunking JSON and covering-chunk helpers now use explicit loop-built JSON element/property
   buffers, direct `Utf8JsonWriter` object serialization, sorted pair buffers, and loop-built
   covering chunk item/index lists instead of LINQ projection/sort chains and small temporary index

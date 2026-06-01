@@ -87,17 +87,12 @@ internal sealed class SagaService(
         }
 
         var driver = driverAccessor();
-        var sagaNode = saga switch
-        {
-            SagaNode providedSaga => providedSaga,
-            string sagaName => await GetOrCreateAsync(
-                driver,
-                sagaName,
-                groupId,
-                episode.ValidAt,
-                cancellationToken).ConfigureAwait(false),
-            _ => throw new ArgumentException("saga must be a string or SagaNode", nameof(saga))
-        };
+        var sagaNode = await ResolveSagaAsync(
+            driver,
+            saga,
+            groupId,
+            episode.ValidAt,
+            cancellationToken).ConfigureAwait(false);
 
         var previousEpisodeUuid = sagaPreviousEpisodeUuid
                                   ?? await driver.GetSagaPreviousEpisodeUuidAsync(
@@ -125,6 +120,60 @@ internal sealed class SagaService(
 
         sagaNode.FirstEpisodeUuid ??= episode.Uuid;
         sagaNode.LastEpisodeUuid = episode.Uuid;
+        await sagaNode.SaveAsync(driver, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task AssociateBulkAsync(
+        object? saga,
+        string groupId,
+        DateTime now,
+        IReadOnlyList<EpisodicNode> orderedEpisodes,
+        CancellationToken cancellationToken)
+    {
+        if (saga is null || orderedEpisodes.Count == 0)
+        {
+            return;
+        }
+
+        var driver = driverAccessor();
+        var sagaNode = await ResolveSagaAsync(
+            driver,
+            saga,
+            groupId,
+            orderedEpisodes[0].ValidAt,
+            cancellationToken).ConfigureAwait(false);
+        var previousEpisodeUuid = await driver.GetSagaPreviousEpisodeUuidAsync(
+            sagaNode.Uuid,
+            orderedEpisodes[0].Uuid,
+            cancellationToken).ConfigureAwait(false);
+
+        for (var i = 0; i < orderedEpisodes.Count; i++)
+        {
+            var episode = orderedEpisodes[i];
+            if (previousEpisodeUuid is not null)
+            {
+                await new NextEpisodeEdge
+                {
+                    SourceNodeUuid = previousEpisodeUuid,
+                    TargetNodeUuid = episode.Uuid,
+                    GroupId = groupId,
+                    CreatedAt = now
+                }.SaveAsync(driver, cancellationToken).ConfigureAwait(false);
+            }
+
+            await new HasEpisodeEdge
+            {
+                SourceNodeUuid = sagaNode.Uuid,
+                TargetNodeUuid = episode.Uuid,
+                GroupId = groupId,
+                CreatedAt = now
+            }.SaveAsync(driver, cancellationToken).ConfigureAwait(false);
+
+            sagaNode.FirstEpisodeUuid ??= episode.Uuid;
+            sagaNode.LastEpisodeUuid = episode.Uuid;
+            previousEpisodeUuid = episode.Uuid;
+        }
+
         await sagaNode.SaveAsync(driver, cancellationToken).ConfigureAwait(false);
     }
 
@@ -199,6 +248,24 @@ Write 2-6 dense sentences. Use third person. Preserve all names, dates, counts, 
         await saga.SaveAsync(driver, cancellationToken).ConfigureAwait(false);
         return saga;
     }
+
+    private static async Task<SagaNode> ResolveSagaAsync(
+        IGraphDriver driver,
+        object saga,
+        string groupId,
+        DateTime createdAt,
+        CancellationToken cancellationToken) =>
+        saga switch
+        {
+            SagaNode providedSaga => providedSaga,
+            string sagaName => await GetOrCreateAsync(
+                driver,
+                sagaName,
+                groupId,
+                createdAt,
+                cancellationToken).ConfigureAwait(false),
+            _ => throw new ArgumentException("saga must be a string or SagaNode", nameof(saga))
+        };
 
     private static string HardTruncateSummary(string? summary) =>
         string.IsNullOrEmpty(summary)

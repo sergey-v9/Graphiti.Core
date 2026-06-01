@@ -1581,6 +1581,82 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisodeBulk_AppendsToExistingSagaChainByValidAt()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: new StaticLlmClient(new JsonObject()));
+        var existingTime = new DateTime(2026, 1, 1, 9, 0, 0, DateTimeKind.Utc);
+        var earliestNewTime = existingTime.AddHours(1);
+        var latestNewTime = existingTime.AddHours(2);
+        var saga = new SagaNode
+        {
+            Name = "launch",
+            GroupId = "group",
+            CreatedAt = existingTime
+        };
+        var existingEpisode = new EpisodicNode
+        {
+            Name = "existing",
+            GroupId = "group",
+            Source = EpisodeType.Message,
+            SourceDescription = "message",
+            Content = "Existing event.",
+            CreatedAt = existingTime,
+            ValidAt = existingTime
+        };
+        saga.FirstEpisodeUuid = existingEpisode.Uuid;
+        saga.LastEpisodeUuid = existingEpisode.Uuid;
+        await saga.SaveAsync(driver);
+        await existingEpisode.SaveAsync(driver);
+        await new HasEpisodeEdge
+        {
+            SourceNodeUuid = saga.Uuid,
+            TargetNodeUuid = existingEpisode.Uuid,
+            GroupId = "group",
+            CreatedAt = existingTime
+        }.SaveAsync(driver);
+
+        var result = await graphiti.AddEpisodeBulkAsync(
+            new[]
+            {
+                new RawEpisode
+                {
+                    Name = "latest-new",
+                    Content = "Latest new event.",
+                    SourceDescription = "message",
+                    ReferenceTime = latestNewTime
+                },
+                new RawEpisode
+                {
+                    Name = "earliest-new",
+                    Content = "Earliest new event.",
+                    SourceDescription = "message",
+                    ReferenceTime = earliestNewTime
+                }
+            },
+            groupId: "group",
+            saga: "launch");
+
+        var storedSaga = await SagaNode.GetByUuidAsync(driver, saga.Uuid);
+        var nextEdges = await NextEpisodeEdge.GetByGroupIdsAsync(driver, new[] { "group" });
+        var hasEdges = await HasEpisodeEdge.GetByGroupIdsAsync(driver, new[] { "group" });
+        var byName = result.Episodes.ToDictionary(episode => episode.Name, StringComparer.Ordinal);
+
+        Assert.Equal(new[] { "latest-new", "earliest-new" }, result.Episodes.Select(episode => episode.Name));
+        Assert.Equal(existingEpisode.Uuid, storedSaga.FirstEpisodeUuid);
+        Assert.Equal(byName["latest-new"].Uuid, storedSaga.LastEpisodeUuid);
+        Assert.Contains(nextEdges, edge =>
+            edge.SourceNodeUuid == existingEpisode.Uuid && edge.TargetNodeUuid == byName["earliest-new"].Uuid);
+        Assert.Contains(nextEdges, edge =>
+            edge.SourceNodeUuid == byName["earliest-new"].Uuid && edge.TargetNodeUuid == byName["latest-new"].Uuid);
+        Assert.Contains(hasEdges, edge => edge.TargetNodeUuid == existingEpisode.Uuid);
+        Assert.Contains(hasEdges, edge => edge.TargetNodeUuid == byName["earliest-new"].Uuid);
+        Assert.Contains(hasEdges, edge => edge.TargetNodeUuid == byName["latest-new"].Uuid);
+    }
+
+    [Fact]
     public async Task AddEpisodeBulk_DoesNotFinalBulkSaveAfterExtractionFailure()
     {
         var driver = new InMemoryGraphDriver();
