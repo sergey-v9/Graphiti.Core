@@ -22,7 +22,7 @@ not duplicate its proof matrix here.
   saga, community, infrastructure, and extraction parsing partials.
 - `Models/`: node, edge, result DTO, entity type, entity attribute, and episode type models.
 - `Drivers/`: `IGraphDriver`, base driver, deterministic in-memory reference driver, Neo4j driver,
-  Ladybug internal driver foundation, statement builders, record mappers, session/executor helpers,
+  LadybugDB driver/factory/executor, statement builders, record mappers, session/executor helpers,
   provider enum, and saga episode content.
 - `Namespaces/`: node and edge namespace facades over drivers.
 - `Search/`: search configs/results, hybrid search engine, rerankers, filter builders/matchers,
@@ -31,14 +31,13 @@ not duplicate its proof matrix here.
 - `Text/`: chunking, token counting, text helpers, and Graphiti helper functions.
 - `LlmClients/`, `Embedding/`, `CrossEncoder/`: provider abstractions, Microsoft.Extensions.AI
   adapters, deterministic/test implementations, cache/usage helpers, and rerankers.
-- `Configuration/`: options, validators, DI registration, cache/resilience settings.
+- `Configuration/`: options, validators, DI registration, LadybugDB driver options, cache/resilience
+  settings.
 - `Telemetry/`: `ActivitySource` spans and source-generated logging.
 - `Serialization/`: System.Text.Json serializer and source-generated context.
 - `Internal/`: helper/services for extraction context, attribute merging, edge merging, type
   resolution, deterministic text, throttling, rate limiting, saga/community/attribute/edge/node
   services, and episode graph extraction.
-- `Graphiti.Core`: core LadybugDB driver that owns LadybugDB package/native references,
-  public factory/options, and DI helper wiring through `GraphitiOptions.GraphDriverFactory`.
 
 ## Current State
 
@@ -61,8 +60,9 @@ not duplicate its proof matrix here.
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
-vocabulary. `GraphProvider.Kuzu` is still not a supported core options/DI enum path; the optional
-`Graphiti.Core` package wires drivers through an explicit factory.
+vocabulary. `GraphProvider.Kuzu` is a supported core options/DI enum path that creates the
+LadybugDB-backed driver. `AddLadybugDbGraphDriver` remains the explicit host-facing configuration
+helper for `DatabasePath`.
 
 For provider status, package facts, package quirks, runtime proof, and remaining work, read
 `kuzu-driver-port.md`. If implementation uncovers a likely LadybugDB package/binding issue, record it
@@ -75,10 +75,9 @@ Recent 2026-06-01 checkpoints recorded successful locked restore, format verific
 no-incremental build, full test runs, and package builds at different points. Historical counts in old
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
-Latest checkpoint, 2026-06-02: `.\eng\Verify-GraphitiCore.ps1 -FocusedFilter ...` succeeded with a
-focused filter covering edge episode attachment, exact duplicate edge reuse, and duplicate-fact
-collapse. It ran locked restore, 8 focused cases, format verification, no-incremental build, the
-full test suite (`872` passed), and `dotnet pack` for `Graphiti.Core.2.0.0.nupkg`.
+Latest checkpoint, 2026-06-02: `.\eng\Verify-GraphitiCore.ps1` succeeded. It ran locked restore,
+format verification, no-incremental build, the full test suite (`867` passed), and `dotnet pack` for
+`Graphiti.Core.2.0.0-alpha.1.nupkg`.
 
 Primary full verification command from the C# repo root:
 

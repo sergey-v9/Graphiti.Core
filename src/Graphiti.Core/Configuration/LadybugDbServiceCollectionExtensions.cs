@@ -31,8 +31,7 @@ public static class LadybugDbServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Binds LadybugDB options from configuration and configures Graphiti Core to use the
-    /// LadybugDB graph-driver factory.
+    /// Binds LadybugDB options from configuration and configures Graphiti Core to use LadybugDB.
     /// </summary>
     /// <param name="services">The service collection to configure.</param>
     /// <param name="configuration">Configuration section containing <see cref="LadybugDbOptions"/>.</param>

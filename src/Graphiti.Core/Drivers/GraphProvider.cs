@@ -10,13 +10,12 @@ public enum GraphProvider
     FalkorDb,
 
     // PORTING STATUS: LadybugDB is the primary provider target, using the alternative Kuzu fork's
-    // LadybugDB package. Existing GraphProvider.Kuzu branches are interim Python-parity
-    // compatibility behavior and should be revisited when the LadybugDB provider lands. Neptune is
-    // not implemented in the C# port and remains present for enum/wire compatibility unless that
-    // decision changes.
+    // LadybugDB package. GraphProvider.Kuzu remains the Python-parity compatibility value until the
+    // driver-facing LadybugDB naming decision is explicit. Neptune is not implemented in the C# port
+    // and remains present for enum/wire compatibility unless that decision changes.
 
     /// <summary>
-    /// Kuzu compatibility provider. Planned to transition to a LadybugDB-backed provider.
+    /// Kuzu compatibility provider backed by LadybugDB in the C# port.
     /// </summary>
     Kuzu,
 

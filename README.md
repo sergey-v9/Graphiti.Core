@@ -4,21 +4,17 @@ This folder contains the C# port of `graphiti_core/` as a reusable .NET library.
 
 ## Projects
 
-- `src/Graphiti.Core`: core library models, `Graphiti` orchestration, graph drivers, search, maintenance helpers, LLM/embedder/reranker contracts, and tested utility behavior.
-- `src/Graphiti.Core`: LadybugDB driver that owns the LadybugDB
-  package/native dependency boundary.
+- `src/Graphiti.Core`: core library models, `Graphiti` orchestration, graph drivers, search, maintenance helpers, LLM/embedder/reranker contracts, LadybugDB integration, and tested utility behavior.
 - `tests/Graphiti.Core.Tests`: parity-oriented xUnit tests for search config/filter defaults, text and content chunking, LLM base behavior, and in-memory graph workflows.
 
 ## Current Drivers
 
 - `InMemoryGraphDriver`: executable deterministic driver for local embedding, ingestion, retrieval, search, triplets, saga links, and tests.
 - `Neo4jGraphDriver`: Neo4j-backed semantic operation driver using `Neo4j.Driver`.
-- `Graphiti.Core`: optional package exposing a LadybugDB-backed driver factory and DI
-  helpers. Factory-backed Graphiti ingestion, attribution lookup, episode removal, and advanced
-  search, plus direct triplet persistence/search, bulk duplicate-fact ingestion, and saga association
-  plus summarization, community build/rebuild/search, and incremental community updates have initial
-  end-to-end proof. Configured file-backed `DatabasePath` persistence is also package-proved, while
-  the core DI provider switch supports LadybugDB.
+- LadybugDB: core LadybugDB-backed driver, factory, and DI helpers. Graphiti ingestion, attribution
+  lookup, episode removal, advanced search, direct triplet persistence/search, bulk duplicate-fact
+  ingestion, saga association plus summarization, community build/rebuild/search, incremental
+  community updates, and configured file-backed `DatabasePath` persistence have end-to-end proof.
 
 ## Namespace Layout
 
@@ -34,6 +30,7 @@ everything else lives under a matching sub-namespace:
 | `Graphiti.Core.Models.Edges` | `Edge`, `EntityEdge`, `EpisodicEdge`, `CommunityEdge`, `HasEpisodeEdge`, `NextEpisodeEdge` |
 | `Graphiti.Core.Models.Results` | `AddEpisodeResults`, `AddBulkEpisodeResults`, `AddTripletResults`, `RawEpisode`, `GraphitiClients` |
 | `Graphiti.Core.Drivers` | `IGraphDriver`, `GraphDriverBase`, `InMemoryGraphDriver`, `Neo4jGraphDriver`, `GraphProvider` |
+| `Graphiti.Core.Drivers.Ladybug` | LadybugDB driver factory and provider internals |
 | `Graphiti.Core.Search` | search engine, configuration, filters, and reranking |
 | `Graphiti.Core.LlmClients` | `ILlmClient`, `LlmClient`, `LlmConfig`, response caches, token usage |
 | `Graphiti.Core.Embedding` | `IEmbedderClient`, `EmbedderClient`, `HashEmbedder` |
@@ -47,8 +44,8 @@ everything else lives under a matching sub-namespace:
 
 ### Migrating from the flat `Graphiti.Core` namespace
 
-Earlier prototypes exposed every type from the single flat `Graphiti.Core` namespace. As of
-2.0.0 those types moved into the sub-namespaces above. This is a source-breaking change for
+Earlier prototypes exposed every type from the single flat `Graphiti.Core` namespace. In the
+2.0.0 line those types moved into the sub-namespaces above. This is a source-breaking change for
 external consumers: add the sub-namespace `using` directives for the types you reference (for
 example `using Graphiti.Core.Models.Nodes;` for `EntityNode`). LLM client types were also
 renamed from the `LLM` prefix to `Llm` (`ILLMClient` -> `ILlmClient`, `LLMConfig` -> `LlmConfig`,

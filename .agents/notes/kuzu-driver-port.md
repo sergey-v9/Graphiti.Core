@@ -5,20 +5,18 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 
 ## Current Status
 
-- Core remains free of LadybugDB package/native references.
-- Internal core helpers under `Drivers/Ladybug/` own schema, statement construction, record mapping,
-  statement normalization, and executor-backed graph/search behavior over `ILadybugQueryExecutor`.
+- `Graphiti.Core` owns the LadybugDB package and native references.
+- `Drivers/Ladybug/` owns schema, statement construction, record mapping, statement normalization,
+  the concrete package executor, and executor-backed graph/search behavior.
 - `LadybugGraphDriver` is internal, implements the graph-driver surface, and delegates search through
   `LadybugSearchExecutor`.
-- `Graphiti.Core` is the core LadybugDB driver. It owns `LadybugDB` and native package
-  references, the concrete package executor, `LadybugDbGraphDriverFactory`, `LadybugDbOptions`, and
-  `AddLadybugDbGraphDriver` helpers.
-- Optional-package DI works by setting `GraphitiOptions.GraphDriverFactory`. The core
-  `GraphProvider.Kuzu` enum/options path remains unsupported by core validation.
-- runtime-backed proof covers the main ingest/search/removal/triplet/bulk/saga/community workflows
-  and file-backed `DatabasePath` persistence. Treat tests as the detailed proof source.
-- The test project has private LadybugDB package references for runtime facts. Do not add those
-  references to `Graphiti.Core`.
+- `LadybugDbGraphDriverFactory` creates LadybugDB-backed drivers directly from core.
+- `LadybugDbOptions` and `AddLadybugDbGraphDriver` provide host-facing `DatabasePath`
+  configuration.
+- `GraphProvider.Kuzu` is a supported core options/DI path and resolves to the LadybugDB-backed
+  driver.
+- Runtime proof covers the main ingest/search/removal/triplet/bulk/saga/community workflows and
+  file-backed `DatabasePath` persistence. Treat tests as the detailed proof source.
 - Ladybug sources are available at `W:\code\ladybug`, including C# bindings and the base library. Do
   not inspect them during Graphiti work unless a confirmed Ladybug issue blocks progress; if that
   happens, keep any Ladybug fix as a separate local commit.
@@ -28,7 +26,7 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 - LadybugDB is the provider investment target.
 - Implement against Python Kuzu behavior for parity, but prefer LadybugDB naming for the final
   driver-facing product surface.
-- Do not wire `GraphProvider.Kuzu` through core DI/options until the naming/support decision is
+- Keep `GraphProvider.Kuzu` as the compatibility provider value until the final naming decision is
   explicit.
 - Keep Neo4j, FalkorDB, InMemory, and Neptune policy in `decisions.md`; do not repeat it here.
 - If runtime proof exposes behavior that looks like a LadybugDB package or binding bug, mark it
@@ -64,26 +62,26 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 
 ## Existing Touchpoints
 
-- `Drivers/GraphProvider.cs`: keeps `GraphProvider.Kuzu` as pending compatibility vocabulary.
-- `Drivers/Ladybug/`: schema, statement, normalizer, record mapper, internal driver, search
-  statements, and search executor.
+- `Drivers/GraphProvider.cs`: keeps `GraphProvider.Kuzu` as compatibility vocabulary.
+- `Drivers/Ladybug/`: schema, statement, normalizer, record mapper, driver, concrete executor, search
+  statements, search executor, and driver factory.
+- `Configuration/LadybugDbOptions.cs`: host-facing LadybugDB driver options.
+- `Configuration/LadybugDbServiceCollectionExtensions.cs`: LadybugDB DI helper.
+- `Configuration/GraphitiServiceCollectionExtensions.cs`: core `GraphProvider.Kuzu` driver creation.
 - `Search/CompiledSearchFilter.cs`: Kuzu label-query behavior for node and edge filters.
 - `Search/SearchUtilities.cs`: `GraphProvider.Kuzu` full-text branch and
   `BuildKuzuFulltextQuery`.
-- `src/Graphiti.Core/`: core LadybugDB driver and DI/factory surface.
-- `tests/Graphiti.Core.Tests/Drivers/Ladybug/`: foundation, internal driver, runtime package,
-  core driver, search statement, and search executor coverage.
-- `GraphitiOptionsValidationTests.cs`: current unsupported enum/options behavior.
+- `tests/Graphiti.Core.Tests/Drivers/Ladybug/`: foundation, internal driver, runtime, search
+  statement, search executor, and core DI coverage.
 
 ## Remaining Work
 
-1. Broaden optional-package workflow coverage only where it exercises behavior not already covered by
-   the current runtime-backed ingest/search/removal/triplet/bulk/saga/community tests.
+1. Broaden workflow coverage only where it exercises behavior not already covered by the current
+   ingest/search/removal/triplet/bulk/saga/community tests.
 2. Add host-facing options only when real runtime requirements appear. `DatabasePath` exists; avoid
    speculative options.
-3. Add native-gated integration smoke tests if they provide coverage beyond the current package
-   runtime tests.
-4. Decide the final driver-facing naming and whether/when core should expose a supported enum/DI path.
+3. Add native-gated integration smoke tests if they provide coverage beyond the current runtime tests.
+4. Decide the final driver-facing naming beyond the current `GraphProvider.Kuzu` compatibility value.
 5. Revisit interim Kuzu query/filter helpers and move provider-specific behavior into the driver when
    appropriate.
 6. Finish the Kuzu-to-LadybugDB terminology transition once the provider is stable.

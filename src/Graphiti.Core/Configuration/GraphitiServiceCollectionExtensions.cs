@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using Graphiti.Core.Drivers.Ladybug;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
@@ -78,6 +79,7 @@ public static class GraphitiServiceCollectionExtensions
         services.AddOptions<ContentChunkingOptions>();
         services.AddOptions<GraphitiCacheOptions>();
         services.AddOptions<GraphitiResilienceOptions>();
+        services.AddOptions<LadybugDbOptions>();
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IValidateOptions<GraphitiOptions>, GraphitiOptionsValidator>());
         services.TryAddEnumerable(
@@ -90,6 +92,8 @@ public static class GraphitiServiceCollectionExtensions
             ServiceDescriptor.Singleton<IValidateOptions<GraphitiCacheOptions>, GraphitiCacheOptionsValidator>());
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IValidateOptions<GraphitiResilienceOptions>, GraphitiResilienceOptionsValidator>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<LadybugDbOptions>, LadybugDbOptionsValidator>());
         services.AddHybridCache();
         services.TryAddSingleton<ILlmResponseCache>(CreateLlmResponseCache);
         services.TryAddSingleton(CreateChatResiliencePipeline);
@@ -217,6 +221,7 @@ public static class GraphitiServiceCollectionExtensions
                 options.User,
                 options.Password,
                 options.Database),
+            GraphProvider.Kuzu => LadybugDbGraphDriverFactory.Create(options.Database),
             _ => throw new NotSupportedException($"{options.Provider} is not supported by the C# port yet.")
         };
     }

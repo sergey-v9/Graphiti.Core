@@ -71,6 +71,7 @@ internal sealed class GraphitiOptionsValidator : IValidateOptions<GraphitiOption
         switch (options.Provider)
         {
             case GraphProvider.InMemory:
+            case GraphProvider.Kuzu:
                 break;
             case GraphProvider.Neo4j:
                 if (string.IsNullOrWhiteSpace(options.Uri))

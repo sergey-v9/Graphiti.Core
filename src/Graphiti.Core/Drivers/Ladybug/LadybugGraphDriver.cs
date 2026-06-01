@@ -1,8 +1,7 @@
 namespace Graphiti.Core.Drivers.Ladybug;
 
 /// <summary>
-/// Provider-ready LadybugDB/Kuzu driver core over an abstract statement executor. This intentionally
-/// remains internal and unwired in core until runtime-backed runtime parity is proven.
+/// LadybugDB/Kuzu driver core over an abstract statement executor.
 /// </summary>
 internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver
 {

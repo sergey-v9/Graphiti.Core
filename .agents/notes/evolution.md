@@ -93,7 +93,7 @@ longer true, mark it `Superseded` and explain the successor direction.
 | ID | Status | Milestone | Summary |
 |---|---|---|---|
 | M1 | Landed | Deep C# modernization | The port moved from literal translation toward idiomatic .NET structure, infrastructure, and allocation-aware implementation while preserving Graphiti behavior. |
-| M2 | Active | LadybugDB-first provider strategy | The C# port's provider investment target is LadybugDB via an core LadybugDB driver, unlike the Python provider priorities. |
+| M2 | Active | LadybugDB-first provider strategy | The C# port's provider investment target is a core LadybugDB-backed driver, unlike the Python provider priorities. |
 
 ## M1: Deep C# Modernization
 
@@ -116,7 +116,8 @@ The C# port now treats idiomatic .NET shape as part of the product:
 - feature-aligned namespaces and folders under `Graphiti.Core.*`;
 - `Graphiti` kept as the public orchestrator while behavior is split into partials, internal
   services, helpers, namespaces, drivers, search components, maintenance code, and provider adapters;
-- one-public-type-per-file direction and source-breaking namespace migration documented for `2.0.0`;
+- one-public-type-per-file direction and source-breaking namespace migration documented for the
+  `2.0.0` line;
 - .NET-native infrastructure where it does not change Graphiti semantics, including
   `Microsoft.Extensions.AI`, `HybridCache`, Polly resilience pipelines, `ActivitySource`,
   source-generated logging/serialization, and `Microsoft.ML.Tokenizers`;
@@ -147,7 +148,7 @@ Modernization must not casually change:
 ### Follow-Up Decisions
 
 - How much XML documentation should be added before considering the public surface polished.
-- Whether future core LadybugDB drivers should follow the LadybugDB package pattern.
+- Whether future provider integrations should live in core or outside the core package.
 - Whether any remaining Python compatibility shims should be removed before a stable public release.
 
 ## M2: LadybugDB-First Provider Strategy
@@ -167,13 +168,13 @@ priority is not the C# product direction.
 
 The C# port is moving toward a LadybugDB-centered provider model:
 
-- `Graphiti.Core` stays free of LadybugDB package/native references.
-- LadybugDB-specific package and native dependencies live in `Graphiti.Core`.
+- `Graphiti.Core` owns the LadybugDB package and native references.
 - Internal core helpers under `Drivers/Ladybug/` own shared statement, schema, mapping, normalizer,
-  and executor-backed behavior.
-- Optional-package DI uses `GraphitiOptions.GraphDriverFactory`.
-- `GraphProvider.Kuzu` remains compatibility vocabulary and is not a supported core options/DI path
-  until the product decision is explicit.
+  concrete package execution, and executor-backed behavior.
+- `Configuration/LadybugDbOptions.cs` and `AddLadybugDbGraphDriver` provide host-facing
+  `DatabasePath` configuration.
+- `GraphProvider.Kuzu` remains compatibility vocabulary and is a supported core options/DI path that
+  resolves to the LadybugDB-backed driver.
 - Neo4j is retained only as existing/reference behavior while present, FalkorDB is not a C# provider
   investment target, and InMemory remains a deterministic reference/test driver.
 
@@ -183,24 +184,20 @@ The C# port is moving toward a LadybugDB-centered provider model:
   FalkorDB, and InMemory.
 - `kuzu-driver-port.md` records detailed package facts, provider policy, runtime proof, quirks, and
   remaining work.
-- `src/Graphiti.Core/README.md` documents the optional package boundary and factory/DI
-  surface.
-- Tests provide runtime-backed proof for main ingest/search/removal/triplet/bulk/saga/community
-  workflows and file-backed `DatabasePath` persistence.
+- Tests provide runtime proof for main ingest/search/removal/triplet/bulk/saga/community workflows,
+  core DI registration, `GraphProvider.Kuzu` resolution, and file-backed `DatabasePath` persistence.
 
 ### Boundaries
 
 The LadybugDB milestone must still preserve:
 
 - Python-compatible graph behavior where Kuzu parity is the relevant baseline;
-- core package neutrality from LadybugDB native/package dependencies;
 - clear separation between Graphiti port gaps and LadybugDB package/binding limitations;
-- explicit support decisions before exposing core enum/DI provider paths.
+- explicit naming decisions before replacing the current Kuzu compatibility provider value.
 
 ### Follow-Up Decisions
 
 - Final driver-facing naming: Kuzu compatibility vocabulary versus LadybugDB product naming.
-- Whether and when core should expose a supported LadybugDB enum/options/DI path.
 - Whether Neo4j removal becomes its own milestone.
 - How much provider-specific query/filter behavior should move fully into the LadybugDB driver.
 

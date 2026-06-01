@@ -22,7 +22,8 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>    <ProjectReference Include="..\..\src\Graphiti.Core\Graphiti.Core.csproj" />
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Graphiti.Core\Graphiti.Core.csproj" />
   </ItemGroup>
 
 </Project>

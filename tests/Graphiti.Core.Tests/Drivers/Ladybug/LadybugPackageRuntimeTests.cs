@@ -904,18 +904,6 @@ public class LadybugPackageRuntimeTests
         Assert.True(Assert.IsType<double>(row[1]) > 0);
     }
 
-    [Fact]
-    public void CoreProject_DoesNotReferenceLadybugPackageBeforeProviderWiring()
-    {
-        var project = File.ReadAllText(Path.Combine(
-            FindCSharpRoot(),
-            "src",
-            "Graphiti.Core",
-            "Graphiti.Core.csproj"));
-
-        Assert.DoesNotContain("LadybugDB", project, StringComparison.Ordinal);
-    }
-
     private static void ExecuteParameterQuery(Connection connection, object value)
     {
         using var result = connection.Execute(

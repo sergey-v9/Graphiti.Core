@@ -62,8 +62,8 @@ semantics, wire compatibility, or performance/allocation discipline.
 
 - Use `Microsoft.Extensions.AI` as the primary adapter boundary for chat and embeddings.
 - Keep `ILLmClient`, `IEmbedderClient`, and `ICrossEncoderClient` as Graphiti-facing abstractions.
-- Use official provider SDKs behind adapters or optional integration packages rather than hard-coding
-  providers into core.
+- Use official provider SDKs behind adapters where possible. LadybugDB is the core graph-provider
+  investment target and its package/native references are owned by `Graphiti.Core`.
 - Use `HybridCache` for LLM response caching and preserve cache-key semantics for parity-sensitive
   structured calls.
 - Keep LLM cache storage as `JsonObject` payloads serialized with `GraphitiJsonSerializer.Options`
@@ -136,8 +136,8 @@ semantics, wire compatibility, or performance/allocation discipline.
 
 ## Provider Status
 
-- LadybugDB is the primary graph provider target for the C# port and should become the default first
-  provider option once implemented. It is the package/backend we will invest in.
+- LadybugDB is the primary graph provider target for the C# port and is owned by `Graphiti.Core`.
+  It is the package/backend we will invest in.
 - The LadybugDB provider should use the LadybugDB NuGet package, which comes from the alternative
   Kuzu fork. Kuzu remains the Python parity lineage and compatibility vocabulary, but the driver-facing
   provider name should move to LadybugDB as the port freezes. See `kuzu-driver-port.md`.
@@ -146,11 +146,9 @@ semantics, wire compatibility, or performance/allocation discipline.
   improvements there: FalkorDB does not matter for the current port, Neo4j is expected to be removed,
   and InMemory is a reference/test driver rather than a product provider. LadybugDB is the provider
   path to invest in.
-- LadybugDB/Kuzu foundation helpers may land before final provider naming/wiring decisions, but they
-  must not make `GraphProvider.Kuzu` valid in core DI/options or imply full provider support until
-  that product decision is explicit. The optional `Graphiti.Core` package may own the
-  concrete LadybugDB package adapter, DI helper, searchable driver surface, and runtime-backed proof
-  while core owns the LadybugDB dependency. See `kuzu-driver-port.md` for current runtime coverage.
+- `GraphProvider.Kuzu` is valid in core DI/options and creates the LadybugDB-backed driver. Kuzu
+  remains the compatibility enum value until the final driver-facing LadybugDB naming decision is
+  explicit. See `kuzu-driver-port.md` for current runtime coverage.
 - LadybugDB package/backend behavior that appears buggy during driver implementation should be marked
   separately from C# port gaps. Work around proven backend limitations deliberately when useful, but
   keep them visible for later LadybugDB fixes.

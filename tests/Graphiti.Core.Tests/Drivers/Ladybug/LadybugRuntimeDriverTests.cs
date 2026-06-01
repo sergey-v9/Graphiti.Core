@@ -22,7 +22,7 @@ public class LadybugRuntimeDriverTests
             Labels = ["Person"],
             NameEmbedding = [1.0f, 0.0f],
             CreatedAt = createdAt,
-            Summary = "created through the optional package source"
+            Summary = "created through the Ladybug driver source"
         };
         var target = new EntityNode
         {
@@ -32,7 +32,7 @@ public class LadybugRuntimeDriverTests
             Labels = ["Person"],
             NameEmbedding = [0.0f, 1.0f],
             CreatedAt = createdAt,
-            Summary = "created through the optional package target"
+            Summary = "created through the Ladybug driver target"
         };
         var edge = new EntityEdge
         {
@@ -68,7 +68,7 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
-    public async Task LadybugGraphitiIngestsAndSearchesEpisodeEndToEnd()
+    public async Task LadybugBackedGraphitiIngestsAndSearchesEpisodeEndToEnd()
     {
         await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
         var graphiti = new Graphiti(
@@ -101,7 +101,7 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
-    public async Task LadybugGraphitiRemovesIngestedEpisodeEndToEnd()
+    public async Task LadybugBackedGraphitiRemovesIngestedEpisodeEndToEnd()
     {
         await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
         var graphiti = new Graphiti(
@@ -141,7 +141,7 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
-    public async Task LadybugGraphitiAddsTripletAndSearchesFactEndToEnd()
+    public async Task LadybugBackedGraphitiAddsTripletAndSearchesFactEndToEnd()
     {
         await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
         var graphiti = new Graphiti(graphDriver: driver, embedder: new HashEmbedder(8));
@@ -192,7 +192,7 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
-    public async Task LadybugGraphitiBulkIngestsDuplicateFactsEndToEnd()
+    public async Task LadybugBackedGraphitiBulkIngestsDuplicateFactsEndToEnd()
     {
         await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
         var graphiti = new Graphiti(
@@ -244,7 +244,7 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
-    public async Task LadybugGraphitiAssociatesSagaEpisodesEndToEnd()
+    public async Task LadybugBackedGraphitiAssociatesSagaEpisodesEndToEnd()
     {
         await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
         var graphiti = new Graphiti(
@@ -290,7 +290,7 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
-    public async Task LadybugGraphitiSummarizesSagaEndToEnd()
+    public async Task LadybugBackedGraphitiSummarizesSagaEndToEnd()
     {
         await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
         var fixedNow = new DateTimeOffset(2026, 9, 15, 16, 17, 18, TimeSpan.Zero);
@@ -335,7 +335,7 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
-    public async Task LadybugGraphitiBuildsCommunitiesEndToEnd()
+    public async Task LadybugBackedGraphitiBuildsCommunitiesEndToEnd()
     {
         await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
         var fixedNow = new DateTimeOffset(2026, 9, 16, 17, 18, 19, TimeSpan.Zero);
@@ -432,7 +432,7 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
-    public async Task LadybugGraphitiUpdatesCommunitiesDuringEpisodeIngestionEndToEnd()
+    public async Task LadybugBackedGraphitiUpdatesCommunitiesDuringEpisodeIngestionEndToEnd()
     {
         await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
         var fixedNow = new DateTimeOffset(2026, 9, 17, 18, 19, 20, TimeSpan.Zero);
@@ -540,6 +540,30 @@ public class LadybugRuntimeDriverTests
         Assert.Equal(GraphProvider.Kuzu, driver.Provider);
         Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
         Assert.Same(driver, graphiti.Driver);
+    }
+
+    [Fact]
+    public async Task GraphProviderKuzuResolvesLadybugDriverFromCoreOptions()
+    {
+        var services = new ServiceCollection();
+        services.AddGraphitiCore(options => options.Provider = GraphProvider.Kuzu);
+
+        await using var serviceProvider = services.BuildServiceProvider(
+            new ServiceProviderOptions
+            {
+                ValidateOnBuild = true,
+                ValidateScopes = true
+            });
+        await using var scope = serviceProvider.CreateAsyncScope();
+
+        var options = scope.ServiceProvider.GetRequiredService<IOptions<GraphitiOptions>>().Value;
+        var driver = scope.ServiceProvider.GetRequiredService<IGraphDriver>();
+        await driver.CloseAsync();
+
+        Assert.Equal(GraphProvider.Kuzu, options.Provider);
+        Assert.Null(options.GraphDriverFactory);
+        Assert.Equal(GraphProvider.Kuzu, driver.Provider);
+        Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
     }
 
     [Fact]

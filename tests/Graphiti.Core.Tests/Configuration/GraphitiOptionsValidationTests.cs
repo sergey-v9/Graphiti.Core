@@ -17,9 +17,6 @@ public class GraphitiOptionsValidationTests
             options => options.Database = "   ",
             options => options.Provider = GraphProvider.Neo4j,
             options => options.Provider = GraphProvider.FalkorDb,
-            // Kuzu remains the LadybugDB parity/compatibility value while the provider is absent.
-            // Listed here to confirm validation handles the enum values without drivers.
-            options => options.Provider = GraphProvider.Kuzu,
             options => options.Provider = GraphProvider.Neptune,
             options => options.Provider = (GraphProvider)999
         };
@@ -93,11 +90,8 @@ public class GraphitiOptionsValidationTests
         Assert.Equal("tenant-db", graphiti.Driver.Database);
     }
 
-    // NOTE: Kuzu remains the LadybugDB parity/compatibility value while the provider is absent. It is
-    // used here as an unsupported value to prove the explicit factory bypasses provider validation.
     [Theory]
     [InlineData(GraphProvider.Neo4j)]
-    [InlineData(GraphProvider.Kuzu)]
     [InlineData((GraphProvider)999)]
     public async Task GraphDriverFactory_BypassesProviderValidation(GraphProvider provider)
     {

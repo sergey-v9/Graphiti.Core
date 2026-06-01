@@ -12,9 +12,8 @@ file; use `evolution.md` for milestone history and `handoff.md` for current-stat
 
 2. Continue LadybugDB provider work.
 
-   LadybugDB is the provider investment target. Keep core free of LadybugDB package/native
-   references; use the optional `Graphiti.Core` package for runtime-backed execution.
-   Current provider status and remaining work live in `kuzu-driver-port.md`.
+   LadybugDB is the provider investment target and is integrated into `Graphiti.Core`. Current
+   provider status and remaining work live in `kuzu-driver-port.md`.
 
 3. Keep modernization Graphiti-shaped.
 
@@ -42,10 +41,10 @@ file; use `evolution.md` for milestone history and `handoff.md` for current-stat
 
 - LadybugDB is the main/default provider target.
 - Kuzu remains the Python parity lineage and compatibility vocabulary until naming is settled.
-- `GraphProvider.Kuzu` must remain unsupported by core options validation until the product decision
-  to expose a core enum/DI path is explicit.
-- The LadybugDB core driver may own concrete package references, native dependencies,
-  factory helpers, host-facing options, and integration proof.
+- `GraphProvider.Kuzu` is supported by core options validation and resolves to the LadybugDB-backed
+  driver.
+- `Graphiti.Core` owns the LadybugDB package references, native dependency boundary, factory helpers,
+  host-facing options, and integration proof.
 - InMemory is a deterministic reference/test driver. Keep it correct and deterministic, but do not
   polish it as a product provider unless tests or LadybugDB-facing abstractions require it.
 - Neo4j may remain only as existing/reference behavior while present; avoid new investment because it
@@ -67,7 +66,7 @@ file; use `evolution.md` for milestone history and `handoff.md` for current-stat
 ## Provider And Infrastructure Work
 
 - Continue using `Microsoft.Extensions.AI` for chat and embeddings.
-- Keep provider SDKs in optional packages or host configuration helpers where possible.
+- Keep non-graph provider SDKs in external adapters or host configuration helpers where possible.
 - Preserve `ILLmClient`, `IEmbedderClient`, and `ICrossEncoderClient` compatibility while adapters
   mature.
 - Use `HybridCache` for expensive deterministic LLM responses.
@@ -123,10 +122,10 @@ These should remain custom unless the user explicitly chooses a different produc
 
 ## Future Decisions To Revisit
 
-- Whether to expose core LadybugDB provider naming/DI support beyond the optional package factory.
+- Whether to add a distinct LadybugDB provider enum/name beyond the current Kuzu compatibility value.
 - Whether to support Neptune later. Current decision: not implemented, enum kept for compatibility.
-- Whether to expose core LadybugDB drivers for OpenAI, Azure OpenAI, Azure AI Search, Qdrant, or
-  Semantic Kernel adapters.
+- Whether to expose external adapters for OpenAI, Azure OpenAI, Azure AI Search, Qdrant, or Semantic
+  Kernel.
 - Whether strict byte-for-byte Python query compatibility is ever needed for Lucene group filtering.
 - Whether to add a compatibility option that defaults chunking to the Python chars-per-token
   heuristic instead of tiktoken.

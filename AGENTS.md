@@ -42,8 +42,8 @@ Never:
   fingerprints, or LLM cache-key inputs as incidental cleanup.
 - Do not move nested `Graphiti.*Response` DTOs out of their stable identity unless the cache/schema
   impact is deliberate and tested.
-- Do not add native binaries, RID packaging, or provider-specific SDK dependencies to core without an
-  explicit packaging/provider decision.
+- Do not add native binaries, RID packaging, or provider-specific SDK dependencies beyond the current
+  core graph-provider dependencies without an explicit packaging/provider decision.
 - Do not spend more effort improving Neo4j or FalkorDB unless it is needed to preserve existing
   behavior, validate shared abstractions, or unblock LadybugDB work.
 
@@ -94,9 +94,9 @@ Port contract:
   tensor primitives are infrastructure choices, not permission to change Graphiti behavior or hide
   avoidable allocations behind fashionable abstractions.
 - Existing Neo4j/FalkorDB behavior may stay only as temporary reference coverage. FalkorDB is not
-  important for current work, Neo4j is expected to be removed later, and the in-memory driver is a
-  real deterministic test/reference backend rather than a product provider. New provider investment
-  should focus on LadybugDB.
+  important for current work, Neo4j is expected to be removed later, LadybugDB is the core provider
+  investment target, and the in-memory driver is a real deterministic test/reference backend rather
+  than a product provider.
 
 Generated vs hand-written:
 - There is no ClangSharp/native binding generator and no checked-in generated interop layer.
@@ -105,7 +105,7 @@ Generated vs hand-written:
 
 Provider/package facts:
 - This is currently a managed `net10.0` library with central package versions in
-  `Directory.Packages.props`.
+  `Directory.Packages.props`. LadybugDB package/native references are part of `Graphiti.Core`.
 - Durable provider policy lives in `.agents/notes/decisions.md`; detailed LadybugDB state lives in
   `.agents/notes/kuzu-driver-port.md`.
 
