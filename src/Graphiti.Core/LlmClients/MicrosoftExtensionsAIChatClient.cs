@@ -55,7 +55,12 @@ public sealed class MicrosoftExtensionsAIChatClient : LlmClient
                     : ChatResponseFormat.Json
         };
 
-        var aiMessages = messages.Select(ToAIMessage).ToList();
+        var aiMessages = new List<Microsoft.Extensions.AI.ChatMessage>(messages.Count);
+        for (var i = 0; i < messages.Count; i++)
+        {
+            aiMessages.Add(ToAIMessage(messages[i]));
+        }
+
         var response = _pipeline is null
             ? await ExecuteProviderCallAsync(cancellationToken).ConfigureAwait(false)
             : await _pipeline.ExecuteAsync(

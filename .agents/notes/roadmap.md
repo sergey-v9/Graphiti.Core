@@ -214,6 +214,9 @@ shorter than the old working plans; expand items only when they become active.
   zero-width/C0-control cleanup matrix, allowed control preservation, malformed surrogate dropping,
   valid surrogate-pair preservation, clean user-content preservation, and cache-key coalescing for
   inputs differing only by stripped characters.
+- `MicrosoftExtensionsAIChatClient` now builds provider chat-message lists with a pre-sized loop
+  instead of LINQ projection. Focused modern-infrastructure and telemetry tests pin provider calls,
+  schema/response parsing, retries, rate limiting, and provider-call spans.
 - Memory, SQLite, and HybridCache LLM caches now carry parsed payload snapshots through
   single-flight and clone them per caller instead of reparsing the same payload string for every
   waiter. Tests pin raw string payload storage, `SetAsync`/`GetAsync` clone isolation, distinct

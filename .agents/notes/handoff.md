@@ -186,6 +186,9 @@ improving those providers unless it directly supports shared abstractions or Lad
 - Microsoft.Extensions.AI adapters now emit per-attempt provider-call spans for chat and embeddings.
   These spans sit inside Polly delegates, so retries produce one span per actual downstream attempt;
   failed attempts record exceptions while the parent logical LLM/embedder span can still complete.
+- The Microsoft.Extensions.AI chat adapter now materializes provider chat messages with a pre-sized
+  loop instead of a LINQ projection, preserving message order, provider call telemetry, retry/rate-
+  limit behavior, response parsing, and usage tracking.
 - Neo4j session execution now emits low-level graph-provider spans for read, write, write-scalar,
   and write-batch operations. Tags intentionally include operation, database, query length,
   parameter count, statement/result counts, and avoid query text or parameter values. Tests also pin
@@ -307,13 +310,13 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after HybridCache LLM cache clone/parse coalescing:
+Latest checkpoint on 2026-06-01 after Microsoft.Extensions.AI chat message projection shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused LLM-client/cache/cancellation test filter passed with 67 tests.
+- The focused ModernInfrastructure/Telemetry test filter passed with 92 tests.
 - `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 796
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
@@ -480,6 +483,8 @@ These were previously audited and found faithful or intentionally different:
   characters
 - HybridCache LLM response cache corrupt/sentinel payload repair coalescing, sentinel miss cleanup,
   parsed-snapshot single-flight result, and cancellation-isolated shared fill behavior
+- Microsoft.Extensions.AI chat adapter message projection, provider-call telemetry, retry/rate-limit
+  behavior, response parsing, and usage tracking
 - Token usage per-prompt totals, call counts, average tokens, snapshot immutability, and int64
   accumulation behavior
 - Embedding dimension and finite-value validation for model assignment and M.E.AI adapter outputs

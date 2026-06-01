@@ -75,7 +75,7 @@ Verified build/test command from this folder:
 dotnet test "Graphiti.Core.CSharp.slnx" --verbosity minimal
 ```
 
-Verified on 2026-06-01 after HybridCache LLM cache clone/parse coalescing:
+Verified on 2026-06-01 after Microsoft.Extensions.AI chat message projection shaping:
 restore/format/build succeeded with 0 warnings and 796 tests passed.
 
 Port contract:
