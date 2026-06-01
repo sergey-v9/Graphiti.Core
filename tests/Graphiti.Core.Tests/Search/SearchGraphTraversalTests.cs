@@ -165,6 +165,91 @@ public class SearchGraphTraversalTests
     }
 
     [Fact]
+    public async Task MaterializedSearch_FiltersFulltextAndVectorCandidatesBeforeRanking()
+    {
+        var driver = new InMemoryGraphDriver();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var allowed = Entity("allowed", now);
+        allowed.Uuid = "allowed-node";
+        allowed.Name = "Alpha";
+        allowed.NameEmbedding = new List<float> { 1f, 0f };
+        allowed.Labels.Add("Person");
+        var target = Entity("target", now);
+        target.Uuid = "target-node";
+        target.NameEmbedding = new List<float> { 0f, 1f };
+        target.Labels.Add("Person");
+        var blockedLabel = Entity("blocked-label", now);
+        blockedLabel.Uuid = "blocked-label-node";
+        blockedLabel.Name = "Alpha";
+        blockedLabel.NameEmbedding = new List<float> { 1f, 0f };
+        blockedLabel.Labels.Add("Project");
+        var otherGroup = Entity("other-group", now);
+        otherGroup.Uuid = "other-group-node";
+        otherGroup.Name = "Alpha";
+        otherGroup.GroupId = "other";
+        otherGroup.NameEmbedding = new List<float> { 1f, 0f };
+        otherGroup.Labels.Add("Person");
+
+        foreach (var node in new[] { allowed, target, blockedLabel, otherGroup })
+        {
+            await driver.SaveNodeAsync(node);
+        }
+
+        var allowedEdge = Edge(allowed, target, "alpha relation", now);
+        allowedEdge.Uuid = "allowed-edge";
+        allowedEdge.FactEmbedding = new List<float> { 1f, 0f };
+        var blockedEndpointEdge = Edge(allowed, blockedLabel, "alpha relation", now);
+        blockedEndpointEdge.Uuid = "blocked-endpoint-edge";
+        blockedEndpointEdge.FactEmbedding = new List<float> { 1f, 0f };
+        var blockedTypeEdge = Edge(allowed, target, "alpha relation", now);
+        blockedTypeEdge.Uuid = "blocked-type-edge";
+        blockedTypeEdge.Name = "IGNORES";
+        blockedTypeEdge.FactEmbedding = new List<float> { 1f, 0f };
+        foreach (var edge in new[] { allowedEdge, blockedEndpointEdge, blockedTypeEdge })
+        {
+            await driver.SaveEdgeAsync(edge);
+        }
+
+        var searchDriver = new MaterializingSearchGraphDriver(driver);
+        var nodeFilter = new SearchFilters { NodeLabels = new List<string> { "Person" } };
+        var edgeFilter = new SearchFilters
+        {
+            NodeLabels = new List<string> { "Person" },
+            EdgeTypes = new List<string> { "RELATES_TO" }
+        };
+
+        var nodeFulltext = await searchDriver.SearchEntityNodesFulltextAsync(
+            "alpha",
+            nodeFilter,
+            new[] { "group" },
+            limit: 10);
+        var nodeVector = await searchDriver.SearchEntityNodesByEmbeddingAsync(
+            new[] { 1f, 0f },
+            nodeFilter,
+            new[] { "group" },
+            limit: 10,
+            minScore: 0.5f);
+        var edgeFulltext = await searchDriver.SearchEntityEdgesFulltextAsync(
+            "alpha",
+            edgeFilter,
+            new[] { "group" },
+            limit: 10);
+        var edgeVector = await searchDriver.SearchEntityEdgesByEmbeddingAsync(
+            new[] { 1f, 0f },
+            edgeFilter,
+            new[] { "group" },
+            limit: 10,
+            minScore: 0.5f,
+            sourceNodeUuid: allowed.Uuid,
+            targetNodeUuid: target.Uuid);
+
+        Assert.Equal(allowed.Uuid, Assert.Single(nodeFulltext).Item.Uuid);
+        Assert.Equal(allowed.Uuid, Assert.Single(nodeVector).Item.Uuid);
+        Assert.Equal(allowedEdge.Uuid, Assert.Single(edgeFulltext).Item.Uuid);
+        Assert.Equal(allowedEdge.Uuid, Assert.Single(edgeVector).Item.Uuid);
+    }
+
+    [Fact]
     public async Task MaterializedNodeDistanceRanker_DeduplicatesInputsAndKeepsStableTies()
     {
         var driver = new InMemoryGraphDriver();

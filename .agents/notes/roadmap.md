@@ -278,6 +278,10 @@ shorter than the old working plans; expand items only when they become active.
   `IReadOnlyList[]` allocations that previously connected `SearchEngine` branches to fusion/merge.
   Tests pin one-list RRF, two-list RRF/merge, three-list parity, and the existing RRF/merge ordering
   semantics.
+- Materialized fallback full-text/vector search now uses predicate-aware BM25 and top-score overloads
+  instead of `Where` iterator chains. This preserves filter order, stable ranking ties, endpoint
+  filtering, strict vector min-score behavior, and BM25 document scoring without allocating full
+  filtered candidate lists for vector paths.
 - `LadybugGraphDriver` now executes internal bulk-save phase statements and read-side collection
   projections with explicit loops and pre-sized buffers instead of LINQ iterator chains. Tests pin
   backend record-order preservation, group filtering, first-seen group-id de-duplication, and the

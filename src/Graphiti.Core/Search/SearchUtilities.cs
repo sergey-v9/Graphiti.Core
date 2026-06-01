@@ -130,6 +130,32 @@ public static partial class SearchUtilities
             includeMinScore);
     }
 
+    internal static IReadOnlyList<(T Item, float Score)> TopByScore<T>(
+        IReadOnlyList<T> candidates,
+        Func<T, bool> candidatePredicate,
+        Func<T, float> scoreSelector,
+        int limit,
+        float minScore = 0,
+        bool includeMinScore = true)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        ArgumentNullException.ThrowIfNull(candidatePredicate);
+        ArgumentNullException.ThrowIfNull(scoreSelector);
+
+        if (limit <= 0)
+        {
+            return Array.Empty<(T Item, float Score)>();
+        }
+
+        return TopByScoreCore(
+            candidates,
+            candidatePredicate,
+            scoreSelector,
+            limit,
+            minScore,
+            includeMinScore);
+    }
+
     private static IReadOnlyList<(T Item, float Score)> TopByScoreCore<T>(
         IEnumerable<T> candidates,
         Func<T, float> scoreSelector,
@@ -176,6 +202,82 @@ public static partial class SearchUtilities
             }
 
             index++;
+        }
+
+        var ordered = new List<ScoredCandidate<T>>(queue.Count);
+        foreach (var item in queue.UnorderedItems)
+        {
+            ordered.Add(item.Element);
+        }
+
+        ordered.Sort(static (left, right) =>
+        {
+            var scoreComparison = right.Score.CompareTo(left.Score);
+            return scoreComparison != 0
+                ? scoreComparison
+                : left.Index.CompareTo(right.Index);
+        });
+
+        var results = new List<(T Item, float Score)>(ordered.Count);
+        foreach (var item in ordered)
+        {
+            results.Add((item.Item, item.Score));
+        }
+
+        return results;
+    }
+
+    private static IReadOnlyList<(T Item, float Score)> TopByScoreCore<T>(
+        IReadOnlyList<T> candidates,
+        Func<T, bool> candidatePredicate,
+        Func<T, float> scoreSelector,
+        int limit,
+        float minScore,
+        bool includeMinScore)
+    {
+        if (limit <= 0)
+        {
+            return Array.Empty<(T Item, float Score)>();
+        }
+
+        var comparer = StableScorePriorityComparer.Instance;
+        var queue = new PriorityQueue<ScoredCandidate<T>, StableScorePriority>(comparer);
+        var stableIndex = 0;
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            var candidate = candidates[i];
+            if (!candidatePredicate(candidate))
+            {
+                continue;
+            }
+
+            var score = scoreSelector(candidate);
+            var meetsMinScore = includeMinScore
+                ? score >= minScore
+                : score > minScore;
+            if (!meetsMinScore)
+            {
+                stableIndex++;
+                continue;
+            }
+
+            var scored = new ScoredCandidate<T>(candidate, score, stableIndex);
+            var priority = new StableScorePriority(score, stableIndex);
+            if (queue.Count < limit)
+            {
+                queue.Enqueue(scored, priority);
+            }
+            else
+            {
+                queue.TryPeek(out _, out var worstPriority);
+                if (comparer.Compare(priority, worstPriority) > 0)
+                {
+                    queue.Dequeue();
+                    queue.Enqueue(scored, priority);
+                }
+            }
+
+            stableIndex++;
         }
 
         var ordered = new List<ScoredCandidate<T>>(queue.Count);

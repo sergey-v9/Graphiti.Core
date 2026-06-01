@@ -19,7 +19,8 @@ internal sealed class MaterializingSearchGraphDriver(
             materializeEmbeddingsForFulltext,
             cancellationToken).ConfigureAwait(false);
         return ToSearchHits(Bm25TextScorer.Rank(
-            candidates.Where(node => SearchFilterMatcher.NodeMatches(node, compiledFilter)),
+            candidates,
+            node => SearchFilterMatcher.NodeMatches(node, compiledFilter),
             EntityNodeFulltextText,
             query,
             limit));
@@ -41,7 +42,8 @@ internal sealed class MaterializingSearchGraphDriver(
             cancellationToken).ConfigureAwait(false);
         var scorer = SearchUtilities.CreateCosineSimilarityScorer(searchVector);
         return ToSearchHits(SearchUtilities.TopByScore(
-            candidates.Where(node => SearchFilterMatcher.NodeMatches(node, compiledFilter)),
+            candidates,
+            node => SearchFilterMatcher.NodeMatches(node, compiledFilter),
             node => scorer.Score(node.NameEmbedding),
             limit,
             minScore,
@@ -67,7 +69,8 @@ internal sealed class MaterializingSearchGraphDriver(
             compiledFilter,
             cancellationToken).ConfigureAwait(false);
         return ToSearchHits(Bm25TextScorer.Rank(
-            candidates.Where(edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid)),
+            candidates,
+            edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid),
             EntityEdgeFulltextText,
             query,
             limit));
@@ -99,7 +102,8 @@ internal sealed class MaterializingSearchGraphDriver(
             cancellationToken).ConfigureAwait(false);
         var scorer = SearchUtilities.CreateCosineSimilarityScorer(searchVector);
         return ToSearchHits(SearchUtilities.TopByScore(
-            candidates.Where(edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid)),
+            candidates,
+            edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid),
             edge => scorer.Score(edge.FactEmbedding),
             limit,
             minScore,
@@ -144,11 +148,11 @@ internal sealed class MaterializingSearchGraphDriver(
         }
 
         var compiledFilter = CompiledSearchFilter.Compile(searchFilter);
-        var candidates = (await SearchFallbackGraph.GetAllEntityEdgesAsync(
+        var candidates = await SearchFallbackGraph.GetAllEntityEdgesAsync(
             driver,
             groupIds,
             withEmbeddings: false,
-            cancellationToken).ConfigureAwait(false)).ToList();
+            cancellationToken).ConfigureAwait(false);
         var nodesByUuid = await SearchFallbackGraph.LoadEdgeEndpointNodeLookupAsync(
             driver,
             candidates,
@@ -337,7 +341,7 @@ internal sealed class MaterializingSearchGraphDriver(
     }
 
     private static Dictionary<string, EntityEdge> BuildEdgeCandidateLookup(
-        List<EntityEdge> candidates,
+        IReadOnlyList<EntityEdge> candidates,
         CompiledSearchFilter compiledFilter,
         IReadOnlyDictionary<string, EntityNode> nodesByUuid)
     {

@@ -33,41 +33,70 @@ internal static class Bm25TextScorer
 
         foreach (var candidate in candidates)
         {
-            var length = 0;
-            Dictionary<string, int>? termFrequencies = null;
-            SearchUtilities.VisitTokens(
-                textSelector(candidate),
-                queryTerms.TermSet,
-                (token, terms) =>
-            {
-                length++;
-                if (!terms.Contains(token))
-                {
-                    return;
-                }
-
-                termFrequencies ??= new Dictionary<string, int>(StringComparer.Ordinal);
-                ref var frequency = ref CollectionsMarshal.GetValueRefOrAddDefault(
-                    termFrequencies,
-                    token,
-                    out var exists);
-                frequency++;
-                if (exists)
-                {
-                    return;
-                }
-
-                ref var documentFrequency = ref CollectionsMarshal.GetValueRefOrAddDefault(
-                    documentFrequencies,
-                    token,
-                    out _);
-                documentFrequency++;
-            });
-
-            documents.Add(new Document<T>(candidate, length, termFrequencies));
-            totalDocumentLength += length;
+            AddDocument(
+                candidate,
+                textSelector,
+                queryTerms,
+                documentFrequencies,
+                documents,
+                ref totalDocumentLength);
         }
 
+        return ScoreDocuments(queryTerms, documentFrequencies, documents, totalDocumentLength, limit);
+    }
+
+    public static IReadOnlyList<(T Item, float Score)> Rank<T>(
+        IReadOnlyList<T> candidates,
+        Func<T, bool> candidatePredicate,
+        Func<T, string> textSelector,
+        string query,
+        int limit)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        ArgumentNullException.ThrowIfNull(candidatePredicate);
+        ArgumentNullException.ThrowIfNull(textSelector);
+
+        if (limit <= 0)
+        {
+            return Array.Empty<(T Item, float Score)>();
+        }
+
+        var queryTerms = BuildDistinctQueryTerms(query);
+        if (queryTerms.Terms.Count == 0)
+        {
+            return Array.Empty<(T Item, float Score)>();
+        }
+
+        var documentFrequencies = new Dictionary<string, int>(StringComparer.Ordinal);
+        var documents = new List<Document<T>>();
+        var totalDocumentLength = 0;
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            var candidate = candidates[i];
+            if (!candidatePredicate(candidate))
+            {
+                continue;
+            }
+
+            AddDocument(
+                candidate,
+                textSelector,
+                queryTerms,
+                documentFrequencies,
+                documents,
+                ref totalDocumentLength);
+        }
+
+        return ScoreDocuments(queryTerms, documentFrequencies, documents, totalDocumentLength, limit);
+    }
+
+    private static IReadOnlyList<(T Item, float Score)> ScoreDocuments<T>(
+        QueryTerms queryTerms,
+        Dictionary<string, int> documentFrequencies,
+        List<Document<T>> documents,
+        int totalDocumentLength,
+        int limit)
+    {
         if (documents.Count == 0 || totalDocumentLength == 0)
         {
             return Array.Empty<(T Item, float Score)>();
@@ -89,6 +118,49 @@ internal static class Bm25TextScorer
             limit,
             minScore: 0,
             includeMinScore: false));
+    }
+
+    private static void AddDocument<T>(
+        T candidate,
+        Func<T, string> textSelector,
+        QueryTerms queryTerms,
+        Dictionary<string, int> documentFrequencies,
+        List<Document<T>> documents,
+        ref int totalDocumentLength)
+    {
+        var length = 0;
+        Dictionary<string, int>? termFrequencies = null;
+        SearchUtilities.VisitTokens(
+            textSelector(candidate),
+            queryTerms.TermSet,
+            (token, terms) =>
+        {
+            length++;
+            if (!terms.Contains(token))
+            {
+                return;
+            }
+
+            termFrequencies ??= new Dictionary<string, int>(StringComparer.Ordinal);
+            ref var frequency = ref CollectionsMarshal.GetValueRefOrAddDefault(
+                termFrequencies,
+                token,
+                out var exists);
+            frequency++;
+            if (exists)
+            {
+                return;
+            }
+
+            ref var documentFrequency = ref CollectionsMarshal.GetValueRefOrAddDefault(
+                documentFrequencies,
+                token,
+                out _);
+            documentFrequency++;
+        });
+
+        documents.Add(new Document<T>(candidate, length, termFrequencies));
+        totalDocumentLength += length;
     }
 
     private static QueryTerms BuildDistinctQueryTerms(string query)
