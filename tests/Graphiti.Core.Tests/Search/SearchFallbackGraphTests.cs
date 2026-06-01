@@ -110,6 +110,23 @@ public class SearchFallbackGraphTests
         Assert.Equal(new[] { 1f, 1f }, edgeWithEmbedding.FactEmbedding);
         Assert.Equal(episode.Uuid, fallbackEpisode.Uuid);
         Assert.Equal(episodicEdge.Uuid, fallbackEpisodicEdge.Uuid);
+
+        entityWithEmbedding.Name = "mutated";
+        entityWithEmbedding.NameEmbedding![0] = 99f;
+        communityWithEmbedding.Name = "mutated";
+        communityWithEmbedding.NameEmbedding![0] = 99f;
+        edgeWithEmbedding.Fact = "mutated";
+        edgeWithEmbedding.FactEmbedding![0] = 99f;
+
+        var storedEntity = await EntityNode.GetByUuidAsync(driver, entity.Uuid);
+        var storedCommunity = await CommunityNode.GetByUuidAsync(driver, community.Uuid);
+        var storedEdge = await EntityEdge.GetByUuidAsync(driver, entityEdge.Uuid);
+        Assert.Equal("Entity", storedEntity.Name);
+        Assert.Equal(new[] { 1f, 0f }, storedEntity.NameEmbedding);
+        Assert.Equal("Community", storedCommunity.Name);
+        Assert.Equal(new[] { 0f, 1f }, storedCommunity.NameEmbedding);
+        Assert.Equal("entity relates to community", storedEdge.Fact);
+        Assert.Equal(new[] { 1f, 1f }, storedEdge.FactEmbedding);
     }
 
     [Fact]

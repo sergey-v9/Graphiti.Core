@@ -179,6 +179,10 @@ shorter than the old working plans; expand items only when they become active.
   `Select` materialization. Preserve filter order, stable ranking ties, strict vector min-score
   behavior, endpoint filters, and clone/embedding isolation across node, edge, episode, and community
   search hits.
+- `InMemoryGraphDriver` snapshot cloning, traversal graph setup, entity-node lookup, and BFS origin
+  scanning now use explicit pre-sized buffers and sorted candidate lists instead of LINQ
+  projection/order/dictionary chains. Preserve clone isolation, duplicate-UUID failure behavior,
+  empty/missing origin skipping, all-node group lookup coverage, and UUID-ordered BFS edge traversal.
 - Search fallback in-memory snapshot projection now uses explicit typed loops over cloned driver
   snapshots instead of `OfType`/`Select` chains. Preserve the clone isolation, type filtering,
   embedding stripping flags, stable order, and `IReadOnlyList<EntityEdge>` endpoint lookup shape.

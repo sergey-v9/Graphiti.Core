@@ -1071,7 +1071,13 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
     {
         lock (_gate)
         {
-            return _nodes.Values.Select(CloneNode).ToList();
+            var nodes = new List<Node>(_nodes.Count);
+            foreach (var node in _nodes.Values)
+            {
+                nodes.Add(CloneNode(node));
+            }
+
+            return nodes;
         }
     }
 
@@ -1079,7 +1085,13 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
     {
         lock (_gate)
         {
-            return _edges.Values.Select(CloneEdge).ToList();
+            var edges = new List<Edge>(_edges.Count);
+            foreach (var edge in _edges.Values)
+            {
+                edges.Add(CloneEdge(edge));
+            }
+
+            return edges;
         }
     }
 
@@ -1330,10 +1342,12 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         IReadOnlyList<string>? groupIds)
         where TEdge : Edge
     {
+        var candidates = GetEdgesFromIndex<TEdge>(groupIds, allWhenNoGroups: true);
+        candidates.Sort(static (left, right) => string.CompareOrdinal(left.Uuid, right.Uuid));
         var result = new Dictionary<string, List<TEdge>>(StringComparer.Ordinal);
-        foreach (var edge in GetEdgesFromIndex<TEdge>(groupIds, allWhenNoGroups: true)
-                     .OrderBy(edge => edge.Uuid, StringComparer.Ordinal))
+        for (var i = 0; i < candidates.Count; i++)
         {
+            var edge = candidates[i];
             if (!result.TryGetValue(edge.SourceNodeUuid, out var edges))
             {
                 edges = new List<TEdge>();
@@ -1632,11 +1646,30 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         new(
             BuildEdgesBySource<EntityEdge>(groupIds),
             BuildEdgesBySource<EpisodicEdge>(groupIds),
-            _nodes.Values.ToDictionary(node => node.Uuid, node => node.GroupId, StringComparer.Ordinal));
+            BuildNodeGroupLookup());
 
-    private Dictionary<string, EntityNode> EntityNodeLookup() =>
-        GetNodesFromIndex<EntityNode>(null, allWhenNoGroups: true)
-            .ToDictionary(node => node.Uuid, StringComparer.Ordinal);
+    private Dictionary<string, string> BuildNodeGroupLookup()
+    {
+        var groupIdsByUuid = new Dictionary<string, string>(_nodes.Count, StringComparer.Ordinal);
+        foreach (var node in _nodes.Values)
+        {
+            groupIdsByUuid.Add(node.Uuid, node.GroupId);
+        }
+
+        return groupIdsByUuid;
+    }
+
+    private Dictionary<string, EntityNode> EntityNodeLookup()
+    {
+        var nodes = GetNodesFromIndex<EntityNode>(null, allWhenNoGroups: true);
+        var nodesByUuid = new Dictionary<string, EntityNode>(nodes.Count, StringComparer.Ordinal);
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            nodesByUuid.Add(nodes[i].Uuid, nodes[i]);
+        }
+
+        return nodesByUuid;
+    }
 
     private static Dictionary<string, EntityNode> BuildNodeCandidateLookup(
         List<EntityNode> candidates,
@@ -1890,8 +1923,14 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         var queue = new Queue<(string NodeUuid, int Depth, string OriginGroupId)>();
         var visited = new HashSet<(string NodeUuid, string OriginGroupId)>();
 
-        foreach (var origin in originNodeUuids.Where(origin => !string.IsNullOrEmpty(origin)))
+        for (var i = 0; i < originNodeUuids.Count; i++)
         {
+            var origin = originNodeUuids[i];
+            if (string.IsNullOrEmpty(origin))
+            {
+                continue;
+            }
+
             if (!graph.NodeGroupIdsByUuid.TryGetValue(origin, out var originGroupId))
             {
                 continue;

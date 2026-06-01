@@ -557,6 +557,63 @@ public class InMemorySearchGraphDriverTests
     }
 
     [Fact]
+    public async Task InMemoryEdgeBfs_IgnoresEmptyOriginsAndTraversesSourceEdgesInUuidOrder()
+    {
+        var driver = new InMemoryGraphDriver();
+        var searchDriver = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode",
+            Name = "episode",
+            GroupId = "group",
+            Source = EpisodeType.Message,
+            SourceDescription = "message",
+            Content = "alpha",
+            CreatedAt = now,
+            ValidAt = now
+        };
+        var alpha = Entity("alpha", now);
+        alpha.Uuid = "alpha";
+        var beta = Entity("beta", now);
+        beta.Uuid = "beta";
+        var gamma = Entity("gamma", now);
+        gamma.Uuid = "gamma";
+
+        foreach (var node in new Node[] { episode, alpha, beta, gamma })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        await new EpisodicEdge
+        {
+            Uuid = "mention",
+            SourceNodeUuid = episode.Uuid,
+            TargetNodeUuid = alpha.Uuid,
+            GroupId = "group",
+            CreatedAt = now
+        }.SaveAsync(driver);
+
+        var laterUuidEdge = Edge(alpha, beta, "alpha to beta", now);
+        laterUuidEdge.Uuid = "edge-b";
+        var earlierUuidEdge = Edge(alpha, gamma, "alpha to gamma", now);
+        earlierUuidEdge.Uuid = "edge-a";
+        await laterUuidEdge.SaveAsync(driver);
+        await earlierUuidEdge.SaveAsync(driver);
+
+        var hits = await searchDriver.SearchEntityEdgesBfsAsync(
+            new[] { string.Empty, "missing-origin", episode.Uuid },
+            new SearchFilters { EdgeTypes = new List<string> { "RELATES_TO" } },
+            maxDepth: 2,
+            groupIds: null,
+            limit: 10);
+
+        Assert.Equal(
+            new[] { earlierUuidEdge.Uuid, laterUuidEdge.Uuid },
+            hits.Select(hit => hit.Item.Uuid));
+    }
+
+    [Fact]
     public async Task InMemoryNodeBfs_KeepsResultsInOriginGroupWhenGroupIdsNull()
     {
         var driver = new InMemoryGraphDriver();
