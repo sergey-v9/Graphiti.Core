@@ -108,11 +108,18 @@ internal static class LadybugRecordMapper
                 var parsed = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
                     text,
                     GraphitiJsonSerializer.Options);
-                return parsed?.ToDictionary(
-                        pair => pair.Key,
-                        pair => (object?)pair.Value.Clone(),
-                        StringComparer.Ordinal)
-                    ?? new Dictionary<string, object?>(StringComparer.Ordinal);
+                if (parsed is null)
+                {
+                    return new Dictionary<string, object?>(StringComparer.Ordinal);
+                }
+
+                var attributes = new Dictionary<string, object?>(parsed.Count, StringComparer.Ordinal);
+                foreach (var (key, element) in parsed)
+                {
+                    attributes[key] = element.Clone();
+                }
+
+                return attributes;
             }
             catch (JsonException)
             {
@@ -122,10 +129,13 @@ internal static class LadybugRecordMapper
 
         if (value is JsonObject jsonObject)
         {
-            return jsonObject.ToDictionary(
-                pair => pair.Key,
-                pair => (object?)pair.Value?.DeepClone(),
-                StringComparer.Ordinal);
+            var attributes = new Dictionary<string, object?>(jsonObject.Count, StringComparer.Ordinal);
+            foreach (var (key, item) in jsonObject)
+            {
+                attributes[key] = item?.DeepClone();
+            }
+
+            return attributes;
         }
 
         if (value is IReadOnlyDictionary<string, object?> nullableDictionary)
@@ -135,10 +145,13 @@ internal static class LadybugRecordMapper
 
         if (value is IReadOnlyDictionary<string, object> dictionary)
         {
-            return dictionary.ToDictionary(
-                pair => pair.Key,
-                pair => (object?)pair.Value,
-                StringComparer.Ordinal);
+            var attributes = new Dictionary<string, object?>(dictionary.Count, StringComparer.Ordinal);
+            foreach (var (key, item) in dictionary)
+            {
+                attributes[key] = item;
+            }
+
+            return attributes;
         }
 
         return new Dictionary<string, object?>(StringComparer.Ordinal);
@@ -189,15 +202,32 @@ internal static class LadybugRecordMapper
 
         if (value is IEnumerable<T> typed)
         {
-            return typed.ToList();
+            return MaterializeTypedEnumerable(typed);
         }
 
         if (value is JsonArray jsonArray)
         {
-            return jsonArray
-                .Select(item => item is null ? default : item.Deserialize<T>(GraphitiJsonSerializer.Options))
-                .OfType<T>()
-                .ToList();
+            var values = new List<T>(jsonArray.Count);
+            foreach (var item in jsonArray)
+            {
+                if (item is null)
+                {
+                    if (default(T) is T defaultValue)
+                    {
+                        values.Add(defaultValue);
+                    }
+
+                    continue;
+                }
+
+                var converted = item.Deserialize<T>(GraphitiJsonSerializer.Options);
+                if (converted is not null)
+                {
+                    values.Add(converted);
+                }
+            }
+
+            return values;
         }
 
         if (value is JsonElement { ValueKind: JsonValueKind.Array } element)
@@ -207,12 +237,36 @@ internal static class LadybugRecordMapper
 
         if (value is not string && value is IEnumerable<object> objects)
         {
-            return objects
-                .Select(item => (T)Convert.ChangeType(item, typeof(T), CultureInfo.InvariantCulture))
-                .ToList();
+            return MaterializeConvertedObjects<T>(objects);
         }
 
         return null;
+    }
+
+    private static List<T> MaterializeTypedEnumerable<T>(IEnumerable<T> values)
+    {
+        var list = values.TryGetNonEnumeratedCount(out var count)
+            ? new List<T>(count)
+            : new List<T>();
+        foreach (var value in values)
+        {
+            list.Add(value);
+        }
+
+        return list;
+    }
+
+    private static List<T> MaterializeConvertedObjects<T>(IEnumerable<object> values)
+    {
+        var list = values.TryGetNonEnumeratedCount(out var count)
+            ? new List<T>(count)
+            : new List<T>();
+        foreach (var value in values)
+        {
+            list.Add((T)Convert.ChangeType(value, typeof(T), CultureInfo.InvariantCulture));
+        }
+
+        return list;
     }
 
     private static object? GetValueOrNull(IReadOnlyDictionary<string, object?> record, string key) =>

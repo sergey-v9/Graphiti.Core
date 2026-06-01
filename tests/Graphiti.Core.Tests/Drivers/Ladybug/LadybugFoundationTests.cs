@@ -366,6 +366,62 @@ public class LadybugFoundationTests
     }
 
     [Fact]
+    public void RecordMapper_HandlesJsonNodeAttributesAndArrayValues()
+    {
+        var jsonAttributes = new JsonObject
+        {
+            ["nested"] = new JsonObject { ["value"] = 1 },
+            ["text"] = "original"
+        };
+        var parsedAttributes = LadybugRecordMapper.ParseAttributes(jsonAttributes);
+        jsonAttributes["nested"]!["value"] = 2;
+        jsonAttributes["text"] = "mutated";
+
+        var nested = Assert.IsType<JsonObject>(parsedAttributes["nested"]);
+        Assert.Equal(1, nested["value"]!.GetValue<int>());
+        Assert.Equal("original", Assert.IsAssignableFrom<JsonValue>(parsedAttributes["text"]).GetValue<string>());
+        Assert.Same(StringComparer.Ordinal, parsedAttributes.Comparer);
+
+        var episode = LadybugRecordMapper.MapEpisodicNode(new Dictionary<string, object?>
+        {
+            ["uuid"] = "episode-1",
+            ["source"] = "message",
+            ["entity_edges"] = new JsonArray("edge-1", null, "edge-2")
+        });
+        var communityFromJsonArray = LadybugRecordMapper.MapCommunityNode(new Dictionary<string, object?>
+        {
+            ["uuid"] = "community-1",
+            ["name_embedding"] = new JsonArray(0.1, null, 0.3)
+        });
+        var element = JsonSerializer.Deserialize<JsonElement>("[\"Entity\",\"Person\"]");
+        var entity = LadybugRecordMapper.MapEntityNode(new Dictionary<string, object?>
+        {
+            ["uuid"] = "entity-1",
+            ["labels"] = element,
+            ["name_embedding"] = new object[] { 1, "2.5" },
+            ["attributes"] = new Dictionary<string, object> { ["role"] = "engineer" }
+        });
+
+        Assert.Equal(new[] { "edge-1", "edge-2" }, episode.EntityEdges);
+        Assert.Equal(new[] { 0.1f, 0f, 0.3f }, communityFromJsonArray.NameEmbedding);
+        Assert.Equal(new[] { "Entity", "Person" }, entity.Labels);
+        Assert.Equal(new[] { 1f, 2.5f }, entity.NameEmbedding);
+        Assert.Equal("engineer", entity.Attributes["role"]);
+        Assert.Same(StringComparer.Ordinal, entity.Attributes.Comparer);
+
+        var marker = new object();
+        IReadOnlyDictionary<string, object?> nullableAttributes = new Dictionary<string, object?>
+        {
+            ["marker"] = marker
+        };
+        var copiedNullableAttributes = LadybugRecordMapper.ParseAttributes(nullableAttributes);
+
+        Assert.Same(StringComparer.Ordinal, copiedNullableAttributes.Comparer);
+        Assert.Same(marker, copiedNullableAttributes["marker"]);
+        Assert.Empty(LadybugRecordMapper.ParseAttributes("null"));
+    }
+
+    [Fact]
     public void RecordMapper_MapsRemainingNodeAndSimpleEdgeProjectionTypes()
     {
         var createdAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);

@@ -205,6 +205,10 @@ improving those providers unless it directly supports shared abstractions or Lad
   community reads, and saga reads. Its bulk-save phase writes and read-side collection projections
   now use explicit loops and pre-sized buffers while preserving backend record order, optional group
   filtering, saga chronology, first-seen group-id de-duplication, and unsupported provider status.
+  `LadybugRecordMapper` now materializes attributes and list fields with explicit loops while
+  preserving ordinal attribute dictionaries, JSON string `JsonElement` clones, `JsonObject`
+  deep-clone semantics, shallow dictionary copies, JSON array null handling, invariant object
+  conversion, and source ordering.
   Internal `LadybugSearchStatementBuilder` and
   `LadybugSearchExecutor` helpers now pin and exercise Kuzu full-text index/search statements, vector
   search, BFS statement plans, per-UUID ranker statements, Kuzu label filters, `RelatesToNode_`
@@ -317,14 +321,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after Ladybug search-ranker shaping:
+Latest checkpoint on 2026-06-01 after Ladybug record-mapper shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused Ladybug driver test filter passed with 34 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 802
+- The focused Ladybug driver test filter passed with 35 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 803
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -468,6 +472,7 @@ These were previously audited and found faithful or intentionally different:
   projections, label-array storage, JSON attribute serialization/deserialization, simple-edge record
   mapping, individual bulk-save statement expansion, internal executor-backed non-search driver
   forwarding/mapping, allocation-light collection projection and first-seen group-id de-duplication,
+  allocation-light record-mapper attribute/list materialization with JSON clone/null behavior,
   search statement plans for full-text/vector/BFS/rankers, internal search execution/mapping over
   `ILadybugQueryExecutor`, allocation-light ranker score/statement shaping with duplicate/unknown
   UUID parity, and keeping provider status unsupported in DI/options.

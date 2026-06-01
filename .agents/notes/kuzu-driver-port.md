@@ -17,6 +17,9 @@ being ported.
   without adding the LadybugDB package or native assets. Its current projection path uses explicit
   loops for bulk-save phase statements, read records, saga contents, and first-seen group-id
   de-duplication. There is still no concrete LadybugDB package adapter in the project.
+- `LadybugRecordMapper` uses loop-built attribute/list materialization for Ladybug/Kuzu rows while
+  preserving JSON clone semantics, ordinal dictionaries, source ordering, null handling, and
+  invariant object conversion.
 - `LadybugSearchStatementBuilder` and `LadybugSearchExecutor` are internal. They pin Kuzu full-text
   index statements, `QUERY_FTS_INDEX` calls, `array_cosine_similarity` vector search, doubled-depth
   BFS plans over `RelatesToNode_`, per-UUID ranker statements, Kuzu label filters, score extraction,

@@ -241,6 +241,10 @@ shorter than the old working plans; expand items only when they become active.
   and statements with explicit first-seen loops. Tests pin duplicate input collapse, center-node
   query exclusion plus synthetic score, unknown backend UUID inclusion, last backend row wins,
   inclusive min-score filtering, and missing default scores.
+- `LadybugRecordMapper` now maps JSON attributes and list fields with explicit loops instead of LINQ
+  materialization chains. Tests pin ordinal dictionaries, JSON string `JsonElement` clones,
+  `JsonObject` deep-cloning, shallow dictionary copies, JSON array null behavior, `JsonElement`
+  arrays, invariant object conversion, and source-order preservation.
 - Good next allocation slice from the 2026-06-01 scans: continue with a fresh targeted scan before
   editing. Concrete candidates from the latest scan are Neo4j bulk-save parameter loop projection
   or moving back to LadybugDB package proof when provider work is the higher-leverage slice.
