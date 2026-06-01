@@ -71,25 +71,10 @@ public class LadybugRuntimeDriverTests
     public async Task LadybugGraphitiIngestsAndSearchesEpisodeEndToEnd()
     {
         await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
-        var llm = new StaticJsonLlmClient(_ => new JsonObject
-        {
-            ["extracted_entities"] = new JsonArray
-            {
-                new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
-                new JsonObject { ["name"] = "Acme", ["entity_type"] = "Organization" }
-            },
-            ["edges"] = new JsonArray
-            {
-                new JsonObject
-                {
-                    ["source_entity_name"] = "Alice",
-                    ["target_entity_name"] = "Acme",
-                    ["relation_type"] = "WORKS_AT",
-                    ["fact"] = "Alice works at Acme."
-                }
-            }
-        });
-        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm, embedder: new HashEmbedder(8));
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: CreateAliceAcmeLlmClient(),
+            embedder: new HashEmbedder(8));
         var referenceTime = new DateTime(2026, 9, 10, 11, 12, 13, DateTimeKind.Utc);
 
         await graphiti.BuildIndicesAndConstraintsAsync();
@@ -113,6 +98,46 @@ public class LadybugRuntimeDriverTests
         Assert.Contains(searchResults.Nodes, node => string.Equals(node.Name, "Alice", StringComparison.Ordinal));
         Assert.Contains(searchResults.Nodes, node => string.Equals(node.Name, "Acme", StringComparison.Ordinal));
         Assert.Equal(result.Episode.Uuid, Assert.Single(searchResults.Episodes).Uuid);
+    }
+
+    [Fact]
+    public async Task LadybugGraphitiRemovesIngestedEpisodeEndToEnd()
+    {
+        await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: CreateAliceAcmeLlmClient(),
+            embedder: new HashEmbedder(8));
+        var referenceTime = new DateTime(2026, 9, 11, 12, 13, 14, DateTimeKind.Utc);
+
+        await graphiti.BuildIndicesAndConstraintsAsync();
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Alice works at Acme.",
+            "message",
+            referenceTime,
+            groupId: "tenant");
+        var attributed = await graphiti.GetNodesAndEdgesByEpisodeAsync([result.Episode.Uuid]);
+
+        await graphiti.RemoveEpisodeAsync(result.Episode.Uuid);
+        var searchResults = await graphiti.SearchAdvancedAsync(
+            "Alice Acme",
+            SearchConfigRecipes.CombinedHybridSearchRrf,
+            groupIds: ["tenant"]);
+
+        Assert.Equal(result.Edges[0].Uuid, Assert.Single(attributed.Edges).Uuid);
+        Assert.Equal(2, attributed.Nodes.Count);
+        await Assert.ThrowsAsync<NodeNotFoundException>(
+            () => driver.GetNodeByUuidAsync<EpisodicNode>(result.Episode.Uuid));
+        await Assert.ThrowsAsync<EdgeNotFoundException>(
+            () => driver.GetEdgeByUuidAsync<EntityEdge>(result.Edges[0].Uuid));
+        await Assert.ThrowsAsync<NodeNotFoundException>(
+            () => driver.GetNodeByUuidAsync<EntityNode>(result.Nodes[0].Uuid));
+        await Assert.ThrowsAsync<NodeNotFoundException>(
+            () => driver.GetNodeByUuidAsync<EntityNode>(result.Nodes[1].Uuid));
+        Assert.Empty(searchResults.Edges);
+        Assert.Empty(searchResults.Nodes);
+        Assert.Empty(searchResults.Episodes);
     }
 
     [Fact]
@@ -184,4 +209,24 @@ public class LadybugRuntimeDriverTests
         Assert.NotNull(graphitiOptions.GraphDriverFactory);
         Assert.Equal(GraphProvider.Kuzu, driver.Provider);
     }
+
+    private static StaticJsonLlmClient CreateAliceAcmeLlmClient() =>
+        new(_ => new JsonObject
+        {
+            ["extracted_entities"] = new JsonArray
+            {
+                new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                new JsonObject { ["name"] = "Acme", ["entity_type"] = "Organization" }
+            },
+            ["edges"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["source_entity_name"] = "Alice",
+                    ["target_entity_name"] = "Acme",
+                    ["relation_type"] = "WORKS_AT",
+                    ["fact"] = "Alice works at Acme."
+                }
+            }
+        });
 }

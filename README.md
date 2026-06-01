@@ -14,8 +14,8 @@ This folder contains the C# port of `graphiti_core/` as a reusable .NET library.
 - `InMemoryGraphDriver`: executable deterministic driver for local embedding, ingestion, retrieval, search, triplets, saga links, and tests.
 - `Neo4jGraphDriver`: Neo4j-backed semantic operation driver using `Neo4j.Driver`.
 - `Graphiti.Core`: optional package exposing a LadybugDB-backed driver factory and DI
-  helpers. Factory-backed Graphiti ingestion plus advanced search has initial end-to-end proof, while
-  the core DI provider switch supports LadybugDB.
+  helpers. Factory-backed Graphiti ingestion, attribution lookup, episode removal, and advanced
+  search have initial end-to-end proof, while the core DI provider switch supports LadybugDB.
 
 ## Namespace Layout
 
