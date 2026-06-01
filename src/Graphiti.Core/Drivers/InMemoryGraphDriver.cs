@@ -510,48 +510,66 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         var referenceUtc = GraphitiHelpers.EnsureUtc(referenceTime);
         lock (_gate)
         {
-            IEnumerable<EpisodicNode> episodes = groupIds is { Count: > 0 }
+            if (lastN <= 0)
+            {
+                return Task.FromResult<IReadOnlyList<EpisodicNode>>(Array.Empty<EpisodicNode>());
+            }
+
+            var candidates = groupIds is { Count: > 0 }
                 ? GetNodesFromIndex<EpisodicNode>(groupIds, allWhenNoGroups: false)
                 : GetNodesFromIndex<EpisodicNode>(null, allWhenNoGroups: true);
 
-            if (source is not null)
-            {
-                episodes = episodes.Where(episode => episode.Source == source);
-            }
-
+            HashSet<string>? sagaEpisodeUuids = null;
             if (!string.IsNullOrEmpty(saga))
             {
-                var sagaNode = (groupIds is { Count: > 0 }
-                        ? groupIds.SelectMany(groupId => GetIndexedUuids(_sagaNodeUuidsByGroupAndName, (groupId, saga)))
-                        : _sagaNodeUuidsByGroupAndName
-                            .Where(pair => string.Equals(pair.Key.Name, saga, StringComparison.Ordinal))
-                            .SelectMany(pair => pair.Value))
-                    .Select(uuid => _nodes.GetValueOrDefault(uuid))
-                    .OfType<SagaNode>()
-                    .FirstOrDefault();
+                var sagaNode = groupIds is { Count: > 0 }
+                    ? FindStoredSagaByName(groupIds[0], saga)
+                    : FindFirstStoredSagaByName(saga);
 
                 if (sagaNode is null)
                 {
                     return Task.FromResult<IReadOnlyList<EpisodicNode>>(Array.Empty<EpisodicNode>());
                 }
 
-                var sagaEpisodeUuids = GetIndexedUuids(_hasEpisodeEdgeUuidsBySagaUuid, sagaNode.Uuid)
-                    .Select(uuid => _edges.GetValueOrDefault(uuid))
-                    .OfType<HasEpisodeEdge>()
-                    .Select(edge => edge.TargetNodeUuid)
-                    .ToHashSet(StringComparer.Ordinal);
-                episodes = episodes.Where(episode => sagaEpisodeUuids.Contains(episode.Uuid));
+                sagaEpisodeUuids = MaterializeSagaEpisodeUuids(sagaNode.Uuid);
             }
 
-            IReadOnlyList<EpisodicNode> results = episodes
-                .Where(episode => GraphitiHelpers.EnsureUtc(episode.ValidAt) <= referenceUtc)
-                .OrderByDescending(episode => episode.ValidAt)
-                .Take(lastN)
-                .Reverse()
-                .Select(episode => (EpisodicNode)CloneNode(episode))
-                .ToList();
+            var episodes = new List<IndexedEpisode>(candidates.Count);
+            for (var i = 0; i < candidates.Count; i++)
+            {
+                var episode = candidates[i];
+                if (source is not null && episode.Source != source.Value)
+                {
+                    continue;
+                }
 
-            return Task.FromResult(results);
+                if (sagaEpisodeUuids is not null && !sagaEpisodeUuids.Contains(episode.Uuid))
+                {
+                    continue;
+                }
+
+                if (GraphitiHelpers.EnsureUtc(episode.ValidAt) > referenceUtc)
+                {
+                    continue;
+                }
+
+                episodes.Add(new IndexedEpisode(episode, i));
+            }
+
+            if (episodes.Count == 0)
+            {
+                return Task.FromResult<IReadOnlyList<EpisodicNode>>(Array.Empty<EpisodicNode>());
+            }
+
+            episodes.Sort(CompareEpisodeValidAtNewestFirst);
+            var take = Math.Min(lastN, episodes.Count);
+            var results = new List<EpisodicNode>(take);
+            for (var i = take - 1; i >= 0; i--)
+            {
+                results.Add((EpisodicNode)CloneNode(episodes[i].Episode));
+            }
+
+            return Task.FromResult<IReadOnlyList<EpisodicNode>>(results);
         }
     }
 
@@ -646,11 +664,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            var saga = GetIndexedUuids(_sagaNodeUuidsByGroupAndName, (groupId, name))
-                .Order(StringComparer.Ordinal)
-                .Select(uuid => _nodes.GetValueOrDefault(uuid))
-                .OfType<SagaNode>()
-                .FirstOrDefault();
+            var saga = FindStoredSagaByName(groupId, name);
             return Task.FromResult(saga is null ? null : (SagaNode)CloneNode(saga));
         }
     }
@@ -663,19 +677,27 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            var episodeUuids = GetIndexedUuids(_hasEpisodeEdgeUuidsBySagaUuid, sagaUuid)
-                .Select(uuid => _edges.GetValueOrDefault(uuid))
-                .OfType<HasEpisodeEdge>()
-                .Where(edge => edge.TargetNodeUuid != currentEpisodeUuid)
-                .Select(edge => edge.TargetNodeUuid)
-                .ToHashSet(StringComparer.Ordinal);
+            var seenEpisodeUuids = new HashSet<string>(StringComparer.Ordinal);
+            EpisodicNode? previous = null;
+            foreach (var edgeUuid in GetIndexedUuids(_hasEpisodeEdgeUuidsBySagaUuid, sagaUuid))
+            {
+                if (!_edges.TryGetValue(edgeUuid, out var edge)
+                    || edge is not HasEpisodeEdge hasEpisodeEdge
+                    || string.Equals(hasEpisodeEdge.TargetNodeUuid, currentEpisodeUuid, StringComparison.Ordinal)
+                    || !seenEpisodeUuids.Add(hasEpisodeEdge.TargetNodeUuid)
+                    || !_nodes.TryGetValue(hasEpisodeEdge.TargetNodeUuid, out var node)
+                    || node is not EpisodicNode episode)
+                {
+                    continue;
+                }
 
-            var previous = episodeUuids
-                .Select(uuid => _nodes.GetValueOrDefault(uuid))
-                .OfType<EpisodicNode>()
-                .OrderByDescending(episode => episode.ValidAt)
-                .ThenByDescending(episode => episode.CreatedAt)
-                .FirstOrDefault();
+                if (previous is null
+                    || episode.ValidAt > previous.ValidAt
+                    || (episode.ValidAt == previous.ValidAt && episode.CreatedAt > previous.CreatedAt))
+                {
+                    previous = episode;
+                }
+            }
 
             return Task.FromResult(previous?.Uuid);
         }
@@ -690,39 +712,71 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            var episodeUuids = GetIndexedUuids(_hasEpisodeEdgeUuidsBySagaUuid, sagaUuid)
-                .Select(uuid => _edges.GetValueOrDefault(uuid))
-                .OfType<HasEpisodeEdge>()
-                .Select(edge => edge.TargetNodeUuid)
-                .ToHashSet(StringComparer.Ordinal);
-
-            IEnumerable<EpisodicNode> query = episodeUuids
-                .Select(uuid => _nodes.GetValueOrDefault(uuid))
-                .OfType<EpisodicNode>();
-
-            if (since is not null)
+            var take = Math.Max(0, limit);
+            if (take == 0)
             {
-                query = query
-                    .Where(episode => episode.CreatedAt > since.Value)
-                    .OrderBy(episode => episode.ValidAt)
-                    .ThenBy(episode => episode.CreatedAt);
+                return Task.FromResult<IReadOnlyList<SagaEpisodeContent>>(Array.Empty<SagaEpisodeContent>());
+            }
+
+            var seenEpisodeUuids = new HashSet<string>(StringComparer.Ordinal);
+            var episodes = new List<IndexedEpisode>();
+            var index = 0;
+            foreach (var edgeUuid in GetIndexedUuids(_hasEpisodeEdgeUuidsBySagaUuid, sagaUuid))
+            {
+                if (!_edges.TryGetValue(edgeUuid, out var edge)
+                    || edge is not HasEpisodeEdge hasEpisodeEdge
+                    || !seenEpisodeUuids.Add(hasEpisodeEdge.TargetNodeUuid)
+                    || !_nodes.TryGetValue(hasEpisodeEdge.TargetNodeUuid, out var node)
+                    || node is not EpisodicNode episode)
+                {
+                    continue;
+                }
+
+                if (since is not null && episode.CreatedAt <= since.Value)
+                {
+                    index++;
+                    continue;
+                }
+
+                episodes.Add(new IndexedEpisode(episode, index));
+                index++;
+            }
+
+            if (episodes.Count == 0)
+            {
+                return Task.FromResult<IReadOnlyList<SagaEpisodeContent>>(Array.Empty<SagaEpisodeContent>());
+            }
+
+            episodes.Sort(since is null
+                ? CompareEpisodeNewestFirst
+                : CompareEpisodeOldestFirst);
+
+            take = Math.Min(take, episodes.Count);
+            var results = new List<SagaEpisodeContent>(take);
+            if (since is null)
+            {
+                for (var i = take - 1; i >= 0; i--)
+                {
+                    var episode = episodes[i].Episode;
+                    if (!string.IsNullOrEmpty(episode.Content))
+                    {
+                        results.Add(new SagaEpisodeContent(episode.Content, episode.ValidAt));
+                    }
+                }
             }
             else
             {
-                query = query
-                    .OrderByDescending(episode => episode.ValidAt)
-                    .ThenByDescending(episode => episode.CreatedAt)
-                    .Take(limit)
-                    .Reverse();
+                for (var i = 0; i < take; i++)
+                {
+                    var episode = episodes[i].Episode;
+                    if (!string.IsNullOrEmpty(episode.Content))
+                    {
+                        results.Add(new SagaEpisodeContent(episode.Content, episode.ValidAt));
+                    }
+                }
             }
 
-            IReadOnlyList<SagaEpisodeContent> results = query
-                .Take(limit)
-                .Where(episode => !string.IsNullOrEmpty(episode.Content))
-                .Select(episode => new SagaEpisodeContent(episode.Content, episode.ValidAt))
-                .ToList();
-
-            return Task.FromResult(results);
+            return Task.FromResult<IReadOnlyList<SagaEpisodeContent>>(results);
         }
     }
 
@@ -1195,6 +1249,55 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return edges;
     }
 
+    private SagaNode? FindStoredSagaByName(string groupId, string name)
+    {
+        var sagaUuids = MaterializeSortedUuids(GetIndexedUuids(_sagaNodeUuidsByGroupAndName, (groupId, name)));
+        foreach (var uuid in sagaUuids)
+        {
+            if (_nodes.TryGetValue(uuid, out var node) && node is SagaNode saga)
+            {
+                return saga;
+            }
+        }
+
+        return null;
+    }
+
+    private SagaNode? FindFirstStoredSagaByName(string name)
+    {
+        foreach (var pair in _sagaNodeUuidsByGroupAndName)
+        {
+            if (!string.Equals(pair.Key.Name, name, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            foreach (var uuid in pair.Value)
+            {
+                if (_nodes.TryGetValue(uuid, out var node) && node is SagaNode saga)
+                {
+                    return saga;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private HashSet<string> MaterializeSagaEpisodeUuids(string sagaUuid)
+    {
+        var episodeUuids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var edgeUuid in GetIndexedUuids(_hasEpisodeEdgeUuidsBySagaUuid, sagaUuid))
+        {
+            if (_edges.TryGetValue(edgeUuid, out var edge) && edge is HasEpisodeEdge hasEpisodeEdge)
+            {
+                episodeUuids.Add(hasEpisodeEdge.TargetNodeUuid);
+            }
+        }
+
+        return episodeUuids;
+    }
+
     private Dictionary<string, List<TEdge>> BuildEdgesBySource<TEdge>(
         IReadOnlyList<string>? groupIds)
         where TEdge : Edge
@@ -1401,6 +1504,43 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         {
             index.Remove(key);
         }
+    }
+
+    private readonly struct IndexedEpisode(EpisodicNode episode, int index)
+    {
+        public EpisodicNode Episode { get; } = episode;
+
+        public int Index { get; } = index;
+    }
+
+    private static int CompareEpisodeValidAtNewestFirst(IndexedEpisode left, IndexedEpisode right)
+    {
+        var validAt = right.Episode.ValidAt.CompareTo(left.Episode.ValidAt);
+        return validAt != 0 ? validAt : left.Index.CompareTo(right.Index);
+    }
+
+    private static int CompareEpisodeNewestFirst(IndexedEpisode left, IndexedEpisode right)
+    {
+        var validAt = right.Episode.ValidAt.CompareTo(left.Episode.ValidAt);
+        if (validAt != 0)
+        {
+            return validAt;
+        }
+
+        var createdAt = right.Episode.CreatedAt.CompareTo(left.Episode.CreatedAt);
+        return createdAt != 0 ? createdAt : left.Index.CompareTo(right.Index);
+    }
+
+    private static int CompareEpisodeOldestFirst(IndexedEpisode left, IndexedEpisode right)
+    {
+        var validAt = left.Episode.ValidAt.CompareTo(right.Episode.ValidAt);
+        if (validAt != 0)
+        {
+            return validAt;
+        }
+
+        var createdAt = left.Episode.CreatedAt.CompareTo(right.Episode.CreatedAt);
+        return createdAt != 0 ? createdAt : left.Index.CompareTo(right.Index);
     }
 
     private static IEnumerable<string> GetIndexedUuids<TKey>(

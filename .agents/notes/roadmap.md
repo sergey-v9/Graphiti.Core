@@ -164,6 +164,12 @@ shorter than the old working plans; expand items only when they become active.
   matched nodes plus incident edges. Focused tests pin null inputs, lazy-input cancellation,
   pagination edge cases, missing groups, full clear, duplicate scoped clear, and edge-group-only
   non-deletion.
+- `InMemoryGraphDriver` saga episode read helpers now use loop-built candidate buffers and stable
+  explicit sort comparers instead of LINQ filter/sort/projection chains. Retrieve-episodes keeps
+  source/group/reference filters, Python/provider-style first-group saga lookup, chronological
+  returned-window shape, and clone isolation; saga lookup, previous-episode selection, and
+  saga-content windows preserve ordinal UUID selection, valid/created timestamp ordering, and
+  limit-before-empty-content filtering. Focused tests pin these behaviors.
 - Search fallback in-memory snapshot projection now uses explicit typed loops over cloned driver
   snapshots instead of `OfType`/`Select` chains. Preserve the clone isolation, type filtering,
   embedding stripping flags, stable order, and `IReadOnlyList<EntityEdge>` endpoint lookup shape.
