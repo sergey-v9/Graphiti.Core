@@ -250,11 +250,14 @@ shorter than the old working plans; expand items only when they become active.
   projection uses phase-ordered loops instead of LINQ `Select`/`AddRange` chains. Tests pin
   ordered snapshot behavior for non-enumerable read-only list inputs without changing provider
   support status.
-- Good next provider slice from the 2026-06-01 scans: add a test-only LadybugDB package/runtime
-  proof with private package/native references, schema/scalar Saga smoke coverage, row projection
-  proof, and pinned package blockers for list/null parameter binding plus FTS extension loading.
-  Keep core free of LadybugDB package references and keep `GraphProvider.Kuzu` unsupported until the
-  adapter path is proven.
+- A test-only LadybugDB package/runtime proof now uses private `LadybugDB` / `LadybugDB.Native`
+  references to run the schema through the internal driver, round-trip a scalar Saga node, prove
+  `QueryResult` row projection, and pin package blockers for list/array/null parameter binding plus
+  FTS extension loading. Core still has no LadybugDB package reference and `GraphProvider.Kuzu`
+  remains unsupported.
+- Good next provider slice from the 2026-06-01 scans: design the concrete LadybugDB executor adapter
+  strategy for list/array parameter binding, null parameter handling, and FTS extension loading, then
+  expand runtime proof toward entity-edge `reference_time`, list-valued columns, and full-text search.
 
 ## Graphiti Decomposition
 

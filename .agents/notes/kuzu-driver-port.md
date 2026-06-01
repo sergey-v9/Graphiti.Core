@@ -14,9 +14,10 @@ being ported.
   and now feed an internal executor-backed `LadybugGraphDriver` core.
 - `LadybugGraphDriver` is internal and not wired to DI/options. It executes the non-search graph
   driver surface through an abstract `ILadybugQueryExecutor`, which keeps the core path testable
-  without adding the LadybugDB package or native assets. Its current projection path uses explicit
-  loops for bulk-save phase statements, read records, saga contents, and first-seen group-id
-  de-duplication. There is still no concrete LadybugDB package adapter in the project.
+  without adding the LadybugDB package or native assets to the core project. Its current projection
+  path uses explicit loops for bulk-save phase statements, read records, saga contents, and
+  first-seen group-id de-duplication. There is still no concrete LadybugDB package adapter in the
+  project.
 - `LadybugRecordMapper` uses loop-built attribute/list materialization for Ladybug/Kuzu rows while
   preserving JSON clone semantics, ordinal dictionaries, source ordering, null handling, and
   invariant object conversion.
@@ -42,9 +43,9 @@ being ported.
 - Existing Kuzu-specific query/filter branches preserve interim behavior until the driver lands.
   `SearchUtilities.BuildKuzuFulltextQuery` now matches Python Kuzu's whitespace word truncation.
 - `GraphitiServiceCollectionExtensions` does not currently wire a LadybugDB/Kuzu driver.
-- Local NuGet cache inspection found `LadybugDB` version `0.17.0-alpha.1` plus separate native
-  packages. Adding these to core still needs an explicit packaging/provider decision because native
-  dependencies affect package layout.
+- The test project has private `LadybugDB` and `LadybugDB.Native` references for runtime package
+  proof only. Adding these to core still needs an explicit packaging/provider decision because
+  native dependencies affect package layout.
 - Neo4j and FalkorDB can stay as reference/confirmation paths if already working, but they are not
   where future provider improvements should go.
 - Neptune is a separate provider decision and remains not implemented.
@@ -66,13 +67,15 @@ being ported.
   local package docs.
 - `Database(string databasePath, SystemConfig)` uses an empty string for in-memory databases; Python
   Kuzu uses `':memory:'`.
-- A local in-memory package smoke confirmed basic Cypher, current schema execution, scalar Saga
-  save/read projections, `DateTime` parameters, and literal `array_cosine_similarity`.
+- A test-only in-memory package smoke confirms basic Cypher, current schema execution through the
+  internal driver, scalar Saga save/read projections, `QueryResult.ColumnNames` / `Rows()` record
+  projection, `DateTime` parameters, and literal `array_cosine_similarity`.
 - Current package binding does not accept the list/array and null parameter shapes Graphiti
-  statements use today. `List<string>`, `string[]`, `float[]`, `object[]`, and `null` parameters need
-  an adapter decision before most graph/search statements can execute unchanged.
-- FTS calls need explicit extension handling (`INSTALL FTS; LOAD EXTENSION FTS;`) before
-  `CREATE_FTS_INDEX` / `QUERY_FTS_INDEX` proof can pass.
+  statements use today. `List<string>`, `string[]`, `float[]`, and `object[]` throw
+  `NotSupportedException`; `null` throws `ArgumentNullException`. The concrete adapter needs a
+  binding/rewriting strategy before most graph/search statements can execute unchanged.
+- FTS calls currently throw until explicit extension handling (`INSTALL FTS; LOAD EXTENSION FTS;`) is
+  added before `CREATE_FTS_INDEX` / `QUERY_FTS_INDEX` proof.
 
 ## Facts To Confirm Before Driver Wiring
 
@@ -82,8 +85,9 @@ being ported.
 - Whether parameter names and binding use `$name` across prepared and direct execution paths.
 - Adapter strategy for CLR mappings that do not bind directly today, especially `List<string>` /
   `STRING[]`, `List<float>` / `FLOAT[]`, nullable timestamps, and JSON attribute strings.
-- Whether full-text and vector functions used by Python Kuzu exist in LadybugDB `0.17.0-alpha.1`,
-  especially `CALL CREATE_FTS_INDEX`, `CALL QUERY_FTS_INDEX`, and `array_cosine_similarity`.
+- Whether full-text functions used by Python Kuzu exist after extension loading in LadybugDB
+  `0.17.0-alpha.1`, especially `CALL CREATE_FTS_INDEX` and `CALL QUERY_FTS_INDEX`. Literal
+  `array_cosine_similarity` is already proven.
 - Whether native package dependencies are acceptable in `Graphiti.Core` or require an optional
   core driver.
 
@@ -107,17 +111,18 @@ being ported.
   `Drivers/Ladybug/LadybugSearchExecutorTests.cs` pin the internal search statement/execution
   foundation, including search parameter snapshot behavior, while asserting `LadybugGraphDriver` is
   still not an `ISearchGraphDriver`.
+- Tests in `Drivers/Ladybug/LadybugPackageRuntimeTests.cs` pin the current LadybugDB package runtime
+  facts using private test-only package references while asserting the core project still has no
+  LadybugDB package reference.
 
 ## Expected Implementation Work
 
 1. Decide package/native dependency shape for the LadybugDB provider. Do not add core package
    references until this is explicit.
-2. Add a test-only LadybugDB runtime proof with private package/native references before core wiring:
-   run the schema against `Database("")`, round-trip one scalar Saga node through the internal driver,
-   prove `QueryResult` row projection, and pin the current list/null binding plus FTS-extension
-   blockers as package facts.
-3. Add/use the LadybugDB package and decide how its connections/options should be represented in
-   `GraphitiOptions`.
+2. Decide the concrete adapter strategy for the package blockers now pinned by tests: list/array
+   parameter binding, null parameter handling, and FTS extension loading.
+3. Add/use the LadybugDB package in the core driver/core boundary selected above and decide how
+   its connections/options should be represented in `GraphitiOptions`.
 4. Add a concrete LadybugDB package adapter for `ILadybugQueryExecutor`. Keep `GraphProvider.Kuzu`
    unsupported in DI/options until save/get/delete, bulk paths, saga episode queries, fulltext,
    vector search, BFS, rerankers, and DI construction are proven against the real backend. The search

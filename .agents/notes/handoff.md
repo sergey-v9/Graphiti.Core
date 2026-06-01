@@ -220,18 +220,21 @@ improving those providers unless it directly supports shared abstractions or Lad
   lists with explicit loops while preserving duplicate input collapse, center-node exclusion/query
   synthesis, unknown backend UUID inclusion, last backend score wins, inclusive min-score filtering,
   and missing-score defaults. Search vector, group-id, and rank-fetch parameters are also copied
-  through loop-built snapshots for read-only list inputs. No LadybugDB package reference, native
-  dependency, concrete
-  package adapter, DI wiring, `ISearchGraphDriver` implementation, or `GraphProvider.Kuzu` options
-  validation support has been added yet. The C# foundation now resolves the current Python Kuzu
+  through loop-built snapshots for read-only list inputs. Test-only private `LadybugDB` /
+  `LadybugDB.Native` references now prove runtime package facts, but there is still no core
+  LadybugDB package reference, native dependency, concrete package adapter, DI wiring,
+  `ISearchGraphDriver` implementation, or `GraphProvider.Kuzu` options validation support. The C#
+  foundation now resolves the current Python Kuzu
   saga schema/query and entity-edge `reference_time` inconsistencies ahead of runtime wiring by using
   the full `SagaNode` shape and returning entity-edge `reference_time`; these still need real-backend
   proof.
-- A read-only LadybugDB package audit on 2026-06-01 found that an in-memory `Database("")` smoke can
-  run basic Cypher, the current schema, scalar Saga save/read projections, `DateTime` parameters, and
-  literal `array_cosine_similarity`. It also found current package blockers for direct statement
-  execution: list/array parameter binding, null parameter binding, and FTS extension loading. The
-  next runtime slice should pin those as test-only package facts before any core provider wiring.
+- A test-only LadybugDB package proof on 2026-06-01 now runs basic Cypher, the current schema through
+  `LadybugGraphDriver`, scalar Saga save/read projections, `QueryResult.ColumnNames` / `Rows()`
+  projection, `DateTime` parameters, and literal `array_cosine_similarity` against `Database("")`.
+  It also pins current package blockers for direct statement execution: `List<string>`, `string[]`,
+  `float[]`, and `object[]` parameters throw `NotSupportedException`, null parameters throw
+  `ArgumentNullException`, and FTS calls throw until extension loading is handled. The next runtime
+  slice should decide the concrete adapter strategy for those blockers before provider wiring.
 - DI-created graph drivers now consistently receive `GraphitiOptions.Database` for both supported
   providers, InMemory and Neo4j. For InMemory this sets the driver `Database` label but intentionally
   does not change the provider default group id.
@@ -331,14 +334,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after Ladybug statement parameter shaping:
+Latest checkpoint on 2026-06-01 after LadybugDB package runtime proof:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused Ladybug driver test filter passed with 37 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 805
+- The focused LadybugDB package runtime test filter passed with 4 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 809
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.

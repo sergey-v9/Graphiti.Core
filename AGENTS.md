@@ -75,8 +75,8 @@ Verified build/test command from this folder:
 dotnet test "Graphiti.Core.CSharp.slnx" --verbosity minimal
 ```
 
-Verified on 2026-06-01 after Ladybug statement parameter shaping:
-restore/format/build succeeded with 0 warnings and 805 tests passed.
+Verified on 2026-06-01 after LadybugDB package runtime proof:
+restore/format/build succeeded with 0 warnings and 809 tests passed.
 
 Port contract:
 - Preserve Python-compatible JSON shape: snake_case properties, relaxed escaping, and wire-value enum
