@@ -29,7 +29,9 @@ being ported.
   explicitly. The factory-backed package path now has an initial `Graphiti` workflow proof for
   schema build, deterministic LLM extraction, episode ingestion, `SearchAdvancedAsync`, attribution
   lookup by episode, episode removal cleanup, and direct `AddTripletAsync` fact persistence with
-  `SearchAsync`. It still does not make `GraphProvider.Kuzu` valid through core provider validation.
+  `SearchAsync`. It also proves `AddEpisodeBulkAsync` duplicate fact coalescing across two episodes
+  with attribution lookup and search. It still does not make `GraphProvider.Kuzu` valid through core
+  provider validation.
 - `LadybugRecordMapper` uses loop-built attribute/list materialization for Ladybug/Kuzu rows while
   preserving JSON clone semantics, ordinal dictionaries, source ordering, null handling, and
   invariant object conversion.
@@ -185,7 +187,7 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
   and provider-package DI helper over the concrete LadybugDB package executor without changing core
   DI/options support, including the first runtime-backed `Graphiti` ingest/search workflow with a
   deterministic `StaticJsonLlmClient`, runtime-backed episode attribution/removal cleanup, and
-  direct triplet persistence/search.
+  direct triplet persistence/search plus bulk duplicate-fact coalescing.
 
 ## Expected Implementation Work
 
@@ -203,10 +205,10 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
    workflow is proven against the real backend and the driver-facing LadybugDB naming is settled.
    Save/get/delete, bulk paths, saga episode queries, fulltext, vector search, BFS, rerankers, graph
    maintenance, concrete adapter execution, optional-package DI, and the first runtime-backed
-   `Graphiti` ingest/search, episode-removal, and direct triplet workflows now have focused proof.
-   Keep the adapter allocation-aware: avoid unnecessary per-row dictionaries/lists, closure-heavy
-   query loops, repeated JSON/string conversions, and exception-driven type coercion where the
-   package API allows direct mapping.
+   `Graphiti` ingest/search, episode-removal, direct triplet, and bulk duplicate-fact workflows now
+   have focused proof. Keep the adapter allocation-aware: avoid unnecessary per-row dictionaries/
+   lists, closure-heavy query loops, repeated JSON/string conversions, and exception-driven type
+   coercion where the package API allows direct mapping.
 5. Prove the full C# Saga schema/save/get projections and entity-edge `reference_time` projections
    against the real LadybugDB backend as part of the first runtime execution slice.
 6. Add optional native-gated integration smoke tests.

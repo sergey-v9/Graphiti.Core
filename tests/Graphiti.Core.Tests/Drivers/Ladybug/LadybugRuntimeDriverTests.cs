@@ -192,6 +192,58 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
+    public async Task LadybugGraphitiBulkIngestsDuplicateFactsEndToEnd()
+    {
+        await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: CreateAliceAcmeLlmClient(),
+            embedder: new HashEmbedder(8));
+        var firstTime = new DateTime(2026, 9, 13, 14, 15, 16, DateTimeKind.Utc);
+        var secondTime = firstTime.AddMinutes(5);
+
+        await graphiti.BuildIndicesAndConstraintsAsync();
+        var result = await graphiti.AddEpisodeBulkAsync(
+            [
+                new RawEpisode
+                {
+                    Name = "first",
+                    Content = "Alice works at Acme.",
+                    SourceDescription = "message",
+                    ReferenceTime = firstTime
+                },
+                new RawEpisode
+                {
+                    Name = "second",
+                    Content = "Alice still works at Acme.",
+                    SourceDescription = "message",
+                    ReferenceTime = secondTime
+                }
+            ],
+            groupId: "tenant");
+        var edge = Assert.Single(result.Edges);
+        var storedEdge = Assert.Single(await driver.GetEdgesByGroupIdsAsync<EntityEdge>(["tenant"]));
+        var attributed = await graphiti.GetNodesAndEdgesByEpisodeAsync(
+            result.Episodes.Select(episode => episode.Uuid).ToArray());
+        var searchResults = await graphiti.SearchAdvancedAsync(
+            "Alice Acme",
+            SearchConfigRecipes.CombinedHybridSearchRrf,
+            groupIds: ["tenant"]);
+
+        Assert.Equal(2, result.Episodes.Count);
+        Assert.Equal(2, result.Nodes.Count);
+        Assert.Equal(4, result.EpisodicEdges.Count);
+        Assert.Equal(edge.Uuid, storedEdge.Uuid);
+        Assert.Equal(2, storedEdge.Episodes.Count);
+        Assert.All(result.Episodes, episode => Assert.Contains(episode.Uuid, storedEdge.Episodes));
+        Assert.All(result.Episodes, episode => Assert.Equal(new[] { edge.Uuid }, episode.EntityEdges));
+        Assert.Equal(2, attributed.Edges.Count);
+        Assert.All(attributed.Edges, attributedEdge => Assert.Equal(edge.Uuid, attributedEdge.Uuid));
+        Assert.Equal(edge.Uuid, Assert.Single(searchResults.Edges).Uuid);
+        Assert.Equal(2, searchResults.Episodes.Count);
+    }
+
+    [Fact]
     public async Task ServiceCollectionExtensionRegistersLadybugDriverThroughGraphDriverFactory()
     {
         var services = new ServiceCollection();
