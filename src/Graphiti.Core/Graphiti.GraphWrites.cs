@@ -11,10 +11,10 @@ public sealed partial class Graphiti
         IEnumerable<EntityEdge> entityEdges,
         CancellationToken cancellationToken)
     {
-        var episodicNodeList = episodicNodes.ToList();
-        var episodicEdgeList = episodicEdges.ToList();
-        var entityNodeList = entityNodes.ToList();
-        var entityEdgeList = entityEdges.ToList();
+        var episodicNodeList = MaterializeList(episodicNodes);
+        var episodicEdgeList = MaterializeList(episodicEdges);
+        var entityNodeList = MaterializeList(entityNodes);
+        var entityEdgeList = MaterializeList(entityEdges);
         var driver = Driver;
 
         using var activity = GraphitiTelemetry.StartActivity("GraphWrite.SaveBulk");
@@ -45,5 +45,23 @@ public sealed partial class Graphiti
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
         }
+    }
+
+    private static List<T> MaterializeList<T>(IEnumerable<T> source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (source is IReadOnlyList<T> list)
+        {
+            return CopyList(list);
+        }
+
+        var capacity = source.TryGetNonEnumeratedCount(out var count) ? count : 0;
+        var results = capacity == 0 ? new List<T>() : new List<T>(capacity);
+        foreach (var item in source)
+        {
+            results.Add(item);
+        }
+
+        return results;
     }
 }
