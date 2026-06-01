@@ -315,17 +315,28 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         string? groupId = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(uuids);
         cancellationToken.ThrowIfCancellationRequested();
-        var uuidSet = uuids.ToHashSet(StringComparer.Ordinal);
+        var uuidList = MaterializeDistinctUuids(uuids, cancellationToken);
+        if (uuidList.Count == 0)
+        {
+            return Task.FromResult<IReadOnlyList<TNode>>(Array.Empty<TNode>());
+        }
+
         lock (_gate)
         {
-            IReadOnlyList<TNode> nodes = uuidSet
-                .Select(uuid => _nodes.GetValueOrDefault(uuid))
-                .OfType<TNode>()
-                .Where(node => groupId is null || node.GroupId == groupId)
-                .Select(node => (TNode)CloneNode(node))
-                .ToList();
-            return Task.FromResult(nodes);
+            var nodes = new List<TNode>(uuidList.Count);
+            foreach (var uuid in uuidList)
+            {
+                if (_nodes.TryGetValue(uuid, out var node)
+                    && node is TNode typed
+                    && (groupId is null || string.Equals(node.GroupId, groupId, StringComparison.Ordinal)))
+                {
+                    nodes.Add((TNode)CloneNode(typed));
+                }
+            }
+
+            return Task.FromResult<IReadOnlyList<TNode>>(nodes);
         }
     }
 
@@ -376,16 +387,26 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
 
     public override Task<IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(IEnumerable<string> uuids, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(uuids);
         cancellationToken.ThrowIfCancellationRequested();
-        var uuidSet = uuids.ToHashSet(StringComparer.Ordinal);
+        var uuidList = MaterializeDistinctUuids(uuids, cancellationToken);
+        if (uuidList.Count == 0)
+        {
+            return Task.FromResult<IReadOnlyList<T>>(Array.Empty<T>());
+        }
+
         lock (_gate)
         {
-            IReadOnlyList<T> edges = uuidSet
-                .Select(uuid => _edges.GetValueOrDefault(uuid))
-                .OfType<T>()
-                .Select(edge => (T)CloneEdge(edge))
-                .ToList();
-            return Task.FromResult(edges);
+            var edges = new List<T>(uuidList.Count);
+            foreach (var uuid in uuidList)
+            {
+                if (_edges.TryGetValue(uuid, out var edge) && edge is T typed)
+                {
+                    edges.Add((T)CloneEdge(typed));
+                }
+            }
+
+            return Task.FromResult<IReadOnlyList<T>>(edges);
         }
     }
 
@@ -428,15 +449,19 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            IReadOnlyList<EntityEdge> edges = GetIndexedUuids(
-                    _entityEdgeUuidsByEndpoints,
-                    (sourceNodeUuid, targetNodeUuid))
-                .Order(StringComparer.Ordinal)
-                .Select(uuid => _edges.GetValueOrDefault(uuid))
-                .OfType<EntityEdge>()
-                .Select(edge => (EntityEdge)CloneEdge(edge))
-                .ToList();
-            return Task.FromResult(edges);
+            var edgeUuids = MaterializeSortedUuids(GetIndexedUuids(
+                _entityEdgeUuidsByEndpoints,
+                (sourceNodeUuid, targetNodeUuid)));
+            var edges = new List<EntityEdge>(edgeUuids.Count);
+            foreach (var uuid in edgeUuids)
+            {
+                if (_edges.TryGetValue(uuid, out var edge) && edge is EntityEdge entityEdge)
+                {
+                    edges.Add((EntityEdge)CloneEdge(entityEdge));
+                }
+            }
+
+            return Task.FromResult<IReadOnlyList<EntityEdge>>(edges);
         }
     }
 
@@ -447,13 +472,17 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            IReadOnlyList<EntityEdge> edges = GetIndexedUuids(_entityEdgeUuidsByNodeUuid, nodeUuid)
-                .Order(StringComparer.Ordinal)
-                .Select(uuid => _edges.GetValueOrDefault(uuid))
-                .OfType<EntityEdge>()
-                .Select(edge => (EntityEdge)CloneEdge(edge))
-                .ToList();
-            return Task.FromResult(edges);
+            var edgeUuids = MaterializeSortedUuids(GetIndexedUuids(_entityEdgeUuidsByNodeUuid, nodeUuid));
+            var edges = new List<EntityEdge>(edgeUuids.Count);
+            foreach (var uuid in edgeUuids)
+            {
+                if (_edges.TryGetValue(uuid, out var edge) && edge is EntityEdge entityEdge)
+                {
+                    edges.Add((EntityEdge)CloneEdge(entityEdge));
+                }
+            }
+
+            return Task.FromResult<IReadOnlyList<EntityEdge>>(edges);
         }
     }
 
@@ -464,19 +493,26 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            var episodeUuids = GetIndexedUuids(_episodicEdgeUuidsByTargetNodeUuid, entityNodeUuid)
-                .Select(uuid => _edges.GetValueOrDefault(uuid))
-                .OfType<EpisodicEdge>()
-                .Select(edge => edge.SourceNodeUuid)
-                .ToHashSet(StringComparer.Ordinal);
+            var edgeUuids = MaterializeSortedUuids(GetIndexedUuids(
+                _episodicEdgeUuidsByTargetNodeUuid,
+                entityNodeUuid));
+            var episodeUuids = new HashSet<string>(StringComparer.Ordinal);
+            var episodes = new List<EpisodicNode>();
+            foreach (var edgeUuid in edgeUuids)
+            {
+                if (!_edges.TryGetValue(edgeUuid, out var edge)
+                    || edge is not EpisodicEdge episodicEdge
+                    || !episodeUuids.Add(episodicEdge.SourceNodeUuid)
+                    || !_nodes.TryGetValue(episodicEdge.SourceNodeUuid, out var node)
+                    || node is not EpisodicNode episode)
+                {
+                    continue;
+                }
 
-            IReadOnlyList<EpisodicNode> episodes = episodeUuids
-                .Select(uuid => _nodes.GetValueOrDefault(uuid))
-                .OfType<EpisodicNode>()
-                .Select(episode => (EpisodicNode)CloneNode(episode))
-                .ToList();
+                episodes.Add((EpisodicNode)CloneNode(episode));
+            }
 
-            return Task.FromResult(episodes);
+            return Task.FromResult<IReadOnlyList<EpisodicNode>>(episodes);
         }
     }
 
@@ -542,23 +578,41 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var episodeUuids = episodes.Select(episode => episode.Uuid).ToHashSet(StringComparer.Ordinal);
+        var episodeUuids = new List<string>(episodes.Count);
+        var seenEpisodeUuids = new HashSet<string>(episodes.Count, StringComparer.Ordinal);
+        foreach (var episode in episodes)
+        {
+            if (seenEpisodeUuids.Add(episode.Uuid))
+            {
+                episodeUuids.Add(episode.Uuid);
+            }
+        }
+
         lock (_gate)
         {
-            var nodeUuids = episodeUuids
-                .SelectMany(episodeUuid => GetIndexedUuids(_episodicEdgeUuidsBySourceNodeUuid, episodeUuid))
-                .Select(uuid => _edges.GetValueOrDefault(uuid))
-                .OfType<EpisodicEdge>()
-                .Select(edge => edge.TargetNodeUuid)
-                .ToHashSet(StringComparer.Ordinal);
+            var nodeUuids = new HashSet<string>(StringComparer.Ordinal);
+            var nodes = new List<EntityNode>();
+            foreach (var episodeUuid in episodeUuids)
+            {
+                var edgeUuids = MaterializeSortedUuids(GetIndexedUuids(
+                    _episodicEdgeUuidsBySourceNodeUuid,
+                    episodeUuid));
+                foreach (var edgeUuid in edgeUuids)
+                {
+                    if (!_edges.TryGetValue(edgeUuid, out var edge)
+                        || edge is not EpisodicEdge episodicEdge
+                        || !nodeUuids.Add(episodicEdge.TargetNodeUuid)
+                        || !_nodes.TryGetValue(episodicEdge.TargetNodeUuid, out var node)
+                        || node is not EntityNode entityNode)
+                    {
+                        continue;
+                    }
 
-            IReadOnlyList<EntityNode> nodes = nodeUuids
-                .Select(uuid => _nodes.GetValueOrDefault(uuid))
-                .OfType<EntityNode>()
-                .Select(node => (EntityNode)CloneNode(node))
-                .ToList();
+                    nodes.Add((EntityNode)CloneNode(entityNode));
+                }
+            }
 
-            return Task.FromResult(nodes);
+            return Task.FromResult<IReadOnlyList<EntityNode>>(nodes);
         }
     }
 
@@ -567,23 +621,41 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var nodeUuids = nodes.Select(node => node.Uuid).ToHashSet(StringComparer.Ordinal);
+        var nodeUuids = new List<string>(nodes.Count);
+        var seenNodeUuids = new HashSet<string>(nodes.Count, StringComparer.Ordinal);
+        foreach (var node in nodes)
+        {
+            if (seenNodeUuids.Add(node.Uuid))
+            {
+                nodeUuids.Add(node.Uuid);
+            }
+        }
+
         lock (_gate)
         {
-            var communityUuids = nodeUuids
-                .SelectMany(nodeUuid => GetIndexedUuids(_communityEdgeUuidsByTargetNodeUuid, nodeUuid))
-                .Select(uuid => _edges.GetValueOrDefault(uuid))
-                .OfType<CommunityEdge>()
-                .Select(edge => edge.SourceNodeUuid)
-                .ToHashSet(StringComparer.Ordinal);
+            var communityUuids = new HashSet<string>(StringComparer.Ordinal);
+            var communities = new List<CommunityNode>();
+            foreach (var nodeUuid in nodeUuids)
+            {
+                var edgeUuids = MaterializeSortedUuids(GetIndexedUuids(
+                    _communityEdgeUuidsByTargetNodeUuid,
+                    nodeUuid));
+                foreach (var edgeUuid in edgeUuids)
+                {
+                    if (!_edges.TryGetValue(edgeUuid, out var edge)
+                        || edge is not CommunityEdge communityEdge
+                        || !communityUuids.Add(communityEdge.SourceNodeUuid)
+                        || !_nodes.TryGetValue(communityEdge.SourceNodeUuid, out var node)
+                        || node is not CommunityNode communityNode)
+                    {
+                        continue;
+                    }
 
-            IReadOnlyList<CommunityNode> communities = communityUuids
-                .Select(uuid => _nodes.GetValueOrDefault(uuid))
-                .OfType<CommunityNode>()
-                .Select(node => (CommunityNode)CloneNode(node))
-                .ToList();
+                    communities.Add((CommunityNode)CloneNode(communityNode));
+                }
+            }
 
-            return Task.FromResult(communities);
+            return Task.FromResult<IReadOnlyList<CommunityNode>>(communities);
         }
     }
 
@@ -1229,6 +1301,40 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         index.TryGetValue(key, out var uuids)
             ? uuids
             : Array.Empty<string>();
+
+    private static List<string> MaterializeDistinctUuids(
+        IEnumerable<string> uuids,
+        CancellationToken cancellationToken)
+    {
+        var capacity = uuids.TryGetNonEnumeratedCount(out var count) ? count : 0;
+        var results = capacity == 0 ? new List<string>() : new List<string>(capacity);
+        var seen = capacity == 0
+            ? new HashSet<string>(StringComparer.Ordinal)
+            : new HashSet<string>(capacity, StringComparer.Ordinal);
+        foreach (var uuid in uuids)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (seen.Add(uuid))
+            {
+                results.Add(uuid);
+            }
+        }
+
+        return results;
+    }
+
+    private static List<string> MaterializeSortedUuids(IEnumerable<string> uuids)
+    {
+        var capacity = uuids.TryGetNonEnumeratedCount(out var count) ? count : 0;
+        var results = capacity == 0 ? new List<string>() : new List<string>(capacity);
+        foreach (var uuid in uuids)
+        {
+            results.Add(uuid);
+        }
+
+        results.Sort(StringComparer.Ordinal);
+        return results;
+    }
 
     private static bool GroupMatches(string groupId, IReadOnlyList<string>? groupIds) =>
         groupIds is null || groupIds.Count == 0 || groupIds.Contains(groupId, StringComparer.Ordinal);

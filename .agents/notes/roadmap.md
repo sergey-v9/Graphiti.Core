@@ -152,6 +152,11 @@ shorter than the old working plans; expand items only when they become active.
   candidate lookups, seen sets, and rank buckets. Preserve shortest first traversal hits,
   origin-group filtering, stable first-seen de-duplication, node-distance buckets, episode-mention
   sort semantics, and final hit cloning when changing those reference-backend paths.
+- `InMemoryGraphDriver` UUID and relationship reads now use explicit loop-built buffers instead of
+  LINQ projection chains. UUID reads de-duplicate in first-seen input order, entity-edge lookups keep
+  ordinal edge UUID ordering, and mention/community/episode relationship reads sort indexed edge
+  UUIDs before projecting clone-isolated results. Focused tests pin wrong-type filtering, null UUID
+  inputs, lazy-input cancellation, deterministic ordering, de-duplication, and clone isolation.
 - Search fallback in-memory snapshot projection now uses explicit typed loops over cloned driver
   snapshots instead of `OfType`/`Select` chains. Preserve the clone isolation, type filtering,
   embedding stripping flags, stable order, and `IReadOnlyList<EntityEdge>` endpoint lookup shape.
