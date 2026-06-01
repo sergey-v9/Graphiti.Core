@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 
 namespace Graphiti.Core.Search;
 
@@ -1212,37 +1213,100 @@ public static class SearchEngine
 
     private static void SetEdgeSearchActivityTags(Activity? activity, EdgeSearchConfig config)
     {
-        activity?.SetTag("graphiti.search.methods", string.Join(",", config.SearchMethods.Select(method => method.ToWireValue())));
-        activity?.SetTag("graphiti.search.reranker", config.Reranker.ToWireValue());
-        activity?.SetTag("graphiti.search.sim_min_score", config.SimMinScore);
-        activity?.SetTag("graphiti.search.mmr_lambda", config.MmrLambda);
-        activity?.SetTag("graphiti.search.bfs_max_depth", config.BfsMaxDepth);
+        if (activity is null)
+        {
+            return;
+        }
+
+        SetSearchActivityTags(
+            activity,
+            JoinSearchMethodWireValues(config.SearchMethods, static method => method.ToWireValue()),
+            config.Reranker.ToWireValue(),
+            config.SimMinScore,
+            config.MmrLambda,
+            config.BfsMaxDepth);
     }
 
     private static void SetNodeSearchActivityTags(Activity? activity, NodeSearchConfig config)
     {
-        activity?.SetTag("graphiti.search.methods", string.Join(",", config.SearchMethods.Select(method => method.ToWireValue())));
-        activity?.SetTag("graphiti.search.reranker", config.Reranker.ToWireValue());
-        activity?.SetTag("graphiti.search.sim_min_score", config.SimMinScore);
-        activity?.SetTag("graphiti.search.mmr_lambda", config.MmrLambda);
-        activity?.SetTag("graphiti.search.bfs_max_depth", config.BfsMaxDepth);
+        if (activity is null)
+        {
+            return;
+        }
+
+        SetSearchActivityTags(
+            activity,
+            JoinSearchMethodWireValues(config.SearchMethods, static method => method.ToWireValue()),
+            config.Reranker.ToWireValue(),
+            config.SimMinScore,
+            config.MmrLambda,
+            config.BfsMaxDepth);
     }
 
     private static void SetEpisodeSearchActivityTags(Activity? activity, EpisodeSearchConfig config)
     {
-        activity?.SetTag("graphiti.search.methods", string.Join(",", config.SearchMethods.Select(method => method.ToWireValue())));
-        activity?.SetTag("graphiti.search.reranker", config.Reranker.ToWireValue());
-        activity?.SetTag("graphiti.search.sim_min_score", config.SimMinScore);
-        activity?.SetTag("graphiti.search.mmr_lambda", config.MmrLambda);
-        activity?.SetTag("graphiti.search.bfs_max_depth", config.BfsMaxDepth);
+        if (activity is null)
+        {
+            return;
+        }
+
+        SetSearchActivityTags(
+            activity,
+            JoinSearchMethodWireValues(config.SearchMethods, static method => method.ToWireValue()),
+            config.Reranker.ToWireValue(),
+            config.SimMinScore,
+            config.MmrLambda,
+            config.BfsMaxDepth);
     }
 
     private static void SetCommunitySearchActivityTags(Activity? activity, CommunitySearchConfig config)
     {
-        activity?.SetTag("graphiti.search.methods", string.Join(",", config.SearchMethods.Select(method => method.ToWireValue())));
-        activity?.SetTag("graphiti.search.reranker", config.Reranker.ToWireValue());
-        activity?.SetTag("graphiti.search.sim_min_score", config.SimMinScore);
-        activity?.SetTag("graphiti.search.mmr_lambda", config.MmrLambda);
-        activity?.SetTag("graphiti.search.bfs_max_depth", config.BfsMaxDepth);
+        if (activity is null)
+        {
+            return;
+        }
+
+        SetSearchActivityTags(
+            activity,
+            JoinSearchMethodWireValues(config.SearchMethods, static method => method.ToWireValue()),
+            config.Reranker.ToWireValue(),
+            config.SimMinScore,
+            config.MmrLambda,
+            config.BfsMaxDepth);
+    }
+
+    private static void SetSearchActivityTags(
+        Activity activity,
+        string searchMethods,
+        string reranker,
+        double simMinScore,
+        double mmrLambda,
+        int bfsMaxDepth)
+    {
+        activity.SetTag("graphiti.search.methods", searchMethods);
+        activity.SetTag("graphiti.search.reranker", reranker);
+        activity.SetTag("graphiti.search.sim_min_score", simMinScore);
+        activity.SetTag("graphiti.search.mmr_lambda", mmrLambda);
+        activity.SetTag("graphiti.search.bfs_max_depth", bfsMaxDepth);
+    }
+
+    private static string JoinSearchMethodWireValues<TMethod>(
+        IReadOnlyList<TMethod> methods,
+        Func<TMethod, string> toWireValue)
+    {
+        if (methods.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder(methods.Count * 16);
+        builder.Append(toWireValue(methods[0]));
+        for (var i = 1; i < methods.Count; i++)
+        {
+            builder.Append(',');
+            builder.Append(toWireValue(methods[i]));
+        }
+
+        return builder.ToString();
     }
 }
