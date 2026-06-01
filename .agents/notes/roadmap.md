@@ -255,9 +255,13 @@ shorter than the old working plans; expand items only when they become active.
   `QueryResult` row projection, and pin package blockers for list/array/null parameter binding plus
   FTS extension loading. Core still has no LadybugDB package reference and `GraphProvider.Kuzu`
   remains unsupported.
-- Good next provider slice from the 2026-06-01 scans: design the concrete LadybugDB executor adapter
-  strategy for list/array parameter binding, null parameter handling, and FTS extension loading, then
-  expand runtime proof toward entity-edge `reference_time`, list-valued columns, and full-text search.
+- `LadybugStatementNormalizer` now implements the concrete package-execution strategy for the
+  current LadybugDB binder gaps by inlining list/array/null literals while leaving scalar parameters
+  bound. The test-only runtime executor uses it to round-trip entity-edge `reference_time`,
+  list-valued columns, embeddings, and null temporal fields against the real package.
+- Good next provider slice from the 2026-06-01 scans: move from test-only runtime proof toward a
+  concrete LadybugDB executor adapter shape, including FTS extension loading and broader statement
+  coverage, while keeping provider support unwired until end-to-end search and graph behavior pass.
 
 ## Graphiti Decomposition
 

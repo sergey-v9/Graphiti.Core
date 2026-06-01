@@ -24,6 +24,10 @@ being ported.
 - `LadybugStatementBuilder` now builds bulk-save statement phases and list-valued parameters with
   explicit snapshots, copying `IReadOnlyList<T>` inputs by index where available while preserving
   Kuzu statement order and parameter list isolation.
+- `LadybugStatementNormalizer` is the current concrete adapter strategy for LadybugDB package
+  binding gaps: it rewrites package-unsupported list/array/null parameters into Cypher literals
+  while leaving scalar values bound for prepared execution. It is package-independent and lives in
+  core so a future concrete executor can share the same audited behavior.
 - `LadybugSearchStatementBuilder` and `LadybugSearchExecutor` are internal. They pin Kuzu full-text
   index statements, `QUERY_FTS_INDEX` calls, `array_cosine_similarity` vector search, doubled-depth
   BFS plans over `RelatesToNode_`, per-UUID ranker statements, Kuzu label filters, score extraction,
@@ -72,8 +76,10 @@ being ported.
   projection, `DateTime` parameters, and literal `array_cosine_similarity`.
 - Current package binding does not accept the list/array and null parameter shapes Graphiti
   statements use today. `List<string>`, `string[]`, `float[]`, and `object[]` throw
-  `NotSupportedException`; `null` throws `ArgumentNullException`. The concrete adapter needs a
-  binding/rewriting strategy before most graph/search statements can execute unchanged.
+  `NotSupportedException`; `null` throws `ArgumentNullException`. The normalizer handles these by
+  inlining Kuzu literals at package execution time, and the test-only runtime executor proves this
+  strategy for entity-edge `reference_time`, list-valued `episodes` / embeddings, and null temporal
+  fields.
 - FTS calls currently throw until explicit extension handling (`INSTALL FTS; LOAD EXTENSION FTS;`) is
   added before `CREATE_FTS_INDEX` / `QUERY_FTS_INDEX` proof.
 
@@ -83,8 +89,8 @@ being ported.
   smoke, including `DETACH DELETE`, `WHERE x IN $list`, variable-length relationship paths, and
   `UNION`.
 - Whether parameter names and binding use `$name` across prepared and direct execution paths.
-- Adapter strategy for CLR mappings that do not bind directly today, especially `List<string>` /
-  `STRING[]`, `List<float>` / `FLOAT[]`, nullable timestamps, and JSON attribute strings.
+- Whether the normalizer's CLR literal strategy is enough for the remaining graph/search statements
+  beyond the current Saga and entity-edge runtime proofs.
 - Whether full-text functions used by Python Kuzu exist after extension loading in LadybugDB
   `0.17.0-alpha.1`, especially `CALL CREATE_FTS_INDEX` and `CALL QUERY_FTS_INDEX`. Literal
   `array_cosine_similarity` is already proven.
@@ -112,15 +118,15 @@ being ported.
   foundation, including search parameter snapshot behavior, while asserting `LadybugGraphDriver` is
   still not an `ISearchGraphDriver`.
 - Tests in `Drivers/Ladybug/LadybugPackageRuntimeTests.cs` pin the current LadybugDB package runtime
-  facts using private test-only package references while asserting the core project still has no
-  LadybugDB package reference.
+  facts using private test-only package references, exercise the normalizer against real list/null
+  graph writes and reads, and assert the core project still has no LadybugDB package reference.
 
 ## Expected Implementation Work
 
 1. Decide package/native dependency shape for the LadybugDB provider. Do not add core package
    references until this is explicit.
-2. Decide the concrete adapter strategy for the package blockers now pinned by tests: list/array
-   parameter binding, null parameter handling, and FTS extension loading.
+2. Extend package-runtime proof from the current Saga/entity-edge coverage into remaining graph and
+   search statements, especially FTS extension loading.
 3. Add/use the LadybugDB package in the core driver/core boundary selected above and decide how
    its connections/options should be represented in `GraphitiOptions`.
 4. Add a concrete LadybugDB package adapter for `ILadybugQueryExecutor`. Keep `GraphProvider.Kuzu`

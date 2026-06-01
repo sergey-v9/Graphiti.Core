@@ -172,6 +172,43 @@ public class LadybugFoundationTests
     }
 
     [Fact]
+    public void StatementNormalizer_RewritesPackageUnsupportedValuesAndLeavesScalarsBound()
+    {
+        var statement = new LadybugStatement(
+            """
+            MATCH (n:Entity)
+            WHERE n.uuid IN $uuids AND n.group_id = $group_id AND n.name <> '$uuids'
+            SET n.labels = $labels, n.name_embedding = $embedding, n.expired_at = $expired_at
+            RETURN $limit AS limit, $uuid_extra AS extra
+            """,
+            new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["uuids"] = new List<string> { "entity-1", "entity-'2" },
+                ["labels"] = new[] { "Entity", "Person" },
+                ["embedding"] = new[] { 0.1f, 0.2f },
+                ["expired_at"] = null,
+                ["group_id"] = "tenant",
+                ["limit"] = 5,
+                ["uuid_extra"] = "kept"
+            });
+
+        var normalized = LadybugStatementNormalizer.NormalizeForPackageExecution(statement);
+
+        Assert.Contains("n.uuid IN ['entity-1', 'entity-''2']", normalized.Query, StringComparison.Ordinal);
+        Assert.Contains("n.labels = ['Entity', 'Person']", normalized.Query, StringComparison.Ordinal);
+        Assert.Contains("n.name_embedding = [0.1, 0.2]", normalized.Query, StringComparison.Ordinal);
+        Assert.Contains("n.expired_at = NULL", normalized.Query, StringComparison.Ordinal);
+        Assert.Contains("n.name <> '$uuids'", normalized.Query, StringComparison.Ordinal);
+        Assert.Contains("$group_id", normalized.Query, StringComparison.Ordinal);
+        Assert.Contains("$limit", normalized.Query, StringComparison.Ordinal);
+        Assert.Contains("$uuid_extra", normalized.Query, StringComparison.Ordinal);
+        Assert.Equal(new[] { "group_id", "limit", "uuid_extra" }, normalized.Parameters.Keys);
+        Assert.Equal("tenant", normalized.Parameters["group_id"]);
+        Assert.Equal(5, normalized.Parameters["limit"]);
+        Assert.Equal("kept", normalized.Parameters["uuid_extra"]);
+    }
+
+    [Fact]
     public void BuildSagaNodeSave_UsesFullSagaModelShapeForRuntimeWiring()
     {
         var createdAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);

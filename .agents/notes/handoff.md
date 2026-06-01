@@ -207,7 +207,10 @@ improving those providers unless it directly supports shared abstractions or Lad
   filtering, saga chronology, first-seen group-id de-duplication, and unsupported provider status.
   `LadybugStatementBuilder` now also builds bulk-save statement phases and list-valued parameters
   with explicit snapshots, copying `IReadOnlyList<T>` inputs by index while preserving ordered
-  parameter lists and provider statement order.
+  parameter lists and provider statement order. `LadybugStatementNormalizer` now rewrites the
+  current LadybugDB package's unsupported list/array/null parameters into Kuzu literals while leaving
+  scalar parameters bound, providing the package-independent execution strategy for the future
+  concrete adapter.
   `LadybugRecordMapper` now materializes attributes and list fields with explicit loops while
   preserving ordinal attribute dictionaries, JSON string `JsonElement` clones, `JsonObject`
   deep-clone semantics, shallow dictionary copies, JSON array null handling, invariant object
@@ -233,8 +236,11 @@ improving those providers unless it directly supports shared abstractions or Lad
   projection, `DateTime` parameters, and literal `array_cosine_similarity` against `Database("")`.
   It also pins current package blockers for direct statement execution: `List<string>`, `string[]`,
   `float[]`, and `object[]` parameters throw `NotSupportedException`, null parameters throw
-  `ArgumentNullException`, and FTS calls throw until extension loading is handled. The next runtime
-  slice should decide the concrete adapter strategy for those blockers before provider wiring.
+  `ArgumentNullException`, and FTS calls throw until extension loading is handled. The test-only
+  runtime executor now uses the normalizer to prove entity-edge `reference_time`, list-valued
+  `episodes` / embedding columns, group-id list filters, and null temporal fields against the real
+  package. The next runtime slice should extend package proof toward FTS extension loading and a
+  concrete executor adapter before provider wiring.
 - DI-created graph drivers now consistently receive `GraphitiOptions.Database` for both supported
   providers, InMemory and Neo4j. For InMemory this sets the driver `Database` label but intentionally
   does not change the provider default group id.
@@ -334,14 +340,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after LadybugDB package runtime proof:
+Latest checkpoint on 2026-06-01 after LadybugDB statement normalization:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused LadybugDB package runtime test filter passed with 4 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 809
+- The focused Ladybug driver/package runtime test filter passed with 43 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 811
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -485,7 +491,8 @@ These were previously audited and found faithful or intentionally different:
   projections, label-array storage, JSON attribute serialization/deserialization, simple-edge record
   mapping, individual bulk-save statement expansion, internal executor-backed non-search driver
   forwarding/mapping, allocation-light collection projection and first-seen group-id de-duplication,
-  allocation-light statement parameter snapshots from enumerable/read-only-list inputs,
+  allocation-light statement parameter snapshots from enumerable/read-only-list inputs, package-
+  execution normalization for list/array/null parameters,
   allocation-light record-mapper attribute/list materialization with JSON clone/null behavior,
   search statement plans for full-text/vector/BFS/rankers, internal search execution/mapping over
   `ILadybugQueryExecutor`, allocation-light ranker score/statement shaping with duplicate/unknown

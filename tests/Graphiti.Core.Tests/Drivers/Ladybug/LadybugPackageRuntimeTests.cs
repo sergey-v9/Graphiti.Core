@@ -49,6 +49,64 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_NormalizedStatementsRoundTripEntityEdgeListsAndNulls()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var referenceTime = new DateTime(2026, 2, 3, 4, 5, 6, DateTimeKind.Utc);
+        var source = new EntityNode
+        {
+            Uuid = "entity-source",
+            Name = "Alice",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            NameEmbedding = [0.1f, 0.2f],
+            Summary = "source summary"
+        };
+        var target = new EntityNode
+        {
+            Uuid = "entity-target",
+            Name = "Bob",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            NameEmbedding = [0.2f, 0.3f],
+            Summary = "target summary"
+        };
+        var edge = new EntityEdge
+        {
+            Uuid = "edge-1",
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = target.Uuid,
+            GroupId = "tenant",
+            Name = "KNOWS",
+            Fact = "Alice knows Bob",
+            FactEmbedding = [0.3f, 0.4f],
+            Episodes = ["episode-1", "episode-2"],
+            CreatedAt = referenceTime.AddMinutes(-1),
+            ValidAt = referenceTime.AddHours(-1),
+            ExpiredAt = null,
+            InvalidAt = null,
+            ReferenceTime = referenceTime
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(source);
+        await driver.SaveNodeAsync(target);
+        await driver.SaveEdgeAsync(edge);
+        var fetched = Assert.Single(await driver.GetEdgesByGroupIdsAsync<EntityEdge>(
+            ["tenant"],
+            withEmbeddings: true));
+
+        Assert.Equal(source.Uuid, fetched.SourceNodeUuid);
+        Assert.Equal(target.Uuid, fetched.TargetNodeUuid);
+        Assert.Equal(new[] { "episode-1", "episode-2" }, fetched.Episodes);
+        Assert.Equal(new[] { 0.3f, 0.4f }, fetched.FactEmbedding);
+        Assert.Null(fetched.ExpiredAt);
+        Assert.Null(fetched.InvalidAt);
+        Assert.Equal(referenceTime, fetched.ReferenceTime);
+    }
+
+    [Fact]
     public void PackageRuntime_DoesNotBindGraphitiListArrayOrNullParametersDirectlyYet()
     {
         using var database = new Database("");
@@ -137,9 +195,7 @@ public class LadybugPackageRuntimeTests
         public Task ExecuteAsync(LadybugStatement statement, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            using var result = statement.Parameters.Count == 0
-                ? _connection.Query(statement.Query)
-                : _connection.Execute(statement.Query, SnapshotParameters(statement.Parameters));
+            using var result = ExecuteStatement(statement);
             return Task.CompletedTask;
         }
 
@@ -148,9 +204,7 @@ public class LadybugPackageRuntimeTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            using var result = statement.Parameters.Count == 0
-                ? _connection.Query(statement.Query)
-                : _connection.Execute(statement.Query, SnapshotParameters(statement.Parameters));
+            using var result = ExecuteStatement(statement);
             var columns = result.ColumnNames;
             LastColumnNames = columns;
             var records = new List<IReadOnlyDictionary<string, object?>>((int)result.RowCount);
@@ -182,17 +236,12 @@ public class LadybugPackageRuntimeTests
             return ValueTask.CompletedTask;
         }
 
-        private static Dictionary<string, object?> SnapshotParameters(
-            Dictionary<string, object?> parameters)
+        private QueryResult ExecuteStatement(LadybugStatement statement)
         {
-            var snapshot = new Dictionary<string, object?>(parameters.Count, StringComparer.Ordinal);
-            foreach (var (key, value) in parameters)
-            {
-                snapshot[key] = value ?? throw new NotSupportedException(
-                    "The current LadybugDB package cannot bind null parameters directly.");
-            }
-
-            return snapshot;
+            var normalized = LadybugStatementNormalizer.NormalizeForPackageExecution(statement);
+            return normalized.Parameters.Count == 0
+                ? _connection.Query(normalized.Query)
+                : _connection.Execute(normalized.Query, normalized.Parameters);
         }
     }
 }
