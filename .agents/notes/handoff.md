@@ -226,12 +226,12 @@ improving those providers unless it directly supports shared abstractions or Lad
   System.Text.Json source-generation context instead of an anonymous-object payload. Existing hash
   tests pin byte-compatible cache-key JSON.
 - LLM response caches now share one payload serializer so memory, SQLite, and HybridCache entries
-  preserve the same JSON options. Memory and SQLite single-flight fills recheck the backing cache
-  before running the expensive factory, and corrupt/non-object string payloads are removed and
-  regenerated once under concurrent misses. Memory and SQLite `GetOrCreateAsync` now carry parsed
-  payload snapshots through single-flight so concurrent waiters clone those objects instead of
-  reparsing the same payload string; stored values remain raw JSON strings and public callers still
-  receive independent mutable `JsonObject` instances.
+  preserve the same JSON options. Single-flight fills recheck the backing cache before running the
+  expensive factory, and corrupt/non-object string payloads are removed and regenerated once under
+  concurrent misses. Memory, SQLite, and HybridCache `GetOrCreateAsync` now carry parsed payload
+  snapshots through single-flight so concurrent waiters clone those objects instead of reparsing the
+  same payload string; stored values remain raw JSON strings and public callers still receive
+  independent mutable `JsonObject` instances.
 - `LlmClient.PrepareMessages` now clones messages with a pre-sized loop instead of LINQ projection,
   and `CleanInput` has a validation fast path that returns the original string for already-clean
   valid UTF-16. The slow path still removes the same zero-width runes and C0 controls, preserves
@@ -295,8 +295,9 @@ improving those providers unless it directly supports shared abstractions or Lad
   unknown timestamps, and tuple overload parity.
 - `HybridCacheLlmResponseCache.GetOrCreateAsync` now coalesces the whole per-key get/create path
   through Graphiti's `AsyncSingleFlight`, so corrupt or sentinel cache payload repair shares one
-  cancellation-isolated factory call instead of fanning out late repair callers. Cache-key inputs and
-  serialized JSON payload shape stay unchanged.
+  cancellation-isolated factory call instead of fanning out late repair callers. It now returns a
+  parsed payload snapshot from single-flight while continuing to store raw strings in HybridCache;
+  cache-key inputs, sentinel handling, and serialized JSON payload shape stay unchanged.
 - XML docs have been added across much of the public surface. Remaining low-priority gaps include
   some internal utilities, deeper namespace member docs, and internal `Graphiti` helper details.
 
@@ -306,14 +307,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after SQLite LLM cache clone/parse coalescing:
+Latest checkpoint on 2026-06-01 after HybridCache LLM cache clone/parse coalescing:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused LLM-client/cache/cancellation test filter passed with 64 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 793
+- The focused LLM-client/cache/cancellation test filter passed with 67 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 796
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -468,16 +469,17 @@ These were previously audited and found faithful or intentionally different:
   `duplicate_candidate_id`
 - Source-generated serializer metadata coverage for the typed LLM cache-key payload, while
   preserving existing cache-key hash bytes.
-- LLM response cache cloned payload, raw memory/SQLite payload shape, cancellation-isolated fill,
-  stale-miss recheck, distinct concurrent memory/SQLite cache waiter responses, memory/SQLite
-  single-flight clone/parse coalescing, and corrupt memory/SQLite payload repair behavior
+- LLM response cache cloned payload, raw memory/SQLite/HybridCache payload shape,
+  cancellation-isolated fill, stale-miss recheck, distinct concurrent memory/SQLite/HybridCache
+  cache waiter responses, single-flight clone/parse coalescing, HybridCache sentinel cleanup, and
+  corrupt memory/SQLite/HybridCache payload repair behavior
 - LLM message preparation and input cleaning, including pre-sized message cloning, language/schema/
   attribute ordering, clean-input same-instance fast path, zero-width/C0-control removal,
   newline/carriage-return/tab preservation, DEL/C1 preservation, malformed surrogate dropping, valid
   surrogate-pair preservation, and cache-key coalescing for inputs differing only by stripped
   characters
-- HybridCache LLM response cache corrupt/sentinel payload repair coalescing and cancellation-isolated
-  shared fill behavior
+- HybridCache LLM response cache corrupt/sentinel payload repair coalescing, sentinel miss cleanup,
+  parsed-snapshot single-flight result, and cancellation-isolated shared fill behavior
 - Token usage per-prompt totals, call counts, average tokens, snapshot immutability, and int64
   accumulation behavior
 - Embedding dimension and finite-value validation for model assignment and M.E.AI adapter outputs

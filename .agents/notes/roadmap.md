@@ -214,10 +214,11 @@ shorter than the old working plans; expand items only when they become active.
   zero-width/C0-control cleanup matrix, allowed control preservation, malformed surrogate dropping,
   valid surrogate-pair preservation, clean user-content preservation, and cache-key coalescing for
   inputs differing only by stripped characters.
-- Memory and SQLite LLM caches now carry parsed payload snapshots through single-flight and clone
-  them per caller instead of reparsing the same payload string for every waiter. Tests pin raw string
-  payload storage, `SetAsync`/`GetAsync` clone isolation, distinct concurrent waiter objects,
-  stale-miss recheck, and corrupt repair cancellation isolation for both cache implementations.
+- Memory, SQLite, and HybridCache LLM caches now carry parsed payload snapshots through
+  single-flight and clone them per caller instead of reparsing the same payload string for every
+  waiter. Tests pin raw string payload storage, `SetAsync`/`GetAsync` clone isolation, distinct
+  concurrent waiter objects, stale-miss recheck, HybridCache sentinel cleanup, and corrupt repair
+  cancellation isolation across cache implementations.
 - Direct ranked-list composition in `SearchResultComposer`/`SearchUtilities` now avoids the small
   `IReadOnlyList[]` allocations that previously connected `SearchEngine` branches to fusion/merge.
   Tests pin one-list RRF, two-list RRF/merge, three-list parity, and the existing RRF/merge ordering

@@ -338,6 +338,84 @@ public class LlmResponseCacheTests
         }
     }
 
+    [Fact]
+    public async Task HybridCacheLlmResponseCache_SetAndGetUseRawPayloadAndClonedResponses()
+    {
+        using var provider = BuildHybridCacheProvider();
+        var hybridCache = provider.GetRequiredService<HybridCache>();
+        var cache = new HybridCacheLlmResponseCache(hybridCache);
+        var original = new JsonObject { ["value"] = 1 };
+
+        await cache.SetAsync("key", original);
+        original["value"] = 99;
+
+        var stored = await hybridCache.GetOrCreateAsync(
+            "key",
+            static _ => ValueTask.FromResult("missing"));
+        Assert.Equal("{\"value\":1}", stored);
+
+        var first = await cache.GetAsync("key");
+        Assert.NotNull(first);
+        first["value"] = 2;
+
+        var second = await cache.GetAsync("key");
+        Assert.NotNull(second);
+        Assert.NotSame(first, second);
+        Assert.Equal(1, second["value"]?.GetValue<int>());
+    }
+
+    [Fact]
+    public async Task HybridCacheLlmResponseCache_GetAsyncMissRemovesSentinelEntry()
+    {
+        using var provider = BuildHybridCacheProvider();
+        var hybridCache = provider.GetRequiredService<HybridCache>();
+        var cache = new HybridCacheLlmResponseCache(hybridCache);
+
+        var missing = await cache.GetAsync("missing-key");
+        var direct = await hybridCache.GetOrCreateAsync(
+            "missing-key",
+            static _ => ValueTask.FromResult("fallback"));
+
+        Assert.Null(missing);
+        Assert.Equal("fallback", direct);
+    }
+
+    [Fact]
+    public async Task HybridCacheLlmResponseCache_ConcurrentMissWaitersReceiveDistinctResponses()
+    {
+        using var provider = BuildHybridCacheProvider();
+        var cache = new HybridCacheLlmResponseCache(provider.GetRequiredService<HybridCache>());
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+
+        async Task<JsonObject> Factory(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref calls);
+            Assert.False(cancellationToken.CanBeCanceled);
+            started.TrySetResult();
+            await release.Task.ConfigureAwait(false);
+            return new JsonObject { ["value"] = 1 };
+        }
+
+        var waits = Enumerable.Range(0, 16)
+            .Select(_ => cache.GetOrCreateAsync("shared-key", Factory))
+            .ToArray();
+
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        release.SetResult();
+        var responses = await Task.WhenAll(waits);
+        responses[0]["value"] = 99;
+        var cached = await cache.GetOrCreateAsync(
+            "shared-key",
+            _ => Task.FromResult(new JsonObject { ["value"] = 2 }));
+
+        Assert.Equal(1, calls);
+        Assert.NotSame(responses[0], responses[1]);
+        Assert.Equal(1, responses[1]["value"]?.GetValue<int>());
+        Assert.Equal(1, cached["value"]?.GetValue<int>());
+    }
+
     [Theory]
     [InlineData("{not-json")]
     [InlineData("[1,2,3]")]

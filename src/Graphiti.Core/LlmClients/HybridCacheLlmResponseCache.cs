@@ -13,7 +13,7 @@ public sealed class HybridCacheLlmResponseCache : ILlmResponseCache
     private const string CacheMissSentinel = "\uE000_graphiti_cache_miss";
 
     private readonly HybridCache _cache;
-    private readonly AsyncSingleFlight<string, string> _inflight = new(StringComparer.Ordinal);
+    private readonly AsyncSingleFlight<string, LlmResponseCachePayloadSnapshot> _inflight = new(StringComparer.Ordinal);
     private readonly HybridCacheEntryOptions? _entryOptions;
     private readonly IReadOnlyList<string> _tags;
 
@@ -69,21 +69,14 @@ public sealed class HybridCacheLlmResponseCache : ILlmResponseCache
         Func<CancellationToken, Task<JsonObject>> factory,
         CancellationToken cancellationToken = default)
     {
-        var payload = await _inflight.RunAsync(
+        var snapshot = await _inflight.RunAsync(
             key,
-            () => GetOrCreatePayloadAsync(key, factory),
+            () => GetOrCreateSnapshotAsync(key, factory),
             cancellationToken).ConfigureAwait(false);
-        var parsed = LlmResponseCachePayload.Clone(payload);
-        if (parsed is not null)
-        {
-            return parsed;
-        }
-
-        await _cache.RemoveAsync(key, cancellationToken).ConfigureAwait(false);
-        throw new InvalidOperationException("Regenerated LLM cache payload was not a JSON object.");
+        return snapshot.CloneResponse();
     }
 
-    private async Task<string> GetOrCreatePayloadAsync(
+    private async Task<LlmResponseCachePayloadSnapshot> GetOrCreateSnapshotAsync(
         string key,
         Func<CancellationToken, Task<JsonObject>> factory)
     {
@@ -98,33 +91,39 @@ public sealed class HybridCacheLlmResponseCache : ILlmResponseCache
             _tags,
             CancellationToken.None).ConfigureAwait(false);
 
-        return payload != CacheMissSentinel && LlmResponseCachePayload.Clone(payload) is not null
-            ? payload
-            : await RegeneratePayloadAsync(key, factory).ConfigureAwait(false);
+        return payload != CacheMissSentinel
+            && LlmResponseCachePayload.TryCreateSnapshot(payload, out var snapshot)
+            ? snapshot
+            : await RegenerateSnapshotAsync(key, factory).ConfigureAwait(false);
     }
 
-    private async Task<string> RegeneratePayloadAsync(
+    private async Task<LlmResponseCachePayloadSnapshot> RegenerateSnapshotAsync(
         string key,
         Func<CancellationToken, Task<JsonObject>> factory)
     {
         var currentPayload = await ReadPayloadOrSentinelAsync(key, CancellationToken.None)
             .ConfigureAwait(false);
         if (currentPayload != CacheMissSentinel
-            && LlmResponseCachePayload.Clone(currentPayload) is not null)
+            && LlmResponseCachePayload.TryCreateSnapshot(currentPayload, out var currentSnapshot))
         {
-            return currentPayload;
+            return currentSnapshot;
         }
 
         await _cache.RemoveAsync(key, CancellationToken.None).ConfigureAwait(false);
         var value = await factory(CancellationToken.None).ConfigureAwait(false);
         var regeneratedPayload = LlmResponseCachePayload.Serialize(value);
+        if (!LlmResponseCachePayload.TryCreateSnapshot(regeneratedPayload, out var regeneratedSnapshot))
+        {
+            throw new InvalidOperationException("Regenerated LLM cache payload was not a JSON object.");
+        }
+
         await _cache.SetAsync(
             key,
             regeneratedPayload,
             _entryOptions,
             _tags,
             CancellationToken.None).ConfigureAwait(false);
-        return regeneratedPayload;
+        return regeneratedSnapshot;
     }
 
     private ValueTask<string> ReadPayloadOrSentinelAsync(
