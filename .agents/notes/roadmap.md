@@ -244,6 +244,11 @@ shorter than the old working plans; expand items only when they become active.
 - Bulk edge invalidation snapshots now replace stale graph/search copies with in-batch snapshot
   overrides by UUID while preserving graph-first ranking/limit behavior, related-edge offsets,
   ordered repeated-episode semantics, and canonical coalescing.
+- Edge resolution now handles duplicate-fact id selection and later-candidate expiry with explicit
+  index scans instead of LINQ filter/materialization and sort chains. Preserve first valid duplicate
+  id selection, invalid id skipping, contradiction index offsets across related and search
+  candidates, earliest later valid-time expiry, and unchanged invalidation candidate ordering for
+  contradiction processing.
 - Episode removal and saga deletion repair now build pruning, deletion, saga-bound, and
   next-episode repair worklists with explicit loops and named comparers instead of LINQ iterator
   chains. Preserve all-occurrence episode UUID removal from shared entity edges, retained endpoint

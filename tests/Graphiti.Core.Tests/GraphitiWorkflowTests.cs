@@ -2689,7 +2689,7 @@ public class GraphitiWorkflowTests
                 },
                 ["dedupe_edges.resolve_edge"] = new()
                 {
-                    ["duplicate_facts"] = new JsonArray { 0 },
+                    ["duplicate_facts"] = new JsonArray { -1, 99, 0 },
                     ["contradicted_facts"] = new JsonArray()
                 }
             }));
@@ -2849,6 +2849,7 @@ public class GraphitiWorkflowTests
         await acme.SaveAsync(driver);
         var laterEdge = new EntityEdge
         {
+            Uuid = "later-edge-1",
             SourceNodeUuid = alice.Uuid,
             TargetNodeUuid = acme.Uuid,
             GroupId = "group",
@@ -2857,6 +2858,17 @@ public class GraphitiWorkflowTests
             ValidAt = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc)
         };
         await laterEdge.SaveAsync(driver);
+        var earliestLaterEdge = new EntityEdge
+        {
+            Uuid = "later-edge-2",
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = acme.Uuid,
+            GroupId = "group",
+            Name = "LEFT",
+            Fact = "Alice had already left Acme.",
+            ValidAt = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+        await earliestLaterEdge.SaveAsync(driver);
 
         var graphiti = new Graphiti(
             graphDriver: driver,
@@ -2885,7 +2897,7 @@ public class GraphitiWorkflowTests
                 ["dedupe_edges.resolve_edge"] = new()
                 {
                     ["duplicate_facts"] = new JsonArray(),
-                    ["contradicted_facts"] = new JsonArray { 0 }
+                    ["contradicted_facts"] = new JsonArray { 0, 1 }
                 }
             }));
 
@@ -2896,8 +2908,8 @@ public class GraphitiWorkflowTests
             new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
             groupId: "group");
 
-        var newEdge = Assert.Single(result.Edges, edge => edge.Uuid != laterEdge.Uuid);
-        Assert.Equal(laterEdge.ValidAt, newEdge.InvalidAt);
+        var newEdge = Assert.Single(result.Edges, edge => edge.Fact == "Alice worked at Acme.");
+        Assert.Equal(earliestLaterEdge.ValidAt, newEdge.InvalidAt);
         Assert.Equal(fixedNow.UtcDateTime, newEdge.ExpiredAt);
     }
 

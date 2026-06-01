@@ -75,7 +75,7 @@ Verified build/test command from this folder:
 dotnet test "Graphiti.Core.CSharp.slnx" --verbosity minimal
 ```
 
-Verified on 2026-06-01 after the TextScorer query-term allocation slice:
+Verified on 2026-06-01 after the edge-resolution index handling allocation slice:
 locked restore, format verification, and no-incremental build succeeded with 0 warnings, 865 tests
 passed, and `Graphiti.Core` packed as `2.0.0`.
 

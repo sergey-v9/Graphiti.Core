@@ -244,10 +244,12 @@ internal sealed class EdgeResolutionService(
             promptName: "dedupe_edges.resolve_edge",
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        var duplicateFactIds = EdgeMergeHelpers.ReadIntArray(response, "duplicate_facts")
-            .Where(index => index >= 0 && index < relatedEdges.Count)
-            .ToList();
-        var resolvedEdge = duplicateFactIds.Count > 0 ? relatedEdges[duplicateFactIds[0]] : extractedEdge;
+        var resolvedEdge = TryGetFirstValidIndex(
+            EdgeMergeHelpers.ReadIntArray(response, "duplicate_facts"),
+            relatedEdges.Count,
+            out var duplicateFactIndex)
+            ? relatedEdges[duplicateFactIndex]
+            : extractedEdge;
         if (resolvedEdge.Uuid != extractedEdge.Uuid
             && !resolvedEdge.Episodes.Contains(episode.Uuid, StringComparer.Ordinal))
         {
@@ -279,31 +281,72 @@ internal sealed class EdgeResolutionService(
             await ExtractEdgeTimestampsAsync(resolvedEdge, episode, now, cancellationToken).ConfigureAwait(false);
         }
 
-        if (resolvedEdge.ExpiredAt is null)
-        {
-            foreach (var candidate in invalidationCandidates
-                         .OrderBy(candidate => candidate.ValidAt is null)
-                         .ThenBy(candidate => candidate.ValidAt))
-            {
-                var candidateValidAt = candidate.ValidAt is null
-                    ? (DateTime?)null
-                    : GraphitiHelpers.EnsureUtc(candidate.ValidAt.Value);
-                var resolvedValidAt = resolvedEdge.ValidAt is null
-                    ? (DateTime?)null
-                    : GraphitiHelpers.EnsureUtc(resolvedEdge.ValidAt.Value);
-                if (candidateValidAt is not null
-                    && resolvedValidAt is not null
-                    && candidateValidAt > resolvedValidAt)
-                {
-                    resolvedEdge.InvalidAt = candidate.ValidAt;
-                    resolvedEdge.ExpiredAt = now;
-                    break;
-                }
-            }
-        }
+        ExpireResolvedEdgeIfLaterCandidateExists(resolvedEdge, invalidationCandidates, now);
 
         var invalidatedEdges = EdgeMergeHelpers.ResolveEdgeContradictions(resolvedEdge, invalidationCandidates, now);
         return (resolvedEdge, invalidatedEdges);
+    }
+
+    private static bool TryGetFirstValidIndex(
+        IReadOnlyList<int> indexes,
+        int upperBound,
+        out int validIndex)
+    {
+        for (var i = 0; i < indexes.Count; i++)
+        {
+            var index = indexes[i];
+            if (index >= 0 && index < upperBound)
+            {
+                validIndex = index;
+                return true;
+            }
+        }
+
+        validIndex = 0;
+        return false;
+    }
+
+    private static void ExpireResolvedEdgeIfLaterCandidateExists(
+        EntityEdge resolvedEdge,
+        List<EntityEdge> invalidationCandidates,
+        DateTime now)
+    {
+        if (resolvedEdge.ExpiredAt is not null || resolvedEdge.ValidAt is null)
+        {
+            return;
+        }
+
+        var resolvedValidAt = GraphitiHelpers.EnsureUtc(resolvedEdge.ValidAt.Value);
+        EntityEdge? earliestLaterCandidate = null;
+        var earliestLaterValidAt = default(DateTime);
+        for (var i = 0; i < invalidationCandidates.Count; i++)
+        {
+            var candidate = invalidationCandidates[i];
+            if (candidate.ValidAt is null)
+            {
+                continue;
+            }
+
+            var candidateValidAt = GraphitiHelpers.EnsureUtc(candidate.ValidAt.Value);
+            if (candidateValidAt <= resolvedValidAt)
+            {
+                continue;
+            }
+
+            if (earliestLaterCandidate is null || candidate.ValidAt.Value < earliestLaterValidAt)
+            {
+                earliestLaterCandidate = candidate;
+                earliestLaterValidAt = candidate.ValidAt.Value;
+            }
+        }
+
+        if (earliestLaterCandidate is null)
+        {
+            return;
+        }
+
+        resolvedEdge.InvalidAt = earliestLaterCandidate.ValidAt;
+        resolvedEdge.ExpiredAt = now;
     }
 
     private async Task ExtractEdgeTimestampsAsync(
