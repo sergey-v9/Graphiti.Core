@@ -432,6 +432,90 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
+    public async Task LadybugGraphitiUpdatesCommunitiesDuringEpisodeIngestionEndToEnd()
+    {
+        await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
+        var fixedNow = new DateTimeOffset(2026, 9, 17, 18, 19, 20, TimeSpan.Zero);
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: CreateCommunityUpdateLlmClient(
+                "Acme collaborators work together.",
+                "Acme Collaborators"),
+            embedder: new HashEmbedder(8),
+            timeProvider: new FixedTimeProvider(fixedNow));
+        var createdAt = new DateTime(2026, 9, 17, 10, 11, 12, DateTimeKind.Utc);
+        var alice = new EntityNode
+        {
+            Uuid = "community-update-alice",
+            Name = "Alice",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            Summary = "Alice owns the Acme launch."
+        };
+        var bob = new EntityNode
+        {
+            Uuid = "community-update-bob",
+            Name = "Bob",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            Summary = "Bob coordinates launch operations."
+        };
+
+        await graphiti.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(alice);
+        await driver.SaveNodeAsync(bob);
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "community-update-alice-bob",
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = createdAt,
+            Name = "WORKS_WITH",
+            Fact = "Alice works with Bob on the Acme launch.",
+            FactEmbedding = [0.5f, 0.5f, 0, 0, 0, 0, 0, 0],
+            Episodes = []
+        });
+        var (initialCommunities, initialCommunityEdges) = await graphiti.BuildCommunitiesAsync(["tenant"]);
+        var initialCommunity = Assert.Single(initialCommunities);
+        Assert.Equal(2, initialCommunityEdges.Count);
+
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Carol works with Alice",
+            "message",
+            createdAt.AddMinutes(1),
+            groupId: "tenant",
+            updateCommunities: true);
+        var carol = Assert.Single(result.Nodes, node => node.Name == "Carol");
+        var aliceResult = Assert.Single(result.Nodes, node => node.Name == "Alice");
+        var newCommunityEdge = Assert.Single(result.CommunityEdges);
+        var storedCommunity = await driver.GetNodeByUuidAsync<CommunityNode>(initialCommunity.Uuid);
+        var carolCommunities = await driver.GetCommunitiesByNodesAsync([carol]);
+        var storedCommunityEdges = await driver.GetEdgesByGroupIdsAsync<CommunityEdge>(["tenant"]);
+        var searchResults = await graphiti.SearchAdvancedAsync(
+            "Acme Collaborators",
+            SearchConfigRecipes.CommunityHybridSearchRrf,
+            groupIds: ["tenant"]);
+
+        Assert.Equal(alice.Uuid, aliceResult.Uuid);
+        Assert.Equal(carol.Uuid, newCommunityEdge.TargetNodeUuid);
+        Assert.Equal(initialCommunity.Uuid, newCommunityEdge.SourceNodeUuid);
+        Assert.NotEmpty(result.Communities);
+        Assert.Contains(result.Communities, community => community.Uuid == initialCommunity.Uuid);
+        Assert.Equal("Acme Collaborators", storedCommunity.Name);
+        Assert.Equal("Acme collaborators work together.", storedCommunity.Summary);
+        Assert.Equal(initialCommunity.Uuid, Assert.Single(carolCommunities).Uuid);
+        Assert.Equal(3, storedCommunityEdges.Count);
+        Assert.Contains(storedCommunityEdges, edge => edge.TargetNodeUuid == carol.Uuid);
+        Assert.Equal(initialCommunity.Uuid, Assert.Single(searchResults.Communities).Uuid);
+    }
+
+    [Fact]
     public async Task ServiceCollectionExtensionRegistersLadybugDriverThroughGraphDriverFactory()
     {
         var services = new ServiceCollection();
@@ -515,6 +599,28 @@ public class LadybugRuntimeDriverTests
     private static StaticJsonLlmClient CreateCommunityLlmClient(string summary, string description) =>
         new(_ => new JsonObject
         {
+            ["summary"] = summary,
+            ["description"] = description
+        });
+
+    private static StaticJsonLlmClient CreateCommunityUpdateLlmClient(string summary, string description) =>
+        new(_ => new JsonObject
+        {
+            ["extracted_entities"] = new JsonArray
+            {
+                new JsonObject { ["name"] = "Carol", ["entity_type"] = "Person" },
+                new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" }
+            },
+            ["edges"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["source_entity_name"] = "Carol",
+                    ["target_entity_name"] = "Alice",
+                    ["relation_type"] = "WORKS_WITH",
+                    ["fact"] = "Carol works with Alice"
+                }
+            },
             ["summary"] = summary,
             ["description"] = description
         });

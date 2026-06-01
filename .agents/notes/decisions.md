@@ -160,9 +160,9 @@ Graphiti semantics, wire compatibility, or performance/allocation discipline.
   LadybugDB package adapter, DI helper, and searchable driver surface while core owns the LadybugDB dependency
   and `GraphProvider.Kuzu` remains unsupported by core provider validation. First factory-backed
   `Graphiti` ingest/search/removal, direct triplet, bulk duplicate-fact, saga association,
-  saga summarization, and community build/rebuild/search workflows are proved, but broader workflow
-  coverage and the driver-facing LadybugDB naming decision are still required before core provider
-  wiring.
+  saga summarization, community build/rebuild/search, and incremental community update workflows are
+  proved, but broader workflow coverage and the driver-facing LadybugDB naming decision are still
+  required before core provider wiring.
 - LadybugDB package/backend behavior that appears buggy during driver implementation should be marked
   separately from C# port gaps. Work around proven backend limitations deliberately when useful, but
   keep them visible for later LadybugDB fixes.

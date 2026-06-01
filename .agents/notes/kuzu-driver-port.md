@@ -32,8 +32,9 @@ being ported.
   `SearchAsync`. It also proves `AddEpisodeBulkAsync` duplicate fact coalescing across two episodes
   with attribution lookup and search, plus saga association with `HAS_EPISODE` / `NEXT_EPISODE`
   edges and saga content retrieval, `SummarizeSagaAsync` summary/watermark persistence, and
-  `BuildCommunitiesAsync` community construction/rebuild cleanup with community search. It still
-  does not make `GraphProvider.Kuzu` valid through core provider validation.
+  `BuildCommunitiesAsync` community construction/rebuild cleanup with community search. It now also
+  proves `AddEpisodeAsync(updateCommunities: true)` attaching a newly ingested entity to an existing
+  community. It still does not make `GraphProvider.Kuzu` valid through core provider validation.
 - `LadybugRecordMapper` uses loop-built attribute/list materialization for Ladybug/Kuzu rows while
   preserving JSON clone semantics, ordinal dictionaries, source ordering, null handling, and
   invariant object conversion.
@@ -208,8 +209,8 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
    Save/get/delete, bulk paths, saga episode queries, saga summarization, fulltext, vector search,
    BFS, rerankers, graph maintenance, concrete adapter execution, optional-package DI, and the
    first runtime-backed `Graphiti` ingest/search, episode-removal, direct triplet,
-   bulk duplicate-fact, saga association/summarization, and community build/rebuild/search workflows
-   now have focused proof. Keep the adapter allocation-aware: avoid unnecessary
+   bulk duplicate-fact, saga association/summarization, community build/rebuild/search, and
+   incremental community update workflows now have focused proof. Keep the adapter allocation-aware: avoid unnecessary
    per-row dictionaries/lists, closure-heavy query loops, repeated JSON/string conversions, and
    exception-driven type coercion where the package API allows direct mapping.
 5. Prove the full C# Saga schema/save/get projections and entity-edge `reference_time` projections

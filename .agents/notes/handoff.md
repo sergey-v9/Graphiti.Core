@@ -244,7 +244,9 @@ pack a local NuGet, and wire Graphiti to the repaired package only as part of th
   episode pointers, `HAS_EPISODE` and `NEXT_EPISODE` edges, and saga content retrieval.
   `SummarizeSagaAsync` now has runtime-backed proof for summary and watermark persistence.
   `BuildCommunitiesAsync` now has runtime-backed proof for community nodes, rebuild cleanup,
-  membership edges, node-to-community lookup, and community search. There is
+  membership edges, node-to-community lookup, and community search.
+  `AddEpisodeAsync(updateCommunities: true)` now has runtime-backed proof for attaching a newly
+  ingested entity to an existing community. There is
   still no core LadybugDB package reference, native dependency, core DI wiring, or
   `GraphProvider.Kuzu` options validation support. The C# foundation now resolves the current Python
   Kuzu saga schema/query and entity-edge `reference_time` inconsistencies ahead of runtime wiring by
@@ -371,14 +373,15 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after proving the runtime-backed Ladybug community build/search workflow:
+Latest checkpoint on 2026-06-01 after proving the runtime-backed Ladybug incremental community update workflow:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused `FactoryBackedGraphitiBuildsCommunitiesEndToEnd` filter passed with 1 test.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 830
+- The focused `FactoryBackedGraphitiUpdatesCommunitiesDuringEpisodeIngestionEndToEnd` filter passed
+  with 1 test.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 831
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration
   Release --verbosity minimal` passed, producing `Graphiti.Core.2.0.0-alpha.1.nupkg`.
@@ -629,8 +632,8 @@ that configure `GraphitiOptions.GraphDriverFactory`, while `GraphProvider.Kuzu` 
 core DI/options. Factory-backed clones share the same package executor/database for group-scoped
 operations, and runtime-backed `Graphiti` ingest/search, episode-attribution, and episode-removal
 workflows are proved, along with direct triplet persistence/search and bulk duplicate-fact
-coalescing plus saga association/summarization and community build/rebuild/search. The next safe
-provider increment is broader workflow coverage,
+coalescing plus saga association/summarization, community build/rebuild/search, and incremental
+community updates. The next safe provider increment is broader workflow coverage,
 richer optional-package host options, or native-gated integration smoke tests. If implementation
 uncovers behavior that
 appears to be a LadybugDB package bug, record it separately from Graphiti port TODOs. The local

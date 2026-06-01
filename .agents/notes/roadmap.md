@@ -45,7 +45,9 @@ shorter than the old working plans; expand items only when they become active.
    proof for saga creation, first/last episode pointers, `HAS_EPISODE` / `NEXT_EPISODE` edges, and
    content retrieval. Saga summarization now has runtime-backed proof for summary and watermark
    persistence. Community construction now has runtime-backed proof for community nodes, rebuild
-   cleanup, membership edges, node-to-community lookup, and community search. Next provider work
+   cleanup, membership edges, node-to-community lookup, and community search. Incremental community
+   updates during episode ingestion now have runtime-backed proof for attaching a newly ingested
+   entity to an existing community. Next provider work
    should broaden workflow coverage, add runtime-driven host
    options only when needed, and avoid marking core DI support complete too early. Details are in
    `kuzu-driver-port.md`.
@@ -277,8 +279,9 @@ shorter than the old working plans; expand items only when they become active.
   operations; runtime-backed `AddEpisodeAsync`, `SearchAdvancedAsync`, attribution lookup, and
   `RemoveEpisodeAsync` cleanup are proved; runtime-backed `AddTripletAsync` persistence plus
   `SearchAsync` over the fact is proved; runtime-backed `AddEpisodeBulkAsync` duplicate fact
-  coalescing is proved; runtime-backed saga association/summarization and community build/rebuild/search are
-  proved; core still has no LadybugDB package reference and `GraphProvider.Kuzu` remains unsupported.
+  coalescing is proved; runtime-backed saga association/summarization, community build/rebuild/search,
+  and incremental community updates are proved; core still has no LadybugDB package reference and
+  `GraphProvider.Kuzu` remains unsupported.
 - `LadybugStatementNormalizer` now implements the concrete package-execution strategy for the
   current LadybugDB binder gaps by inlining list/array/null literals while leaving scalar parameters
   bound. The test-only runtime executor uses it to round-trip entity-edge `reference_time`,
