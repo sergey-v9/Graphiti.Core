@@ -6,8 +6,9 @@ being ported.
 
 ## Current Status
 
-- LadybugDB provider support is partially implemented as an explicit optional package factory, but it
-  is not yet wired into core DI/options or exposed as a supported `GraphProvider` path.
+- LadybugDB provider support is partially implemented through the explicit optional
+  `Graphiti.Core` package factory and provider-package DI helpers, but it is not wired into
+  core DI/options or exposed as a supported `GraphProvider` path.
 - Foundation-only schema, statement-builder, and record-mapper helpers now exist under
   `csharp/src/Graphiti.Core/Drivers/Ladybug/`. They pin Python Kuzu schema/table names, save/get/
   delete/retrieve/load-embedding Cypher, individual bulk-save statement expansion, JSON attributes,
@@ -20,9 +21,11 @@ being ported.
   first-seen group-id de-duplication.
 - `Graphiti.Core` is now the core LadybugDB driver boundary. It references
   `Graphiti.Core`, `LadybugDB`, and `LadybugDB.Native`, exposes `LadybugDbGraphDriverFactory`, and
-  implements the concrete package executor for `ILadybugQueryExecutor`. This keeps native/package
+  implements the concrete package executor for `ILadybugQueryExecutor`. It also exposes
+  `LadybugDbOptions` and `AddLadybugDbGraphDriver` helpers that configure
+  `GraphitiOptions.GraphDriverFactory` from the optional package. This keeps native/package
   dependencies out of `Graphiti.Core` while letting callers opt into runtime-backed drivers
-  explicitly. It still does not wire `GraphProvider.Kuzu` into `GraphitiOptions`/DI.
+  explicitly. It still does not make `GraphProvider.Kuzu` valid through core provider validation.
 - `LadybugRecordMapper` uses loop-built attribute/list materialization for Ladybug/Kuzu rows while
   preserving JSON clone semantics, ordinal dictionaries, source ordering, null handling, and
   invariant object conversion.
@@ -46,7 +49,8 @@ being ported.
 - `GraphProvider.Kuzu` remains in the enum today and should be treated as a pending compatibility
   value, not a rejected provider.
 - `GraphProvider.Kuzu` is still unsupported by `GraphitiOptions`/DI unless callers provide an
-  explicit `GraphDriverFactory`.
+  explicit `GraphDriverFactory`; the optional package DI helper does exactly that without changing
+  core validation.
 - Implement against Kuzu behavior for Python parity, but name the driver-facing provider LadybugDB as
   the port freezes. The end state should make LadybugDB the default first provider option.
 - Existing Kuzu-specific query/filter branches preserve interim behavior until the driver lands.
@@ -143,7 +147,8 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
 - Whether the normalizer's CLR literal strategy is enough for the remaining graph/search statements
   beyond the current Saga, entity-edge, episode retrieval, mention traversal, FTS/vector search,
   BFS/ranker, `UNION`, delete, and clear runtime proofs.
-- Whether the core LadybugDB driver needs additional host-facing options before DI wiring.
+- Whether the core LadybugDB driver needs additional host-facing options beyond `DatabasePath`
+  before core provider wiring.
 
 ## Existing Touchpoints
 
@@ -170,7 +175,8 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
   graph writes, reads, search, delete, and clear paths, and assert the core project still has no
   LadybugDB package reference.
 - Tests in `Drivers/Ladybug/LadybugProviderPackageTests.cs` pin the core LadybugDB driver factory
-  over the concrete LadybugDB package executor without changing DI/options support.
+  and provider-package DI helper over the concrete LadybugDB package executor without changing core
+  DI/options support.
 
 ## Expected Implementation Work
 
@@ -182,8 +188,8 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
    package appears to reject valid Kuzu behavior or mishandle binding/projection/materialization,
    record that as a suspected package bug separately from Graphiti port work, and only then use the
    local `W:\code\ladybug` repair/package workflow.
-3. Decide how LadybugDB connections/options should be represented in `GraphitiOptions` and optional
-   provider DI helpers.
+3. Extend optional-package host options only when real connection/runtime requirements appear; the
+   current optional package exposes `LadybugDbOptions.DatabasePath` and DI helper registration.
 4. Keep `GraphProvider.Kuzu` unsupported in core DI/options until save/get/delete, bulk paths, saga
    episode queries, fulltext, vector search, BFS, rerankers, graph maintenance, concrete adapter
    execution, and DI construction are proven against the real backend. Keep the adapter

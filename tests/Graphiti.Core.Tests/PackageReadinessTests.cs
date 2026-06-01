@@ -71,6 +71,8 @@ public class PackageReadinessTests
         Assert.Contains("-", packageVersion);
         Assert.Contains("LadybugDB", packageReferences);
         Assert.Contains("LadybugDB.Native", packageReferences);
+        Assert.Contains("Microsoft.Extensions.DependencyInjection.Abstractions", packageReferences);
+        Assert.Contains("Microsoft.Extensions.Options", packageReferences);
         Assert.Contains(@"..\Graphiti.Core\Graphiti.Core.csproj", projectReferences);
     }
 

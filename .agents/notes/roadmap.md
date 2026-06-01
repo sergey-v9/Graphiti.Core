@@ -34,9 +34,10 @@ shorter than the old working plans; expand items only when they become active.
    the internal search executor's FTS/vector, BFS, ranker, non-empty search-filter, and graph-
    maintenance statements against LadybugDB, including community-edge `UNION`, normalized list-backed
    deletes, grouped clear, and full clear. The optional `Graphiti.Core` package now owns
-   the LadybugDB package/native dependency boundary and concrete package executor while core remains
-   free of those references. Next provider work should design optional provider options/DI wiring and
-   avoid marking DI support complete too early. Details are in `kuzu-driver-port.md`.
+   the LadybugDB package/native dependency boundary, concrete package executor, public factory, and
+   optional provider DI helpers while core remains free of those references. Next provider work
+   should expand concrete adapter/search coverage or add only runtime-driven host options, and avoid
+   marking core DI support complete too early. Details are in `kuzu-driver-port.md`.
 
 4. Finish low-risk XML documentation gaps.
 
@@ -259,16 +260,16 @@ shorter than the old working plans; expand items only when they become active.
   list/array/null parameter binding, prove internal search-executor FTS/vector/BFS/ranker
   statements, prove non-empty Kuzu search filters, prove graph-maintenance `UNION`/delete/clear
   statements, and prove alias-based ordering needed after projected `RETURN` clauses. The optional
-  `Graphiti.Core` package now carries the concrete package executor/factory and owns the
-  LadybugDB package references; core still has no LadybugDB package reference and
+  `Graphiti.Core` package now carries the concrete package executor/factory, optional DI
+  helper, and LadybugDB package references; core still has no LadybugDB package reference and
   `GraphProvider.Kuzu` remains unsupported.
 - `LadybugStatementNormalizer` now implements the concrete package-execution strategy for the
   current LadybugDB binder gaps by inlining list/array/null literals while leaving scalar parameters
   bound. The test-only runtime executor uses it to round-trip entity-edge `reference_time`,
   list-valued columns, embeddings, episode retrieval/group filters, `MENTIONS` traversals, and null
   temporal fields against the real package.
-- Good next provider slice from the 2026-06-01 scans: move from test-only runtime proof toward a
-  concrete optional-provider options/DI shape, while keeping core provider support unwired until
+- Good next provider slice from the 2026-06-01 scans: expand concrete runtime-backed adapter/search
+  coverage from the core LadybugDB driver, while keeping core provider support unwired until
   end-to-end search and graph behavior pass.
 
 ## Graphiti Decomposition
