@@ -113,6 +113,19 @@ public class LadybugGraphDriverTests
     }
 
     [Fact]
+    public async Task DeleteNodesByUuidsAsync_BatchesWithoutReordering()
+    {
+        var executor = new RecordingLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+
+        await driver.DeleteNodesByUuidsAsync(["node-1", "node-2", "node-3"], batchSize: 2);
+
+        Assert.Equal(10, executor.Executed.Count);
+        AssertUuidBatch(executor.Executed, 0, ["node-1", "node-2"]);
+        AssertUuidBatch(executor.Executed, 5, ["node-3"]);
+    }
+
+    [Fact]
     public async Task NonSearchReadSurface_UsesLadybugStatementsAndMapsRecords()
     {
         var executor = new RecordingLadybugExecutor();
@@ -283,6 +296,17 @@ public class LadybugGraphDriverTests
             ["last_summarized_at"] = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
             ["last_summarized_episode_valid_at"] = new DateTime(2026, 1, 2, 1, 0, 0, DateTimeKind.Utc)
         };
+
+    private static void AssertUuidBatch(
+        List<LadybugStatement> statements,
+        int start,
+        string[] expected)
+    {
+        for (var i = start; i < start + 5; i++)
+        {
+            Assert.Equal(expected, Assert.IsType<List<string>>(statements[i].Parameters["uuids"]));
+        }
+    }
 
     private sealed class RecordingLadybugExecutor : ILadybugQueryExecutor
     {

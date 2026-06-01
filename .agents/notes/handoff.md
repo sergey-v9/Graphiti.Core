@@ -76,12 +76,12 @@ no-incremental build, full test runs, and package builds at different points. Hi
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
 Latest checkpoint, 2026-06-02:
-`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.GraphitiWorkflowTests|FullyQualifiedName~Graphiti.Core.Tests.Telemetry.TelemetryTests"`
-succeeded. It ran locked restore, focused Graphiti workflow/telemetry coverage (`98` passed),
-format verification, no-incremental build, the full test suite (`867` passed), and `dotnet pack` for
+`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Drivers.Ladybug.LadybugGraphDriverTests|FullyQualifiedName~Graphiti.Core.Tests.Drivers.Ladybug.LadybugPackageRuntimeTests"`
+succeeded. It ran locked restore, focused Ladybug mock-driver/runtime coverage (`18` passed), format
+verification, no-incremental build, the full test suite (`868` passed), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. Recent preceding checkpoints used the same verifier with
-focused InMemory delete/cancellation coverage (`15` passed) and InMemory clone/read/search coverage
-(`26` passed).
+focused Graphiti workflow/telemetry coverage (`98` passed), InMemory delete/cancellation coverage
+(`15` passed), and InMemory clone/read/search coverage (`26` passed).
 
 Primary full verification command from the C# repo root:
 

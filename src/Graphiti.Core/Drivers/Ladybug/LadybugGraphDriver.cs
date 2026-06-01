@@ -232,8 +232,12 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver
     {
         ArgumentNullException.ThrowIfNull(uuids);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
-        foreach (var batch in MaterializeWithCancellation(uuids, cancellationToken).Chunk(batchSize))
+        var uuidList = MaterializeWithCancellation(uuids, cancellationToken);
+        for (var batchStart = 0; batchStart < uuidList.Count;)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            var batchCount = Math.Min(batchSize, uuidList.Count - batchStart);
+            var batch = CopyRange(uuidList, batchStart, batchCount);
             await ExecuteAllAsync(
                 LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<EntityNode>(batch),
                 cancellationToken).ConfigureAwait(false);
@@ -246,6 +250,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver
             await _executor.ExecuteAsync(
                 LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<SagaNode>(batch)[0],
                 cancellationToken).ConfigureAwait(false);
+            batchStart += batchCount;
         }
     }
 
@@ -835,6 +840,18 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver
 
         cancellationToken.ThrowIfCancellationRequested();
         return list;
+    }
+
+    private static List<string> CopyRange(List<string> values, int start, int count)
+    {
+        var copy = new List<string>(count);
+        var end = start + count;
+        for (var i = start; i < end; i++)
+        {
+            copy.Add(values[i]);
+        }
+
+        return copy;
     }
 
     private static string? GetString(IReadOnlyDictionary<string, object?> record, string key)
