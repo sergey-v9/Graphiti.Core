@@ -112,9 +112,9 @@ beyond a single throwaway investigation.
 - Preserve active-driver scoping through `UseGroupDriver` / `AsyncLocal`.
 - Treat implicit allocations as part of the review surface in shared ingestion, search, parsing,
   serialization, embedding/vector, and provider paths.
-- Keep note updates scoped: durable decisions in `decisions.md`, current state or gotchas here,
-  planned work in `roadmap.md`, provider-specific details in `kuzu-driver-port.md`, and commit rules
-  in `commit-policy.md`.
+- Keep note updates scoped: durable decisions in `decisions.md`, milestone history in
+  `evolution.md`, current state or gotchas here, planned work in `roadmap.md`, provider-specific
+  details in `kuzu-driver-port.md`, and commit rules in `commit-policy.md`.
 
 ## Known Audited Areas
 
@@ -136,9 +136,9 @@ allocation-sensitive coverage and should not be casually rewritten without targe
 ## Notes Coordination Protocol
 
 - At task start, read the relevant note(s). For broad port work, read `decisions.md`, `handoff.md`,
-  and `roadmap.md`; for provider work, also read `kuzu-driver-port.md`.
+  `roadmap.md`, and `evolution.md`; for provider work, also read `kuzu-driver-port.md`.
 - Before finalizing work that changes direction, architecture, provider status, verification claims,
-  or roadmap scope, re-read or search the affected notes.
+  milestone status, or roadmap scope, re-read or search the affected notes.
 - If the newest user instruction conflicts with the notes, follow the user and update the notes so
   future agents do not inherit stale direction.
 - Prefer replacing stale guidance over preserving contradictory history.

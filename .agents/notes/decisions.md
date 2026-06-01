@@ -1,8 +1,9 @@
 # C# Port Decisions
 
-These notes capture stable decisions for the C# Graphiti Core port. Python `graphiti_core/` remains
-the behavioral source of truth, but the C# port should be idiomatic .NET where that does not break
-Graphiti semantics, wire compatibility, or performance/allocation discipline.
+These notes capture stable decisions for the C# Graphiti Core port. Milestone history for major
+divergences from Python lives in `evolution.md`. Python `graphiti_core/` remains the behavioral
+source of truth, but the C# port should be idiomatic .NET where that does not break Graphiti
+semantics, wire compatibility, or performance/allocation discipline.
 
 ## Porting Direction
 

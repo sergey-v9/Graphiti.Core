@@ -6,10 +6,11 @@ identity, cache semantics, and performance/allocation discipline stay compatible
 
 **Working notes - read first, keep current.** The main living docs under `.agents/notes/` carry
 context across agent sessions: `roadmap.md` (phase status / what's left), `handoff.md` (current state
-and verified context), and `decisions.md` (standing port/parity/design decisions). Start substantive
-work by reading the relevant note and update it in the same change when a standing fact changes.
-LadybugDB/Kuzu has its own focused handoff in `.agents/notes/kuzu-driver-port.md`. For C# submodule
-commit rules, read `.agents/notes/commit-policy.md`.
+and verified context), `decisions.md` (standing port/parity/design decisions), and `evolution.md`
+(milestone history for major divergences from Python). Start substantive work by reading the relevant
+note and update it in the same change when a standing fact changes. LadybugDB/Kuzu has its own focused
+handoff in `.agents/notes/kuzu-driver-port.md`. For C# submodule commit rules, read
+`.agents/notes/commit-policy.md`.
 
 The notes can change outside your session. Re-read relevant notes before finalizing work that touches
 direction, architecture, providers, verification, or roadmap items; if current notes contradict your
@@ -60,8 +61,8 @@ Always:
   it could not run.
 - Preserve active-driver scoping through `UseGroupDriver` / `AsyncLocal<IGraphDriver?>`.
 - Keep `InMemoryGraphDriver` deterministic; it is the reference backend for tests.
-- Update `.agents/notes/*` when you change a standing decision, handoff fact, roadmap item, or Kuzu
-  status.
+- Update `.agents/notes/*` when you change a standing decision, handoff fact, roadmap item, milestone
+  status, or Kuzu status.
 
 Ask first:
 - Public API shape changes, namespace moves, target framework changes, package version strategy, or
@@ -110,6 +111,7 @@ Provider/package facts:
 
 Pointers:
 - `.agents/notes/decisions.md` has standing port decisions and parity calls.
+- `.agents/notes/evolution.md` has milestone history for major divergences from Python.
 - `.agents/notes/handoff.md` has current context and known audited areas.
 - `.agents/notes/roadmap.md` has follow-up work.
 - `.agents/notes/kuzu-driver-port.md` is the focused LadybugDB/Kuzu handoff.

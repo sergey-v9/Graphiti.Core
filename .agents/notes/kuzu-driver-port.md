@@ -87,7 +87,7 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 5. Revisit interim Kuzu query/filter helpers and move provider-specific behavior into the driver when
    appropriate.
 6. Finish the Kuzu-to-LadybugDB terminology transition once the provider is stable.
-7. Update `decisions.md`, `handoff.md`, and `roadmap.md` when provider status or support level
-   changes.
+7. Update `decisions.md`, `evolution.md`, `handoff.md`, and `roadmap.md` when provider status or
+   support level changes.
 
 This note supersedes older comments that described Kuzu as intentionally out of scope for the C# port.

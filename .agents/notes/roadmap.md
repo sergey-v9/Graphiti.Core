@@ -1,7 +1,7 @@
 # C# Port Roadmap
 
 This roadmap lists open or recurring work for the C# port. Keep completed slice history out of this
-file; use git history, tests, and `handoff.md` for current-state context.
+file; use `evolution.md` for milestone history and `handoff.md` for current-state context.
 
 ## Near-Term
 
