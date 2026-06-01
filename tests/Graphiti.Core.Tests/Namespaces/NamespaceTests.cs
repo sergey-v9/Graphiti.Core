@@ -100,6 +100,19 @@ public class NamespaceTests
     }
 
     [Fact]
+    public async Task CommunityNodeSaveBulk_PreCanceledTokenDoesNotEnumerateNodes()
+    {
+        var graphiti = new Graphiti(graphDriver: new InMemoryGraphDriver());
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            graphiti.Nodes.Community.SaveBulkAsync(
+                new ThrowingEnumerable<CommunityNode>(),
+                cancellationToken: cts.Token));
+    }
+
+    [Fact]
     public async Task NamespaceSaveBulk_UsesBoundedConcurrentSavesForSequentialNamespaces()
     {
         var driver = new DelayedNamespaceSaveDriver();

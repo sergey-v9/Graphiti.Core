@@ -282,10 +282,12 @@ internal static class NamespaceDriverHelpers
         }
     }
 
-    private static List<TItem> MaterializeList<TItem>(
+    public static List<TItem> MaterializeList<TItem>(
         IEnumerable<TItem> items,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(items);
+        cancellationToken.ThrowIfCancellationRequested();
         var capacity = items.TryGetNonEnumeratedCount(out var count) ? count : 0;
         var list = capacity == 0 ? new List<TItem>() : new List<TItem>(capacity);
         foreach (var item in items)

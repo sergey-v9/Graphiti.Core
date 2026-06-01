@@ -30,8 +30,7 @@ public sealed class CommunityNodeNamespace
         CancellationToken cancellationToken = default)
     {
         NamespaceDriverHelpers.ValidateBatchSize(batchSize);
-        ArgumentNullException.ThrowIfNull(nodes);
-        var nodeList = nodes.ToList();
+        var nodeList = NamespaceDriverHelpers.MaterializeList(nodes, cancellationToken);
         await NamespaceDriverHelpers.EnsureCommunityNodeEmbeddingsAsync(
             nodeList,
             _embedder,
