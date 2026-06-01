@@ -99,7 +99,7 @@ internal sealed class EdgeResolutionService(
                     relatedEdges,
                     existingEdgesOverride,
                     edge => edge.SourceNodeUuid == sourceNode.Uuid && edge.TargetNodeUuid == targetNode.Uuid);
-                var duplicate = relatedEdges.FirstOrDefault(edge => NormalizeFact(edge.Fact) == key.NormalizedFact);
+                var duplicate = FindDuplicateFact(relatedEdges, key.NormalizedFact);
                 if (duplicate is not null)
                 {
                     if (!duplicate.Episodes.Contains(episode.Uuid, StringComparer.Ordinal))
@@ -149,6 +149,20 @@ internal sealed class EdgeResolutionService(
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
         }
+    }
+
+    private static EntityEdge? FindDuplicateFact(IReadOnlyList<EntityEdge> relatedEdges, string normalizedFact)
+    {
+        for (var i = 0; i < relatedEdges.Count; i++)
+        {
+            var edge = relatedEdges[i];
+            if (NormalizeFact(edge.Fact) == normalizedFact)
+            {
+                return edge;
+            }
+        }
+
+        return null;
     }
 
     public async Task<IReadOnlyList<EntityEdge>> GetEdgeInvalidationCandidatesAsync(
