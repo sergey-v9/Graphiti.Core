@@ -291,7 +291,7 @@ public static partial class GraphitiHelpers
     /// <summary>Returns an L2-normalized copy of the vector; a zero/non-finite norm is left unchanged.</summary>
     public static float[] NormalizeL2(IEnumerable<float> embedding)
     {
-        var vector = embedding.ToArray();
+        var vector = SnapshotEmbedding(embedding);
         NormalizeL2InPlace(vector);
         return vector;
     }
@@ -305,6 +305,68 @@ public static partial class GraphitiHelpers
         }
 
         TensorPrimitives.Divide(vector, norm, vector);
+    }
+
+    private static float[] SnapshotEmbedding(IEnumerable<float> embedding)
+    {
+        ArgumentNullException.ThrowIfNull(embedding);
+
+        if (embedding is ICollection<float> collection)
+        {
+            if (collection.Count == 0)
+            {
+                return Array.Empty<float>();
+            }
+
+            var snapshot = new float[collection.Count];
+            collection.CopyTo(snapshot, 0);
+            return snapshot;
+        }
+
+        if (embedding is IReadOnlyList<float> list)
+        {
+            return CopyReadOnlyList(list);
+        }
+
+        var values = new List<float>();
+        foreach (var value in embedding)
+        {
+            values.Add(value);
+        }
+
+        return CopyList(values);
+    }
+
+    private static float[] CopyReadOnlyList(IReadOnlyList<float> values)
+    {
+        if (values.Count == 0)
+        {
+            return Array.Empty<float>();
+        }
+
+        var snapshot = new float[values.Count];
+        for (var i = 0; i < values.Count; i++)
+        {
+            snapshot[i] = values[i];
+        }
+
+        return snapshot;
+    }
+
+    private static float[] CopyList(List<float> values)
+    {
+        if (values.Count == 0)
+        {
+            return Array.Empty<float>();
+        }
+
+        var snapshot = new float[values.Count];
+        for (var i = 0; i < values.Count; i++)
+        {
+            snapshot[i] = values[i];
+        }
+
+        return snapshot;
     }
 
     private static string EscapeLuceneCharacters(string source, int firstEscaped)

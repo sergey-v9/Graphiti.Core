@@ -244,6 +244,31 @@ public class GraphitiHelperTests
     }
 
     [Fact]
+    public void NormalizeL2_RejectsNullEmbedding()
+    {
+        Assert.Throws<ArgumentNullException>(() => GraphitiHelpers.NormalizeL2(null!));
+    }
+
+    [Fact]
+    public void NormalizeL2_MaterializesDeferredEnumerableOnce()
+    {
+        var enumerations = 0;
+
+        IEnumerable<float> Source()
+        {
+            enumerations++;
+            yield return 3f;
+            yield return 4f;
+        }
+
+        var normalized = GraphitiHelpers.NormalizeL2(Source());
+
+        Assert.Equal(1, enumerations);
+        Assert.Equal(0.6f, normalized[0], precision: 6);
+        Assert.Equal(0.8f, normalized[1], precision: 6);
+    }
+
+    [Fact]
     public void NormalizeL2InPlace_UsesVectorizedNormalization()
     {
         var input = new[] { 3f, 4f };
