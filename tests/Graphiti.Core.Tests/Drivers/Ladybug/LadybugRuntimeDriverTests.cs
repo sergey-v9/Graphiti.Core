@@ -244,6 +244,52 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
+    public async Task LadybugGraphitiAssociatesSagaEpisodesEndToEnd()
+    {
+        await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: CreateAliceAcmeLlmClient(),
+            embedder: new HashEmbedder(8));
+        var firstTime = new DateTime(2026, 9, 14, 15, 16, 17, DateTimeKind.Utc);
+        var secondTime = firstTime.AddMinutes(5);
+
+        await graphiti.BuildIndicesAndConstraintsAsync();
+        var first = await graphiti.AddEpisodeAsync(
+            "first",
+            "Alice works at Acme.",
+            "message",
+            firstTime,
+            groupId: "tenant",
+            saga: "launch");
+        var second = await graphiti.AddEpisodeAsync(
+            "second",
+            "Alice still works at Acme.",
+            "message",
+            secondTime,
+            groupId: "tenant",
+            saga: "launch",
+            sagaPreviousEpisodeUuid: first.Episode.Uuid);
+        var saga = await driver.FindSagaByNameAsync("launch", "tenant");
+        Assert.NotNull(saga);
+
+        var hasEpisodeEdges = await driver.GetEdgesByGroupIdsAsync<HasEpisodeEdge>(["tenant"]);
+        var nextEpisodeEdge = Assert.Single(await driver.GetEdgesByGroupIdsAsync<NextEpisodeEdge>(["tenant"]));
+        var contents = await driver.GetSagaEpisodeContentsAsync(saga.Uuid);
+
+        Assert.Equal(first.Episode.Uuid, saga.FirstEpisodeUuid);
+        Assert.Equal(second.Episode.Uuid, saga.LastEpisodeUuid);
+        Assert.Equal(2, hasEpisodeEdges.Count);
+        Assert.Contains(hasEpisodeEdges, edge =>
+            edge.SourceNodeUuid == saga.Uuid && edge.TargetNodeUuid == first.Episode.Uuid);
+        Assert.Contains(hasEpisodeEdges, edge =>
+            edge.SourceNodeUuid == saga.Uuid && edge.TargetNodeUuid == second.Episode.Uuid);
+        Assert.Equal(first.Episode.Uuid, nextEpisodeEdge.SourceNodeUuid);
+        Assert.Equal(second.Episode.Uuid, nextEpisodeEdge.TargetNodeUuid);
+        Assert.Equal(new[] { first.Episode.Content, second.Episode.Content }, contents.Select(content => content.Content));
+    }
+
+    [Fact]
     public async Task ServiceCollectionExtensionRegistersLadybugDriverThroughGraphDriverFactory()
     {
         var services = new ServiceCollection();
