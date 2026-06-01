@@ -47,7 +47,8 @@ internal static class AttributeMerger
             valuesByName[pair.Key] = pair.Value;
         }
 
-        foreach (var attributeName in entityType.Attributes.Keys.OrderBy(key => key, StringComparer.OrdinalIgnoreCase))
+        var attributeNames = SortedAttributeNames(entityType);
+        foreach (var attributeName in attributeNames)
         {
             if (valuesByName.TryGetValue(attributeName, out var value))
             {
@@ -56,6 +57,18 @@ internal static class AttributeMerger
         }
 
         return result;
+    }
+
+    private static List<string> SortedAttributeNames(EntityTypeDefinition entityType)
+    {
+        var attributeNames = new List<string>(entityType.Attributes.Count);
+        foreach (var attributeName in entityType.Attributes.Keys)
+        {
+            attributeNames.Add(attributeName);
+        }
+
+        attributeNames.Sort(StringComparer.OrdinalIgnoreCase);
+        return attributeNames;
     }
 
     private static Dictionary<string, object?> MergeExtractedAttributes(
