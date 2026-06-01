@@ -255,8 +255,8 @@ improving those providers unless it directly supports shared abstractions or Lad
   now also pin rejected-permit behavior, queued cancellation skipping provider calls, and lease
   disposal after post-provider parse/validation failures.
 - Shared concurrency helpers now fail fast on invalid throttling limits, preserve input order for
-  throttled selection, and avoid starting unbounded `SemaphoreGatherAsync` work when already
-  canceled.
+  throttled selection over `IReadOnlyList<T>` inputs, and avoid starting unbounded
+  `SemaphoreGatherAsync` or pre-canceled throttled selection work when already canceled.
 - Saga summarization now uses the deterministic episode-content fallback when a typed LLM response is
   unavailable or contains no summary, so the default no-op LLM no longer clears saga summaries.
 - Entity extraction context now uses Python's stronger default `Entity` type description, including
@@ -310,14 +310,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after Microsoft.Extensions.AI chat message projection shaping:
+Latest checkpoint on 2026-06-01 after default embedder batch shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused ModernInfrastructure/Telemetry test filter passed with 92 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 796
+- The focused ModernInfrastructure/ConcurrencyHelper/Telemetry test filter passed with 105 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 799
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -485,6 +485,8 @@ These were previously audited and found faithful or intentionally different:
   parsed-snapshot single-flight result, and cancellation-isolated shared fill behavior
 - Microsoft.Extensions.AI chat adapter message projection, provider-call telemetry, retry/rate-limit
   behavior, response parsing, and usage tracking
+- Default embedder batch selection, including bounded concurrency, ordered results, mutable input
+  snapshotting, `IReadOnlyList<T>` throttled selection, and pre-canceled throttled selection
 - Token usage per-prompt totals, call counts, average tokens, snapshot immutability, and int64
   accumulation behavior
 - Embedding dimension and finite-value validation for model assignment and M.E.AI adapter outputs

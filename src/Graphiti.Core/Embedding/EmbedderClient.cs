@@ -1,3 +1,5 @@
+using Graphiti.Core.Internal;
+
 namespace Graphiti.Core.Embedding;
 
 /// <summary>
@@ -49,15 +51,18 @@ public abstract class EmbedderClient : IEmbedderClient
                 return Array.Empty<IReadOnlyList<float>>();
             }
 
-            var operations = input
-                .Select<string, Func<CancellationToken, Task<IReadOnlyList<float>>>>(
-                    item => token => CreateAsync(item, token))
-                .ToList();
-            var embeddings = await GraphitiHelpers.SemaphoreGatherAsync(
-                operations,
+            var inputs = new string[input.Count];
+            for (var i = 0; i < input.Count; i++)
+            {
+                inputs[i] = input[i];
+            }
+
+            var embeddings = await ThrottledWork.SelectAsync(
+                inputs,
+                CreateAsync,
                 Config.BatchConcurrency,
                 cancellationToken).ConfigureAwait(false);
-            activity?.SetTag("graphiti.embedding.output_count", embeddings.Count);
+            activity?.SetTag("graphiti.embedding.output_count", embeddings.Length);
             GraphitiTelemetry.SetOk(activity);
             return embeddings;
         }

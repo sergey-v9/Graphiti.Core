@@ -25,7 +25,7 @@ internal static class ThrottledWork
     }
 
     public static async Task<TResult[]> SelectAsync<TSource, TResult>(
-        List<TSource> items,
+        IReadOnlyList<TSource> items,
         Func<TSource, CancellationToken, Task<TResult>> operation,
         int maxDegreeOfParallelism,
         CancellationToken cancellationToken)

@@ -641,10 +641,25 @@ public class ModernInfrastructureTests
         var embedder = new DelayedEmbedder(batchConcurrency: 3);
 
         var batch = await embedder.CreateBatchAsync(
-            Enumerable.Range(0, 10).Select(index => index.ToString(CultureInfo.InvariantCulture)).ToList());
+            Enumerable.Range(0, 10).Select(index => index.ToString(CultureInfo.InvariantCulture)).ToArray());
 
         Assert.Equal(Enumerable.Range(0, 10), batch.Select(vector => (int)vector[0]));
         Assert.InRange(embedder.MaxObservedConcurrency, 2, 3);
+    }
+
+    [Fact]
+    public async Task EmbedderClient_DefaultBatchSnapshotsMutableInputValues()
+    {
+        var embedder = new DelayedEmbedder(batchConcurrency: 1);
+        var input = new[] { "1", "2", "3" };
+
+        var batchTask = embedder.CreateBatchAsync(input);
+        input[0] = "100";
+        input[1] = "200";
+        input[2] = "300";
+        var batch = await batchTask;
+
+        Assert.Equal(new[] { 1, 2, 3 }, batch.Select(vector => (int)vector[0]));
     }
 
     [Fact]

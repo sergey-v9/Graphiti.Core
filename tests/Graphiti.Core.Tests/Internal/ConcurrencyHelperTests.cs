@@ -166,6 +166,46 @@ public class ConcurrencyHelperTests
         Assert.Empty(empty);
     }
 
+    [Fact]
+    public async Task ThrottledWork_SelectAsync_AcceptsReadOnlyListInputs()
+    {
+        var items = Array.AsReadOnly(Enumerable.Range(0, 8).ToArray());
+
+        var selected = await ThrottledWork.SelectAsync(
+            items,
+            async (item, cancellationToken) =>
+            {
+                await Task.Delay((items.Count - item) * 2, cancellationToken);
+                return item * item;
+            },
+            maxDegreeOfParallelism: 3,
+            CancellationToken.None);
+
+        Assert.Equal(items.Select(item => item * item), selected);
+    }
+
+    [Fact]
+    public async Task ThrottledWork_SelectAsync_DoesNotStartOperationsWhenAlreadyCanceled()
+    {
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+        var started = 0;
+        var items = Array.AsReadOnly(Enumerable.Range(0, 4).ToArray());
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            ThrottledWork.SelectAsync(
+                items,
+                (item, _) =>
+                {
+                    Interlocked.Increment(ref started);
+                    return Task.FromResult(item);
+                },
+                maxDegreeOfParallelism: 2,
+                cancellation.Token));
+
+        Assert.Equal(0, Volatile.Read(ref started));
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
