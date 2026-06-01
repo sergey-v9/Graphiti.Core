@@ -174,20 +174,21 @@ public sealed partial class Graphiti
         try
         {
             var episodes = await EpisodicNode.GetByUuidsAsync(Driver, episodeUuids, cancellationToken).ConfigureAwait(false);
-            var edges = new List<EntityEdge>();
-            foreach (var episode in episodes)
+            var edges = new List<EntityEdge>(CountEpisodeEntityEdges(episodes));
+            for (var i = 0; i < episodes.Count; i++)
             {
-                edges.AddRange(await EntityEdge.GetByUuidsAsync(
+                var episodeEdges = await EntityEdge.GetByUuidsAsync(
                     Driver,
-                    episode.EntityEdges,
-                    cancellationToken).ConfigureAwait(false));
+                    episodes[i].EntityEdges,
+                    cancellationToken).ConfigureAwait(false);
+                AppendEdges(edges, episodeEdges);
             }
 
             var nodes = await Driver.GetMentionedNodesAsync(episodes, cancellationToken).ConfigureAwait(false);
             var results = new SearchResults
             {
                 Edges = edges,
-                Nodes = nodes.ToList()
+                Nodes = CopyList(nodes)
             };
             activity?.SetTag("graphiti.result.nodes", results.Nodes.Count);
             activity?.SetTag("graphiti.result.edges", results.Edges.Count);
@@ -198,6 +199,25 @@ public sealed partial class Graphiti
         {
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
+        }
+    }
+
+    private static int CountEpisodeEntityEdges(IReadOnlyList<EpisodicNode> episodes)
+    {
+        var count = 0;
+        for (var i = 0; i < episodes.Count; i++)
+        {
+            count += episodes[i].EntityEdges.Count;
+        }
+
+        return count;
+    }
+
+    private static void AppendEdges(List<EntityEdge> target, IReadOnlyList<EntityEdge> source)
+    {
+        for (var i = 0; i < source.Count; i++)
+        {
+            target.Add(source[i]);
         }
     }
 }
