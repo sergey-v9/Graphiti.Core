@@ -6,7 +6,8 @@ being ported.
 
 ## Current Status
 
-- The LadybugDB provider has not been implemented yet.
+- LadybugDB provider support is partially implemented as an explicit optional package factory, but it
+  is not yet wired into core DI/options or exposed as a supported `GraphProvider` path.
 - Foundation-only schema, statement-builder, and record-mapper helpers now exist under
   `csharp/src/Graphiti.Core/Drivers/Ladybug/`. They pin Python Kuzu schema/table names, save/get/
   delete/retrieve/load-embedding Cypher, individual bulk-save statement expansion, JSON attributes,
@@ -16,8 +17,12 @@ being ported.
   driver surface through an abstract `ILadybugQueryExecutor`, which keeps the core path testable
   without adding the LadybugDB package or native assets to the core project. Its current projection
   path uses explicit loops for bulk-save phase statements, read records, saga contents, and
-  first-seen group-id de-duplication. There is still no concrete LadybugDB package adapter in the
-  project.
+  first-seen group-id de-duplication.
+- `Graphiti.Core` is now the core LadybugDB driver boundary. It references
+  `Graphiti.Core`, `LadybugDB`, and `LadybugDB.Native`, exposes `LadybugDbGraphDriverFactory`, and
+  implements the concrete package executor for `ILadybugQueryExecutor`. This keeps native/package
+  dependencies out of `Graphiti.Core` while letting callers opt into runtime-backed drivers
+  explicitly. It still does not wire `GraphProvider.Kuzu` into `GraphitiOptions`/DI.
 - `LadybugRecordMapper` uses loop-built attribute/list materialization for Ladybug/Kuzu rows while
   preserving JSON clone semantics, ordinal dictionaries, source ordering, null handling, and
   invariant object conversion.
@@ -27,7 +32,7 @@ being ported.
 - `LadybugStatementNormalizer` is the current concrete adapter strategy for LadybugDB package
   binding gaps: it rewrites package-unsupported list/array/null parameters into Cypher literals
   while leaving scalar values bound for prepared execution. It is package-independent and lives in
-  core so a future concrete executor can share the same audited behavior.
+  core so the optional provider executor can share the same audited behavior.
 - `LadybugSearchStatementBuilder` and `LadybugSearchExecutor` are internal. They pin Kuzu full-text
   index statements, `QUERY_FTS_INDEX` calls, `array_cosine_similarity` vector search, doubled-depth
   BFS plans over `RelatesToNode_`, per-UUID ranker statements, Kuzu label filters, score extraction,
@@ -48,8 +53,8 @@ being ported.
   `SearchUtilities.BuildKuzuFulltextQuery` now matches Python Kuzu's whitespace word truncation.
 - `GraphitiServiceCollectionExtensions` does not currently wire a LadybugDB/Kuzu driver.
 - The test project has private `LadybugDB` and `LadybugDB.Native` references for runtime package
-  proof only. Adding these to core still needs an explicit packaging/provider decision because
-  native dependencies affect package layout.
+  proof only; the optional `Graphiti.Core` package has the real provider references. Do not
+  add these package/native references to `Graphiti.Core`.
 - If driver implementation uncovers behavior that looks like a LadybugDB package/backend bug rather
   than a C# port bug, mark it separately in this note or a focused issue. The port may work around
   proven backend limitations, but should not blur them with Graphiti parity gaps.
@@ -106,6 +111,27 @@ being ported.
   port bug, mark it separately in this note or a focused test skip/issue note. Do not bury suspected
   package bugs as ordinary port TODOs; we can fix or patch those driver/package issues later.
 
+## Local LadybugDB Repair Workflow
+
+The Ladybug repository is available locally at `W:\code\ladybug`. It is the full repository,
+including the base C library and wrappers. The C# bindings live under
+`W:\code\ladybug\tools\csharp_api`.
+
+If Graphiti provider implementation exposes a likely LadybugDB package or C# binding bug:
+
+- Reproduce it as narrowly as possible and record why it is likely a LadybugDB/package issue rather
+  than a Graphiti port issue.
+- Create a separate local branch in `W:\code\ladybug` for the fix. Do not push that repository unless
+  the user explicitly asks.
+- Commit the Ladybug fix locally with a focused message and a useful description.
+- Draft a pull request description for the Ladybug fix next to the local work, including the problem,
+  fix, Graphiti scenario that exposed it, and verification. This can be a local markdown note if no
+  remote PR is being opened yet.
+- Build local NuGet packages from the Ladybug repo as needed and consume those packages from the
+  Graphiti C# work to continue provider implementation.
+- Keep Graphiti commits and Ladybug fix commits separate. The Graphiti side may depend on a local
+  Ladybug package while the upstream fix branch remains local.
+
 ## Facts To Confirm Before Driver Wiring
 
 - Whether LadybugDB accepts any Python Kuzu Cypher shapes used by Graphiti that are not represented
@@ -117,8 +143,7 @@ being ported.
 - Whether the normalizer's CLR literal strategy is enough for the remaining graph/search statements
   beyond the current Saga, entity-edge, episode retrieval, mention traversal, FTS/vector search,
   BFS/ranker, `UNION`, delete, and clear runtime proofs.
-- Whether native package dependencies are acceptable in `Graphiti.Core` or require an optional
-  core driver.
+- Whether the core LadybugDB driver needs additional host-facing options before DI wiring.
 
 ## Existing Touchpoints
 
@@ -144,25 +169,25 @@ being ported.
   facts using private test-only package references, exercise the normalizer against real list/null
   graph writes, reads, search, delete, and clear paths, and assert the core project still has no
   LadybugDB package reference.
+- Tests in `Drivers/Ladybug/LadybugProviderPackageTests.cs` pin the core LadybugDB driver factory
+  over the concrete LadybugDB package executor without changing DI/options support.
 
 ## Expected Implementation Work
 
-1. Decide package/native dependency shape for the LadybugDB provider. Do not add core package
-   references until this is explicit.
+1. Continue the optional `Graphiti.Core` core driver path. Do not add LadybugDB
+   package references to `Graphiti.Core`.
 2. Extend package-runtime proof only when a concrete adapter or newly ported feature introduces a
    Ladybug/Kuzu statement shape not already covered by the current Saga/entity-edge/episode/
    FTS/vector/BFS/ranker/filter/`UNION`/delete/clear tests. If a proof fails because the LadybugDB
    package appears to reject valid Kuzu behavior or mishandle binding/projection/materialization,
    record that as a suspected package bug separately from Graphiti port work, and only then use the
    local `W:\code\ladybug` repair/package workflow.
-3. Add/use the LadybugDB package in the core driver/core boundary selected above and decide how
-   its connections/options should be represented in `GraphitiOptions`.
-4. Add a concrete LadybugDB package adapter for `ILadybugQueryExecutor`. Keep `GraphProvider.Kuzu`
-   unsupported in DI/options until save/get/delete, bulk paths, saga episode queries, fulltext,
-   vector search, BFS, rerankers, graph maintenance, and DI construction are proven against the real
-   backend. The current internal graph/search statement and abstract execution shapes now have
-   focused real-package proof but still need concrete adapter coverage. Keep the
-   adapter allocation-aware: avoid unnecessary per-row dictionaries/lists, closure-heavy query loops,
+3. Decide how LadybugDB connections/options should be represented in `GraphitiOptions` and optional
+   provider DI helpers.
+4. Keep `GraphProvider.Kuzu` unsupported in core DI/options until save/get/delete, bulk paths, saga
+   episode queries, fulltext, vector search, BFS, rerankers, graph maintenance, concrete adapter
+   execution, and DI construction are proven against the real backend. Keep the adapter
+   allocation-aware: avoid unnecessary per-row dictionaries/lists, closure-heavy query loops,
    repeated JSON/string conversions, and exception-driven type coercion where the package API allows
    direct mapping.
 5. Prove the full C# Saga schema/save/get projections and entity-edge `reference_time` projections

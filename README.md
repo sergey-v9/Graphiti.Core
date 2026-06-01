@@ -5,12 +5,16 @@ This folder contains the C# port of `graphiti_core/` as a reusable .NET library.
 ## Projects
 
 - `src/Graphiti.Core`: core library models, `Graphiti` orchestration, graph drivers, search, maintenance helpers, LLM/embedder/reranker contracts, and tested utility behavior.
+- `src/Graphiti.Core`: LadybugDB driver that owns the LadybugDB
+  package/native dependency boundary.
 - `tests/Graphiti.Core.Tests`: parity-oriented xUnit tests for search config/filter defaults, text and content chunking, LLM base behavior, and in-memory graph workflows.
 
 ## Current Drivers
 
 - `InMemoryGraphDriver`: executable deterministic driver for local embedding, ingestion, retrieval, search, triplets, saga links, and tests.
 - `Neo4jGraphDriver`: Neo4j-backed semantic operation driver using `Neo4j.Driver`.
+- `Graphiti.Core`: optional package exposing a LadybugDB-backed driver factory while the core
+  DI provider switch remains unwired.
 
 ## Namespace Layout
 

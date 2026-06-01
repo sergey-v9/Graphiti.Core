@@ -229,9 +229,11 @@ pack a local NuGet, and wire Graphiti to the repaired package only as part of th
   synthesis, unknown backend UUID inclusion, last backend score wins, inclusive min-score filtering,
   and missing-score defaults. Search vector, group-id, and rank-fetch parameters are also copied
   through loop-built snapshots for read-only list inputs. Test-only private `LadybugDB` /
-  `LadybugDB.Native` references now prove runtime package facts, but there is still no core
-  LadybugDB package reference, native dependency, concrete package adapter, DI wiring,
-  `ISearchGraphDriver` implementation, or `GraphProvider.Kuzu` options validation support. The C#
+  `LadybugDB.Native` references now prove runtime package facts, and the optional
+  `Graphiti.Core` package now owns the concrete LadybugDB package executor plus
+  `LadybugDbGraphDriverFactory`. There is still no core LadybugDB package reference, native
+  dependency, DI wiring, `ISearchGraphDriver` implementation, or `GraphProvider.Kuzu` options
+  validation support. The C#
   foundation now resolves the current Python Kuzu
   saga schema/query and entity-edge `reference_time` inconsistencies ahead of runtime wiring by using
   the full `SagaNode` shape and returning entity-edge `reference_time`; the test-only package path
@@ -356,15 +358,18 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after LadybugDB package search-filter runtime expansion:
+Latest checkpoint on 2026-06-01 after adding the LadybugDB core driver:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused Ladybug package runtime test filter passed with 10 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 816
+- The focused Ladybug test filter passed with 50 tests, and the package-readiness filter passed with
+  4 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 818
   tests.
+- `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration
+  Release --verbosity minimal` passed, producing `Graphiti.Core.2.0.0-alpha.1.nupkg`.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
 - `dotnet list csharp/Graphiti.Core.CSharp.slnx package --deprecated`, `--vulnerable`, and
@@ -606,7 +611,11 @@ visible for agents working on driver/provider work. The schema/statement/mapper 
 the internal executor-backed non-search driver core exists; the internal search statement foundation
 now has fake-executor execution/mapping coverage plus focused real-package proof for FTS/vector,
 BFS, ranker, search-filter, and graph-maintenance statements, but it is not exposed by
-`LadybugGraphDriver`. The next safe provider increment is deciding package/native dependency shape,
-adding a concrete LadybugDB executor adapter, and keeping `GraphProvider.Kuzu` unsupported until
-behavior is proved end to end. If implementation uncovers behavior that appears to be a LadybugDB
-package bug, record it separately from Graphiti port TODOs so it can be fixed or patched later.
+`LadybugGraphDriver`. The optional `Graphiti.Core` package now contains the concrete
+LadybugDB package executor and public factory, while `GraphProvider.Kuzu` stays unsupported in core
+DI/options until behavior is proved end to end. The next safe provider increment is options/DI design
+for the optional package or more concrete-adapter coverage. If implementation uncovers behavior that
+appears to be a LadybugDB package bug, record it separately from Graphiti port TODOs. The local
+Ladybug repo is `W:\code\ladybug`, with C# bindings in `W:\code\ladybug\tools\csharp_api`; fixes can
+be made there on local branches, committed with PR-draft notes, built into local NuGet packages, and
+consumed by Graphiti without pushing the Ladybug repo.

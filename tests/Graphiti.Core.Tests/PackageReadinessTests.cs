@@ -31,12 +31,47 @@ public class PackageReadinessTests
         Assert.Equal("true", properties["EnablePackageValidation"]);
         Assert.Contains("temporal-graph", properties["PackageTags"], StringComparison.Ordinal);
         Assert.Contains("Neo4j.Driver", packageReferences);
+        Assert.DoesNotContain("LadybugDB", packageReferences);
+        Assert.DoesNotContain("LadybugDB.Native", packageReferences);
         Assert.DoesNotContain("OpenTelemetry", packageReferences);
         Assert.Contains(
             project.Root.Elements("ItemGroup").Elements("None"),
             element => element.Attribute("Pack")?.Value == "true"
                        && element.Attribute("PackagePath")?.Value == "\\"
                        && element.Attribute("Include")?.Value == @"..\..\README.md");
+    }
+
+    [Fact]
+    public void LadybugProviderPackage_OwnsLadybugPackageReferences()
+    {
+        var csharpRoot = FindCSharpRoot();
+        var project = XDocument.Load(Path.Combine(
+            csharpRoot,
+            "src",
+            "Graphiti.Core",
+            "Graphiti.Core.csproj"));
+        var packageReferences = project.Root!
+            .Elements("ItemGroup")
+            .Elements("PackageReference")
+            .Select(element => element.Attribute("Include")?.Value)
+            .Where(value => value is not null)
+            .ToHashSet(StringComparer.Ordinal);
+        var projectReferences = project.Root!
+            .Elements("ItemGroup")
+            .Elements("ProjectReference")
+            .Select(element => element.Attribute("Include")?.Value)
+            .Where(value => value is not null)
+            .ToHashSet(StringComparer.Ordinal);
+        var packageVersion = project.Root!
+            .Elements("PropertyGroup")
+            .Elements("Version")
+            .Single()
+            .Value;
+
+        Assert.Contains("-", packageVersion);
+        Assert.Contains("LadybugDB", packageReferences);
+        Assert.Contains("LadybugDB.Native", packageReferences);
+        Assert.Contains(@"..\Graphiti.Core\Graphiti.Core.csproj", projectReferences);
     }
 
     [Fact]

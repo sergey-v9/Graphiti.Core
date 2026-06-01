@@ -1,7 +1,6 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Graphiti.Core/Graphiti.Core.csproj" />
-  </Folder>
+    <Project Path="src/Graphiti.Core/Graphiti.Core.csproj" />  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Graphiti.Core.Tests/Graphiti.Core.Tests.csproj" />
   </Folder>
