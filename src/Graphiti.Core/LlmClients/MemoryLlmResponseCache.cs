@@ -10,7 +10,7 @@ namespace Graphiti.Core.LlmClients;
 public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
 {
     private readonly IMemoryCache _cache;
-    private readonly AsyncSingleFlight<string, string> _inflight = new(StringComparer.Ordinal);
+    private readonly AsyncSingleFlight<string, CachedResponse> _inflight = new(StringComparer.Ordinal);
     private readonly bool _disposeCache;
     private readonly MemoryCacheEntryOptions _entryOptions;
     private bool _disposed;
@@ -61,9 +61,10 @@ public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
             {
                 if (TryGetPayload(key, out var cachedPayload))
                 {
-                    if (LlmResponseCachePayload.Clone(cachedPayload) is not null)
+                    var cachedResponse = LlmResponseCachePayload.Clone(cachedPayload);
+                    if (cachedResponse is not null)
                     {
-                        return cachedPayload;
+                        return new CachedResponse(cachedResponse);
                     }
 
                     _cache.Remove(key);
@@ -71,20 +72,17 @@ public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
 
                 var value = await factory(CancellationToken.None).ConfigureAwait(false);
                 var payload = LlmResponseCachePayload.Serialize(value);
+                var response = LlmResponseCachePayload.Clone(payload);
+                if (response is null)
+                {
+                    throw new InvalidOperationException("Regenerated LLM cache payload was not a JSON object.");
+                }
+
                 _cache.Set(key, payload, _entryOptions);
-                return payload;
+                return new CachedResponse(response);
             },
             cancellationToken).ConfigureAwait(false);
-        var parsed = LlmResponseCachePayload.Clone(payload);
-        if (parsed is null)
-        {
-            _cache.Remove(key);
-            var value = await factory(cancellationToken).ConfigureAwait(false);
-            await SetAsync(key, value, cancellationToken).ConfigureAwait(false);
-            return value;
-        }
-
-        return parsed;
+        return payload.CloneResponse();
     }
 
     private bool TryGetPayload(string key, out string payload)
@@ -97,6 +95,19 @@ public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
 
         payload = string.Empty;
         return false;
+    }
+
+    private readonly struct CachedResponse
+    {
+        private readonly JsonObject _response;
+
+        public CachedResponse(JsonObject response)
+        {
+            _response = response;
+        }
+
+        public JsonObject CloneResponse() =>
+            LlmResponseCachePayload.Clone(_response);
     }
 
     public void Dispose()

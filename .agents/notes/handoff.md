@@ -228,7 +228,10 @@ improving those providers unless it directly supports shared abstractions or Lad
 - LLM response caches now share one payload serializer so memory, SQLite, and HybridCache entries
   preserve the same JSON options. Memory and SQLite single-flight fills recheck the backing cache
   before running the expensive factory, and memory cache corrupt/non-object string payloads are
-  removed and regenerated once under concurrent misses.
+  removed and regenerated once under concurrent misses. Memory `GetOrCreateAsync` now carries a
+  parsed prototype through single-flight so concurrent waiters clone that object instead of
+  reparsing the same payload string; stored values remain raw JSON strings and public callers still
+  receive independent mutable `JsonObject` instances.
 - `LlmClient.PrepareMessages` now clones messages with a pre-sized loop instead of LINQ projection,
   and `CleanInput` has a validation fast path that returns the original string for already-clean
   valid UTF-16. The slow path still removes the same zero-width runes and C0 controls, preserves
@@ -303,14 +306,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after LLM message preparation shaping:
+Latest checkpoint on 2026-06-01 after memory LLM cache clone/parse coalescing:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused LLM-client/cache/cancellation test filter passed with 57 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 785
+- The focused LLM-client/cache/cancellation test filter passed with 59 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 788
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -465,8 +468,9 @@ These were previously audited and found faithful or intentionally different:
   `duplicate_candidate_id`
 - Source-generated serializer metadata coverage for the typed LLM cache-key payload, while
   preserving existing cache-key hash bytes.
-- LLM response cache cloned payload, cancellation-isolated fill, stale-miss recheck, and
-  corrupt-memory-payload repair behavior
+- LLM response cache cloned payload, raw memory payload shape, cancellation-isolated fill,
+  stale-miss recheck, distinct concurrent memory-cache waiter responses, memory single-flight
+  clone/parse coalescing, and corrupt-memory-payload repair behavior
 - LLM message preparation and input cleaning, including pre-sized message cloning, language/schema/
   attribute ordering, clean-input same-instance fast path, zero-width/C0-control removal,
   newline/carriage-return/tab preservation, DEL/C1 preservation, malformed surrogate dropping, valid

@@ -8,6 +8,29 @@ namespace Graphiti.Core.Tests.LlmClients;
 public class LlmResponseCacheTests
 {
     [Fact]
+    public async Task MemoryLlmResponseCache_SetAndGetUseRawPayloadAndClonedResponses()
+    {
+        using var backingCache = new MemoryCache(new MemoryCacheOptions());
+        using var cache = new MemoryLlmResponseCache(backingCache);
+        var original = new JsonObject { ["value"] = 1 };
+
+        await cache.SetAsync("key", original);
+        original["value"] = 99;
+
+        Assert.True(backingCache.TryGetValue("key", out var stored));
+        Assert.Equal("{\"value\":1}", Assert.IsType<string>(stored));
+
+        var first = await cache.GetAsync("key");
+        Assert.NotNull(first);
+        first["value"] = 2;
+
+        var second = await cache.GetAsync("key");
+        Assert.NotNull(second);
+        Assert.NotSame(first, second);
+        Assert.Equal(1, second["value"]?.GetValue<int>());
+    }
+
+    [Fact]
     public async Task MemoryLlmResponseCache_RechecksCacheBeforeRunningDelayedMissFactory()
     {
         using var backingCache = new CoordinatedFirstMissMemoryCache();
@@ -70,6 +93,79 @@ public class LlmResponseCacheTests
 
         Assert.Equal(1, calls);
         Assert.All(responses, response => Assert.Equal(1, response["value"]?.GetValue<int>()));
+        Assert.Equal(1, cached["value"]?.GetValue<int>());
+    }
+
+    [Fact]
+    public async Task MemoryLlmResponseCache_ConcurrentMissWaitersReceiveDistinctResponses()
+    {
+        using var cache = new MemoryLlmResponseCache();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+
+        async Task<JsonObject> Factory(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref calls);
+            Assert.False(cancellationToken.CanBeCanceled);
+            started.TrySetResult();
+            await release.Task.ConfigureAwait(false);
+            return new JsonObject { ["value"] = 1 };
+        }
+
+        var waits = Enumerable.Range(0, 16)
+            .Select(_ => cache.GetOrCreateAsync("shared-key", Factory))
+            .ToArray();
+
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        release.SetResult();
+        var responses = await Task.WhenAll(waits);
+        responses[0]["value"] = 99;
+        var cached = await cache.GetOrCreateAsync(
+            "shared-key",
+            _ => Task.FromResult(new JsonObject { ["value"] = 2 }));
+
+        Assert.Equal(1, calls);
+        Assert.NotSame(responses[0], responses[1]);
+        Assert.Equal(1, responses[1]["value"]?.GetValue<int>());
+        Assert.Equal(1, cached["value"]?.GetValue<int>());
+    }
+
+    [Fact]
+    public async Task MemoryLlmResponseCache_CancelledCorruptRepairWaitDoesNotCancelSharedFill()
+    {
+        using var backingCache = new MemoryCache(new MemoryCacheOptions());
+        using var cache = new MemoryLlmResponseCache(backingCache);
+        backingCache.Set("shared-key", "{not-json");
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+
+        async Task<JsonObject> Factory(CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref calls);
+            Assert.False(cancellationToken.CanBeCanceled);
+            started.TrySetResult();
+            await release.Task.ConfigureAwait(false);
+            return new JsonObject { ["value"] = 1 };
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        var firstWait = cache.GetOrCreateAsync("shared-key", Factory, cancellation.Token);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => firstWait);
+
+        var secondWait = cache.GetOrCreateAsync("shared-key", Factory);
+        release.SetResult();
+        var second = await secondWait;
+        var cached = await cache.GetOrCreateAsync(
+            "shared-key",
+            _ => Task.FromResult(new JsonObject { ["value"] = 2 }));
+
+        Assert.Equal(1, calls);
+        Assert.Equal(1, second["value"]?.GetValue<int>());
         Assert.Equal(1, cached["value"]?.GetValue<int>());
     }
 

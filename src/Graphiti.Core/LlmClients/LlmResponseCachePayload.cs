@@ -8,6 +8,9 @@ internal static class LlmResponseCachePayload
     public static string Serialize(JsonObject value) =>
         value.ToJsonString(GraphitiJsonSerializer.Options);
 
+    public static JsonObject Clone(JsonObject value) =>
+        (JsonObject)value.DeepClone();
+
     public static JsonObject? Clone(string payload)
     {
         try
