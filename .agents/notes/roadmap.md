@@ -135,6 +135,10 @@ shorter than the old working plans; expand items only when they become active.
 - Shared search token scanning now has an internal visitor path used by `TextScorer` and fallback
   BM25 document scoring, avoiding per-candidate token-list materialization while keeping the
   list-returning `Tokenize` helper and Unicode/invariant lowercase token behavior intact.
+- `TextScorer` now builds its frozen query-term set directly through the shared token visitor instead
+  of materializing the public token list first. Preserve duplicate query collapse, Unicode/invariant
+  lowercase token behavior, ordinal term comparison, empty query/text scores, and repeated document
+  match scoring.
 - `SearchEngine` now derives implicit BFS origins only when BFS is enabled. Explicit origin lists are
   still passed through as provided, while implicit node/edge origins preserve text-before-vector,
   first-seen distinct ordering over node UUIDs and edge source-node UUIDs.

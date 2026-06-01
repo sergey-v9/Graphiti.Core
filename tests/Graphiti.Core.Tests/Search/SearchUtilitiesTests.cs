@@ -194,6 +194,16 @@ public class SearchUtilitiesTests
     }
 
     [Fact]
+    public void TextScorer_CollapsesDuplicateUnicodeQueryTermsInvariantly()
+    {
+        var scorer = SearchUtilities.CreateTextScorer("CAFÉ café ΩMEGA");
+
+        var score = scorer.Score("café ωmega ωmega other");
+
+        Assert.Equal(5f / 6f, score, precision: 6);
+    }
+
+    [Fact]
     public void Bm25TextScorer_RanksCorpusTermsWithLengthNormalization()
     {
         var documents = new[]

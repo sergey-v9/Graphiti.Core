@@ -12,7 +12,12 @@ public sealed class TextScorer
 
     internal TextScorer(string query)
     {
-        _queryTerms = SearchUtilities.Tokenize(query).ToFrozenSet(StringComparer.Ordinal);
+        var queryTerms = new HashSet<string>(StringComparer.Ordinal);
+        SearchUtilities.VisitTokens(
+            query,
+            queryTerms,
+            static (term, terms) => terms.Add(term));
+        _queryTerms = queryTerms.ToFrozenSet(StringComparer.Ordinal);
     }
 
     /// <summary>Scores the given text against the query terms; higher means more overlap.</summary>
