@@ -205,8 +205,8 @@ pack a local NuGet, and wire Graphiti to the repaired package only as part of th
   shapes, Kuzu save/get/delete/retrieve/load-embedding Cypher, individual bulk-save statement
   expansion, JSON attribute storage, label-array behavior, simple-edge record mapping, and
   `RelatesToNode_` entity-edge representation. An internal, non-wired `LadybugGraphDriver` now uses
-  those helpers through an abstract `ILadybugQueryExecutor` for non-search graph-driver operations,
-  including schema execution, save/bulk save, delete, get-by-id/group, retrieve episodes, mention/
+  those helpers through an abstract `ILadybugQueryExecutor` for graph-driver operations, including
+  schema/FTS index execution, save/bulk save, delete, get-by-id/group, retrieve episodes, mention/
   community reads, and saga reads. Its bulk-save phase writes and read-side collection projections
   now use explicit loops and pre-sized buffers while preserving backend record order, optional group
   filtering, saga chronology, first-seen group-id de-duplication, and unsupported provider status.
@@ -233,7 +233,7 @@ pack a local NuGet, and wire Graphiti to the repaired package only as part of th
   `Graphiti.Core` package now owns the concrete LadybugDB package executor plus
   `LadybugDbGraphDriverFactory`, `LadybugDbOptions`, and `AddLadybugDbGraphDriver` DI helpers. There
   is still no core LadybugDB package reference, native dependency, core DI wiring,
-  `ISearchGraphDriver` implementation, or `GraphProvider.Kuzu` options validation support. The C#
+  or `GraphProvider.Kuzu` options validation support. The C#
   foundation now resolves the current Python Kuzu
   saga schema/query and entity-edge `reference_time` inconsistencies ahead of runtime wiring by using
   the full `SagaNode` shape and returning entity-edge `reference_time`; the test-only package path
@@ -358,14 +358,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after adding LadybugDB core driver DI helpers:
+Latest checkpoint on 2026-06-01 after making the Ladybug graph driver searchable:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused provider-package, package-readiness, and options-validation filters passed.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 821
+- The focused Ladybug filter passed with 54 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 822
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration
   Release --verbosity minimal` passed, producing `Graphiti.Core.2.0.0-alpha.1.nupkg`.
@@ -509,8 +509,8 @@ These were previously audited and found faithful or intentionally different:
 - LadybugDB/Kuzu foundation schema and save/get/delete/retrieve/load-embedding statement shapes,
   including `RelatesToNode_`, full Saga model fields, entity-edge `reference_time` save/get/search
   projections, label-array storage, JSON attribute serialization/deserialization, simple-edge record
-  mapping, individual bulk-save statement expansion, internal executor-backed non-search driver
-  forwarding/mapping, allocation-light collection projection and first-seen group-id de-duplication,
+  mapping, individual bulk-save statement expansion, internal executor-backed driver forwarding/
+  mapping, allocation-light collection projection and first-seen group-id de-duplication,
   allocation-light statement parameter snapshots from enumerable/read-only-list inputs, package-
   execution normalization for list/array/null parameters,
   allocation-light record-mapper attribute/list materialization with JSON clone/null behavior,
@@ -607,11 +607,11 @@ These were previously audited and found faithful or intentionally different:
 LadybugDB is the main provider target, using the LadybugDB NuGet package from the alternative Kuzu
 fork while preserving Kuzu behavior for Python parity. Keep the separate `kuzu-driver-port.md` note
 visible for agents working on driver/provider work. The schema/statement/mapper foundation exists;
-the internal executor-backed non-search driver core exists; the internal search statement foundation
-now has fake-executor execution/mapping coverage plus focused real-package proof for FTS/vector,
-BFS, ranker, search-filter, and graph-maintenance statements, but it is not exposed by
-`LadybugGraphDriver`. The optional `Graphiti.Core` package now contains the concrete
-LadybugDB package executor, public factory, `LadybugDbOptions`, and DI helpers that configure
+the internal executor-backed driver core exists and implements `ISearchGraphDriver` by delegating to
+`LadybugSearchExecutor`. The internal search statement foundation has fake-executor
+execution/mapping coverage plus focused real-package proof for FTS/vector, BFS, ranker,
+search-filter, and graph-maintenance statements. The optional `Graphiti.Core` package now
+contains the concrete LadybugDB package executor, public factory, `LadybugDbOptions`, and DI helpers that configure
 `GraphitiOptions.GraphDriverFactory`, while `GraphProvider.Kuzu` stays unsupported in core DI/options
 until behavior is proved end to end. The next safe provider increment is more concrete-adapter/search
 coverage or richer optional-package host options. If implementation uncovers behavior that

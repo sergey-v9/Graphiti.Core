@@ -28,16 +28,17 @@ shorter than the old working plans; expand items only when they become active.
    provider name as the implementation stabilizes. A foundation-only schema/statement/mapper slice
    now covers Kuzu save/get/delete/retrieve/load-embedding shapes, individual bulk-save expansion,
    simple-edge mapping, JSON attributes, label arrays, and `RelatesToNode_`, with an internal
-   executor-backed non-search driver core layered on top. A search statement foundation now pins Kuzu
-   full-text indexes, full-text/vector search, BFS plans, ranker query shapes, and fake-executor
-   result mapping without making the driver searchable. Test-only package runtime coverage now proves
-   the internal search executor's FTS/vector, BFS, ranker, non-empty search-filter, and graph-
-   maintenance statements against LadybugDB, including community-edge `UNION`, normalized list-backed
+   executor-backed driver core layered on top. A search statement foundation now pins Kuzu full-text
+   indexes, full-text/vector search, BFS plans, ranker query shapes, and fake-executor result mapping,
+   and the driver now implements `ISearchGraphDriver` by delegating to that executor. Test-only
+   package runtime coverage now proves the internal search executor's FTS/vector, BFS, ranker,
+   non-empty search-filter, and graph-maintenance statements against LadybugDB, including community-edge `UNION`, normalized list-backed
    deletes, grouped clear, and full clear. The optional `Graphiti.Core` package now owns
    the LadybugDB package/native dependency boundary, concrete package executor, public factory, and
    optional provider DI helpers while core remains free of those references. Next provider work
-   should expand concrete adapter/search coverage or add only runtime-driven host options, and avoid
-   marking core DI support complete too early. Details are in `kuzu-driver-port.md`.
+   should broaden end-to-end Graphiti workflow coverage on the runtime-backed driver or add only
+   runtime-driven host options, and avoid marking core DI support complete too early. Details are in
+   `kuzu-driver-port.md`.
 
 4. Finish low-risk XML documentation gaps.
 
@@ -261,15 +262,15 @@ shorter than the old working plans; expand items only when they become active.
   statements, prove non-empty Kuzu search filters, prove graph-maintenance `UNION`/delete/clear
   statements, and prove alias-based ordering needed after projected `RETURN` clauses. The optional
   `Graphiti.Core` package now carries the concrete package executor/factory, optional DI
-  helper, and LadybugDB package references; core still has no LadybugDB package reference and
-  `GraphProvider.Kuzu` remains unsupported.
+  helper, and LadybugDB package references; `LadybugGraphDriver` now implements `ISearchGraphDriver`;
+  core still has no LadybugDB package reference and `GraphProvider.Kuzu` remains unsupported.
 - `LadybugStatementNormalizer` now implements the concrete package-execution strategy for the
   current LadybugDB binder gaps by inlining list/array/null literals while leaving scalar parameters
   bound. The test-only runtime executor uses it to round-trip entity-edge `reference_time`,
   list-valued columns, embeddings, episode retrieval/group filters, `MENTIONS` traversals, and null
   temporal fields against the real package.
-- Good next provider slice from the 2026-06-01 scans: expand concrete runtime-backed adapter/search
-  coverage from the core LadybugDB driver, while keeping core provider support unwired until
+- Good next provider slice from the 2026-06-01 scans: broaden end-to-end Graphiti workflow coverage
+  on the optional runtime-backed driver, while keeping core provider support unwired until
   end-to-end search and graph behavior pass.
 
 ## Graphiti Decomposition

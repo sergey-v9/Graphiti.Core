@@ -18,7 +18,7 @@ public class LadybugSearchStatementTests
             statements.Select(statement => statement.Query));
         Assert.All(statements, statement => Assert.Empty(statement.Parameters));
         Assert.DoesNotContain("CREATE_FTS_INDEX", LadybugSchema.SchemaQueries, StringComparison.OrdinalIgnoreCase);
-        Assert.False(typeof(ISearchGraphDriver).IsAssignableFrom(typeof(LadybugGraphDriver)));
+        Assert.True(typeof(ISearchGraphDriver).IsAssignableFrom(typeof(LadybugGraphDriver)));
     }
 
     [Fact]

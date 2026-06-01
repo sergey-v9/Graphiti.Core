@@ -58,6 +58,7 @@ public class LadybugRuntimeDriverTests
         await driver.CloseAsync();
 
         Assert.Equal(GraphProvider.Kuzu, driver.Provider);
+        Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
         Assert.Equal(source.Uuid, fetched.Uuid);
         Assert.Equal(new[] { "Person", "Entity" }, fetched.Labels);
         Assert.Equal(edge.Uuid, fetchedEdge.Uuid);
@@ -88,6 +89,7 @@ public class LadybugRuntimeDriverTests
         Assert.Equal(GraphProvider.InMemory, options.Provider);
         Assert.NotNull(options.GraphDriverFactory);
         Assert.Equal(GraphProvider.Kuzu, driver.Provider);
+        Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
         Assert.Same(driver, graphiti.Driver);
     }
 

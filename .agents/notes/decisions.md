@@ -154,13 +154,11 @@ Graphiti semantics, wire compatibility, or performance/allocation discipline.
   current provider surface. Keep existing implemented behavior, but do not plan more Neo4j/FalkorDB
   improvements unless needed to validate shared abstractions or avoid regressions while building
   LadybugDB.
-- LadybugDB/Kuzu foundation helpers may land before package/native dependency decisions, but they
-  must not make `GraphProvider.Kuzu` valid in DI/options or imply search/full driver support until
-  the end-to-end driver is proven. Current foundation helpers may pin Kuzu statement and record
-  shapes for later execution, including get/delete/load-embedding and internal search statement/
-  execution coverage, and may expose an internal executor-backed driver core as long as no concrete
-  package adapter, DI wiring, `ISearchGraphDriver` implementation, or provider support claim is added
-  before the backend is proven.
+- LadybugDB/Kuzu foundation helpers may land before final provider naming/wiring decisions, but they
+  must not make `GraphProvider.Kuzu` valid in core DI/options or imply full provider support until the
+  end-to-end driver is proven. The optional `Graphiti.Core` package may own the concrete
+  LadybugDB package adapter, DI helper, and searchable driver surface while core owns the LadybugDB dependency
+  and `GraphProvider.Kuzu` remains unsupported by core provider validation.
 - LadybugDB package/backend behavior that appears buggy during driver implementation should be marked
   separately from C# port gaps. Work around proven backend limitations deliberately when useful, but
   keep them visible for later LadybugDB fixes.

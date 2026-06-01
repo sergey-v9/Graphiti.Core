@@ -14,11 +14,11 @@ being ported.
   delete/retrieve/load-embedding Cypher, individual bulk-save statement expansion, JSON attributes,
   label-array behavior, simple-edge record mapping, and `RelatesToNode_` entity-edge representation,
   and now feed an internal executor-backed `LadybugGraphDriver` core.
-- `LadybugGraphDriver` is internal and not wired to DI/options. It executes the non-search graph
-  driver surface through an abstract `ILadybugQueryExecutor`, which keeps the core path testable
-  without adding the LadybugDB package or native assets to the core project. Its current projection
-  path uses explicit loops for bulk-save phase statements, read records, saga contents, and
-  first-seen group-id de-duplication.
+- `LadybugGraphDriver` is internal and not wired to core DI/options. It executes the graph-driver
+  surface through an abstract `ILadybugQueryExecutor`, which keeps the core path testable without
+  adding the LadybugDB package or native assets to the core project. Its current projection path uses
+  explicit loops for bulk-save phase statements, read records, saga contents, and first-seen group-id
+  de-duplication.
 - `Graphiti.Core` is now the core LadybugDB driver boundary. It references
   `Graphiti.Core`, `LadybugDB`, and `LadybugDB.Native`, exposes `LadybugDbGraphDriverFactory`, and
   implements the concrete package executor for `ILadybugQueryExecutor`. It also exposes
@@ -39,8 +39,11 @@ being ported.
 - `LadybugSearchStatementBuilder` and `LadybugSearchExecutor` are internal. They pin Kuzu full-text
   index statements, `QUERY_FTS_INDEX` calls, `array_cosine_similarity` vector search, doubled-depth
   BFS plans over `RelatesToNode_`, per-UUID ranker statements, Kuzu label filters, score extraction,
-  BFS dedup/limit behavior, and C# search-rank ordering over the abstract executor. They are not
-  wired into `LadybugGraphDriver` and do not make the driver implement `ISearchGraphDriver`. Their
+  BFS dedup/limit behavior, and C# search-rank ordering over the abstract executor.
+  `LadybugGraphDriver` now implements `ISearchGraphDriver` by delegating to this executor and
+  provisions FTS extension/index statements during `BuildIndicesAndConstraintsAsync`. Repeated
+  schema/index builds on the same driver instance are guarded as a no-op after the first successful
+  build because LadybugDB FTS index creation is not modeled with an `IF NOT EXISTS` clause. The
   per-UUID ranker paths use first-seen loop-built statement and score maps, and search/vector/group
   parameter snapshots now copy read-only lists by index while preserving duplicate input collapse,
   center-node handling, unknown backend rows, last-row-wins score updates, and inclusive minimum-
@@ -164,12 +167,11 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
   and record-mapper behavior.
 - Tests in `Drivers/Ladybug/LadybugGraphDriverTests.cs` pin the internal executor-backed driver core:
   schema execution, sequential Kuzu-style bulk writes with embedding backfill, node/edge deletion
-  forwarding, not-found behavior, non-search read mapping, saga/mention/community query forwarding,
-  close/dispose behavior, and no clone support without an executor factory.
+  forwarding, not-found behavior, read mapping, saga/mention/community query forwarding,
+  search-surface delegation, close/dispose behavior, and no clone support without an executor factory.
 - Tests in `Drivers/Ladybug/LadybugSearchStatementTests.cs` and
   `Drivers/Ladybug/LadybugSearchExecutorTests.cs` pin the internal search statement/execution
-  foundation, including search parameter snapshot behavior, while asserting `LadybugGraphDriver` is
-  still not an `ISearchGraphDriver`.
+  foundation, including search parameter snapshot behavior.
 - Tests in `Drivers/Ladybug/LadybugPackageRuntimeTests.cs` pin the current LadybugDB package runtime
   facts using private test-only package references, exercise the normalizer against real list/null
   graph writes, reads, search, delete, and clear paths, and assert the core project still has no
@@ -190,9 +192,10 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
    local `W:\code\ladybug` repair/package workflow.
 3. Extend optional-package host options only when real connection/runtime requirements appear; the
    current optional package exposes `LadybugDbOptions.DatabasePath` and DI helper registration.
-4. Keep `GraphProvider.Kuzu` unsupported in core DI/options until save/get/delete, bulk paths, saga
-   episode queries, fulltext, vector search, BFS, rerankers, graph maintenance, concrete adapter
-   execution, and DI construction are proven against the real backend. Keep the adapter
+4. Keep `GraphProvider.Kuzu` unsupported in core DI/options until the remaining end-to-end provider
+   workflow is proven against the real backend and the driver-facing LadybugDB naming is settled.
+   Save/get/delete, bulk paths, saga episode queries, fulltext, vector search, BFS, rerankers, graph
+   maintenance, concrete adapter execution, and optional-package DI now have focused proof. Keep the adapter
    allocation-aware: avoid unnecessary per-row dictionaries/lists, closure-heavy query loops,
    repeated JSON/string conversions, and exception-driven type coercion where the package API allows
    direct mapping.

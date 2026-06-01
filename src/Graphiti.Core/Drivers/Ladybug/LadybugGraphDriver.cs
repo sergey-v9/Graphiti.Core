@@ -2,13 +2,16 @@ namespace Graphiti.Core.Drivers.Ladybug;
 
 /// <summary>
 /// Provider-ready LadybugDB/Kuzu driver core over an abstract statement executor. This intentionally
-/// remains internal and unwired in core until runtime-backed search/runtime parity is proven.
+/// remains internal and unwired in core until runtime-backed runtime parity is proven.
 /// </summary>
-internal sealed class LadybugGraphDriver : GraphDriverBase
+internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver
 {
     private readonly ILadybugQueryExecutor _executor;
     private readonly Func<string, ILadybugQueryExecutor>? _executorFactory;
+    private readonly LadybugSearchExecutor _search;
+    private readonly SemaphoreSlim _schemaLock = new(1, 1);
     private bool _closed;
+    private bool _schemaBuilt;
 
     internal LadybugGraphDriver(ILadybugQueryExecutor executor, string database = "")
         : this(executor, executorFactory: null, database)
@@ -29,6 +32,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
         ArgumentNullException.ThrowIfNull(executor);
         _executor = executor;
         _executorFactory = executorFactory;
+        _search = new LadybugSearchExecutor(executor);
     }
 
     public override async Task BuildIndicesAndConstraintsAsync(
@@ -36,11 +40,43 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        await _executor.ExecuteAsync(
-            new LadybugStatement(
-                LadybugSchema.SchemaQueries,
-                new Dictionary<string, object?>(StringComparer.Ordinal)),
-            cancellationToken).ConfigureAwait(false);
+        if (_schemaBuilt)
+        {
+            return;
+        }
+
+        await _schemaLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_schemaBuilt)
+            {
+                return;
+            }
+
+            await _executor.ExecuteAsync(
+                new LadybugStatement(
+                    LadybugSchema.SchemaQueries,
+                    new Dictionary<string, object?>(StringComparer.Ordinal)),
+                cancellationToken).ConfigureAwait(false);
+            await _executor.ExecuteAsync(
+                new LadybugStatement(
+                    "INSTALL FTS;",
+                    new Dictionary<string, object?>(StringComparer.Ordinal)),
+                cancellationToken).ConfigureAwait(false);
+            await _executor.ExecuteAsync(
+                new LadybugStatement(
+                    "LOAD EXTENSION FTS;",
+                    new Dictionary<string, object?>(StringComparer.Ordinal)),
+                cancellationToken).ConfigureAwait(false);
+            await ExecuteAllAsync(
+                LadybugSearchStatementBuilder.BuildFulltextIndexStatements(),
+                cancellationToken).ConfigureAwait(false);
+            _schemaBuilt = true;
+        }
+        finally
+        {
+            _schemaLock.Release();
+        }
     }
 
     public override async Task CloseAsync(CancellationToken cancellationToken = default)
@@ -52,6 +88,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
 
         cancellationToken.ThrowIfCancellationRequested();
         await _executor.DisposeAsync().ConfigureAwait(false);
+        _schemaLock.Dispose();
         _closed = true;
     }
 
@@ -483,6 +520,122 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
             cancellationToken).ConfigureAwait(false);
         return MapRecords(records, LadybugRecordMapper.MapCommunityNode);
     }
+
+    public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesFulltextAsync(
+        string query,
+        SearchFilters searchFilter,
+        IReadOnlyList<string>? groupIds,
+        int limit,
+        CancellationToken cancellationToken = default) =>
+        _search.SearchEntityNodesFulltextAsync(query, searchFilter, groupIds, limit, cancellationToken);
+
+    public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesByEmbeddingAsync(
+        IReadOnlyList<float> searchVector,
+        SearchFilters searchFilter,
+        IReadOnlyList<string>? groupIds,
+        int limit,
+        float minScore,
+        CancellationToken cancellationToken = default) =>
+        _search.SearchEntityNodesByEmbeddingAsync(
+            searchVector,
+            searchFilter,
+            groupIds,
+            limit,
+            minScore,
+            cancellationToken);
+
+    public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesFulltextAsync(
+        string query,
+        SearchFilters searchFilter,
+        IReadOnlyList<string>? groupIds,
+        int limit,
+        CancellationToken cancellationToken = default) =>
+        _search.SearchEntityEdgesFulltextAsync(query, searchFilter, groupIds, limit, cancellationToken);
+
+    public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesByEmbeddingAsync(
+        IReadOnlyList<float> searchVector,
+        SearchFilters searchFilter,
+        IReadOnlyList<string>? groupIds,
+        int limit,
+        float minScore,
+        string? sourceNodeUuid = null,
+        string? targetNodeUuid = null,
+        CancellationToken cancellationToken = default) =>
+        _search.SearchEntityEdgesByEmbeddingAsync(
+            searchVector,
+            searchFilter,
+            groupIds,
+            limit,
+            minScore,
+            sourceNodeUuid,
+            targetNodeUuid,
+            cancellationToken);
+
+    public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesBfsAsync(
+        IReadOnlyList<string>? originNodeUuids,
+        SearchFilters searchFilter,
+        int maxDepth,
+        IReadOnlyList<string>? groupIds,
+        int limit,
+        CancellationToken cancellationToken = default) =>
+        _search.SearchEntityNodesBfsAsync(
+            originNodeUuids,
+            searchFilter,
+            maxDepth,
+            groupIds,
+            limit,
+            cancellationToken);
+
+    public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesBfsAsync(
+        IReadOnlyList<string>? originNodeUuids,
+        SearchFilters searchFilter,
+        int maxDepth,
+        IReadOnlyList<string>? groupIds,
+        int limit,
+        CancellationToken cancellationToken = default) =>
+        _search.SearchEntityEdgesBfsAsync(
+            originNodeUuids,
+            searchFilter,
+            maxDepth,
+            groupIds,
+            limit,
+            cancellationToken);
+
+    public Task<IReadOnlyList<SearchHit<EpisodicNode>>> SearchEpisodesFulltextAsync(
+        string query,
+        SearchFilters searchFilter,
+        IReadOnlyList<string>? groupIds,
+        int limit,
+        CancellationToken cancellationToken = default) =>
+        _search.SearchEpisodesFulltextAsync(query, searchFilter, groupIds, limit, cancellationToken);
+
+    public Task<IReadOnlyList<SearchHit<CommunityNode>>> SearchCommunitiesFulltextAsync(
+        string query,
+        IReadOnlyList<string>? groupIds,
+        int limit,
+        CancellationToken cancellationToken = default) =>
+        _search.SearchCommunitiesFulltextAsync(query, groupIds, limit, cancellationToken);
+
+    public Task<IReadOnlyList<SearchHit<CommunityNode>>> SearchCommunitiesByEmbeddingAsync(
+        IReadOnlyList<float> searchVector,
+        IReadOnlyList<string>? groupIds,
+        int limit,
+        float minScore,
+        CancellationToken cancellationToken = default) =>
+        _search.SearchCommunitiesByEmbeddingAsync(searchVector, groupIds, limit, minScore, cancellationToken);
+
+    public Task<IReadOnlyList<SearchRank>> RankNodeDistanceAsync(
+        IReadOnlyList<string> nodeUuids,
+        string centerNodeUuid,
+        float minScore = 0,
+        CancellationToken cancellationToken = default) =>
+        _search.RankNodeDistanceAsync(nodeUuids, centerNodeUuid, minScore, cancellationToken);
+
+    public Task<IReadOnlyList<SearchRank>> RankNodeEpisodeMentionsAsync(
+        IReadOnlyList<string> nodeUuids,
+        float minScore = 0,
+        CancellationToken cancellationToken = default) =>
+        _search.RankNodeEpisodeMentionsAsync(nodeUuids, minScore, cancellationToken);
 
     public override async Task<SagaNode?> FindSagaByNameAsync(
         string name,

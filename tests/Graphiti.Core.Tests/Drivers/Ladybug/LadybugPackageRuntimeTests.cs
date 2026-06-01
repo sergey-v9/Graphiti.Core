@@ -28,6 +28,7 @@ public class LadybugPackageRuntimeTests
         };
 
         await driver.BuildIndicesAndConstraintsAsync();
+        await driver.BuildIndicesAndConstraintsAsync();
         await driver.SaveNodeAsync(saga);
         var fetched = await driver.GetNodeByUuidAsync<GraphitiSagaNode>("saga-1");
         Assert.Contains("uuid", executor.LastColumnNames);
@@ -222,7 +223,7 @@ public class LadybugPackageRuntimeTests
     {
         await using var executor = new PackageLadybugExecutor();
         var driver = new LadybugGraphDriver(executor);
-        var search = new LadybugSearchExecutor(executor);
+        var search = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
         var createdAt = new DateTime(2026, 4, 5, 6, 7, 8, DateTimeKind.Utc);
         var source = new EntityNode
         {
@@ -286,7 +287,6 @@ public class LadybugPackageRuntimeTests
         await driver.SaveNodeAsync(episode);
         await driver.SaveNodeAsync(community);
         await driver.SaveEdgeAsync(edge);
-        await InstallFtsAndCreateSearchIndexesAsync(executor);
 
         var nodeVector = await search.SearchEntityNodesByEmbeddingAsync(
             [1.0f, 0.0f],
@@ -344,7 +344,7 @@ public class LadybugPackageRuntimeTests
     {
         await using var executor = new PackageLadybugExecutor();
         var driver = new LadybugGraphDriver(executor);
-        var search = new LadybugSearchExecutor(executor);
+        var search = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
         var createdAt = new DateTime(2026, 7, 8, 9, 10, 11, DateTimeKind.Utc);
         var source = new EntityNode
         {
@@ -463,7 +463,6 @@ public class LadybugPackageRuntimeTests
             ValidAt = createdAt,
             ReferenceTime = createdAt
         });
-        await InstallFtsAndCreateSearchIndexesAsync(executor);
 
         var nodeFilters = new SearchFilters { NodeLabels = new List<string> { "Person" } };
         var edgeFilters = new SearchFilters
@@ -925,20 +924,6 @@ public class LadybugPackageRuntimeTests
             {
                 ["value"] = value
             });
-    }
-
-    private static async Task InstallFtsAndCreateSearchIndexesAsync(ILadybugQueryExecutor executor)
-    {
-        await executor.ExecuteAsync(new LadybugStatement(
-            "INSTALL FTS;",
-            new Dictionary<string, object?>(StringComparer.Ordinal)));
-        await executor.ExecuteAsync(new LadybugStatement(
-            "LOAD EXTENSION FTS;",
-            new Dictionary<string, object?>(StringComparer.Ordinal)));
-        foreach (var statement in LadybugSearchStatementBuilder.BuildFulltextIndexStatements())
-        {
-            await executor.ExecuteAsync(statement);
-        }
     }
 
     private static string FindCSharpRoot()

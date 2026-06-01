@@ -158,15 +158,48 @@ public class LadybugGraphDriverTests
         var driver = new LadybugGraphDriver(executor, database: "graphiti");
 
         await driver.BuildIndicesAndConstraintsAsync();
+        await driver.BuildIndicesAndConstraintsAsync();
         await driver.CloseAsync();
         await driver.CloseAsync();
 
         Assert.Equal(GraphProvider.Kuzu, driver.Provider);
         Assert.Equal("graphiti", driver.Database);
-        Assert.Single(executor.Executed);
+        Assert.Equal(7, executor.Executed.Count);
         Assert.Equal(LadybugSchema.SchemaQueries, executor.Executed[0].Query);
+        Assert.Equal("INSTALL FTS;", executor.Executed[1].Query);
+        Assert.Equal("LOAD EXTENSION FTS;", executor.Executed[2].Query);
+        Assert.Contains("CREATE_FTS_INDEX", executor.Executed[3].Query, StringComparison.Ordinal);
+        Assert.Contains("CREATE_FTS_INDEX", executor.Executed[6].Query, StringComparison.Ordinal);
         Assert.True(executor.Disposed);
         Assert.Throws<NotSupportedException>(() => driver.Clone("other"));
+    }
+
+    [Fact]
+    public async Task SearchSurface_DelegatesToLadybugSearchExecutor()
+    {
+        var executor = new RecordingLadybugExecutor();
+        executor.EnqueueQuery(EntityRecord("entity-1"));
+        executor.EnqueueQuery(new Dictionary<string, object?> { ["uuid"] = "entity-1", ["score"] = 3 });
+        var driver = new LadybugGraphDriver(executor);
+        var search = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
+
+        var fulltext = await search.SearchEntityNodesFulltextAsync(
+            "Alice",
+            new SearchFilters(),
+            ["tenant"],
+            limit: 5);
+        var distance = await search.RankNodeDistanceAsync(
+            ["entity-1"],
+            "center",
+            minScore: 0);
+
+        Assert.Equal("entity-1", Assert.Single(fulltext).Item.Uuid);
+        Assert.Equal("entity-1", Assert.Single(distance).Uuid);
+        Assert.Equal(2, executor.Queried.Count);
+        Assert.Contains("QUERY_FTS_INDEX('Entity'", executor.Queried[0].Query, StringComparison.Ordinal);
+        Assert.Contains("MATCH (center:Entity {uuid: $center_uuid})", executor.Queried[1].Query, StringComparison.Ordinal);
+        Assert.Equal("center", executor.Queried[1].Parameters["center_uuid"]);
+        Assert.Equal("entity-1", executor.Queried[1].Parameters["node_uuid"]);
     }
 
     private static Dictionary<string, object?> EntityRecord(string uuid, string groupId = "tenant") =>
