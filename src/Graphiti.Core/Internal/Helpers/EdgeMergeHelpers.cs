@@ -274,10 +274,7 @@ internal static class EdgeMergeHelpers
 
         foreach (var episodeUuid in source.Episodes)
         {
-            if (!target.Episodes.Contains(episodeUuid, StringComparer.Ordinal))
-            {
-                target.Episodes.Add(episodeUuid);
-            }
+            AddEpisodeIfMissing(target, episodeUuid);
         }
 
         target.FactEmbedding ??= source.FactEmbedding;
@@ -289,5 +286,18 @@ internal static class EdgeMergeHelpers
         {
             target.Attributes[pair.Key] = pair.Value;
         }
+    }
+
+    internal static void AddEpisodeIfMissing(EntityEdge edge, string episodeUuid)
+    {
+        for (var i = 0; i < edge.Episodes.Count; i++)
+        {
+            if (string.Equals(edge.Episodes[i], episodeUuid, StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+
+        edge.Episodes.Add(episodeUuid);
     }
 }

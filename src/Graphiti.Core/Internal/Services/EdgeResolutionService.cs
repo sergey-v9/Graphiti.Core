@@ -102,11 +102,7 @@ internal sealed class EdgeResolutionService(
                 var duplicate = FindDuplicateFact(relatedEdges, key.NormalizedFact);
                 if (duplicate is not null)
                 {
-                    if (!duplicate.Episodes.Contains(episode.Uuid, StringComparer.Ordinal))
-                    {
-                        duplicate.Episodes.Add(episode.Uuid);
-                    }
-
+                    EdgeMergeHelpers.AddEpisodeIfMissing(duplicate, episode.Uuid);
                     EdgeMergeHelpers.AddResolvedEdge(result, resultUuids, duplicate);
                     continue;
                 }
@@ -264,10 +260,9 @@ internal sealed class EdgeResolutionService(
             out var duplicateFactIndex)
             ? relatedEdges[duplicateFactIndex]
             : extractedEdge;
-        if (resolvedEdge.Uuid != extractedEdge.Uuid
-            && !resolvedEdge.Episodes.Contains(episode.Uuid, StringComparer.Ordinal))
+        if (resolvedEdge.Uuid != extractedEdge.Uuid)
         {
-            resolvedEdge.Episodes.Add(episode.Uuid);
+            EdgeMergeHelpers.AddEpisodeIfMissing(resolvedEdge, episode.Uuid);
         }
 
         var invalidationCandidates = new List<EntityEdge>();

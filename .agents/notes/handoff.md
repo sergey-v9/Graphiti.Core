@@ -76,9 +76,9 @@ no-incremental build, full test runs, and package builds at different points. Hi
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
 Latest checkpoint, 2026-06-02: `.\eng\Verify-GraphitiCore.ps1 -FocusedFilter ...` succeeded with a
-focused filter covering exact duplicate edge reuse and duplicate-fact collapse. It ran locked
-restore, 5 focused cases, format verification, no-incremental build, the full test suite (`872`
-passed), and `dotnet pack` for `Graphiti.Core.2.0.0.nupkg`.
+focused filter covering edge episode attachment, exact duplicate edge reuse, and duplicate-fact
+collapse. It ran locked restore, 8 focused cases, format verification, no-incremental build, the
+full test suite (`872` passed), and `dotnet pack` for `Graphiti.Core.2.0.0.nupkg`.
 
 Primary full verification command from the C# repo root:
 
