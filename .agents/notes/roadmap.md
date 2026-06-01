@@ -157,6 +157,13 @@ shorter than the old working plans; expand items only when they become active.
   ordinal edge UUID ordering, and mention/community/episode relationship reads sort indexed edge
   UUIDs before projecting clone-isolated results. Focused tests pin wrong-type filtering, null UUID
   inputs, lazy-input cancellation, deterministic ordering, de-duplication, and clone isolation.
+- `InMemoryGraphDriver` group-index reads and group-scoped cleanup now use explicit loops and
+  bounded projection buffers instead of LINQ projection chains. Group-id discovery keeps type-specific
+  non-empty ordinal ordering, by-group node/edge reads preserve duplicate-group de-duplication, UUID
+  cursor/limit semantics, embedding projection, and clone isolation, and scoped clear deletes only
+  matched nodes plus incident edges. Focused tests pin null inputs, lazy-input cancellation,
+  pagination edge cases, missing groups, full clear, duplicate scoped clear, and edge-group-only
+  non-deletion.
 - Search fallback in-memory snapshot projection now uses explicit typed loops over cloned driver
   snapshots instead of `OfType`/`Select` chains. Preserve the clone isolation, type filtering,
   embedding stripping flags, stable order, and `IReadOnlyList<EntityEdge>` endpoint lookup shape.

@@ -87,4 +87,77 @@ public class InMemoryGraphDriverClearDataTests
         Assert.Equal(bob.Uuid, (await driver.GetNodeByUuidAsync<EntityNode>(bob.Uuid)).Uuid);
         Assert.Equal(edge.Uuid, (await driver.GetEdgeByUuidAsync<EntityEdge>(edge.Uuid)).Uuid);
     }
+
+    [Fact]
+    public async Task ClearDataAsync_NullGroupListClearsAllNodesEdgesAndIndexes()
+    {
+        var driver = new InMemoryGraphDriver();
+        var alice = new EntityNode { Uuid = "alice", Name = "Alice", GroupId = "group-a" };
+        var community = new CommunityNode { Uuid = "community", Name = "Community", GroupId = "group-a" };
+        await driver.SaveNodeAsync(alice);
+        await driver.SaveNodeAsync(community);
+        await driver.SaveEdgeAsync(new CommunityEdge
+        {
+            Uuid = "membership",
+            SourceNodeUuid = community.Uuid,
+            TargetNodeUuid = alice.Uuid,
+            GroupId = "group-a"
+        });
+
+        await driver.ClearDataAsync();
+
+        Assert.Empty(await driver.GetEntityGroupIdsAsync());
+        Assert.Empty(await driver.GetCommunityGroupIdsAsync());
+        Assert.Empty(await driver.GetNodesByGroupIdsAsync<EntityNode>(new[] { "group-a" }));
+        Assert.Empty(await driver.GetEdgesByGroupIdsAsync<CommunityEdge>(new[] { "group-a" }));
+        await Assert.ThrowsAsync<NodeNotFoundException>(() =>
+            driver.GetNodeByUuidAsync<EntityNode>(alice.Uuid));
+        await Assert.ThrowsAsync<EdgeNotFoundException>(() =>
+            driver.GetEdgeByUuidAsync<CommunityEdge>("membership"));
+    }
+
+    [Fact]
+    public async Task ClearDataAsync_DuplicateGroupIdsDeleteScopedNodesAndIncidentEdgesOnce()
+    {
+        var driver = new InMemoryGraphDriver();
+        var alice = new EntityNode { Uuid = "alice", Name = "Alice", GroupId = "group-a" };
+        var anna = new EntityNode { Uuid = "anna", Name = "Anna", GroupId = "group-a" };
+        var bob = new EntityNode { Uuid = "bob", Name = "Bob", GroupId = "group-b" };
+        foreach (var node in new[] { alice, anna, bob })
+        {
+            await driver.SaveNodeAsync(node);
+        }
+
+        var crossEdge = new EntityEdge
+        {
+            Uuid = "cross-edge",
+            GroupId = "edge-group",
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            Name = "KNOWS",
+            Fact = "Alice knows Bob"
+        };
+        var remainingEdge = new EntityEdge
+        {
+            Uuid = "remaining-edge",
+            GroupId = "group-b",
+            SourceNodeUuid = bob.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            Name = "SELF",
+            Fact = "Bob knows Bob"
+        };
+        await driver.SaveEdgeAsync(crossEdge);
+        await driver.SaveEdgeAsync(remainingEdge);
+
+        await driver.ClearDataAsync(new[] { "group-a", "group-a" });
+
+        await Assert.ThrowsAsync<NodeNotFoundException>(() =>
+            driver.GetNodeByUuidAsync<EntityNode>(alice.Uuid));
+        await Assert.ThrowsAsync<NodeNotFoundException>(() =>
+            driver.GetNodeByUuidAsync<EntityNode>(anna.Uuid));
+        await Assert.ThrowsAsync<EdgeNotFoundException>(() =>
+            driver.GetEdgeByUuidAsync<EntityEdge>(crossEdge.Uuid));
+        Assert.Equal(bob.Uuid, (await driver.GetNodeByUuidAsync<EntityNode>(bob.Uuid)).Uuid);
+        Assert.Equal(remainingEdge.Uuid, (await driver.GetEdgeByUuidAsync<EntityEdge>(remainingEdge.Uuid)).Uuid);
+    }
 }

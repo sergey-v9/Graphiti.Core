@@ -66,6 +66,132 @@ public sealed class InMemoryGraphDriverReadTests
     }
 
     [Fact]
+    public async Task GroupLookups_FilterSortPageProjectAndReturnClones()
+    {
+        var driver = new InMemoryGraphDriver();
+        var nodeA = Entity("node-a", "A", "group-b");
+        var nodeB = Entity("node-b", "B", "group-a");
+        var nodeC = Entity("node-c", "C", "group-a");
+        var hidden = Entity("node-hidden", "Hidden", string.Empty);
+        var episode = Episode("episode", new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc));
+        episode.GroupId = "episode-group";
+        nodeA.NameEmbedding = new List<float> { 1f, 0f };
+        nodeB.NameEmbedding = new List<float> { 0f, 1f };
+        nodeC.NameEmbedding = new List<float> { 1f, 1f };
+        foreach (var node in new Node[] { nodeA, nodeB, nodeC, hidden, episode })
+        {
+            await driver.SaveNodeAsync(node);
+        }
+
+        var communityZ = Community("community-z", "Community Z", "community-z");
+        var communityA = Community("community-a", "Community A", "community-a");
+        await driver.SaveNodeAsync(communityZ);
+        await driver.SaveNodeAsync(communityA);
+
+        await driver.SaveEdgeAsync(Relates("edge-a", nodeA, nodeB, "first", "group-a", [1f, 0f]));
+        await driver.SaveEdgeAsync(Relates("edge-b", nodeB, nodeC, "second", "group-a", [0f, 1f]));
+        await driver.SaveEdgeAsync(Relates("edge-c", nodeC, nodeA, "third", "group-a", [1f, 1f]));
+        await driver.SaveEdgeAsync(Relates("edge-other", nodeA, nodeC, "other", "group-b", [0.5f, 0.5f]));
+
+        Assert.Equal(new[] { "group-a", "group-b" }, await driver.GetEntityGroupIdsAsync());
+        Assert.Equal(new[] { "community-a", "community-z" }, await driver.GetCommunityGroupIdsAsync());
+
+        var nodes = await driver.GetNodesByGroupIdsAsync<EntityNode>(
+            new[] { "group-a", "group-b", "group-a" },
+            limit: 2,
+            uuidCursor: "node-d");
+        var nodesWithEmbeddings = await driver.GetNodesByGroupIdsAsync<EntityNode>(
+            new[] { "group-a" },
+            limit: 1,
+            uuidCursor: "node-d",
+            withEmbeddings: true);
+        var edges = await driver.GetEdgesByGroupIdsAsync<EntityEdge>(
+            new[] { "group-a", "group-a" },
+            limit: 2,
+            uuidCursor: "edge-d");
+        var edgesWithEmbeddings = await driver.GetEdgesByGroupIdsAsync<EntityEdge>(
+            new[] { "group-a" },
+            limit: 1,
+            uuidCursor: "edge-d",
+            withEmbeddings: true);
+        var zeroLimitNodes = await driver.GetNodesByGroupIdsAsync<EntityNode>(
+            new[] { "group-a" },
+            limit: 0,
+            uuidCursor: "node-d");
+        var negativeLimitNodes = await driver.GetNodesByGroupIdsAsync<EntityNode>(
+            new[] { "group-a" },
+            limit: -1,
+            uuidCursor: "node-d");
+        var zeroLimitEdges = await driver.GetEdgesByGroupIdsAsync<EntityEdge>(
+            new[] { "group-a" },
+            limit: 0,
+            uuidCursor: "edge-d");
+        var negativeLimitEdges = await driver.GetEdgesByGroupIdsAsync<EntityEdge>(
+            new[] { "group-a" },
+            limit: -1,
+            uuidCursor: "edge-d");
+        var missingGroupNodes = await driver.GetNodesByGroupIdsAsync<EntityNode>(
+            new[] { "missing-group" },
+            limit: 10);
+        var missingGroupEdges = await driver.GetEdgesByGroupIdsAsync<EntityEdge>(
+            new[] { "missing-group" },
+            limit: 10);
+
+        Assert.Equal(new[] { "node-c", "node-b" }, nodes.Select(node => node.Uuid));
+        Assert.All(nodes, node => Assert.Null(node.NameEmbedding));
+        Assert.Equal("node-c", Assert.Single(nodesWithEmbeddings).Uuid);
+        Assert.Equal(new List<float> { 1f, 1f }, nodesWithEmbeddings[0].NameEmbedding);
+        Assert.Equal(new[] { "edge-c", "edge-b" }, edges.Select(edge => edge.Uuid));
+        Assert.All(edges, edge => Assert.Null(edge.FactEmbedding));
+        Assert.Equal("edge-c", Assert.Single(edgesWithEmbeddings).Uuid);
+        Assert.Equal(new List<float> { 1f, 1f }, edgesWithEmbeddings[0].FactEmbedding);
+        Assert.Empty(zeroLimitNodes);
+        Assert.Empty(negativeLimitNodes);
+        Assert.Empty(zeroLimitEdges);
+        Assert.Empty(negativeLimitEdges);
+        Assert.Empty(missingGroupNodes);
+        Assert.Empty(missingGroupEdges);
+
+        nodes[0].Summary = "mutated";
+        nodesWithEmbeddings[0].NameEmbedding![0] = 99f;
+        edges[0].Fact = "mutated";
+        edgesWithEmbeddings[0].FactEmbedding![0] = 99f;
+
+        Assert.Equal("C summary", (await driver.GetNodeByUuidAsync<EntityNode>("node-c")).Summary);
+        Assert.Equal(new List<float> { 1f, 1f }, (await driver.GetNodeByUuidAsync<EntityNode>("node-c")).NameEmbedding);
+        Assert.Equal("third", (await driver.GetEdgeByUuidAsync<EntityEdge>("edge-c")).Fact);
+        Assert.Equal(new List<float> { 1f, 1f }, (await driver.GetEdgeByUuidAsync<EntityEdge>("edge-c")).FactEmbedding);
+    }
+
+    [Fact]
+    public async Task GroupLookups_RejectNullInputs()
+    {
+        var driver = new InMemoryGraphDriver();
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            driver.GetNodesByGroupIdsAsync<EntityNode>(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            driver.GetEdgesByGroupIdsAsync<EntityEdge>(null!));
+    }
+
+    [Fact]
+    public async Task GroupLookups_ObserveCancellationWhileEnumeratingLazyInputs()
+    {
+        var driver = new InMemoryGraphDriver();
+        using var nodeCancellation = new CancellationTokenSource();
+        using var edgeCancellation = new CancellationTokenSource();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await driver.GetNodesByGroupIdsAsync<EntityNode>(
+                CancelAfterFirst("group", nodeCancellation),
+                cancellationToken: nodeCancellation.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await driver.GetEdgesByGroupIdsAsync<EntityEdge>(
+                CancelAfterFirst("group", edgeCancellation),
+                cancellationToken: edgeCancellation.Token));
+    }
+
+    [Fact]
     public async Task RelationshipLookups_DeduplicateInDeterministicTraversalOrderAndReturnClones()
     {
         var driver = new InMemoryGraphDriver();
@@ -145,11 +271,14 @@ public sealed class InMemoryGraphDriverReadTests
         };
 
     private static CommunityNode Community(string uuid, string name) =>
+        Community(uuid, name, "tenant");
+
+    private static CommunityNode Community(string uuid, string name, string groupId) =>
         new()
         {
             Uuid = uuid,
             Name = name,
-            GroupId = "tenant",
+            GroupId = groupId,
             Summary = $"{name} summary"
         };
 
@@ -162,6 +291,24 @@ public sealed class InMemoryGraphDriverReadTests
             GroupId = source.GroupId,
             Name = "RELATES_TO",
             Fact = fact
+        };
+
+    private static EntityEdge Relates(
+        string uuid,
+        EntityNode source,
+        EntityNode target,
+        string fact,
+        string groupId,
+        List<float> factEmbedding) =>
+        new()
+        {
+            Uuid = uuid,
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = target.Uuid,
+            GroupId = groupId,
+            Name = "RELATES_TO",
+            Fact = fact,
+            FactEmbedding = factEmbedding
         };
 
     private static EpisodicEdge Mention(string uuid, EpisodicNode episode, EntityNode entity) =>

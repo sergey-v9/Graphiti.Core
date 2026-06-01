@@ -111,12 +111,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            IReadOnlyList<string> groupIds = _entityNodeUuidsByGroup
-                .Where(pair => pair.Value.Count > 0 && !string.IsNullOrEmpty(pair.Key))
-                .Select(pair => pair.Key)
-                .Order(StringComparer.Ordinal)
-                .ToList();
-            return Task.FromResult(groupIds);
+            return Task.FromResult<IReadOnlyList<string>>(MaterializeSortedNonEmptyGroupIds(_entityNodeUuidsByGroup));
         }
     }
 
@@ -125,12 +120,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            IReadOnlyList<string> groupIds = _communityNodeUuidsByGroup
-                .Where(pair => pair.Value.Count > 0 && !string.IsNullOrEmpty(pair.Key))
-                .Select(pair => pair.Key)
-                .Order(StringComparer.Ordinal)
-                .ToList();
-            return Task.FromResult(groupIds);
+            return Task.FromResult<IReadOnlyList<string>>(MaterializeSortedNonEmptyGroupIds(_communityNodeUuidsByGroup));
         }
     }
 
@@ -271,10 +261,29 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
             }
             else
             {
-                var groupSet = groupIds.ToHashSet(StringComparer.Ordinal);
-                var nodeUuids = groupSet
-                    .SelectMany(groupId => GetIndexedUuids(_nodeUuidsByGroup, groupId))
-                    .ToHashSet(StringComparer.Ordinal);
+                var nodeUuids = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var groupId in groupIds)
+                {
+                    foreach (var nodeUuid in GetIndexedUuids(_nodeUuidsByGroup, groupId))
+                    {
+                        nodeUuids.Add(nodeUuid);
+                    }
+                }
+
+                if (nodeUuids.Count == 0)
+                {
+                    return Task.CompletedTask;
+                }
+
+                var edgeUuids = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var nodeUuid in nodeUuids)
+                {
+                    foreach (var edgeUuid in GetIndexedUuids(_incidentEdgeUuidsByNodeUuid, nodeUuid))
+                    {
+                        edgeUuids.Add(edgeUuid);
+                    }
+                }
+
                 foreach (var nodeUuid in nodeUuids)
                 {
                     if (_nodes.Remove(nodeUuid, out var node))
@@ -283,10 +292,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
                     }
                 }
 
-                foreach (var edgeUuid in nodeUuids
-                             .SelectMany(nodeUuid => GetIndexedUuids(_incidentEdgeUuidsByNodeUuid, nodeUuid))
-                             .Distinct(StringComparer.Ordinal)
-                             .ToList())
+                foreach (var edgeUuid in edgeUuids)
                 {
                     RemoveEdgeByUuid(edgeUuid);
                 }
@@ -347,27 +353,15 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         bool withEmbeddings = false,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(groupIds);
         cancellationToken.ThrowIfCancellationRequested();
-        var groupSet = groupIds.ToHashSet(StringComparer.Ordinal);
+        var groupList = MaterializeDistinctUuids(groupIds, cancellationToken);
         lock (_gate)
         {
-            IEnumerable<TNode> query = GetNodesFromIndex<TNode>(groupSet, allWhenNoGroups: false);
-
-            if (!string.IsNullOrEmpty(uuidCursor))
-            {
-                query = query.Where(node => string.CompareOrdinal(node.Uuid, uuidCursor) < 0);
-            }
-
-            query = query.OrderByDescending(node => node.Uuid);
-            if (limit is not null)
-            {
-                query = query.Take(limit.Value);
-            }
-
-            IReadOnlyList<TNode> nodes = query
-                .Select(node => ProjectNodeEmbedding((TNode)CloneNode(node), withEmbeddings))
-                .ToList();
-            return Task.FromResult(nodes);
+            var candidates = GetNodesFromIndex<TNode>(groupList, allWhenNoGroups: false);
+            candidates.Sort(static (left, right) => string.CompareOrdinal(right.Uuid, left.Uuid));
+            var nodes = ProjectNodesByUuidOrder(candidates, limit, uuidCursor, withEmbeddings);
+            return Task.FromResult<IReadOnlyList<TNode>>(nodes);
         }
     }
 
@@ -417,27 +411,15 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         bool withEmbeddings = false,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(groupIds);
         cancellationToken.ThrowIfCancellationRequested();
-        var groupSet = groupIds.ToHashSet(StringComparer.Ordinal);
+        var groupList = MaterializeDistinctUuids(groupIds, cancellationToken);
         lock (_gate)
         {
-            IEnumerable<T> query = GetEdgesFromIndex<T>(groupSet, allWhenNoGroups: false);
-
-            if (!string.IsNullOrEmpty(uuidCursor))
-            {
-                query = query.Where(edge => string.CompareOrdinal(edge.Uuid, uuidCursor) < 0);
-            }
-
-            query = query.OrderByDescending(edge => edge.Uuid);
-            if (limit is not null)
-            {
-                query = query.Take(limit.Value);
-            }
-
-            IReadOnlyList<T> edges = query
-                .Select(edge => ProjectEdgeEmbedding((T)CloneEdge(edge), withEmbeddings))
-                .ToList();
-            return Task.FromResult(edges);
+            var candidates = GetEdgesFromIndex<T>(groupList, allWhenNoGroups: false);
+            candidates.Sort(static (left, right) => string.CompareOrdinal(right.Uuid, left.Uuid));
+            var edges = ProjectEdgesByUuidOrder(candidates, limit, uuidCursor, withEmbeddings);
+            return Task.FromResult<IReadOnlyList<T>>(edges);
         }
     }
 
@@ -1182,20 +1164,36 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         where TNode : Node
     {
         var index = GetNodeGroupIndex<TNode>();
-        return GetUuidsByGroups(index, groupIds, allWhenNoGroups)
-            .Select(uuid => _nodes.GetValueOrDefault(uuid))
-            .OfType<TNode>()
-            .ToList();
+        var uuids = GetUuidsByGroups(index, groupIds, allWhenNoGroups);
+        var nodes = new List<TNode>(uuids.Count);
+        foreach (var uuid in uuids)
+        {
+            if (_nodes.TryGetValue(uuid, out var node) && node is TNode typed)
+            {
+                nodes.Add(typed);
+            }
+        }
+
+        return nodes;
     }
 
     private List<TEdge> GetEdgesFromIndex<TEdge>(
         IEnumerable<string>? groupIds,
         bool allWhenNoGroups)
-        where TEdge : Edge =>
-        GetUuidsByGroups(_edgeUuidsByGroup, groupIds, allWhenNoGroups)
-            .Select(uuid => _edges.GetValueOrDefault(uuid))
-            .OfType<TEdge>()
-            .ToList();
+        where TEdge : Edge
+    {
+        var uuids = GetUuidsByGroups(_edgeUuidsByGroup, groupIds, allWhenNoGroups);
+        var edges = new List<TEdge>(uuids.Count);
+        foreach (var uuid in uuids)
+        {
+            if (_edges.TryGetValue(uuid, out var edge) && edge is TEdge typed)
+            {
+                edges.Add(typed);
+            }
+        }
+
+        return edges;
+    }
 
     private Dictionary<string, List<TEdge>> BuildEdgesBySource<TEdge>(
         IReadOnlyList<string>? groupIds)
@@ -1238,28 +1236,139 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return _nodeUuidsByGroup;
     }
 
-    private static IEnumerable<string> GetUuidsByGroups(
+    private static List<string> GetUuidsByGroups(
         Dictionary<string, HashSet<string>> index,
         IEnumerable<string>? groupIds,
         bool allWhenNoGroups)
     {
         if (groupIds is null)
         {
-            return allWhenNoGroups
-                ? index.Values.SelectMany(uuids => uuids)
-                : Array.Empty<string>();
+            return allWhenNoGroups ? MaterializeAllIndexedUuids(index) : [];
         }
 
-        var groupSet = groupIds.ToHashSet(StringComparer.Ordinal);
-        if (groupSet.Count == 0)
+        var groups = MaterializeDistinctUuids(groupIds, CancellationToken.None);
+        if (groups.Count == 0)
         {
-            return allWhenNoGroups
-                ? index.Values.SelectMany(uuids => uuids)
-                : Array.Empty<string>();
+            return allWhenNoGroups ? MaterializeAllIndexedUuids(index) : [];
         }
 
-        return groupSet.SelectMany(groupId => GetIndexedUuids(index, groupId)).Distinct(StringComparer.Ordinal);
+        var results = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var groupId in groups)
+        {
+            foreach (var uuid in GetIndexedUuids(index, groupId))
+            {
+                if (seen.Add(uuid))
+                {
+                    results.Add(uuid);
+                }
+            }
+        }
+
+        return results;
     }
+
+    private static List<string> MaterializeAllIndexedUuids(Dictionary<string, HashSet<string>> index)
+    {
+        var capacity = 0;
+        foreach (var pair in index)
+        {
+            capacity += pair.Value.Count;
+        }
+
+        var results = new List<string>(capacity);
+        foreach (var pair in index)
+        {
+            foreach (var uuid in pair.Value)
+            {
+                results.Add(uuid);
+            }
+        }
+
+        return results;
+    }
+
+    private static List<string> MaterializeSortedNonEmptyGroupIds(Dictionary<string, HashSet<string>> index)
+    {
+        var groupIds = new List<string>(index.Count);
+        foreach (var pair in index)
+        {
+            if (pair.Value.Count > 0 && !string.IsNullOrEmpty(pair.Key))
+            {
+                groupIds.Add(pair.Key);
+            }
+        }
+
+        groupIds.Sort(StringComparer.Ordinal);
+        return groupIds;
+    }
+
+    private static List<TNode> ProjectNodesByUuidOrder<TNode>(
+        List<TNode> candidates,
+        int? limit,
+        string? uuidCursor,
+        bool withEmbeddings)
+        where TNode : Node
+    {
+        var capacity = BoundedCapacity(candidates.Count, limit);
+        if (capacity == 0)
+        {
+            return [];
+        }
+
+        var nodes = new List<TNode>(capacity);
+        foreach (var candidate in candidates)
+        {
+            if (!string.IsNullOrEmpty(uuidCursor) && string.CompareOrdinal(candidate.Uuid, uuidCursor) >= 0)
+            {
+                continue;
+            }
+
+            nodes.Add(ProjectNodeEmbedding((TNode)CloneNode(candidate), withEmbeddings));
+            if (limit is not null && nodes.Count == limit.Value)
+            {
+                break;
+            }
+        }
+
+        return nodes;
+    }
+
+    private static List<TEdge> ProjectEdgesByUuidOrder<TEdge>(
+        List<TEdge> candidates,
+        int? limit,
+        string? uuidCursor,
+        bool withEmbeddings)
+        where TEdge : Edge
+    {
+        var capacity = BoundedCapacity(candidates.Count, limit);
+        if (capacity == 0)
+        {
+            return [];
+        }
+
+        var edges = new List<TEdge>(capacity);
+        foreach (var candidate in candidates)
+        {
+            if (!string.IsNullOrEmpty(uuidCursor) && string.CompareOrdinal(candidate.Uuid, uuidCursor) >= 0)
+            {
+                continue;
+            }
+
+            edges.Add(ProjectEdgeEmbedding((TEdge)CloneEdge(candidate), withEmbeddings));
+            if (limit is not null && edges.Count == limit.Value)
+            {
+                break;
+            }
+        }
+
+        return edges;
+    }
+
+    private static int BoundedCapacity(int count, int? limit) =>
+        limit is null
+            ? count
+            : Math.Min(count, Math.Max(0, limit.Value));
 
     private static void AddToIndex<TKey>(
         Dictionary<TKey, HashSet<string>> index,
