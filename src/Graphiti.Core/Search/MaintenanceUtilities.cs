@@ -71,16 +71,22 @@ public static class MaintenanceUtilities
     public static IReadOnlyList<CommunityEdge> BuildCommunityEdges(
         IReadOnlyList<EntityNode> entityNodes,
         CommunityNode communityNode,
-        DateTime createdAt) =>
-        entityNodes
-            .Select(node => new CommunityEdge
+        DateTime createdAt)
+    {
+        var edges = new List<CommunityEdge>(entityNodes.Count);
+        foreach (var node in entityNodes)
+        {
+            edges.Add(new CommunityEdge
             {
                 SourceNodeUuid = communityNode.Uuid,
                 TargetNodeUuid = node.Uuid,
                 CreatedAt = createdAt,
                 GroupId = communityNode.GroupId
-            })
-            .ToList();
+            });
+        }
+
+        return edges;
+    }
 
     /// <summary>Generates name embeddings for any entity nodes that do not yet have one.</summary>
     public static async Task CreateEntityNodeEmbeddingsAsync(
@@ -88,8 +94,13 @@ public static class MaintenanceUtilities
         IReadOnlyList<EntityNode> nodes,
         CancellationToken cancellationToken = default)
     {
-        foreach (var node in nodes.Where(node => node.NameEmbedding is null))
+        foreach (var node in nodes)
         {
+            if (node.NameEmbedding is not null)
+            {
+                continue;
+            }
+
             await node.GenerateNameEmbeddingAsync(embedder, cancellationToken).ConfigureAwait(false);
         }
     }
@@ -100,8 +111,13 @@ public static class MaintenanceUtilities
         IReadOnlyList<EntityEdge> edges,
         CancellationToken cancellationToken = default)
     {
-        foreach (var edge in edges.Where(edge => edge.FactEmbedding is null))
+        foreach (var edge in edges)
         {
+            if (edge.FactEmbedding is not null)
+            {
+                continue;
+            }
+
             await edge.GenerateEmbeddingAsync(embedder, cancellationToken).ConfigureAwait(false);
         }
     }

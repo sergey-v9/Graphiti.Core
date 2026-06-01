@@ -1,10 +1,28 @@
+using System.Text;
+
 namespace Graphiti.Core.Internal.Helpers;
 
 internal static class DeterministicCommunityText
 {
     internal static string BuildCommunitySummary(IReadOnlyList<string> summaries)
     {
-        var summary = string.Join("; ", summaries.Where(summary => !string.IsNullOrWhiteSpace(summary)));
+        var builder = new StringBuilder();
+        foreach (var value in summaries)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            if (builder.Length > 0)
+            {
+                builder.Append("; ");
+            }
+
+            builder.Append(value);
+        }
+
+        var summary = builder.ToString();
         return TextUtilities.TruncateAtSentence(summary, TextUtilities.MaxSummaryChars) ?? summary;
     }
 
@@ -15,14 +33,34 @@ internal static class DeterministicCommunityText
 
     internal static string BuildCommunityName(IReadOnlyList<EntityNode> cluster)
     {
-        var names = cluster
-            .Select(node => node.Name)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(3)
-            .ToList();
-        return names.Count == 0
-            ? "Community"
-            : "Community: " + string.Join(", ", names);
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        StringBuilder? builder = null;
+
+        foreach (var node in cluster)
+        {
+            var name = node.Name;
+            if (string.IsNullOrWhiteSpace(name) || !names.Add(name))
+            {
+                continue;
+            }
+
+            if (builder is null)
+            {
+                builder = new StringBuilder("Community: ");
+                builder.Append(name);
+            }
+            else
+            {
+                builder.Append(", ");
+                builder.Append(name);
+            }
+
+            if (names.Count == 3)
+            {
+                break;
+            }
+        }
+
+        return builder?.ToString() ?? "Community";
     }
 }

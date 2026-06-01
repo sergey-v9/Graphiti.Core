@@ -1,5 +1,8 @@
 using System.Text.Json.Nodes;
 using Graphiti.Core;
+using Graphiti.Core.Internal.Helpers;
+using Graphiti.Core.Internal.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Graphiti.Core.Tests;
 
@@ -344,6 +347,125 @@ public class GraphitiCommunityTests
         Assert.Equal(3, storedCommunityEdges.Count);
     }
 
+    [Fact]
+    public async Task UpdateCommunitiesForNodes_DeduplicatesNodesByUuidInFirstSeenOrder()
+    {
+        var driver = new InMemoryGraphDriver();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var community = Community("community", "Existing", "group", now);
+        var carol = Entity("Carol", "group", now, "carol");
+        var duplicate = Entity("Carol duplicate", "group", now, "carol");
+        await community.SaveAsync(driver);
+        await carol.SaveAsync(driver);
+        await Member(community, carol, now).SaveAsync(driver);
+
+        var service = CreateCommunityService(driver);
+        var (communities, communityEdges) = await service.UpdateCommunitiesForNodesAsync(
+            new[] { carol, duplicate },
+            driver,
+            CancellationToken.None);
+
+        var updated = Assert.Single(communities);
+        Assert.Equal("community", updated.Uuid);
+        Assert.Empty(communityEdges);
+    }
+
+    [Fact]
+    public async Task UpdateCommunitiesForNodes_ChoosesMostFrequentNeighborCommunity()
+    {
+        var driver = new InMemoryGraphDriver();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var majority = Community("z-community", "Majority", "group", now);
+        var minority = Community("a-community", "Minority", "group", now);
+        var carol = Entity("Carol", "group", now, "carol");
+        var alice = Entity("Alice", "group", now, "alice");
+        var alex = Entity("Alex", "group", now, "alex");
+        var bob = Entity("Bob", "group", now, "bob");
+        foreach (var node in new Node[] { majority, minority, carol, alice, alex, bob })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        await Member(majority, alice, now).SaveAsync(driver);
+        await Member(majority, alex, now).SaveAsync(driver);
+        await Member(minority, bob, now).SaveAsync(driver);
+        await Relates(carol, bob, "group", now, "edge-0").SaveAsync(driver);
+        await Relates(carol, alice, "group", now, "edge-1").SaveAsync(driver);
+        await Relates(carol, alex, "group", now, "edge-2").SaveAsync(driver);
+
+        var service = CreateCommunityService(driver);
+        var (communities, communityEdges) = await service.UpdateCommunitiesForNodesAsync(
+            new[] { carol },
+            driver,
+            CancellationToken.None);
+
+        var updated = Assert.Single(communities);
+        var membership = Assert.Single(communityEdges);
+        Assert.Equal("z-community", updated.Uuid);
+        Assert.Equal("z-community", membership.SourceNodeUuid);
+        Assert.Equal("carol", membership.TargetNodeUuid);
+    }
+
+    [Fact]
+    public async Task UpdateCommunitiesForNodes_TieUsesFirstNeighborCommunity()
+    {
+        var driver = new InMemoryGraphDriver();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var first = Community("z-community", "First", "group", now);
+        var second = Community("a-community", "Second", "group", now);
+        var carol = Entity("Carol", "group", now, "carol");
+        var alice = Entity("Alice", "group", now, "alice");
+        var bob = Entity("Bob", "group", now, "bob");
+        foreach (var node in new Node[] { first, second, carol, alice, bob })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        await Member(first, alice, now).SaveAsync(driver);
+        await Member(second, bob, now).SaveAsync(driver);
+        await Relates(carol, alice, "group", now, "edge-0").SaveAsync(driver);
+        await Relates(carol, bob, "group", now, "edge-1").SaveAsync(driver);
+
+        var service = CreateCommunityService(driver);
+        var (communities, communityEdges) = await service.UpdateCommunitiesForNodesAsync(
+            new[] { carol },
+            driver,
+            CancellationToken.None);
+
+        var updated = Assert.Single(communities);
+        var membership = Assert.Single(communityEdges);
+        Assert.Equal("z-community", updated.Uuid);
+        Assert.Equal("z-community", membership.SourceNodeUuid);
+        Assert.Equal("carol", membership.TargetNodeUuid);
+    }
+
+    [Fact]
+    public void DeterministicCommunityText_SkipsBlankSummariesAndPreservesOrder()
+    {
+        var summary = DeterministicCommunityText.BuildCommunitySummary(
+            new[] { string.Empty, "First", " ", "Second", "Third" });
+
+        Assert.Equal("First; Second; Third", summary);
+    }
+
+    [Fact]
+    public void DeterministicCommunityText_UsesFirstThreeDistinctNamesWithOriginalCasing()
+    {
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var name = DeterministicCommunityText.BuildCommunityName(
+            new[]
+            {
+                Entity("Alice", "group", now),
+                Entity("alice", "group", now),
+                Entity(" ", "group", now),
+                Entity("Bob", "group", now),
+                Entity("Dana", "group", now),
+                Entity("Erin", "group", now)
+            });
+
+        Assert.Equal("Community: Alice, Bob, Dana", name);
+    }
+
     private static EntityNode Entity(string name, string groupId, DateTime createdAt) =>
         new()
         {
@@ -361,6 +483,26 @@ public class GraphitiCommunityTests
         return node;
     }
 
+    private static CommunityNode Community(string uuid, string name, string groupId, DateTime createdAt) =>
+        new()
+        {
+            Uuid = uuid,
+            Name = name,
+            GroupId = groupId,
+            Labels = new List<string> { "Community" },
+            CreatedAt = createdAt,
+            Summary = $"{name} summary"
+        };
+
+    private static CommunityEdge Member(CommunityNode community, EntityNode entity, DateTime createdAt) =>
+        new()
+        {
+            SourceNodeUuid = community.Uuid,
+            TargetNodeUuid = entity.Uuid,
+            GroupId = community.GroupId,
+            CreatedAt = createdAt
+        };
+
     private static EntityEdge Relates(EntityNode source, EntityNode target, string groupId, DateTime createdAt) =>
         new()
         {
@@ -371,6 +513,41 @@ public class GraphitiCommunityTests
             Name = "RELATES_TO",
             Fact = $"{source.Name} relates to {target.Name}"
         };
+
+    private static EntityEdge Relates(
+        EntityNode source,
+        EntityNode target,
+        string groupId,
+        DateTime createdAt,
+        string uuid)
+    {
+        var edge = Relates(source, target, groupId, createdAt);
+        edge.Uuid = uuid;
+        return edge;
+    }
+
+    private static CommunityService CreateCommunityService(InMemoryGraphDriver driver) =>
+        new(
+            () => driver,
+            new StaticJsonLlmClient(messages =>
+            {
+                var system = messages.Count > 0 ? messages[0].Content : string.Empty;
+                if (system.Contains("Summarize", StringComparison.Ordinal))
+                {
+                    return new JsonObject { ["summary"] = "updated summary" };
+                }
+
+                if (system.Contains("Name", StringComparison.Ordinal))
+                {
+                    return new JsonObject { ["description"] = "Updated community" };
+                }
+
+                return new JsonObject();
+            }),
+            new HashEmbedder(4),
+            NullLogger<Graphiti>.Instance,
+            TimeProvider.System,
+            () => 1);
 
     private static string[][] ClusterUuids(IReadOnlyList<List<EntityNode>> clusters) =>
         clusters

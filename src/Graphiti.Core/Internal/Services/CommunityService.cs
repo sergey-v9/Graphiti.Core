@@ -34,12 +34,22 @@ internal sealed class CommunityService(
                 clusters,
                 (cluster, token) => BuildCommunityAsync(cluster, now, token),
                 cancellationToken).ConfigureAwait(false);
-            var communities = builtCommunities
-                .Select(result => result.Community)
-                .ToList();
-            var communityEdges = builtCommunities
-                .SelectMany(result => result.CommunityEdges)
-                .ToList();
+            var communities = new List<CommunityNode>(builtCommunities.Length);
+            var communityEdgeCapacity = 0;
+            foreach (var result in builtCommunities)
+            {
+                communityEdgeCapacity += result.CommunityEdges.Count;
+            }
+
+            var communityEdges = new List<CommunityEdge>(communityEdgeCapacity);
+            foreach (var result in builtCommunities)
+            {
+                communities.Add(result.Community);
+                foreach (var edge in result.CommunityEdges)
+                {
+                    communityEdges.Add(edge);
+                }
+            }
 
             await ThrottledWork.ForEachAsync(
                 communities,
@@ -72,8 +82,14 @@ internal sealed class CommunityService(
     {
         var communities = new List<CommunityNode>();
         var communityEdges = new List<CommunityEdge>();
-        foreach (var node in nodes.GroupBy(node => node.Uuid, StringComparer.Ordinal).Select(group => group.First()))
+        var seenNodeUuids = new HashSet<string>(nodes.Count, StringComparer.Ordinal);
+        foreach (var node in nodes)
         {
+            if (!seenNodeUuids.Add(node.Uuid))
+            {
+                continue;
+            }
+
             var (updatedCommunities, newCommunityEdges) = await UpdateCommunityAsync(node, driver, cancellationToken).ConfigureAwait(false);
             communities.AddRange(updatedCommunities);
             communityEdges.AddRange(newCommunityEdges);
@@ -113,10 +129,13 @@ internal sealed class CommunityService(
             return;
         }
 
-        await Node.DeleteByUuidsAsync(
-            driver,
-            existing.Select(community => community.Uuid),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var communityUuids = new string[existing.Count];
+        for (var i = 0; i < existing.Count; i++)
+        {
+            communityUuids[i] = existing[i].Uuid;
+        }
+
+        await Node.DeleteByUuidsAsync(driver, communityUuids, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<IReadOnlyList<string>> ResolveCommunityGroupIdsAsync(
@@ -142,7 +161,13 @@ internal sealed class CommunityService(
         var nodes = await driver.GetNodesByGroupIdsAsync<EntityNode>(
             groupIds,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        return nodes.ToList();
+        var result = new List<EntityNode>(nodes.Count);
+        foreach (var node in nodes)
+        {
+            result.Add(node);
+        }
+
+        return result;
     }
 
     private static async Task<IReadOnlyList<EntityEdge>> GetEntityEdgesForCommunityAsync(
@@ -173,13 +198,18 @@ internal sealed class CommunityService(
     }
 
     private async Task<string> GenerateCommunitySummaryAsync(
-        IReadOnlyList<EntityNode> cluster,
+        List<EntityNode> cluster,
         CancellationToken cancellationToken)
     {
-        var summaries = cluster
-            .Select(DeterministicCommunityText.BuildNodeSummary)
-            .Where(summary => !string.IsNullOrWhiteSpace(summary))
-            .ToList();
+        var summaries = new List<string>(cluster.Count);
+        foreach (var node in cluster)
+        {
+            var summary = DeterministicCommunityText.BuildNodeSummary(node);
+            if (!string.IsNullOrWhiteSpace(summary))
+            {
+                summaries.Add(summary);
+            }
+        }
         if (summaries.Count == 0)
         {
             return string.Empty;
@@ -323,11 +353,20 @@ internal sealed class CommunityService(
         }
 
         var edges = await driver.GetEntityEdgesByNodeUuidAsync(entity.Uuid, cancellationToken).ConfigureAwait(false);
-        var neighborUuids = edges
-            .Select(edge => edge.SourceNodeUuid == entity.Uuid ? edge.TargetNodeUuid : edge.SourceNodeUuid)
-            .Where(uuid => !string.Equals(uuid, entity.Uuid, StringComparison.Ordinal))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
+        var neighborUuids = new List<string>(edges.Count);
+        var seenNeighborUuids = new HashSet<string>(edges.Count, StringComparer.Ordinal);
+        foreach (var edge in edges)
+        {
+            var neighborUuid = string.Equals(edge.SourceNodeUuid, entity.Uuid, StringComparison.Ordinal)
+                ? edge.TargetNodeUuid
+                : edge.SourceNodeUuid;
+            if (!string.Equals(neighborUuid, entity.Uuid, StringComparison.Ordinal)
+                && seenNeighborUuids.Add(neighborUuid))
+            {
+                neighborUuids.Add(neighborUuid);
+            }
+        }
+
         if (neighborUuids.Count == 0)
         {
             return (null, false);
@@ -339,13 +378,48 @@ internal sealed class CommunityService(
             return (null, false);
         }
 
-        var neighborCommunities = await driver.GetCommunitiesByNodesAsync(neighbors, cancellationToken).ConfigureAwait(false);
-        var community = neighborCommunities
-            .GroupBy(candidate => candidate.Uuid, StringComparer.Ordinal)
-            .OrderByDescending(group => group.Count())
-            .ThenBy(group => group.Key, StringComparer.Ordinal)
-            .Select(group => group.First())
-            .FirstOrDefault();
+        var neighborsByUuid = new Dictionary<string, EntityNode>(neighbors.Count, StringComparer.Ordinal);
+        foreach (var neighbor in neighbors)
+        {
+            neighborsByUuid.TryAdd(neighbor.Uuid, neighbor);
+        }
+
+        var communityCounts = new Dictionary<string, (CommunityNode Community, int Count)>(StringComparer.Ordinal);
+        var communityOrder = new List<string>(neighbors.Count);
+        var singleNeighbor = new EntityNode[1];
+        foreach (var neighborUuid in neighborUuids)
+        {
+            if (!neighborsByUuid.TryGetValue(neighborUuid, out var neighbor))
+            {
+                continue;
+            }
+
+            singleNeighbor[0] = neighbor;
+            var neighborCommunities = await driver.GetCommunitiesByNodesAsync(singleNeighbor, cancellationToken).ConfigureAwait(false);
+            foreach (var candidate in neighborCommunities)
+            {
+                if (communityCounts.TryGetValue(candidate.Uuid, out var existing))
+                {
+                    communityCounts[candidate.Uuid] = (existing.Community, existing.Count + 1);
+                    continue;
+                }
+
+                communityCounts.Add(candidate.Uuid, (candidate, 1));
+                communityOrder.Add(candidate.Uuid);
+            }
+        }
+
+        CommunityNode? community = null;
+        var bestCount = 0;
+        foreach (var communityUuid in communityOrder)
+        {
+            var candidate = communityCounts[communityUuid];
+            if (community is null || candidate.Count > bestCount)
+            {
+                community = candidate.Community;
+                bestCount = candidate.Count;
+            }
+        }
 
         return community is null ? (null, false) : (community, true);
     }

@@ -137,6 +137,9 @@ Graphiti semantics, wire compatibility, or performance/allocation discipline.
   truncation where Python does.
 - Saga summarization treats a missing or blank typed LLM summary the same as an unavailable typed
   LLM response and falls back to deterministic episode-content concatenation.
+- Incremental community updates choose the mode community among neighboring entities. Ties keep the
+  first community encountered from the neighbor traversal, matching Python's first-max behavior
+  rather than sorting by UUID.
 - Structured-output prompts include the JSON schema text in the final prompt message and may also
   pass response-format metadata to the provider. Source-generated JSON metadata may cover nested
   `Graphiti.*Response` DTOs, but DTO type identity and snake_case schema/wire names must stay stable.

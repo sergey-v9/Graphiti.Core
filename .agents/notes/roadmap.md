@@ -227,6 +227,11 @@ shorter than the old working plans; expand items only when they become active.
   `StringBuilder` loops instead of LINQ projection plus `string.Join`, and the tuple overload no
   longer allocates intermediate `SagaEpisodeContent` records. Tests pin timestamp/separator shape,
   single-episode pass-through, null timestamp fallback, and tuple overload parity.
+- Community maintenance now uses explicit loop-built buffers for community edge construction,
+  community build-result flattening, update-node de-duplication, summary/name fallback text, missing
+  embedding generation, and rebuild community deletion. Incremental community updates count neighbor
+  communities per neighboring entity and keep Python's first-seen tie behavior. Tests pin duplicate
+  update suppression, mode and tie selection, deterministic community text, and community edge order.
 - `LlmClient.PrepareMessages` now clones messages with a pre-sized loop, and `CleanInput` has a
   validation fast path that returns the original string for clean valid UTF-16. Tests pin the
   zero-width/C0-control cleanup matrix, allowed control preservation, malformed surrogate dropping,
