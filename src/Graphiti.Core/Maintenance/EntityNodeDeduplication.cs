@@ -57,7 +57,7 @@ internal static partial class EntityNodeDeduplicator
             resolvedByExtractedName[extracted.Name] = resolvedByCanonicalUuid[canonical.Node.Uuid];
         }
 
-        return new EntityNodeResolution(resolvedByUuid.Values.ToList(), resolvedByExtractedName);
+        return new EntityNodeResolution(ToNodeList(resolvedByUuid), resolvedByExtractedName);
     }
 
     private static CollapsedExtractedNodes CollapseExtractedNodes(IReadOnlyList<EntityNode> extractedNodes)
@@ -91,7 +91,7 @@ internal static partial class EntityNodeDeduplicator
         }
 
         return new CollapsedExtractedNodes(
-            orderedKeys.Select(key => canonicalByKey[key]).ToList(),
+            BuildCanonicalProfiles(orderedKeys, canonicalByKey),
             canonicalByOriginalUuid);
     }
 
@@ -104,8 +104,19 @@ internal static partial class EntityNodeDeduplicator
                    && candidate.Name.Trim().Length > existing.Name.Trim().Length);
     }
 
-    private static int SpecificLabelCount(IEnumerable<string> labels) =>
-        labels.Count(label => !string.Equals(label, "Entity", StringComparison.Ordinal));
+    private static int SpecificLabelCount(List<string> labels)
+    {
+        var count = 0;
+        for (var i = 0; i < labels.Count; i++)
+        {
+            if (!string.Equals(labels[i], "Entity", StringComparison.Ordinal))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
 
     private static EntityNode ResolveOne(
         EntityNameProfile extracted,
@@ -128,8 +139,10 @@ internal static partial class EntityNodeDeduplicator
         }
 
         var candidateIds = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var band in LshBands(extracted.Signature))
+        var signature = extracted.Signature;
+        for (var i = 0; i < LshBandCount(signature); i++)
         {
+            var band = LshBandAt(signature, i);
             if (indexes.LshBuckets.TryGetValue(band, out var bucket))
             {
                 foreach (var candidateId in bucket)
@@ -274,25 +287,17 @@ internal static partial class EntityNodeDeduplicator
         return signature;
     }
 
-    private static IEnumerable<BandKey> LshBands(ulong[] signature)
-    {
-        if (signature.Length == 0)
-        {
-            yield break;
-        }
+    private static int LshBandCount(ulong[] signature) => signature.Length / MinHashBandSize;
 
-        for (var start = 0; start < signature.Length; start += MinHashBandSize)
-        {
-            if (start + MinHashBandSize <= signature.Length)
-            {
-                yield return new BandKey(
-                    start / MinHashBandSize,
-                    signature[start],
-                    signature[start + 1],
-                    signature[start + 2],
-                    signature[start + 3]);
-            }
-        }
+    private static BandKey LshBandAt(ulong[] signature, int bandIndex)
+    {
+        var start = bandIndex * MinHashBandSize;
+        return new BandKey(
+            bandIndex,
+            signature[start],
+            signature[start + 1],
+            signature[start + 2],
+            signature[start + 3]);
     }
 
     private static double JaccardSimilarity(FrozenSet<string> left, FrozenSet<string> right)
@@ -390,8 +395,10 @@ internal static partial class EntityNodeDeduplicator
                 exactMatches.Add(profile);
                 profilesByUuid[candidate.Uuid] = profile;
 
-                foreach (var band in LshBands(profile.Signature))
+                var signature = profile.Signature;
+                for (var i = 0; i < LshBandCount(signature); i++)
                 {
+                    var band = LshBandAt(signature, i);
                     if (!lshBuckets.TryGetValue(band, out var bucket))
                     {
                         bucket = new List<string>();
@@ -412,6 +419,30 @@ internal static partial class EntityNodeDeduplicator
                     pair => pair.Key,
                     pair => (IReadOnlyList<string>)pair.Value.ToArray()));
         }
+    }
+
+    private static List<EntityNode> ToNodeList(Dictionary<string, EntityNode> nodesByUuid)
+    {
+        var nodes = new List<EntityNode>(nodesByUuid.Count);
+        foreach (var node in nodesByUuid.Values)
+        {
+            nodes.Add(node);
+        }
+
+        return nodes;
+    }
+
+    private static List<EntityNameProfile> BuildCanonicalProfiles(
+        List<string> orderedKeys,
+        Dictionary<string, EntityNameProfile> canonicalByKey)
+    {
+        var canonicalProfiles = new List<EntityNameProfile>(orderedKeys.Count);
+        for (var i = 0; i < orderedKeys.Count; i++)
+        {
+            canonicalProfiles.Add(canonicalByKey[orderedKeys[i]]);
+        }
+
+        return canonicalProfiles;
     }
 
     private readonly record struct BandKey(int Index, ulong First, ulong Second, ulong Third, ulong Fourth);

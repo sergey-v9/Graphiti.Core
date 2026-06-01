@@ -111,6 +111,42 @@ public class EntityNodeDeduplicationTests
         Assert.Same(specific, resolution.NodesByExtractedName[" acme   corp "]);
     }
 
+    [Fact]
+    public void Resolve_ReturnsCanonicalNodesInFirstExtractedKeyOrder()
+    {
+        var generic = new EntityNode
+        {
+            Uuid = "generic-acme",
+            Name = "Acme Corp",
+            GroupId = "group",
+            Labels = new List<string> { "Entity" }
+        };
+        var bob = new EntityNode
+        {
+            Uuid = "bob",
+            Name = "Bob",
+            GroupId = "group",
+            Labels = new List<string> { "Entity", "Person" }
+        };
+        var specific = new EntityNode
+        {
+            Uuid = "specific-acme",
+            Name = " acme   corp ",
+            GroupId = "group",
+            Labels = new List<string> { "Entity", "Organization" }
+        };
+
+        var resolution = EntityNodeDeduplicator.Resolve(
+            new[] { generic, bob, specific },
+            Array.Empty<EntityNode>(),
+            MergeLabels);
+
+        Assert.Collection(
+            resolution.Nodes,
+            node => Assert.Same(specific, node),
+            node => Assert.Same(bob, node));
+    }
+
     private static EntityNode MergeLabels(EntityNode existing, EntityNode extracted)
     {
         existing.Labels = existing.Labels
