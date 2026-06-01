@@ -20,6 +20,9 @@ function Invoke-VerifyStep {
 
     Write-Host "==> $Name"
     & $Command
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Name failed with exit code $LASTEXITCODE"
+    }
 }
 
 Invoke-VerifyStep "restore" {
