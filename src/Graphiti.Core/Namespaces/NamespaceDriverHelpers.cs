@@ -31,6 +31,42 @@ internal static class NamespaceDriverHelpers
             driver.SaveEdgeAsync,
             cancellationToken);
 
+    public static Task SaveEntityNodesBulkAsync(
+        IGraphDriver driver,
+        IEnumerable<EntityNode> nodes,
+        int batchSize,
+        IEmbedderClient embedder,
+        CancellationToken cancellationToken) =>
+        ForEachBatchAsync(
+            nodes,
+            batchSize,
+            (batch, token) => driver.SaveBulkAsync(
+                Array.Empty<EpisodicNode>(),
+                Array.Empty<EpisodicEdge>(),
+                batch,
+                Array.Empty<EntityEdge>(),
+                embedder,
+                token),
+            cancellationToken);
+
+    public static Task SaveEntityEdgesBulkAsync(
+        IGraphDriver driver,
+        IEnumerable<EntityEdge> edges,
+        int batchSize,
+        IEmbedderClient embedder,
+        CancellationToken cancellationToken) =>
+        ForEachBatchAsync(
+            edges,
+            batchSize,
+            (batch, token) => driver.SaveBulkAsync(
+                Array.Empty<EpisodicNode>(),
+                Array.Empty<EpisodicEdge>(),
+                Array.Empty<EntityNode>(),
+                batch,
+                embedder,
+                token),
+            cancellationToken);
+
     private static async Task SaveItemsAsync<TItem>(
         IEnumerable<TItem> items,
         int batchSize,
@@ -41,29 +77,56 @@ internal static class NamespaceDriverHelpers
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(saveAsync);
 
-        foreach (var chunk in items.Chunk(batchSize))
+        await ForEachBatchAsync(
+            items,
+            batchSize,
+            async (batch, token) =>
+            {
+                if (batch.Count == 1)
+                {
+                    await saveAsync(batch[0], token).ConfigureAwait(false);
+                    return;
+                }
+
+                var options = new ParallelOptions
+                {
+                    CancellationToken = token,
+                    MaxDegreeOfParallelism = Math.Min(batch.Count, MaxNamespaceSaveConcurrency)
+                };
+                await Parallel.ForEachAsync(
+                    batch,
+                    options,
+                    async (item, itemToken) => await saveAsync(item, itemToken).ConfigureAwait(false)).ConfigureAwait(false);
+            },
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task ForEachBatchAsync<TItem>(
+        IEnumerable<TItem> items,
+        int batchSize,
+        Func<IReadOnlyList<TItem>, CancellationToken, Task> processBatchAsync,
+        CancellationToken cancellationToken)
+    {
+        ValidateBatchSize(batchSize);
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(processBatchAsync);
+
+        var batch = new List<TItem>(batchSize);
+        foreach (var item in items)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (chunk.Length == 0)
+            batch.Add(item);
+            if (batch.Count == batchSize)
             {
-                continue;
+                await processBatchAsync(batch, cancellationToken).ConfigureAwait(false);
+                batch = new List<TItem>(batchSize);
             }
+        }
 
-            if (chunk.Length == 1)
-            {
-                await saveAsync(chunk[0], cancellationToken).ConfigureAwait(false);
-                continue;
-            }
-
-            var options = new ParallelOptions
-            {
-                CancellationToken = cancellationToken,
-                MaxDegreeOfParallelism = Math.Min(chunk.Length, MaxNamespaceSaveConcurrency)
-            };
-            await Parallel.ForEachAsync(
-                chunk,
-                options,
-                async (item, token) => await saveAsync(item, token).ConfigureAwait(false)).ConfigureAwait(false);
+        if (batch.Count > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await processBatchAsync(batch, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -80,7 +143,7 @@ internal static class NamespaceDriverHelpers
             cancellationToken: cancellationToken).ConfigureAwait(false);
         await DeleteNodesByUuidsAsync<TNode>(
             driver,
-            nodes.Select(node => node.Uuid),
+            BuildNodeUuidList(nodes),
             batchSize,
             cancellationToken).ConfigureAwait(false);
     }
@@ -97,7 +160,7 @@ internal static class NamespaceDriverHelpers
         var typedNodes = await driver.GetNodesByUuidsAsync<TNode>(
             uuids,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        var typedUuids = typedNodes.Select(node => node.Uuid).ToList();
+        var typedUuids = BuildNodeUuidList(typedNodes);
         if (typedUuids.Count == 0)
         {
             return;
@@ -116,7 +179,7 @@ internal static class NamespaceDriverHelpers
         var typedEdges = await driver.GetEdgesByUuidsAsync<TEdge>(
             uuids,
             cancellationToken).ConfigureAwait(false);
-        var typedUuids = typedEdges.Select(edge => edge.Uuid).ToList();
+        var typedUuids = BuildEdgeUuidList(typedEdges);
         if (typedUuids.Count == 0)
         {
             return;
@@ -131,17 +194,28 @@ internal static class NamespaceDriverHelpers
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(embedder);
-        var nodesMissingEmbeddings = nodes
-            .Where(node => node.NameEmbedding is null)
-            .ToList();
+        ArgumentNullException.ThrowIfNull(nodes);
+
+        var nodesMissingEmbeddings = new List<CommunityNode>(nodes.Count);
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            if (nodes[i].NameEmbedding is null)
+            {
+                nodesMissingEmbeddings.Add(nodes[i]);
+            }
+        }
+
         if (nodesMissingEmbeddings.Count == 0)
         {
             return;
         }
 
-        var inputs = nodesMissingEmbeddings
-            .Select(node => (node.Name ?? string.Empty).Replace('\n', ' '))
-            .ToList();
+        var inputs = new List<string>(nodesMissingEmbeddings.Count);
+        for (var i = 0; i < nodesMissingEmbeddings.Count; i++)
+        {
+            inputs.Add((nodesMissingEmbeddings[i].Name ?? string.Empty).Replace('\n', ' '));
+        }
+
         var embeddings = EmbeddingVectorValidation.MaterializeBatch(
             await embedder.CreateBatchAsync(inputs, cancellationToken).ConfigureAwait(false),
             nodesMissingEmbeddings.Count,
@@ -159,21 +233,24 @@ internal static class NamespaceDriverHelpers
         IEnumerable<EntityNode> nodes,
         CancellationToken cancellationToken)
     {
-        var nodeList = nodes.ToList();
+        ArgumentNullException.ThrowIfNull(nodes);
+
+        var nodeList = MaterializeList(nodes, cancellationToken);
         if (nodeList.Count == 0)
         {
             return;
         }
 
+        var nodeUuids = BuildNodeUuidList(nodeList);
         var storedNodes = await driver.GetNodesByUuidsAsync<EntityNode>(
-            nodeList.Select(node => node.Uuid),
+            nodeUuids,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        var storedByUuid = storedNodes.ToDictionary(node => node.Uuid, StringComparer.Ordinal);
+        var storedByUuid = BuildNodeLookup(storedNodes);
         foreach (var node in nodeList)
         {
             if (storedByUuid.TryGetValue(node.Uuid, out var stored))
             {
-                node.NameEmbedding = stored.NameEmbedding?.ToList();
+                node.NameEmbedding = CopyFloatList(stored.NameEmbedding);
             }
         }
     }
@@ -183,22 +260,102 @@ internal static class NamespaceDriverHelpers
         IEnumerable<EntityEdge> edges,
         CancellationToken cancellationToken)
     {
-        var edgeList = edges.ToList();
+        ArgumentNullException.ThrowIfNull(edges);
+
+        var edgeList = MaterializeList(edges, cancellationToken);
         if (edgeList.Count == 0)
         {
             return;
         }
 
+        var edgeUuids = BuildEdgeUuidList(edgeList);
         var storedEdges = await driver.GetEdgesByUuidsAsync<EntityEdge>(
-            edgeList.Select(edge => edge.Uuid),
+            edgeUuids,
             cancellationToken).ConfigureAwait(false);
-        var storedByUuid = storedEdges.ToDictionary(edge => edge.Uuid, StringComparer.Ordinal);
+        var storedByUuid = BuildEdgeLookup(storedEdges);
         foreach (var edge in edgeList)
         {
             if (storedByUuid.TryGetValue(edge.Uuid, out var stored))
             {
-                edge.FactEmbedding = stored.FactEmbedding?.ToList();
+                edge.FactEmbedding = CopyFloatList(stored.FactEmbedding);
             }
         }
+    }
+
+    private static List<TItem> MaterializeList<TItem>(
+        IEnumerable<TItem> items,
+        CancellationToken cancellationToken)
+    {
+        var capacity = items.TryGetNonEnumeratedCount(out var count) ? count : 0;
+        var list = capacity == 0 ? new List<TItem>() : new List<TItem>(capacity);
+        foreach (var item in items)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            list.Add(item);
+        }
+
+        return list;
+    }
+
+    private static List<string> BuildNodeUuidList<TNode>(IReadOnlyList<TNode> nodes)
+        where TNode : Node
+    {
+        var uuids = new List<string>(nodes.Count);
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            uuids.Add(nodes[i].Uuid);
+        }
+
+        return uuids;
+    }
+
+    private static List<string> BuildEdgeUuidList<TEdge>(IReadOnlyList<TEdge> edges)
+        where TEdge : Edge
+    {
+        var uuids = new List<string>(edges.Count);
+        for (var i = 0; i < edges.Count; i++)
+        {
+            uuids.Add(edges[i].Uuid);
+        }
+
+        return uuids;
+    }
+
+    private static Dictionary<string, EntityNode> BuildNodeLookup(IReadOnlyList<EntityNode> nodes)
+    {
+        var lookup = new Dictionary<string, EntityNode>(nodes.Count, StringComparer.Ordinal);
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            lookup.Add(nodes[i].Uuid, nodes[i]);
+        }
+
+        return lookup;
+    }
+
+    private static Dictionary<string, EntityEdge> BuildEdgeLookup(IReadOnlyList<EntityEdge> edges)
+    {
+        var lookup = new Dictionary<string, EntityEdge>(edges.Count, StringComparer.Ordinal);
+        for (var i = 0; i < edges.Count; i++)
+        {
+            lookup.Add(edges[i].Uuid, edges[i]);
+        }
+
+        return lookup;
+    }
+
+    private static List<float>? CopyFloatList(List<float>? source)
+    {
+        if (source is null)
+        {
+            return null;
+        }
+
+        var copy = new List<float>(source.Count);
+        for (var i = 0; i < source.Count; i++)
+        {
+            copy.Add(source[i]);
+        }
+
+        return copy;
     }
 }

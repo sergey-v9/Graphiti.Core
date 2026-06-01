@@ -296,6 +296,11 @@ shorter than the old working plans; expand items only when they become active.
   `IReadOnlyList[]` allocations that previously connected `SearchEngine` branches to fusion/merge.
   Tests pin one-list RRF, two-list RRF/merge, three-list parity, and the existing RRF/merge ordering
   semantics.
+- Namespace bulk-save, typed delete, community embedding backfill, and entity embedding load helpers
+  now use explicit streaming batch buffers, UUID buffers/lookups, and embedding copy loops instead of
+  `Chunk`/LINQ projection chains. Preserve batch-size validation before enumeration, sequential
+  batches with per-batch concurrency capped at 8, typed delete filtering, empty-load no-ops,
+  missing-stored-item behavior, null embedding clearing, and clone-isolated loaded vectors.
 - Materialized fallback full-text/vector search now uses predicate-aware BM25 and top-score overloads
   instead of `Where` iterator chains. This preserves filter order, stable ranking ties, endpoint
   filtering, strict vector min-score behavior, and BM25 document scoring without allocating full

@@ -54,6 +54,9 @@ public class NamespaceTests
         var shell = new EntityNode { Uuid = alice.Uuid, Name = "shell", GroupId = "group" };
         await graphiti.Nodes.Entity.LoadEmbeddingsBulkAsync(new[] { shell });
         Assert.Equal(alice.NameEmbedding, shell.NameEmbedding);
+        shell.NameEmbedding![0] = 99f;
+        var storedAlice = await graphiti.Nodes.Entity.GetByUuidAsync(alice.Uuid);
+        Assert.Equal(alice.NameEmbedding, storedAlice.NameEmbedding);
 
         await graphiti.Nodes.Entity.DeleteByGroupIdAsync("group");
 
@@ -129,6 +132,19 @@ public class NamespaceTests
 
         Assert.Equal(edges.Count, driver.SavedEdgeCount);
         Assert.Equal(2, driver.MaxConcurrentSaves);
+
+        driver.ResetMaxConcurrentSaves();
+        var cappedEpisodes = Enumerable.Range(0, 12)
+            .Select(index => new EpisodicNode
+            {
+                Uuid = $"capped-episode-{index}",
+                Name = $"capped-episode-{index}",
+                GroupId = "group"
+            })
+            .ToList();
+        await graphiti.Nodes.Episode.SaveBulkAsync(cappedEpisodes, batchSize: 12);
+
+        Assert.Equal(8, driver.MaxConcurrentSaves);
     }
 
     [Fact]
@@ -262,6 +278,9 @@ public class NamespaceTests
         var shell = new EntityEdge { Uuid = knows.Uuid };
         await graphiti.Edges.Entity.LoadEmbeddingsBulkAsync(new[] { shell });
         Assert.Equal(knows.FactEmbedding, shell.FactEmbedding);
+        shell.FactEmbedding![0] = 99f;
+        var storedKnows = await graphiti.Edges.Entity.GetByUuidAsync(knows.Uuid);
+        Assert.Equal(knows.FactEmbedding, storedKnows.FactEmbedding);
 
         await graphiti.Edges.Entity.DeleteByUuidsAsync(new[] { knows.Uuid, mention.Uuid });
 

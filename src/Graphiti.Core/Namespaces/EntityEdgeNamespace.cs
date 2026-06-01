@@ -32,22 +32,12 @@ public sealed class EntityEdgeNamespace
         NamespaceDriverHelpers.ValidateBatchSize(batchSize);
         ArgumentNullException.ThrowIfNull(edges);
 
-        foreach (var chunk in edges.Chunk(batchSize))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (chunk.Length == 0)
-            {
-                continue;
-            }
-
-            await _driver.SaveBulkAsync(
-                Array.Empty<EpisodicNode>(),
-                Array.Empty<EpisodicEdge>(),
-                Array.Empty<EntityNode>(),
-                chunk,
-                _embedder,
-                cancellationToken).ConfigureAwait(false);
-        }
+        await NamespaceDriverHelpers.SaveEntityEdgesBulkAsync(
+            _driver,
+            edges,
+            batchSize,
+            _embedder,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public Task DeleteAsync(EntityEdge edge, CancellationToken cancellationToken = default) =>

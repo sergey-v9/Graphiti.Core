@@ -31,22 +31,12 @@ public sealed class EntityNodeNamespace
         NamespaceDriverHelpers.ValidateBatchSize(batchSize);
         ArgumentNullException.ThrowIfNull(nodes);
 
-        foreach (var chunk in nodes.Chunk(batchSize))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (chunk.Length == 0)
-            {
-                continue;
-            }
-
-            await _driver.SaveBulkAsync(
-                Array.Empty<EpisodicNode>(),
-                Array.Empty<EpisodicEdge>(),
-                chunk,
-                Array.Empty<EntityEdge>(),
-                _embedder,
-                cancellationToken).ConfigureAwait(false);
-        }
+        await NamespaceDriverHelpers.SaveEntityNodesBulkAsync(
+            _driver,
+            nodes,
+            batchSize,
+            _embedder,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public Task DeleteAsync(EntityNode node, CancellationToken cancellationToken = default) =>
