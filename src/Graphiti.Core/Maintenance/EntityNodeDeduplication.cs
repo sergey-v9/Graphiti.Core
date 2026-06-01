@@ -412,12 +412,28 @@ internal static partial class EntityNodeDeduplicator
             return new CandidateIndexes(
                 normalizedExisting.ToFrozenDictionary(
                     pair => pair.Key,
-                    pair => (IReadOnlyList<EntityNameProfile>)pair.Value.ToArray(),
+                    pair => (IReadOnlyList<EntityNameProfile>)CopyBucket(pair.Value),
                     StringComparer.Ordinal),
                 profilesByUuid.ToFrozenDictionary(StringComparer.Ordinal),
                 lshBuckets.ToFrozenDictionary(
                     pair => pair.Key,
-                    pair => (IReadOnlyList<string>)pair.Value.ToArray()));
+                    pair => (IReadOnlyList<string>)CopyBucket(pair.Value)));
+        }
+
+        private static T[] CopyBucket<T>(List<T> bucket)
+        {
+            if (bucket.Count == 0)
+            {
+                return Array.Empty<T>();
+            }
+
+            var snapshot = new T[bucket.Count];
+            for (var i = 0; i < bucket.Count; i++)
+            {
+                snapshot[i] = bucket[i];
+            }
+
+            return snapshot;
         }
     }
 
