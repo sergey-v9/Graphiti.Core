@@ -233,6 +233,10 @@ shorter than the old working plans; expand items only when they become active.
   `IReadOnlyList[]` allocations that previously connected `SearchEngine` branches to fusion/merge.
   Tests pin one-list RRF, two-list RRF/merge, three-list parity, and the existing RRF/merge ordering
   semantics.
+- `LadybugGraphDriver` now executes internal bulk-save phase statements and read-side collection
+  projections with explicit loops and pre-sized buffers instead of LINQ iterator chains. Tests pin
+  backend record-order preservation, group filtering, first-seen group-id de-duplication, and the
+  internal-only provider boundary.
 - Good next allocation slice from the 2026-06-01 scans: continue with a fresh targeted scan before
   editing. Concrete candidates from the latest scan are Neo4j bulk-save parameter loop projection
   or moving back to LadybugDB package proof when provider work is the higher-leverage slice.

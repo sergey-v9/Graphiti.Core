@@ -93,26 +93,42 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
         ArgumentNullException.ThrowIfNull(embedder);
 
         var episodeList = MaterializeWithCancellation(episodicNodes, cancellationToken);
-        await ExecuteAllAsync(
-            episodeList.Select(LadybugStatementBuilder.BuildEpisodicNodeSave),
-            cancellationToken).ConfigureAwait(false);
+        for (var i = 0; i < episodeList.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await _executor.ExecuteAsync(
+                LadybugStatementBuilder.BuildEpisodicNodeSave(episodeList[i]),
+                cancellationToken).ConfigureAwait(false);
+        }
 
         var entityList = MaterializeWithCancellation(entityNodes, cancellationToken);
         await EnsureEntityNodeEmbeddingsAsync(entityList, embedder, cancellationToken).ConfigureAwait(false);
-        await ExecuteAllAsync(
-            entityList.Select(LadybugStatementBuilder.BuildEntityNodeSave),
-            cancellationToken).ConfigureAwait(false);
+        for (var i = 0; i < entityList.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await _executor.ExecuteAsync(
+                LadybugStatementBuilder.BuildEntityNodeSave(entityList[i]),
+                cancellationToken).ConfigureAwait(false);
+        }
 
         var episodicEdgeList = MaterializeWithCancellation(episodicEdges, cancellationToken);
-        await ExecuteAllAsync(
-            episodicEdgeList.Select(LadybugStatementBuilder.BuildEpisodicEdgeSave),
-            cancellationToken).ConfigureAwait(false);
+        for (var i = 0; i < episodicEdgeList.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await _executor.ExecuteAsync(
+                LadybugStatementBuilder.BuildEpisodicEdgeSave(episodicEdgeList[i]),
+                cancellationToken).ConfigureAwait(false);
+        }
 
         var entityEdgeList = MaterializeWithCancellation(entityEdges, cancellationToken);
         await EnsureEntityEdgeEmbeddingsAsync(entityEdgeList, embedder, cancellationToken).ConfigureAwait(false);
-        await ExecuteAllAsync(
-            entityEdgeList.Select(LadybugStatementBuilder.BuildEntityEdgeSave),
-            cancellationToken).ConfigureAwait(false);
+        for (var i = 0; i < entityEdgeList.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await _executor.ExecuteAsync(
+                LadybugStatementBuilder.BuildEntityEdgeSave(entityEdgeList[i]),
+                cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public override async Task DeleteNodeAsync(string uuid, CancellationToken cancellationToken = default)
@@ -303,13 +319,17 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
         var records = await _executor.QueryAsync(
             LadybugStatementBuilder.BuildNodesGetByUuids<TNode>(uuidList),
             cancellationToken).ConfigureAwait(false);
-        var nodes = records.Select(MapNode<TNode>);
-        if (groupId is not null)
+        var nodes = new List<TNode>(records.Count);
+        for (var i = 0; i < records.Count; i++)
         {
-            nodes = nodes.Where(node => string.Equals(node.GroupId, groupId, StringComparison.Ordinal));
+            var node = MapNode<TNode>(records[i]);
+            if (groupId is null || string.Equals(node.GroupId, groupId, StringComparison.Ordinal))
+            {
+                nodes.Add(node);
+            }
         }
 
-        return nodes.ToList();
+        return nodes;
     }
 
     public override async Task<IReadOnlyList<TNode>> GetNodesByGroupIdsAsync<TNode>(
@@ -327,7 +347,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
                 uuidCursor,
                 withEmbeddings),
             cancellationToken).ConfigureAwait(false);
-        return records.Select(MapNode<TNode>).ToList();
+        return MapNodeRecords<TNode>(records);
     }
 
     public override async Task<T> GetEdgeByUuidAsync<T>(
@@ -359,7 +379,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
         var records = await _executor.QueryAsync(
             LadybugStatementBuilder.BuildEdgesGetByUuids<T>(uuidList),
             cancellationToken).ConfigureAwait(false);
-        return records.Select(MapEdge<T>).ToList();
+        return MapEdgeRecords<T>(records);
     }
 
     public override async Task<IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(
@@ -377,7 +397,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
                 uuidCursor,
                 withEmbeddings),
             cancellationToken).ConfigureAwait(false);
-        return records.Select(MapEdge<T>).ToList();
+        return MapEdgeRecords<T>(records);
     }
 
     public override async Task<IReadOnlyList<EntityEdge>> GetEntityEdgesBetweenNodesAsync(
@@ -388,7 +408,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
         var records = await _executor.QueryAsync(
             LadybugStatementBuilder.BuildEntityEdgesBetweenNodesGet(sourceNodeUuid, targetNodeUuid),
             cancellationToken).ConfigureAwait(false);
-        return records.Select(LadybugRecordMapper.MapEntityEdge).ToList();
+        return MapRecords(records, LadybugRecordMapper.MapEntityEdge);
     }
 
     public override async Task<IReadOnlyList<EntityEdge>> GetEntityEdgesByNodeUuidAsync(
@@ -398,7 +418,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
         var records = await _executor.QueryAsync(
             LadybugStatementBuilder.BuildEntityEdgesByNodeUuidGet(nodeUuid),
             cancellationToken).ConfigureAwait(false);
-        return records.Select(LadybugRecordMapper.MapEntityEdge).ToList();
+        return MapRecords(records, LadybugRecordMapper.MapEntityEdge);
     }
 
     public override async Task<IReadOnlyList<EpisodicNode>> GetEpisodesByEntityNodeUuidAsync(
@@ -408,7 +428,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
         var records = await _executor.QueryAsync(
             LadybugStatementBuilder.BuildEpisodesByEntityNodeUuidGet(entityNodeUuid),
             cancellationToken).ConfigureAwait(false);
-        return records.Select(LadybugRecordMapper.MapEpisodicNode).ToList();
+        return MapRecords(records, LadybugRecordMapper.MapEpisodicNode);
     }
 
     public override async Task<IReadOnlyList<EpisodicNode>> RetrieveEpisodesAsync(
@@ -422,27 +442,47 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
         var records = await _executor.QueryAsync(
             LadybugStatementBuilder.BuildRetrieveEpisodes(referenceTime, lastN, groupIds, source, saga),
             cancellationToken).ConfigureAwait(false);
-        return records.Select(LadybugRecordMapper.MapEpisodicNode).Reverse().ToList();
+        var episodes = new List<EpisodicNode>(records.Count);
+        for (var i = records.Count - 1; i >= 0; i--)
+        {
+            episodes.Add(LadybugRecordMapper.MapEpisodicNode(records[i]));
+        }
+
+        return episodes;
     }
 
     public override async Task<IReadOnlyList<EntityNode>> GetMentionedNodesAsync(
         IReadOnlyList<EpisodicNode> episodes,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        var episodeUuids = new List<string>(episodes.Count);
+        for (var i = 0; i < episodes.Count; i++)
+        {
+            episodeUuids.Add(episodes[i].Uuid);
+        }
+
         var records = await _executor.QueryAsync(
-            LadybugStatementBuilder.BuildMentionedNodesGet(episodes.Select(episode => episode.Uuid)),
+            LadybugStatementBuilder.BuildMentionedNodesGet(episodeUuids),
             cancellationToken).ConfigureAwait(false);
-        return records.Select(LadybugRecordMapper.MapEntityNode).ToList();
+        return MapRecords(records, LadybugRecordMapper.MapEntityNode);
     }
 
     public override async Task<IReadOnlyList<CommunityNode>> GetCommunitiesByNodesAsync(
         IReadOnlyList<EntityNode> nodes,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        var nodeUuids = new List<string>(nodes.Count);
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            nodeUuids.Add(nodes[i].Uuid);
+        }
+
         var records = await _executor.QueryAsync(
-            LadybugStatementBuilder.BuildCommunitiesByNodesGet(nodes.Select(node => node.Uuid)),
+            LadybugStatementBuilder.BuildCommunitiesByNodesGet(nodeUuids),
             cancellationToken).ConfigureAwait(false);
-        return records.Select(LadybugRecordMapper.MapCommunityNode).ToList();
+        return MapRecords(records, LadybugRecordMapper.MapCommunityNode);
     }
 
     public override async Task<SagaNode?> FindSagaByNameAsync(
@@ -476,13 +516,23 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
         var records = await _executor.QueryAsync(
             LadybugStatementBuilder.BuildSagaEpisodeContentsGet(sagaUuid, since, limit),
             cancellationToken).ConfigureAwait(false);
-        var chronologicalRecords = since is null ? records.AsEnumerable().Reverse() : records;
-        return chronologicalRecords
-            .Select(record => new SagaEpisodeContent(
-                GetString(record, "content") ?? string.Empty,
-                record.TryGetValue("valid_at", out var validAt) ? GraphitiHelpers.ParseDbDate(validAt) : null))
-            .Where(content => content.Content.Length > 0)
-            .ToList();
+        var contents = new List<SagaEpisodeContent>(records.Count);
+        if (since is null)
+        {
+            for (var i = records.Count - 1; i >= 0; i--)
+            {
+                AddSagaEpisodeContent(records[i], contents);
+            }
+        }
+        else
+        {
+            for (var i = 0; i < records.Count; i++)
+            {
+                AddSagaEpisodeContent(records[i], contents);
+            }
+        }
+
+        return contents;
     }
 
     public override async Task<IReadOnlyList<string>> GetEntityGroupIdsAsync(
@@ -499,11 +549,18 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
         var records = await _executor.QueryAsync(
             LadybugStatementBuilder.BuildNodeGroupIdsGet<TNode>(),
             cancellationToken).ConfigureAwait(false);
-        return records
-            .Select(record => GetString(record, "group_id"))
-            .Where(groupId => !string.IsNullOrEmpty(groupId))
-            .Distinct(StringComparer.Ordinal)
-            .ToList()!;
+        var groupIds = new List<string>(records.Count);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < records.Count; i++)
+        {
+            var groupId = GetString(records[i], "group_id");
+            if (!string.IsNullOrEmpty(groupId) && seen.Add(groupId))
+            {
+                groupIds.Add(groupId);
+            }
+        }
+
+        return groupIds;
     }
 
     private async Task ExecuteAllAsync(
@@ -515,6 +572,60 @@ internal sealed class LadybugGraphDriver : GraphDriverBase
             cancellationToken.ThrowIfCancellationRequested();
             await _executor.ExecuteAsync(statement, cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private static List<TNode> MapNodeRecords<TNode>(
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> records)
+        where TNode : Node
+    {
+        var nodes = new List<TNode>(records.Count);
+        for (var i = 0; i < records.Count; i++)
+        {
+            nodes.Add(MapNode<TNode>(records[i]));
+        }
+
+        return nodes;
+    }
+
+    private static List<TEdge> MapEdgeRecords<TEdge>(
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> records)
+        where TEdge : Edge
+    {
+        var edges = new List<TEdge>(records.Count);
+        for (var i = 0; i < records.Count; i++)
+        {
+            edges.Add(MapEdge<TEdge>(records[i]));
+        }
+
+        return edges;
+    }
+
+    private static List<T> MapRecords<T>(
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> records,
+        Func<IReadOnlyDictionary<string, object?>, T> mapper)
+    {
+        var results = new List<T>(records.Count);
+        for (var i = 0; i < records.Count; i++)
+        {
+            results.Add(mapper(records[i]));
+        }
+
+        return results;
+    }
+
+    private static void AddSagaEpisodeContent(
+        IReadOnlyDictionary<string, object?> record,
+        List<SagaEpisodeContent> contents)
+    {
+        var content = GetString(record, "content") ?? string.Empty;
+        if (content.Length == 0)
+        {
+            return;
+        }
+
+        contents.Add(new SagaEpisodeContent(
+            content,
+            record.TryGetValue("valid_at", out var validAt) ? GraphitiHelpers.ParseDbDate(validAt) : null));
     }
 
     private static TNode MapNode<TNode>(IReadOnlyDictionary<string, object?> record)

@@ -14,8 +14,9 @@ being ported.
   and now feed an internal executor-backed `LadybugGraphDriver` core.
 - `LadybugGraphDriver` is internal and not wired to DI/options. It executes the non-search graph
   driver surface through an abstract `ILadybugQueryExecutor`, which keeps the core path testable
-  without adding the LadybugDB package or native assets. There is still no concrete LadybugDB package
-  adapter in the project.
+  without adding the LadybugDB package or native assets. Its current projection path uses explicit
+  loops for bulk-save phase statements, read records, saga contents, and first-seen group-id
+  de-duplication. There is still no concrete LadybugDB package adapter in the project.
 - `LadybugSearchStatementBuilder` and `LadybugSearchExecutor` are internal. They pin Kuzu full-text
   index statements, `QUERY_FTS_INDEX` calls, `array_cosine_similarity` vector search, doubled-depth
   BFS plans over `RelatesToNode_`, per-UUID ranker statements, Kuzu label filters, score extraction,

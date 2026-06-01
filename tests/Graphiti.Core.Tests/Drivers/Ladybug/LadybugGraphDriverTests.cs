@@ -64,6 +64,34 @@ public class LadybugGraphDriverTests
     }
 
     [Fact]
+    public async Task CollectionReads_FilterAndDeduplicateWithoutReordering()
+    {
+        var executor = new RecordingLadybugExecutor();
+        executor.EnqueueQuery(
+            EntityRecord("entity-other", "other"),
+            EntityRecord("entity-2"),
+            EntityRecord("entity-1"));
+        executor.EnqueueQuery(
+            new Dictionary<string, object?> { ["group_id"] = "tenant" },
+            new Dictionary<string, object?> { ["group_id"] = "" },
+            new Dictionary<string, object?> { ["group_id"] = "other" },
+            new Dictionary<string, object?> { ["group_id"] = "tenant" },
+            new Dictionary<string, object?> { ["group_id"] = null });
+        var driver = new LadybugGraphDriver(executor);
+
+        var nodes = await driver.GetNodesByUuidsAsync<EntityNode>(
+            ["entity-1", "entity-2", "entity-other"],
+            groupId: "tenant");
+        var groupIds = await driver.GetEntityGroupIdsAsync();
+
+        Assert.Equal(new[] { "entity-2", "entity-1" }, nodes.Select(node => node.Uuid));
+        Assert.Equal(new[] { "tenant", "other" }, groupIds);
+        Assert.Equal(2, executor.Queried.Count);
+        Assert.Contains("WHERE n.uuid IN $uuids", executor.Queried[0].Query, StringComparison.Ordinal);
+        Assert.Contains("RETURN DISTINCT n.group_id AS group_id", executor.Queried[1].Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task DeleteNodeAsync_CleansEntityIntermediatesBeforeAllNodeTables()
     {
         var executor = new RecordingLadybugExecutor();
@@ -141,12 +169,12 @@ public class LadybugGraphDriverTests
         Assert.Throws<NotSupportedException>(() => driver.Clone("other"));
     }
 
-    private static Dictionary<string, object?> EntityRecord(string uuid) =>
+    private static Dictionary<string, object?> EntityRecord(string uuid, string groupId = "tenant") =>
         new(StringComparer.Ordinal)
         {
             ["uuid"] = uuid,
             ["name"] = "Alice",
-            ["group_id"] = "tenant",
+            ["group_id"] = groupId,
             ["labels"] = new[] { "Entity", "Person" },
             ["created_at"] = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             ["summary"] = "summary",
