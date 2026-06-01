@@ -244,9 +244,15 @@ public static partial class GraphitiHelpers
         if (invalidTypes is not null)
         {
             invalidTypes.Sort(StringComparer.Ordinal);
-            var sortedAvailableTypes = availableTypes.Order(StringComparer.Ordinal);
+            var sortedAvailableTypes = new List<string>(availableTypes.Count);
+            foreach (var type in availableTypes)
+            {
+                sortedAvailableTypes.Add(type);
+            }
+
+            sortedAvailableTypes.Sort(StringComparer.Ordinal);
             throw new ArgumentException(
-                $"Invalid excluded entity types: [{string.Join(", ", invalidTypes)}]. Available types: [{string.Join(", ", sortedAvailableTypes)}]",
+                $"Invalid excluded entity types: [{FormatCommaSeparated(invalidTypes)}]. Available types: [{FormatCommaSeparated(sortedAvailableTypes)}]",
                 nameof(excludedEntityTypes));
         }
     }
@@ -272,6 +278,30 @@ public static partial class GraphitiHelpers
                 }
             }
         }
+    }
+
+    private static string FormatCommaSeparated(List<string> values)
+    {
+        if (values.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var length = (values.Count - 1) * 2;
+        for (var i = 0; i < values.Count; i++)
+        {
+            length += values[i].Length;
+        }
+
+        var builder = new StringBuilder(length);
+        builder.Append(values[0]);
+        for (var i = 1; i < values.Count; i++)
+        {
+            builder.Append(", ");
+            builder.Append(values[i]);
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>
