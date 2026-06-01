@@ -16,7 +16,8 @@ This folder contains the C# port of `graphiti_core/` as a reusable .NET library.
 - `Graphiti.Core`: optional package exposing a LadybugDB-backed driver factory and DI
   helpers. Factory-backed Graphiti ingestion, attribution lookup, episode removal, and advanced
   search, plus direct triplet persistence/search, bulk duplicate-fact ingestion, and saga association
-  plus summarization have initial end-to-end proof while the core DI provider switch supports LadybugDB.
+  plus summarization, community build/rebuild, and community search have initial end-to-end proof
+  while the core DI provider switch supports LadybugDB.
 
 ## Namespace Layout
 
