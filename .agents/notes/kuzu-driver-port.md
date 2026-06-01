@@ -50,6 +50,9 @@ being ported.
 - The test project has private `LadybugDB` and `LadybugDB.Native` references for runtime package
   proof only. Adding these to core still needs an explicit packaging/provider decision because
   native dependencies affect package layout.
+- If driver implementation uncovers behavior that looks like a LadybugDB package/backend bug rather
+  than a C# port bug, mark it separately in this note or a focused issue. The port may work around
+  proven backend limitations, but should not blur them with Graphiti parity gaps.
 - Neo4j and FalkorDB can stay as reference/confirmation paths if already working, but they are not
   where future provider improvements should go.
 - Neptune is a separate provider decision and remains not implemented.
@@ -79,7 +82,9 @@ being ported.
   entity-node, entity-edge, and community vector search using normalized list parameters. Node/edge
   BFS statements and node-distance/episode-mentions ranker statements also run against the real
   package. The entity-origin edge BFS proof currently pins the Python Kuzu shape where a depth-2
-  origin reaches the second logical `RELATES_TO` fact edge through `RelatesToNode_`.
+  origin reaches the second logical `RELATES_TO` fact edge through `RelatesToNode_`. Graph
+  maintenance proof now covers community-edge `UNION` saves, normalized list-backed edge/node
+  deletes, grouped clear, and full clear through the internal driver.
 - Current package binding does not accept the list/array and null parameter shapes Graphiti
   statements use today. `List<string>`, `string[]`, `float[]`, and `object[]` throw
   `NotSupportedException`; `null` throws `ArgumentNullException`. The normalizer handles these by
@@ -91,15 +96,24 @@ being ported.
 - LadybugDB can reject post-projection ordering by node variables (`ORDER BY n.uuid` / `e.valid_at`).
   Use projected aliases such as `uuid`, `valid_at`, and `created_at` in Kuzu/Ladybug statements after
   `RETURN`.
+- When runtime proof exposes behavior that looks like a LadybugDB package bug rather than a Graphiti
+  port bug, mark it separately in this note or a focused test skip/issue note. Do not bury suspected
+  package bugs as ordinary port TODOs; we can fix or patch those driver/package issues later.
 
 ## Facts To Confirm Before Driver Wiring
 
-- Whether LadybugDB accepts all Python Kuzu Cypher shapes used by Graphiti beyond the current runtime
-  proofs, including `DETACH DELETE`, direct `WHERE x IN $list` binding, and `UNION`.
-- Whether parameter names and binding use `$name` across prepared and direct execution paths.
+- Whether LadybugDB accepts any Python Kuzu Cypher shapes used by Graphiti that are not represented
+  in the current internal-driver and internal-search runtime proofs.
+- Search-runtime proof with non-empty Kuzu filters still needs a focused pass for
+  `list_has_all(...)`, `e.name in $edge_types`, and `e.uuid in $edge_uuids`; current package tests
+  mostly prove empty-filter search execution plus graph/read/delete list predicates.
+- If community-cluster maintenance is ported into the Ladybug driver, prove the `collect(DISTINCT
+  ...)` and `WITH count(*)` query shapes against the package before wiring it.
+- Whether the concrete adapter should use prepared execution everywhere or split direct/prepared
+  paths for package-specific performance and diagnostics.
 - Whether the normalizer's CLR literal strategy is enough for the remaining graph/search statements
-  beyond the current Saga, entity-edge, episode retrieval, mention traversal, FTS/vector search, BFS,
-  and ranker runtime proofs.
+  beyond the current Saga, entity-edge, episode retrieval, mention traversal, FTS/vector search,
+  BFS/ranker, `UNION`, delete, and clear runtime proofs.
 - Whether native package dependencies are acceptable in `Graphiti.Core` or require an optional
   core driver.
 
@@ -125,22 +139,25 @@ being ported.
   still not an `ISearchGraphDriver`.
 - Tests in `Drivers/Ladybug/LadybugPackageRuntimeTests.cs` pin the current LadybugDB package runtime
   facts using private test-only package references, exercise the normalizer against real list/null
-  graph writes and reads, and assert the core project still has no LadybugDB package reference.
+  graph writes, reads, search, delete, and clear paths, and assert the core project still has no
+  LadybugDB package reference.
 
 ## Expected Implementation Work
 
 1. Decide package/native dependency shape for the LadybugDB provider. Do not add core package
    references until this is explicit.
-2. Extend package-runtime proof from the current Saga/entity-edge/episode/FTS/vector/BFS/ranker
-   coverage into remaining graph maintenance and search statements, especially delete/clear and
-   `UNION` paths that are not already covered by real-package tests.
+2. Extend package-runtime proof only when a concrete adapter or newly ported feature introduces a
+   Ladybug/Kuzu statement shape not already covered by the current Saga/entity-edge/episode/
+   FTS/vector/BFS/ranker/`UNION`/delete/clear tests. If a proof fails because the LadybugDB package
+   appears to reject valid Kuzu behavior or mishandle binding/projection/materialization, record that
+   as a suspected package bug separately from Graphiti port work.
 3. Add/use the LadybugDB package in the core driver/core boundary selected above and decide how
    its connections/options should be represented in `GraphitiOptions`.
 4. Add a concrete LadybugDB package adapter for `ILadybugQueryExecutor`. Keep `GraphProvider.Kuzu`
    unsupported in DI/options until save/get/delete, bulk paths, saga episode queries, fulltext,
-   vector search, BFS, rerankers, and DI construction are proven against the real backend. The search
-   statement and abstract execution shapes now have focused real-package proof but still need
-   concrete adapter coverage. Keep the
+   vector search, BFS, rerankers, graph maintenance, and DI construction are proven against the real
+   backend. The current internal graph/search statement and abstract execution shapes now have
+   focused real-package proof but still need concrete adapter coverage. Keep the
    adapter allocation-aware: avoid unnecessary per-row dictionaries/lists, closure-heavy query loops,
    repeated JSON/string conversions, and exception-driven type coercion where the package API allows
    direct mapping.

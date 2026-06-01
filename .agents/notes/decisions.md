@@ -161,6 +161,9 @@ Graphiti semantics, wire compatibility, or performance/allocation discipline.
   execution coverage, and may expose an internal executor-backed driver core as long as no concrete
   package adapter, DI wiring, `ISearchGraphDriver` implementation, or provider support claim is added
   before the backend is proven.
+- LadybugDB package/backend behavior that appears buggy during driver implementation should be marked
+  separately from C# port gaps. Work around proven backend limitations deliberately when useful, but
+  keep them visible for later LadybugDB fixes.
 - Neptune is not implemented in the C# port and remains present only for enum/wire compatibility
   unless a separate decision changes that.
 

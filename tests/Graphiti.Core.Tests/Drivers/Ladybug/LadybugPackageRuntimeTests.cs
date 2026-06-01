@@ -478,6 +478,218 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_GraphDriverRunsUnionDeleteAndClearStatements()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var createdAt = new DateTime(2026, 6, 7, 8, 9, 10, DateTimeKind.Utc);
+        var source = new EntityNode
+        {
+            Uuid = "entity-delete-source",
+            Name = "Delete Source",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [1.0f, 0.0f],
+            Summary = "source"
+        };
+        var target = new EntityNode
+        {
+            Uuid = "entity-delete-target",
+            Name = "Delete Target",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [0.0f, 1.0f],
+            Summary = "target"
+        };
+        var other = new EntityNode
+        {
+            Uuid = "entity-other-group",
+            Name = "Other Group",
+            GroupId = "other",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [0.4f, 0.6f],
+            Summary = "other"
+        };
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode-delete",
+            Name = "delete episode",
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Delete maintenance episode.",
+            ValidAt = createdAt,
+            EntityEdges = ["edge-delete"]
+        };
+        var nextEpisode = new EpisodicNode
+        {
+            Uuid = "episode-next",
+            Name = "next episode",
+            GroupId = "tenant",
+            CreatedAt = createdAt.AddMinutes(1),
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Next episode.",
+            ValidAt = createdAt.AddMinutes(1),
+            EntityEdges = []
+        };
+        var community = new CommunityNode
+        {
+            Uuid = "community-delete",
+            Name = "Delete Community",
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            NameEmbedding = [0.3f, 0.7f],
+            Summary = "community"
+        };
+        var childCommunity = new CommunityNode
+        {
+            Uuid = "community-child",
+            Name = "Child Community",
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            NameEmbedding = [0.2f, 0.8f],
+            Summary = "child"
+        };
+        var saga = new GraphitiSagaNode
+        {
+            Uuid = "saga-delete",
+            Name = "delete saga",
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            Summary = "saga",
+            FirstEpisodeUuid = episode.Uuid,
+            LastEpisodeUuid = nextEpisode.Uuid,
+            LastSummarizedAt = createdAt,
+            LastSummarizedEpisodeValidAt = createdAt
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(source);
+        await driver.SaveNodeAsync(target);
+        await driver.SaveNodeAsync(other);
+        await driver.SaveNodeAsync(episode);
+        await driver.SaveNodeAsync(nextEpisode);
+        await driver.SaveNodeAsync(community);
+        await driver.SaveNodeAsync(childCommunity);
+        await driver.SaveNodeAsync(saga);
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-delete",
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = target.Uuid,
+            GroupId = "tenant",
+            Name = "KNOWS",
+            Fact = "Delete Source knows Delete Target",
+            FactEmbedding = [0.5f, 0.5f],
+            Episodes = [episode.Uuid],
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = createdAt
+        });
+        await driver.SaveEdgeAsync(new EpisodicEdge
+        {
+            Uuid = "mention-delete",
+            SourceNodeUuid = episode.Uuid,
+            TargetNodeUuid = source.Uuid,
+            GroupId = "tenant",
+            CreatedAt = createdAt
+        });
+        await driver.SaveEdgeAsync(new CommunityEdge
+        {
+            Uuid = "member-entity",
+            SourceNodeUuid = community.Uuid,
+            TargetNodeUuid = target.Uuid,
+            GroupId = "tenant",
+            CreatedAt = createdAt
+        });
+        await driver.SaveEdgeAsync(new CommunityEdge
+        {
+            Uuid = "member-community",
+            SourceNodeUuid = community.Uuid,
+            TargetNodeUuid = childCommunity.Uuid,
+            GroupId = "tenant",
+            CreatedAt = createdAt
+        });
+        await driver.SaveEdgeAsync(new HasEpisodeEdge
+        {
+            Uuid = "has-episode-delete",
+            SourceNodeUuid = saga.Uuid,
+            TargetNodeUuid = episode.Uuid,
+            GroupId = "tenant",
+            CreatedAt = createdAt
+        });
+        await driver.SaveEdgeAsync(new NextEpisodeEdge
+        {
+            Uuid = "next-delete",
+            SourceNodeUuid = episode.Uuid,
+            TargetNodeUuid = nextEpisode.Uuid,
+            GroupId = "tenant",
+            CreatedAt = createdAt
+        });
+
+        var memberships = await driver.GetEdgesByUuidsAsync<CommunityEdge>(
+            ["member-entity", "member-community"]);
+        var membershipTargets = memberships.Select(edge => edge.TargetNodeUuid).ToHashSet(StringComparer.Ordinal);
+
+        await driver.DeleteEdgesByUuidsAsync([
+            "edge-delete",
+            "mention-delete",
+            "member-entity",
+            "member-community",
+            "has-episode-delete",
+            "next-delete"
+        ]);
+        var deletedEntityEdges = await driver.GetEdgesByUuidsAsync<EntityEdge>(["edge-delete"]);
+        var deletedMentionEdges = await driver.GetEdgesByUuidsAsync<EpisodicEdge>(["mention-delete"]);
+        var deletedCommunityEdges = await driver.GetEdgesByUuidsAsync<CommunityEdge>(["member-entity", "member-community"]);
+        var deletedHasEpisodeEdges = await driver.GetEdgesByUuidsAsync<HasEpisodeEdge>(["has-episode-delete"]);
+        var deletedNextEpisodeEdges = await driver.GetEdgesByUuidsAsync<NextEpisodeEdge>(["next-delete"]);
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-node-delete",
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = target.Uuid,
+            GroupId = "tenant",
+            Name = "LINKS",
+            Fact = "Source links to target before node delete",
+            FactEmbedding = [0.6f, 0.4f],
+            Episodes = [episode.Uuid],
+            CreatedAt = createdAt.AddMinutes(2),
+            ValidAt = createdAt.AddMinutes(2),
+            ReferenceTime = createdAt.AddMinutes(2)
+        });
+        await driver.DeleteNodesByUuidsAsync(
+            [source.Uuid, episode.Uuid, childCommunity.Uuid, saga.Uuid],
+            batchSize: 2);
+        var deletedNodeEdge = await driver.GetEdgesByUuidsAsync<EntityEdge>(["edge-node-delete"]);
+
+        await driver.ClearDataAsync(["tenant"]);
+        var otherAfterGroupClear = await driver.GetNodeByUuidAsync<EntityNode>(other.Uuid);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => driver.GetNodeByUuidAsync<EntityNode>(target.Uuid));
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => driver.GetNodeByUuidAsync<CommunityNode>(community.Uuid));
+        await driver.ClearDataAsync();
+
+        Assert.Equal(new[] { childCommunity.Uuid, target.Uuid }, membershipTargets.Order(StringComparer.Ordinal));
+        Assert.Empty(deletedEntityEdges);
+        Assert.Empty(deletedMentionEdges);
+        Assert.Empty(deletedCommunityEdges);
+        Assert.Empty(deletedHasEpisodeEdges);
+        Assert.Empty(deletedNextEpisodeEdges);
+        Assert.Empty(deletedNodeEdge);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => driver.GetNodeByUuidAsync<EntityNode>(source.Uuid));
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => driver.GetNodeByUuidAsync<EpisodicNode>(episode.Uuid));
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => driver.GetNodeByUuidAsync<CommunityNode>(childCommunity.Uuid));
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => driver.GetNodeByUuidAsync<GraphitiSagaNode>(saga.Uuid));
+        Assert.Equal(other.Uuid, otherAfterGroupClear.Uuid);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => driver.GetNodeByUuidAsync<EntityNode>(other.Uuid));
+    }
+
+    [Fact]
     public void PackageRuntime_DoesNotBindGraphitiListArrayOrNullParametersDirectlyYet()
     {
         using var database = new Database("");
