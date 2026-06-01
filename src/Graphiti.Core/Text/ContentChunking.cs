@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -1407,8 +1408,61 @@ public static partial class ContentChunking
             firstSeed,
             secondSeed);
 
-        var key = string.Join(",", candidate);
+        var key = BuildCandidateKey(candidate);
         return seenCandidates.Add(key);
+    }
+
+    private static string BuildCandidateKey(int[] candidate)
+    {
+        if (candidate.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var length = candidate.Length - 1;
+        for (var i = 0; i < candidate.Length; i++)
+        {
+            length += CountDecimalDigits(candidate[i]);
+        }
+
+        return string.Create(
+            length,
+            candidate,
+            static (destination, values) =>
+            {
+                var position = 0;
+                for (var i = 0; i < values.Length; i++)
+                {
+                    if (i > 0)
+                    {
+                        destination[position++] = ',';
+                    }
+
+                    values[i].TryFormat(
+                        destination[position..],
+                        out var written,
+                        provider: CultureInfo.InvariantCulture);
+                    position += written;
+                }
+            });
+    }
+
+    private static int CountDecimalDigits(int value)
+    {
+        var magnitude = value < 0 ? (uint)-(long)value : (uint)value;
+        if (magnitude < 10)
+        {
+            return value < 0 ? 2 : 1;
+        }
+
+        var digits = 1;
+        while (magnitude >= 10)
+        {
+            magnitude /= 10;
+            digits++;
+        }
+
+        return value < 0 ? digits + 1 : digits;
     }
 
     private static int[] BuildDeterministicGreedyCandidate(

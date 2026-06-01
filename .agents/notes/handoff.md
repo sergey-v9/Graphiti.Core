@@ -76,9 +76,9 @@ no-incremental build, full test runs, and package builds at different points. Hi
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
 Latest checkpoint, 2026-06-01: `.\eng\Verify-GraphitiCore.ps1 -FocusedFilter ...` succeeded with a
-focused filter covering search filter query construction and search filter JSON wire shape. It ran
-locked restore, 31 focused cases, format verification, no-incremental build, the full test suite
-(`868` passed), and `dotnet pack` for `Graphiti.Core.2.0.0.nupkg`.
+focused filter covering content covering-chunk generation. It ran locked restore, 12 focused cases,
+format verification, no-incremental build, the full test suite (`868` passed), and `dotnet pack` for
+`Graphiti.Core.2.0.0.nupkg`.
 
 Primary full verification command from the C# repo root:
 
