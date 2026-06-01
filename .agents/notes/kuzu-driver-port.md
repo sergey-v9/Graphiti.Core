@@ -31,8 +31,8 @@ being ported.
   lookup by episode, episode removal cleanup, and direct `AddTripletAsync` fact persistence with
   `SearchAsync`. It also proves `AddEpisodeBulkAsync` duplicate fact coalescing across two episodes
   with attribution lookup and search, plus saga association with `HAS_EPISODE` / `NEXT_EPISODE`
-  edges and saga content retrieval. It still does not make `GraphProvider.Kuzu` valid through core
-  provider validation.
+  edges and saga content retrieval, and `SummarizeSagaAsync` summary/watermark persistence. It still
+  does not make `GraphProvider.Kuzu` valid through core provider validation.
 - `LadybugRecordMapper` uses loop-built attribute/list materialization for Ladybug/Kuzu rows while
   preserving JSON clone semantics, ordinal dictionaries, source ordering, null handling, and
   invariant object conversion.
@@ -204,10 +204,11 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
    current optional package exposes `LadybugDbOptions.DatabasePath` and DI helper registration.
 4. Keep `GraphProvider.Kuzu` unsupported in core DI/options until broader end-to-end provider
    workflow is proven against the real backend and the driver-facing LadybugDB naming is settled.
-   Save/get/delete, bulk paths, saga episode queries, fulltext, vector search, BFS, rerankers, graph
-   maintenance, concrete adapter execution, optional-package DI, and the first runtime-backed
-   `Graphiti` ingest/search, episode-removal, direct triplet, bulk duplicate-fact, and saga
-   association workflows now have focused proof. Keep the adapter allocation-aware: avoid unnecessary
+   Save/get/delete, bulk paths, saga episode queries, saga summarization, fulltext, vector search,
+   BFS, rerankers, graph maintenance, concrete adapter execution, optional-package DI, and the
+   first runtime-backed `Graphiti` ingest/search, episode-removal, direct triplet,
+   bulk duplicate-fact, and saga association/summarization workflows now have focused proof. Keep
+   the adapter allocation-aware: avoid unnecessary
    per-row dictionaries/lists, closure-heavy query loops, repeated JSON/string conversions, and
    exception-driven type coercion where the package API allows direct mapping.
 5. Prove the full C# Saga schema/save/get projections and entity-edge `reference_time` projections

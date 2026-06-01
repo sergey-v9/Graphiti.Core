@@ -290,6 +290,51 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
+    public async Task LadybugGraphitiSummarizesSagaEndToEnd()
+    {
+        await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
+        var fixedNow = new DateTimeOffset(2026, 9, 15, 16, 17, 18, TimeSpan.Zero);
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: CreateAliceAcmeSummaryLlmClient("Alice owns the Acme launch summary."),
+            embedder: new HashEmbedder(8),
+            timeProvider: new FixedTimeProvider(fixedNow));
+        var firstTime = new DateTime(2026, 9, 15, 10, 11, 12, DateTimeKind.Utc);
+        var secondTime = firstTime.AddMinutes(5);
+
+        await graphiti.BuildIndicesAndConstraintsAsync();
+        var first = await graphiti.AddEpisodeAsync(
+            "first",
+            "Alice works at Acme.",
+            "message",
+            firstTime,
+            groupId: "tenant",
+            saga: "launch");
+        await graphiti.AddEpisodeAsync(
+            "second",
+            "Alice owns the Acme launch checklist.",
+            "message",
+            secondTime,
+            groupId: "tenant",
+            saga: "launch",
+            sagaPreviousEpisodeUuid: first.Episode.Uuid);
+        var saga = await driver.FindSagaByNameAsync("launch", "tenant");
+        Assert.NotNull(saga);
+
+        var summarized = await graphiti.SummarizeSagaAsync(saga.Uuid);
+        var storedSaga = await driver.GetNodeByUuidAsync<SagaNode>(saga.Uuid);
+
+        Assert.Equal("Alice owns the Acme launch summary.", summarized.Summary);
+        Assert.Equal(summarized.Summary, storedSaga.Summary);
+        Assert.Equal(fixedNow.UtcDateTime, summarized.LastSummarizedAt);
+        Assert.Equal(fixedNow.UtcDateTime, storedSaga.LastSummarizedAt);
+        Assert.Equal(secondTime, summarized.LastSummarizedEpisodeValidAt);
+        Assert.Equal(secondTime, storedSaga.LastSummarizedEpisodeValidAt);
+        Assert.Equal(saga.FirstEpisodeUuid, storedSaga.FirstEpisodeUuid);
+        Assert.Equal(saga.LastEpisodeUuid, storedSaga.LastEpisodeUuid);
+    }
+
+    [Fact]
     public async Task ServiceCollectionExtensionRegistersLadybugDriverThroughGraphDriverFactory()
     {
         var services = new ServiceCollection();
@@ -360,7 +405,18 @@ public class LadybugRuntimeDriverTests
     }
 
     private static StaticJsonLlmClient CreateAliceAcmeLlmClient() =>
-        new(_ => new JsonObject
+        new(_ => CreateAliceAcmeResponse());
+
+    private static StaticJsonLlmClient CreateAliceAcmeSummaryLlmClient(string summary) =>
+        new(_ =>
+        {
+            var response = CreateAliceAcmeResponse();
+            response["summary"] = summary;
+            return response;
+        });
+
+    private static JsonObject CreateAliceAcmeResponse() =>
+        new()
         {
             ["extracted_entities"] = new JsonArray
             {
@@ -377,5 +433,14 @@ public class LadybugRuntimeDriverTests
                     ["fact"] = "Alice works at Acme."
                 }
             }
-        });
+        };
+
+    private sealed class FixedTimeProvider : TimeProvider
+    {
+        private readonly DateTimeOffset _utcNow;
+
+        public FixedTimeProvider(DateTimeOffset utcNow) => _utcNow = utcNow;
+
+        public override DateTimeOffset GetUtcNow() => _utcNow;
+    }
 }
