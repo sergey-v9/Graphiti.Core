@@ -233,7 +233,7 @@ internal sealed class NodeResolutionService(
         foreach (var unresolvedNode in unresolvedNodes)
         {
             var fallbackCandidates = RankFallbackNodeDedupCandidates(
-                new[] { unresolvedNode },
+                unresolvedNode,
                 existingNodes,
                 NodeDedupCandidateLimit);
             if (fallbackCandidates.Count > 0)
@@ -249,11 +249,11 @@ internal sealed class NodeResolutionService(
 
         return new NodeDedupCandidateContext(
             eligibleNodes,
-            candidates.Take(maxCandidates).ToList());
+            candidates.Count <= maxCandidates ? candidates : candidates.GetRange(0, maxCandidates));
     }
 
     private static List<EntityNode> RankFallbackNodeDedupCandidates(
-        IReadOnlyList<EntityNode> unresolvedNodes,
+        EntityNode unresolvedNode,
         IReadOnlyList<EntityNode> existingNodes,
         int limit)
     {
@@ -262,18 +262,38 @@ internal sealed class NodeResolutionService(
             return [];
         }
 
-        return existingNodes
-            .Select((node, index) => (
-                Node: node,
-                Index: index,
-                Score: unresolvedNodes.Max(unresolved =>
-                    SearchUtilities.TextScore(unresolved.Name, $"{node.Name} {node.Summary}"))))
-            .Where(candidate => candidate.Score > 0)
-            .OrderByDescending(candidate => candidate.Score)
-            .ThenBy(candidate => candidate.Index)
-            .Take(limit)
-            .Select(candidate => candidate.Node)
-            .ToList();
+        var scoredCandidates = new List<(EntityNode Node, int Index, float Score)>(existingNodes.Count);
+        for (var i = 0; i < existingNodes.Count; i++)
+        {
+            var node = existingNodes[i];
+            var score = SearchUtilities.TextScore(unresolvedNode.Name, $"{node.Name} {node.Summary}");
+            if (score > 0)
+            {
+                scoredCandidates.Add((node, i, score));
+            }
+        }
+
+        if (scoredCandidates.Count == 0)
+        {
+            return [];
+        }
+
+        scoredCandidates.Sort(static (left, right) =>
+        {
+            var scoreOrder = right.Score.CompareTo(left.Score);
+            return scoreOrder != 0
+                ? scoreOrder
+                : left.Index.CompareTo(right.Index);
+        });
+
+        var resultCount = Math.Min(limit, scoredCandidates.Count);
+        var result = new List<EntityNode>(resultCount);
+        for (var i = 0; i < resultCount; i++)
+        {
+            result.Add(scoredCandidates[i].Node);
+        }
+
+        return result;
     }
 
     private static Message[] BuildNodeDeduplicationMessages(

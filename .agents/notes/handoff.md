@@ -75,10 +75,10 @@ Recent 2026-06-01 checkpoints recorded successful locked restore, format verific
 no-incremental build, full test runs, and package builds at different points. Historical counts in old
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
-Latest checkpoint, 2026-06-01: `.\eng\Verify-GraphitiCore.ps1 -FocusedFilter
-"FullyQualifiedName~AddEpisode_HydratesNestedStructuredAttributeResponses"` succeeded. It ran locked
-restore, the focused attribute-hydration workflow test, format verification, no-incremental build, the
-full test suite (`866` passed), and `dotnet pack` for `Graphiti.Core.2.0.0.nupkg`.
+Latest checkpoint, 2026-06-01: `.\eng\Verify-GraphitiCore.ps1 -FocusedFilter ...` succeeded with a
+focused filter covering ambiguous/exact/fuzzy/bulk node-dedupe workflow cases. It ran locked restore,
+five focused cases, format verification, no-incremental build, the full test suite (`866` passed), and
+`dotnet pack` for `Graphiti.Core.2.0.0.nupkg`.
 
 Primary full verification command from the C# repo root:
 
