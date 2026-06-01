@@ -229,6 +229,12 @@ improving those providers unless it directly supports shared abstractions or Lad
   preserve the same JSON options. Memory and SQLite single-flight fills recheck the backing cache
   before running the expensive factory, and memory cache corrupt/non-object string payloads are
   removed and regenerated once under concurrent misses.
+- `LlmClient.PrepareMessages` now clones messages with a pre-sized loop instead of LINQ projection,
+  and `CleanInput` has a validation fast path that returns the original string for already-clean
+  valid UTF-16. The slow path still removes the same zero-width runes and C0 controls, preserves
+  newline/carriage-return/tab, drops malformed UTF-16 one code unit at a time, preserves valid
+  surrogate pairs, and leaves DEL/C1 controls intact. Cache keys still use the prepared/cleaned
+  messages, so inputs differing only by stripped characters coalesce.
 - Token usage tracking now mirrors Python's per-prompt prompt usage more closely: accumulated prompt
   usage records call counts and average input/output tokens while preserving the existing C# total
   token properties.
@@ -297,14 +303,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after episode concatenation shaping:
+Latest checkpoint on 2026-06-01 after LLM message preparation shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused text/workflow test filter passed with 92 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 780
+- The focused LLM-client/cache/cancellation test filter passed with 57 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 785
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -372,7 +378,8 @@ be edited by users, another agent, or an external worker while a session is in p
 - Date-filter Cypher uses unique params across OR branches by design.
 - Property filters are intentionally enforced in C#.
 - `ConcatenateEpisodes` timestamp formatting now follows Python's `isoformat()` shape where possible.
-- LLM input cleaning now drops malformed surrogate code units.
+- LLM input cleaning now drops malformed surrogate code units and returns the original string for
+  already-clean valid UTF-16.
 - LLM node dedup fallback was added after deterministic dedupe.
 - Saga summary truncation now hard-truncates like Python.
 - Saga summary generation falls back to deterministic episode content when the typed LLM path yields
@@ -460,6 +467,11 @@ These were previously audited and found faithful or intentionally different:
   preserving existing cache-key hash bytes.
 - LLM response cache cloned payload, cancellation-isolated fill, stale-miss recheck, and
   corrupt-memory-payload repair behavior
+- LLM message preparation and input cleaning, including pre-sized message cloning, language/schema/
+  attribute ordering, clean-input same-instance fast path, zero-width/C0-control removal,
+  newline/carriage-return/tab preservation, DEL/C1 preservation, malformed surrogate dropping, valid
+  surrogate-pair preservation, and cache-key coalescing for inputs differing only by stripped
+  characters
 - HybridCache LLM response cache corrupt/sentinel payload repair coalescing and cancellation-isolated
   shared fill behavior
 - Token usage per-prompt totals, call counts, average tokens, snapshot immutability, and int64

@@ -232,7 +232,12 @@ public abstract class LlmClient : ILlmClient, IDisposable
             return Array.Empty<Message>();
         }
 
-        var prepared = messages.Select(message => new Message(message.Role, message.Content)).ToList();
+        var prepared = new List<Message>(messages.Count);
+        for (var i = 0; i < messages.Count; i++)
+        {
+            var message = messages[i];
+            prepared.Add(new Message(message.Role, message.Content));
+        }
         if (attributeExtraction)
         {
             ApplyAttributeExtractionPreamble(prepared);
@@ -251,7 +256,12 @@ public abstract class LlmClient : ILlmClient, IDisposable
 
         for (var i = 0; i < prepared.Count; i++)
         {
-            prepared[i] = prepared[i] with { Content = CleanInput(prepared[i].Content) };
+            var message = prepared[i];
+            var cleaned = CleanInput(message.Content);
+            if (!ReferenceEquals(cleaned, message.Content))
+            {
+                prepared[i] = message with { Content = cleaned };
+            }
         }
 
         return prepared;
@@ -259,6 +269,33 @@ public abstract class LlmClient : ILlmClient, IDisposable
 
     /// <summary>Removes zero-width and non-printable control characters (keeping newlines and tabs).</summary>
     protected static string CleanInput(string input)
+    {
+        if (IsCleanInput(input))
+        {
+            return input;
+        }
+
+        return CleanInputSlow(input);
+    }
+
+    private static bool IsCleanInput(string input)
+    {
+        var remaining = input.AsSpan();
+        while (!remaining.IsEmpty)
+        {
+            var status = Rune.DecodeFromUtf16(remaining, out var rune, out var charsConsumed);
+            if (status != OperationStatus.Done || ShouldRemoveRune(rune.Value))
+            {
+                return false;
+            }
+
+            remaining = remaining[charsConsumed..];
+        }
+
+        return true;
+    }
+
+    private static string CleanInputSlow(string input)
     {
         var builder = new StringBuilder(input.Length);
         var remaining = input.AsSpan();
@@ -273,12 +310,7 @@ public abstract class LlmClient : ILlmClient, IDisposable
             }
 
             remaining = remaining[charsConsumed..];
-            if (rune.Value is 0x200B or 0x200C or 0x200D or 0xFEFF or 0x2060)
-            {
-                continue;
-            }
-
-            if (rune.Value < 32 && rune.Value is not ('\n' or '\r' or '\t'))
+            if (ShouldRemoveRune(rune.Value))
             {
                 continue;
             }
@@ -289,6 +321,10 @@ public abstract class LlmClient : ILlmClient, IDisposable
 
         return builder.ToString();
     }
+
+    private static bool ShouldRemoveRune(int value) =>
+        value is 0x200B or 0x200C or 0x200D or 0xFEFF or 0x2060 ||
+        value < 32 && value is not ('\n' or '\r' or '\t');
 
     /// <summary>
     /// Computes a deterministic SHA-256 cache key over the messages, model selection, sampling settings,

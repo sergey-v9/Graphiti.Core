@@ -75,8 +75,8 @@ Verified build/test command from this folder:
 dotnet test "Graphiti.Core.CSharp.slnx" --verbosity minimal
 ```
 
-Verified on 2026-06-01 after episode concatenation shaping:
-restore/format/build succeeded with 0 warnings and 780 tests passed.
+Verified on 2026-06-01 after LLM message preparation shaping:
+restore/format/build succeeded with 0 warnings and 785 tests passed.
 
 Port contract:
 - Preserve Python-compatible JSON shape: snake_case properties, relaxed escaping, and wire-value enum

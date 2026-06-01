@@ -209,14 +209,19 @@ shorter than the old working plans; expand items only when they become active.
   `StringBuilder` loops instead of LINQ projection plus `string.Join`, and the tuple overload no
   longer allocates intermediate `SagaEpisodeContent` records. Tests pin timestamp/separator shape,
   single-episode pass-through, null timestamp fallback, and tuple overload parity.
+- `LlmClient.PrepareMessages` now clones messages with a pre-sized loop, and `CleanInput` has a
+  validation fast path that returns the original string for clean valid UTF-16. Tests pin the
+  zero-width/C0-control cleanup matrix, allowed control preservation, malformed surrogate dropping,
+  valid surrogate-pair preservation, clean user-content preservation, and cache-key coalescing for
+  inputs differing only by stripped characters.
 - Direct ranked-list composition in `SearchResultComposer`/`SearchUtilities` now avoids the small
   `IReadOnlyList[]` allocations that previously connected `SearchEngine` branches to fusion/merge.
   Tests pin one-list RRF, two-list RRF/merge, three-list parity, and the existing RRF/merge ordering
   semantics.
 - Good next allocation slice from the 2026-06-01 scans: continue with a fresh targeted scan before
-  editing. Concrete candidates from the latest scan are `LlmClient.PrepareMessages` / `CleanInput`
-  clean-input fast paths, Neo4j bulk-save parameter loop projection, or memory LLM cache clone/parse
-  coalescing. Move back to LadybugDB package proof when provider work is the higher-leverage slice.
+  editing. Concrete candidates from the latest scan are Neo4j bulk-save parameter loop projection or
+  memory LLM cache clone/parse coalescing. Move back to LadybugDB package proof when provider work is
+  the higher-leverage slice.
 
 ## Graphiti Decomposition
 

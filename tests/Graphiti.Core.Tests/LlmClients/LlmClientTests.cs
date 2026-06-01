@@ -68,6 +68,62 @@ public class LlmClientTests
     }
 
     [Fact]
+    public void CleanInput_ReturnsOriginalStringForAlreadyCleanUnicodeText()
+    {
+        const string input = "hello\n\t\rGraphiti 😀 Привет";
+
+        var cleaned = CapturingLlmClient.CleanTestInput(input);
+
+        Assert.Same(input, cleaned);
+    }
+
+    [Fact]
+    public void CleanInput_RemovesZeroWidthAndC0ControlsButPreservesAllowedControls()
+    {
+        const string input = "\u200B\u200C\u200D\uFEFF\u2060\0\b\u001Fkeep\n\r\t\u007F\u0085";
+
+        var cleaned = CapturingLlmClient.CleanTestInput(input);
+
+        Assert.Equal("keep\n\r\t\u007F\u0085", cleaned);
+    }
+
+    [Fact]
+    public void CleanInput_DropsMalformedSurrogatesAndPreservesValidPairs()
+    {
+        const string input = "\udc00a\ud800b\ud83d\ude00c\ud800";
+
+        var cleaned = CapturingLlmClient.CleanTestInput(input);
+
+        Assert.Equal("ab😀c", cleaned);
+    }
+
+    [Fact]
+    public void PrepareMessages_PreservesAlreadyCleanUserContent()
+    {
+        var prepared = CapturingLlmClient.PrepareTestMessages(
+            new[] { new Message("system", "sys"), new Message("user", "hello 😀") },
+            responseModel: null,
+            responseSchema: null,
+            groupId: null,
+            attributeExtraction: false);
+
+        Assert.Equal("hello 😀", prepared[1].Content);
+    }
+
+    [Fact]
+    public async Task GenerateResponse_CacheKeyNormalizesStrippedInputCharacters()
+    {
+        var client = new CapturingLlmClient(cache: true);
+
+        await client.GenerateResponseAsync(
+            new[] { new Message("system", "sys\u200B"), new Message("user", "hello\u0001\ud800") });
+        await client.GenerateResponseAsync(
+            new[] { new Message("system", "sys"), new Message("user", "hello") });
+
+        Assert.Equal(1, client.GenerateCalls);
+    }
+
+    [Fact]
     public async Task GenerateResponse_AddsAttributePreambleOnce()
     {
         var client = new CapturingLlmClient();
@@ -848,6 +904,9 @@ public class LlmClientTests
             string? groupId,
             bool attributeExtraction) =>
             PrepareMessages(messages, responseModel, responseSchema, groupId, attributeExtraction);
+
+        public static string CleanTestInput(string input) =>
+            CleanInput(input);
 
         protected override Task<JsonObject> GenerateResponseCoreAsync(
             IReadOnlyList<Message> messages,
