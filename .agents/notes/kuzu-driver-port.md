@@ -76,7 +76,10 @@ being ported.
   projection, `DateTime` parameters, literal `array_cosine_similarity`, and explicit FTS extension
   loading/search after `INSTALL FTS; LOAD EXTENSION FTS;`. The internal `LadybugSearchExecutor` now
   also has package proof for FTS-backed entity-node, entity-edge, episodic, and community search plus
-  entity-node, entity-edge, and community vector search using normalized list parameters.
+  entity-node, entity-edge, and community vector search using normalized list parameters. Node/edge
+  BFS statements and node-distance/episode-mentions ranker statements also run against the real
+  package. The entity-origin edge BFS proof currently pins the Python Kuzu shape where a depth-2
+  origin reaches the second logical `RELATES_TO` fact edge through `RelatesToNode_`.
 - Current package binding does not accept the list/array and null parameter shapes Graphiti
   statements use today. `List<string>`, `string[]`, `float[]`, and `object[]` throw
   `NotSupportedException`; `null` throws `ArgumentNullException`. The normalizer handles these by
@@ -91,13 +94,12 @@ being ported.
 
 ## Facts To Confirm Before Driver Wiring
 
-- Whether LadybugDB accepts all Python Kuzu Cypher shapes used by Graphiti beyond the schema/scalar
-  smoke, including `DETACH DELETE`, `WHERE x IN $list`, variable-length relationship paths, and
-  `UNION`.
+- Whether LadybugDB accepts all Python Kuzu Cypher shapes used by Graphiti beyond the current runtime
+  proofs, including `DETACH DELETE`, direct `WHERE x IN $list` binding, and `UNION`.
 - Whether parameter names and binding use `$name` across prepared and direct execution paths.
 - Whether the normalizer's CLR literal strategy is enough for the remaining graph/search statements
-  beyond the current Saga, entity-edge, episode retrieval, mention traversal, FTS search, and vector
-  search runtime proofs.
+  beyond the current Saga, entity-edge, episode retrieval, mention traversal, FTS/vector search, BFS,
+  and ranker runtime proofs.
 - Whether native package dependencies are acceptable in `Graphiti.Core` or require an optional
   core driver.
 
@@ -129,14 +131,16 @@ being ported.
 
 1. Decide package/native dependency shape for the LadybugDB provider. Do not add core package
    references until this is explicit.
-2. Extend package-runtime proof from the current Saga/entity-edge/episode/FTS/vector coverage into
-   remaining graph and search statements, especially BFS and rerankers.
+2. Extend package-runtime proof from the current Saga/entity-edge/episode/FTS/vector/BFS/ranker
+   coverage into remaining graph maintenance and search statements, especially delete/clear and
+   `UNION` paths that are not already covered by real-package tests.
 3. Add/use the LadybugDB package in the core driver/core boundary selected above and decide how
    its connections/options should be represented in `GraphitiOptions`.
 4. Add a concrete LadybugDB package adapter for `ILadybugQueryExecutor`. Keep `GraphProvider.Kuzu`
    unsupported in DI/options until save/get/delete, bulk paths, saga episode queries, fulltext,
    vector search, BFS, rerankers, and DI construction are proven against the real backend. The search
-   statement and abstract execution shapes are pinned but still need real-backend proof. Keep the
+   statement and abstract execution shapes now have focused real-package proof but still need
+   concrete adapter coverage. Keep the
    adapter allocation-aware: avoid unnecessary per-row dictionaries/lists, closure-heavy query loops,
    repeated JSON/string conversions, and exception-driven type coercion where the package API allows
    direct mapping.

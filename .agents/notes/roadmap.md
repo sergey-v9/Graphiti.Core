@@ -30,9 +30,10 @@ shorter than the old working plans; expand items only when they become active.
    simple-edge mapping, JSON attributes, label arrays, and `RelatesToNode_`, with an internal
    executor-backed non-search driver core layered on top. A search statement foundation now pins Kuzu
    full-text indexes, full-text/vector search, BFS plans, ranker query shapes, and fake-executor
-   result mapping without making the driver searchable. Next provider work should decide package/
-   native dependency shape, add a concrete LadybugDB executor adapter, prove the statements against
-   the real backend, prove the full C# Saga and entity-edge `reference_time` projections, and avoid
+   result mapping without making the driver searchable. Test-only package runtime coverage now proves
+   the internal search executor's FTS/vector, BFS, and ranker statements against LadybugDB. Next
+   provider work should decide package/native dependency shape, add a concrete LadybugDB executor
+   adapter, prove any remaining graph-maintenance statements against the real backend, and avoid
    marking DI support complete too early. Details are in `kuzu-driver-port.md`.
 
 4. Finish low-risk XML documentation gaps.
@@ -253,17 +254,17 @@ shorter than the old working plans; expand items only when they become active.
 - A test-only LadybugDB package/runtime proof now uses private `LadybugDB` / `LadybugDB.Native`
   references to run the schema through the internal driver, round-trip a scalar Saga node, prove
   `QueryResult` row projection, prove explicit FTS extension loading/search, pin package blockers for
-  list/array/null parameter binding, prove internal search-executor FTS/vector statements, and prove
-  alias-based ordering needed after projected `RETURN` clauses. Core still has no LadybugDB package
-  reference and `GraphProvider.Kuzu` remains unsupported.
+  list/array/null parameter binding, prove internal search-executor FTS/vector/BFS/ranker
+  statements, and prove alias-based ordering needed after projected `RETURN` clauses. Core still has
+  no LadybugDB package reference and `GraphProvider.Kuzu` remains unsupported.
 - `LadybugStatementNormalizer` now implements the concrete package-execution strategy for the
   current LadybugDB binder gaps by inlining list/array/null literals while leaving scalar parameters
   bound. The test-only runtime executor uses it to round-trip entity-edge `reference_time`,
   list-valued columns, embeddings, episode retrieval/group filters, `MENTIONS` traversals, and null
   temporal fields against the real package.
 - Good next provider slice from the 2026-06-01 scans: move from test-only runtime proof toward a
-  concrete LadybugDB executor adapter shape and broader BFS/ranker statement coverage, while keeping
-  provider support unwired until end-to-end search and graph behavior pass.
+  concrete LadybugDB executor adapter shape plus any remaining graph-maintenance statement coverage,
+  while keeping provider support unwired until end-to-end search and graph behavior pass.
 
 ## Graphiti Decomposition
 

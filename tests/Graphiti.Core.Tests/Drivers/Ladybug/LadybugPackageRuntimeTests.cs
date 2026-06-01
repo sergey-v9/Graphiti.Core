@@ -340,6 +340,144 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_SearchExecutorRunsBfsAndRankerStatements()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var search = new LadybugSearchExecutor(executor);
+        var createdAt = new DateTime(2026, 5, 6, 7, 8, 9, DateTimeKind.Utc);
+        var center = new EntityNode
+        {
+            Uuid = "entity-center",
+            Name = "Center",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [1.0f, 0.0f],
+            Summary = "center entity"
+        };
+        var near = new EntityNode
+        {
+            Uuid = "entity-near",
+            Name = "Near",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [0.8f, 0.2f],
+            Summary = "near entity"
+        };
+        var far = new EntityNode
+        {
+            Uuid = "entity-far",
+            Name = "Far",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [0.0f, 1.0f],
+            Summary = "far entity"
+        };
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode-bfs",
+            Name = "bfs episode",
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Center starts a traversal.",
+            ValidAt = createdAt,
+            EntityEdges = ["edge-near", "edge-far"]
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(center);
+        await driver.SaveNodeAsync(near);
+        await driver.SaveNodeAsync(far);
+        await driver.SaveNodeAsync(episode);
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-near",
+            SourceNodeUuid = center.Uuid,
+            TargetNodeUuid = near.Uuid,
+            GroupId = "tenant",
+            Name = "LINKS",
+            Fact = "Center links to Near",
+            FactEmbedding = [1.0f, 0.0f],
+            Episodes = [episode.Uuid],
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = createdAt
+        });
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-far",
+            SourceNodeUuid = near.Uuid,
+            TargetNodeUuid = far.Uuid,
+            GroupId = "tenant",
+            Name = "LINKS",
+            Fact = "Near links to Far",
+            FactEmbedding = [0.5f, 0.5f],
+            Episodes = [episode.Uuid],
+            CreatedAt = createdAt.AddMinutes(1),
+            ValidAt = createdAt.AddMinutes(1),
+            ReferenceTime = createdAt.AddMinutes(1)
+        });
+        await driver.SaveEdgeAsync(new EpisodicEdge
+        {
+            Uuid = "mention-center",
+            SourceNodeUuid = episode.Uuid,
+            TargetNodeUuid = center.Uuid,
+            GroupId = "tenant",
+            CreatedAt = createdAt
+        });
+
+        var nodeBfs = await search.SearchEntityNodesBfsAsync(
+            [center.Uuid],
+            new SearchFilters(),
+            maxDepth: 2,
+            ["tenant"],
+            limit: 5);
+        var episodeNodeBfs = await search.SearchEntityNodesBfsAsync(
+            [episode.Uuid],
+            new SearchFilters(),
+            maxDepth: 2,
+            ["tenant"],
+            limit: 5);
+        var edgeBfs = await search.SearchEntityEdgesBfsAsync(
+            [center.Uuid],
+            new SearchFilters(),
+            maxDepth: 2,
+            ["tenant"],
+            limit: 5);
+        var episodeEdgeBfs = await search.SearchEntityEdgesBfsAsync(
+            [episode.Uuid],
+            new SearchFilters(),
+            maxDepth: 2,
+            ["tenant"],
+            limit: 5);
+        var distanceRanks = await search.RankNodeDistanceAsync(
+            [far.Uuid, center.Uuid, near.Uuid],
+            center.Uuid,
+            minScore: 0);
+        var mentionRanks = await search.RankNodeEpisodeMentionsAsync(
+            [far.Uuid, center.Uuid, near.Uuid],
+            minScore: 0);
+
+        Assert.Contains(nodeBfs, hit => hit.Item.Uuid == near.Uuid);
+        Assert.Contains(nodeBfs, hit => hit.Item.Uuid == far.Uuid);
+        Assert.Contains(episodeNodeBfs, hit => hit.Item.Uuid == center.Uuid);
+        Assert.Contains(episodeNodeBfs, hit => hit.Item.Uuid == near.Uuid);
+        Assert.Equal("edge-far", Assert.Single(edgeBfs).Item.Uuid);
+        Assert.Equal("edge-near", Assert.Single(episodeEdgeBfs).Item.Uuid);
+        Assert.Equal(new[] { center.Uuid, near.Uuid, far.Uuid }, distanceRanks.Select(rank => rank.Uuid));
+        Assert.Equal(new[] { 10f, 1f, 0f }, distanceRanks.Select(rank => rank.Score));
+        Assert.Equal(center.Uuid, mentionRanks[0].Uuid);
+        Assert.Equal(1f, mentionRanks[0].Score);
+        Assert.Contains(mentionRanks.Skip(1), rank => rank.Uuid == near.Uuid && float.IsPositiveInfinity(rank.Score));
+        Assert.Contains(mentionRanks.Skip(1), rank => rank.Uuid == far.Uuid && float.IsPositiveInfinity(rank.Score));
+    }
+
+    [Fact]
     public void PackageRuntime_DoesNotBindGraphitiListArrayOrNullParametersDirectlyYet()
     {
         using var database = new Database("");
