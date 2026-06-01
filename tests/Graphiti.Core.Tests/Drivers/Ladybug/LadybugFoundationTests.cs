@@ -145,6 +145,33 @@ public class LadybugFoundationTests
     }
 
     [Fact]
+    public void BuildCollectionParameterStatements_SnapshotInputsWithIndexAccess()
+    {
+        var entityUuids = new IndexOnlyReadOnlyList<string>("entity-1", "entity-2");
+        var edgeUuids = new IndexOnlyReadOnlyList<string>("edge-1", "edge-2");
+        var groupIds = new IndexOnlyReadOnlyList<string>("tenant", "archive");
+        var referenceTime = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+
+        var nodesByUuid = LadybugStatementBuilder.BuildNodesGetByUuids<EntityNode>(entityUuids);
+        var deleteNodes = LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<EntityNode>(entityUuids);
+        var nodeEmbeddings = LadybugStatementBuilder.BuildNodesLoadEmbeddings<EntityNode>(entityUuids);
+        var edgesByUuid = LadybugStatementBuilder.BuildEdgesGetByUuids<EntityEdge>(edgeUuids);
+        var edgeEmbeddings = LadybugStatementBuilder.BuildEntityEdgesLoadEmbeddings(edgeUuids);
+        var nodesByGroup = LadybugStatementBuilder.BuildNodesGetByGroupIds<EntityNode>(groupIds);
+        var edgesByGroup = LadybugStatementBuilder.BuildEdgesGetByGroupIds<EntityEdge>(groupIds);
+        var retrieve = LadybugStatementBuilder.BuildRetrieveEpisodes(referenceTime, 3, groupIds);
+
+        Assert.Equal(new[] { "entity-1", "entity-2" }, Assert.IsType<List<string>>(nodesByUuid.Parameters["uuids"]));
+        Assert.Equal(new[] { "entity-1", "entity-2" }, Assert.IsType<List<string>>(deleteNodes[0].Parameters["uuids"]));
+        Assert.Equal(new[] { "entity-1", "entity-2" }, Assert.IsType<List<string>>(nodeEmbeddings.Parameters["uuids"]));
+        Assert.Equal(new[] { "edge-1", "edge-2" }, Assert.IsType<List<string>>(edgesByUuid.Parameters["uuids"]));
+        Assert.Equal(new[] { "edge-1", "edge-2" }, Assert.IsType<List<string>>(edgeEmbeddings.Parameters["edge_uuids"]));
+        Assert.Equal(new[] { "tenant", "archive" }, Assert.IsType<List<string>>(nodesByGroup.Parameters["group_ids"]));
+        Assert.Equal(new[] { "tenant", "archive" }, Assert.IsType<List<string>>(edgesByGroup.Parameters["group_ids"]));
+        Assert.Equal(new[] { "tenant", "archive" }, Assert.IsType<List<string>>(retrieve.Parameters["group_ids"]));
+    }
+
+    [Fact]
     public void BuildSagaNodeSave_UsesFullSagaModelShapeForRuntimeWiring()
     {
         var createdAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -493,4 +520,20 @@ public class LadybugFoundationTests
             ["target_node_uuid"] = "target-1",
             ["created_at"] = createdAt
         };
+
+    private sealed class IndexOnlyReadOnlyList<T> : IReadOnlyList<T>
+    {
+        private readonly T[] _values;
+
+        internal IndexOnlyReadOnlyList(params T[] values) => _values = values;
+
+        public int Count => _values.Length;
+
+        public T this[int index] => _values[index];
+
+        public IEnumerator<T> GetEnumerator() =>
+            throw new InvalidOperationException("Statement builders should copy IReadOnlyList values by index.");
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
 }

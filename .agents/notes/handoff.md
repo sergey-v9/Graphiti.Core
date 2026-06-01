@@ -205,6 +205,9 @@ improving those providers unless it directly supports shared abstractions or Lad
   community reads, and saga reads. Its bulk-save phase writes and read-side collection projections
   now use explicit loops and pre-sized buffers while preserving backend record order, optional group
   filtering, saga chronology, first-seen group-id de-duplication, and unsupported provider status.
+  `LadybugStatementBuilder` now also builds bulk-save statement phases and list-valued parameters
+  with explicit snapshots, copying `IReadOnlyList<T>` inputs by index while preserving ordered
+  parameter lists and provider statement order.
   `LadybugRecordMapper` now materializes attributes and list fields with explicit loops while
   preserving ordinal attribute dictionaries, JSON string `JsonElement` clones, `JsonObject`
   deep-clone semantics, shallow dictionary copies, JSON array null handling, invariant object
@@ -216,12 +219,19 @@ improving those providers unless it directly supports shared abstractions or Lad
   ordering over the abstract executor. The ranker path now builds first-seen score maps and statement
   lists with explicit loops while preserving duplicate input collapse, center-node exclusion/query
   synthesis, unknown backend UUID inclusion, last backend score wins, inclusive min-score filtering,
-  and missing-score defaults. No LadybugDB package reference, native dependency, concrete
+  and missing-score defaults. Search vector, group-id, and rank-fetch parameters are also copied
+  through loop-built snapshots for read-only list inputs. No LadybugDB package reference, native
+  dependency, concrete
   package adapter, DI wiring, `ISearchGraphDriver` implementation, or `GraphProvider.Kuzu` options
   validation support has been added yet. The C# foundation now resolves the current Python Kuzu
   saga schema/query and entity-edge `reference_time` inconsistencies ahead of runtime wiring by using
   the full `SagaNode` shape and returning entity-edge `reference_time`; these still need real-backend
   proof.
+- A read-only LadybugDB package audit on 2026-06-01 found that an in-memory `Database("")` smoke can
+  run basic Cypher, the current schema, scalar Saga save/read projections, `DateTime` parameters, and
+  literal `array_cosine_similarity`. It also found current package blockers for direct statement
+  execution: list/array parameter binding, null parameter binding, and FTS extension loading. The
+  next runtime slice should pin those as test-only package facts before any core provider wiring.
 - DI-created graph drivers now consistently receive `GraphitiOptions.Database` for both supported
   providers, InMemory and Neo4j. For InMemory this sets the driver `Database` label but intentionally
   does not change the provider default group id.
@@ -321,14 +331,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after Ladybug record-mapper shaping:
+Latest checkpoint on 2026-06-01 after Ladybug statement parameter shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused Ladybug driver test filter passed with 35 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 803
+- The focused Ladybug driver test filter passed with 37 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 805
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -472,6 +482,7 @@ These were previously audited and found faithful or intentionally different:
   projections, label-array storage, JSON attribute serialization/deserialization, simple-edge record
   mapping, individual bulk-save statement expansion, internal executor-backed non-search driver
   forwarding/mapping, allocation-light collection projection and first-seen group-id de-duplication,
+  allocation-light statement parameter snapshots from enumerable/read-only-list inputs,
   allocation-light record-mapper attribute/list materialization with JSON clone/null behavior,
   search statement plans for full-text/vector/BFS/rankers, internal search execution/mapping over
   `ILadybugQueryExecutor`, allocation-light ranker score/statement shaping with duplicate/unknown

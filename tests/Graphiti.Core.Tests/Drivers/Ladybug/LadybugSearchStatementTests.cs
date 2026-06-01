@@ -189,6 +189,47 @@ public class LadybugSearchStatementTests
     }
 
     [Fact]
+    public void SearchStatements_SnapshotReadOnlyListParametersWithIndexAccess()
+    {
+        var groupIds = new IndexOnlyReadOnlyList<string>("tenant", "archive");
+        var vector = new IndexOnlyReadOnlyList<float>(0.1f, 0.2f, 0.3f);
+        var nodeUuids = new IndexOnlyReadOnlyList<string>("node-1", "node-2");
+
+        var nodeEmbedding = LadybugSearchStatementBuilder.BuildEntityNodeEmbeddingSearchStatement(
+            vector,
+            new SearchFilters(),
+            groupIds,
+            limit: 5,
+            minScore: 0.4f);
+        var edgeEmbedding = LadybugSearchStatementBuilder.BuildEntityEdgeEmbeddingSearchStatement(
+            vector,
+            new SearchFilters(),
+            groupIds,
+            limit: 6,
+            minScore: 0.5f);
+        var episode = LadybugSearchStatementBuilder.BuildEpisodeFulltextSearchStatement(
+            "episode",
+            new SearchFilters(),
+            groupIds,
+            limit: 7);
+        var community = LadybugSearchStatementBuilder.BuildCommunityEmbeddingSearchStatement(
+            vector,
+            groupIds,
+            limit: 8,
+            minScore: 0.6f);
+        var fetch = LadybugSearchStatementBuilder.BuildEntityNodesByUuidsForRankStatement(nodeUuids);
+
+        Assert.Equal(new[] { 0.1f, 0.2f, 0.3f }, Assert.IsType<List<float>>(nodeEmbedding.Parameters["search_vector"]));
+        Assert.Equal(new[] { "tenant", "archive" }, Assert.IsType<List<string>>(nodeEmbedding.Parameters["group_ids"]));
+        Assert.Equal(new[] { 0.1f, 0.2f, 0.3f }, Assert.IsType<List<float>>(edgeEmbedding.Parameters["search_vector"]));
+        Assert.Equal(new[] { "tenant", "archive" }, Assert.IsType<List<string>>(edgeEmbedding.Parameters["group_ids"]));
+        Assert.Equal(new[] { "tenant", "archive" }, Assert.IsType<List<string>>(episode.Parameters["group_ids"]));
+        Assert.Equal(new[] { 0.1f, 0.2f, 0.3f }, Assert.IsType<List<float>>(community.Parameters["search_vector"]));
+        Assert.Equal(new[] { "tenant", "archive" }, Assert.IsType<List<string>>(community.Parameters["group_ids"]));
+        Assert.Equal(new[] { "node-1", "node-2" }, Assert.IsType<List<string>>(fetch.Parameters["uuids"]));
+    }
+
+    [Fact]
     public void BuildBfsSearchStatements_ReturnSeparateKuzuStatementsWithDoubledDepth()
     {
         var nodeStatements = LadybugSearchStatementBuilder.BuildEntityNodeBfsSearchStatements(
@@ -270,5 +311,21 @@ public class LadybugSearchStatementTests
 
         Assert.Contains("WHERE n.uuid IN $uuids", fetch.Query, StringComparison.Ordinal);
         Assert.Equal(new[] { "node-b", "node-c" }, Assert.IsType<List<string>>(fetch.Parameters["uuids"]));
+    }
+
+    private sealed class IndexOnlyReadOnlyList<T> : IReadOnlyList<T>
+    {
+        private readonly T[] _values;
+
+        internal IndexOnlyReadOnlyList(params T[] values) => _values = values;
+
+        public int Count => _values.Length;
+
+        public T this[int index] => _values[index];
+
+        public IEnumerator<T> GetEnumerator() =>
+            throw new InvalidOperationException("Search statement builders should copy IReadOnlyList values by index.");
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

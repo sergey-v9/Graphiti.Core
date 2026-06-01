@@ -51,7 +51,7 @@ internal static class LadybugSearchStatementBuilder
             .Compile(searchFilter)
             .BuildNodeQuery(GraphProvider.Kuzu);
         AddGroupFilter(filterQueries, parameters, "n", groupIds);
-        parameters["search_vector"] = searchVector.ToList();
+        parameters["search_vector"] = SnapshotList(searchVector);
         parameters["limit"] = limit;
         parameters["min_score"] = minScore;
 
@@ -125,7 +125,7 @@ internal static class LadybugSearchStatementBuilder
             parameters["target_uuid"] = targetNodeUuid;
         }
 
-        parameters["search_vector"] = searchVector.ToList();
+        parameters["search_vector"] = SnapshotList(searchVector);
         parameters["limit"] = limit;
         parameters["min_score"] = minScore;
 
@@ -275,7 +275,7 @@ internal static class LadybugSearchStatementBuilder
         if (groupIds is not null)
         {
             groupFilter = "AND e.group_id IN $group_ids";
-            parameters["group_ids"] = groupIds.ToList();
+            parameters["group_ids"] = SnapshotList(groupIds);
         }
 
         return new LadybugStatement(
@@ -304,7 +304,7 @@ internal static class LadybugSearchStatementBuilder
         if (groupIds is not null)
         {
             groupFilter = "WHERE c.group_id IN $group_ids";
-            parameters["group_ids"] = groupIds.ToList();
+            parameters["group_ids"] = SnapshotList(groupIds);
         }
 
         return new LadybugStatement(
@@ -330,14 +330,14 @@ internal static class LadybugSearchStatementBuilder
     {
         ArgumentNullException.ThrowIfNull(searchVector);
         var parameters = Parameters(
-            ("search_vector", searchVector.ToList()),
+            ("search_vector", SnapshotList(searchVector)),
             ("limit", limit),
             ("min_score", minScore));
         var groupFilter = string.Empty;
         if (groupIds is not null)
         {
             groupFilter = "WHERE c.group_id IN $group_ids";
-            parameters["group_ids"] = groupIds.ToList();
+            parameters["group_ids"] = SnapshotList(groupIds);
         }
 
         return new LadybugStatement(
@@ -418,7 +418,7 @@ internal static class LadybugSearchStatementBuilder
             RETURN
             {{EntityNodeReturnClause("n")}}
             """,
-            Parameters(("uuids", nodeUuids.ToList())));
+            Parameters(("uuids", SnapshotList(nodeUuids))));
     }
 
     private static LadybugStatement Statement(string query) =>
@@ -455,7 +455,7 @@ internal static class LadybugSearchStatementBuilder
         }
 
         filterQueries.Add($"{alias}.group_id IN $group_ids");
-        filterParams["group_ids"] = groupIds.ToList();
+        filterParams["group_ids"] = SnapshotList(groupIds);
     }
 
     private static string EntityNodeReturnClause(string variable) =>
@@ -518,5 +518,16 @@ internal static class LadybugSearchStatementBuilder
         }
 
         return dictionary;
+    }
+
+    private static List<T> SnapshotList<T>(IReadOnlyList<T> values)
+    {
+        var snapshot = new List<T>(values.Count);
+        for (var i = 0; i < values.Count; i++)
+        {
+            snapshot.Add(values[i]);
+        }
+
+        return snapshot;
     }
 }

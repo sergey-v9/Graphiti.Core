@@ -245,9 +245,16 @@ shorter than the old working plans; expand items only when they become active.
   materialization chains. Tests pin ordinal dictionaries, JSON string `JsonElement` clones,
   `JsonObject` deep-cloning, shallow dictionary copies, JSON array null behavior, `JsonElement`
   arrays, invariant object conversion, and source-order preservation.
-- Good next allocation slice from the 2026-06-01 scans: continue with a fresh targeted scan before
-  editing. Concrete candidates from the latest scan are Neo4j bulk-save parameter loop projection
-  or moving back to LadybugDB package proof when provider work is the higher-leverage slice.
+- `LadybugStatementBuilder` and `LadybugSearchStatementBuilder` now snapshot list/vector parameters
+  with explicit loops and copy `IReadOnlyList<T>` values by index, while bulk-save statement
+  projection uses phase-ordered loops instead of LINQ `Select`/`AddRange` chains. Tests pin
+  ordered snapshot behavior for non-enumerable read-only list inputs without changing provider
+  support status.
+- Good next provider slice from the 2026-06-01 scans: add a test-only LadybugDB package/runtime
+  proof with private package/native references, schema/scalar Saga smoke coverage, row projection
+  proof, and pinned package blockers for list/null parameter binding plus FTS extension loading.
+  Keep core free of LadybugDB package references and keep `GraphProvider.Kuzu` unsupported until the
+  adapter path is proven.
 
 ## Graphiti Decomposition
 

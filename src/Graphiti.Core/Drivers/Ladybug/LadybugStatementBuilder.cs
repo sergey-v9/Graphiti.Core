@@ -33,10 +33,26 @@ internal static class LadybugStatementBuilder
     {
         var statements = new List<LadybugStatement>(
             episodicNodes.Count + episodicEdges.Count + entityNodes.Count + entityEdges.Count);
-        statements.AddRange(episodicNodes.Select(BuildEpisodicNodeSave));
-        statements.AddRange(entityNodes.Select(BuildEntityNodeSave));
-        statements.AddRange(episodicEdges.Select(BuildEpisodicEdgeSave));
-        statements.AddRange(entityEdges.Select(BuildEntityEdgeSave));
+        for (var i = 0; i < episodicNodes.Count; i++)
+        {
+            statements.Add(BuildEpisodicNodeSave(episodicNodes[i]));
+        }
+
+        for (var i = 0; i < entityNodes.Count; i++)
+        {
+            statements.Add(BuildEntityNodeSave(entityNodes[i]));
+        }
+
+        for (var i = 0; i < episodicEdges.Count; i++)
+        {
+            statements.Add(BuildEpisodicEdgeSave(episodicEdges[i]));
+        }
+
+        for (var i = 0; i < entityEdges.Count; i++)
+        {
+            statements.Add(BuildEntityEdgeSave(entityEdges[i]));
+        }
+
         return statements;
     }
 
@@ -69,7 +85,7 @@ internal static class LadybugStatementBuilder
             RETURN DISTINCT
             {NodeReturnClause<TNode>(variable, withEmbeddings)}
             """,
-            Parameters(("uuids", uuids.ToList())));
+            Parameters(("uuids", SnapshotList(uuids))));
     }
 
     internal static LadybugStatement BuildNodesGetByGroupIds<TNode>(
@@ -83,7 +99,7 @@ internal static class LadybugStatementBuilder
         var variable = NodeVariable<TNode>();
         var cursorClause = uuidCursor is null ? string.Empty : $"AND {variable}.uuid < $uuid";
         var limitClause = limit is null ? string.Empty : "LIMIT $limit";
-        var parameters = Parameters(("group_ids", groupIds.ToList()));
+        var parameters = Parameters(("group_ids", SnapshotList(groupIds)));
         if (uuidCursor is not null)
         {
             parameters["uuid"] = uuidCursor;
@@ -126,7 +142,7 @@ internal static class LadybugStatementBuilder
         ArgumentNullException.ThrowIfNull(uuids);
         return BuildNodeDeleteStatements<TNode>(
             NodeUuidsDeleteMatch<TNode>(),
-            Parameters(("uuids", uuids.ToList())));
+            Parameters(("uuids", SnapshotList(uuids))));
     }
 
     internal static LadybugStatement BuildNodeLoadEmbedding<TNode>(string uuid)
@@ -162,7 +178,7 @@ internal static class LadybugStatementBuilder
             WHERE {variable}.uuid IN $uuids
             RETURN DISTINCT {variable}.uuid AS uuid, {variable}.name_embedding AS name_embedding
             """,
-            Parameters(("uuids", uuids.ToList())));
+            Parameters(("uuids", SnapshotList(uuids))));
     }
 
     internal static LadybugStatement BuildEdgeGetByUuid<TEdge>(
@@ -190,7 +206,7 @@ internal static class LadybugStatementBuilder
             RETURN
             {EdgeReturnClause<TEdge>(withEmbeddings)}
             """,
-            Parameters(("uuids", uuids.ToList())));
+            Parameters(("uuids", SnapshotList(uuids))));
     }
 
     internal static LadybugStatement BuildEdgesGetByGroupIds<TEdge>(
@@ -203,7 +219,7 @@ internal static class LadybugStatementBuilder
         ArgumentNullException.ThrowIfNull(groupIds);
         var cursorClause = uuidCursor is null ? string.Empty : "AND e.uuid < $uuid";
         var limitClause = limit is null ? string.Empty : "LIMIT $limit";
-        var parameters = Parameters(("group_ids", groupIds.ToList()));
+        var parameters = Parameters(("group_ids", SnapshotList(groupIds)));
         if (uuidCursor is not null)
         {
             parameters["uuid"] = uuidCursor;
@@ -264,7 +280,7 @@ internal static class LadybugStatementBuilder
             WHERE e.uuid IN $edge_uuids
             RETURN DISTINCT e.uuid AS uuid, e.fact_embedding AS fact_embedding
             """,
-            Parameters(("edge_uuids", uuids.ToList())));
+            Parameters(("edge_uuids", SnapshotList(uuids))));
     }
 
     internal static LadybugStatement BuildRetrieveEpisodes(
@@ -303,7 +319,7 @@ internal static class LadybugStatementBuilder
         var groupClause = groupIds is { Count: > 0 } ? "AND e.group_id IN $group_ids" : string.Empty;
         if (groupIds is { Count: > 0 })
         {
-            parameters["group_ids"] = groupIds.ToList();
+            parameters["group_ids"] = SnapshotList(groupIds);
         }
 
         return new LadybugStatement(
@@ -337,7 +353,7 @@ internal static class LadybugStatementBuilder
             WHERE episode.uuid IN $uuids
             RETURN DISTINCT
             """ + NodeReturnClause<EntityNode>("n"),
-            Parameters(("uuids", episodeUuids.ToList())));
+            Parameters(("uuids", SnapshotList(episodeUuids))));
     }
 
     internal static LadybugStatement BuildCommunitiesByNodesGet(IEnumerable<string> nodeUuids)
@@ -349,7 +365,7 @@ internal static class LadybugStatementBuilder
             WHERE n.uuid IN $uuids
             RETURN DISTINCT
             """ + NodeReturnClause<CommunityNode>("c"),
-            Parameters(("uuids", nodeUuids.ToList())));
+            Parameters(("uuids", SnapshotList(nodeUuids))));
     }
 
     internal static LadybugStatement BuildSagaByNameGet(string name, string groupId) =>
@@ -434,7 +450,7 @@ internal static class LadybugStatementBuilder
             WHERE e.uuid IN $uuids
             {EdgeDeleteVerb<TEdge>()} e
             """,
-            Parameters(("uuids", uuids.ToList())));
+            Parameters(("uuids", SnapshotList(uuids))));
     }
 
     internal static LadybugStatement BuildEpisodicNodeSave(EpisodicNode node) =>
@@ -857,6 +873,35 @@ internal static class LadybugStatementBuilder
         }
 
         return dictionary;
+    }
+
+    private static List<T> SnapshotList<T>(IEnumerable<T> values)
+    {
+        if (values is IReadOnlyList<T> list)
+        {
+            return SnapshotList(list);
+        }
+
+        var snapshot = values.TryGetNonEnumeratedCount(out var count)
+            ? new List<T>(count)
+            : new List<T>();
+        foreach (var value in values)
+        {
+            snapshot.Add(value);
+        }
+
+        return snapshot;
+    }
+
+    private static List<T> SnapshotList<T>(IReadOnlyList<T> values)
+    {
+        var snapshot = new List<T>(values.Count);
+        for (var i = 0; i < values.Count; i++)
+        {
+            snapshot.Add(values[i]);
+        }
+
+        return snapshot;
     }
 
     private static List<string> EntityLabels(EntityNode node)
