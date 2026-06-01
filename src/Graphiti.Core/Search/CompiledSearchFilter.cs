@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 
 namespace Graphiti.Core.Search;
@@ -84,25 +85,12 @@ internal sealed class CompiledSearchFilter
     public (List<string> FilterQueries, Dictionary<string, object?> FilterParams) BuildNodeQuery(
         GraphProvider provider)
     {
-        var filterQueries = new List<string>();
-        var filterParams = new Dictionary<string, object?>(StringComparer.Ordinal);
+        var filterQueries = new List<string>(EstimateNodeQueryCount());
+        var filterParams = new Dictionary<string, object?>(
+            EstimateNodeParameterCount(provider),
+            StringComparer.Ordinal);
 
-        if (_queryNodeLabels is { Count: > 0 })
-        {
-            GraphitiHelpers.ValidateNodeLabels(_queryNodeLabels);
-            // NOTE: LadybugDB is the primary provider target; Kuzu remains the Python-parity
-            // compatibility value. Preserve this interim behavior until LadybugDB owns it.
-            if (provider == GraphProvider.Kuzu)
-            {
-                filterQueries.Add("list_has_all(n.labels, $labels)");
-                filterParams["labels"] = _queryNodeLabels;
-            }
-            else
-            {
-                filterQueries.Add("n:" + string.Join("|", _queryNodeLabels));
-            }
-        }
-
+        AppendNodeLabelFilter(filterQueries, filterParams, provider, includeTarget: false);
         AppendPropertyFilters(filterQueries, filterParams, _propertyFilters, "node_property", "n");
         return (filterQueries, filterParams);
     }
@@ -110,8 +98,10 @@ internal sealed class CompiledSearchFilter
     public (List<string> FilterQueries, Dictionary<string, object?> FilterParams) BuildEdgeQuery(
         GraphProvider provider)
     {
-        var filterQueries = new List<string>();
-        var filterParams = new Dictionary<string, object?>(StringComparer.Ordinal);
+        var filterQueries = new List<string>(EstimateEdgeQueryCount());
+        var filterParams = new Dictionary<string, object?>(
+            EstimateEdgeParameterCount(provider),
+            StringComparer.Ordinal);
 
         if (_queryEdgeTypes is { Count: > 0 })
         {
@@ -125,22 +115,7 @@ internal sealed class CompiledSearchFilter
             filterParams["edge_uuids"] = _queryEdgeUuids;
         }
 
-        if (_queryNodeLabels is { Count: > 0 })
-        {
-            GraphitiHelpers.ValidateNodeLabels(_queryNodeLabels);
-            // NOTE: LadybugDB is the primary provider target; Kuzu remains the Python-parity
-            // compatibility value. Preserve this interim behavior until LadybugDB owns it.
-            if (provider == GraphProvider.Kuzu)
-            {
-                filterQueries.Add("list_has_all(n.labels, $labels) AND list_has_all(m.labels, $labels)");
-                filterParams["labels"] = _queryNodeLabels;
-            }
-            else
-            {
-                var nodeLabels = string.Join("|", _queryNodeLabels);
-                filterQueries.Add("n:" + nodeLabels + " AND m:" + nodeLabels);
-            }
-        }
+        AppendNodeLabelFilter(filterQueries, filterParams, provider, includeTarget: true);
 
         AppendDateFilters(filterQueries, filterParams, _validAt, "valid_at", "e.valid_at");
         AppendDateFilters(filterQueries, filterParams, _invalidAt, "invalid_at", "e.invalid_at");
@@ -149,6 +124,92 @@ internal sealed class CompiledSearchFilter
         AppendPropertyFilters(filterQueries, filterParams, _propertyFilters, "edge_property", "e");
 
         return (filterQueries, filterParams);
+    }
+
+    private int EstimateNodeQueryCount() =>
+        (_queryNodeLabels is { Count: > 0 } ? 1 : 0)
+        + _propertyFilters.Length;
+
+    private int EstimateEdgeQueryCount() =>
+        (_queryEdgeTypes is { Count: > 0 } ? 1 : 0)
+        + (_queryEdgeUuids is { Count: > 0 } ? 1 : 0)
+        + (_queryNodeLabels is { Count: > 0 } ? 1 : 0)
+        + (_validAt is null ? 0 : 1)
+        + (_invalidAt is null ? 0 : 1)
+        + (_createdAt is null ? 0 : 1)
+        + (_expiredAt is null ? 0 : 1)
+        + _propertyFilters.Length;
+
+    private int EstimateNodeParameterCount(GraphProvider provider) =>
+        _propertyFilters.Length * 2
+        + (provider == GraphProvider.Kuzu && _queryNodeLabels is { Count: > 0 } ? 1 : 0);
+
+    private int EstimateEdgeParameterCount(GraphProvider provider) =>
+        _propertyFilters.Length * 2
+        + DateFilterCount(_validAt)
+        + DateFilterCount(_invalidAt)
+        + DateFilterCount(_createdAt)
+        + DateFilterCount(_expiredAt)
+        + (_queryEdgeTypes is { Count: > 0 } ? 1 : 0)
+        + (_queryEdgeUuids is { Count: > 0 } ? 1 : 0)
+        + (provider == GraphProvider.Kuzu && _queryNodeLabels is { Count: > 0 } ? 1 : 0);
+
+    private static int DateFilterCount(CompiledDateFilter[][]? filters)
+    {
+        if (filters is null)
+        {
+            return 0;
+        }
+
+        var count = 0;
+        for (var i = 0; i < filters.Length; i++)
+        {
+            count += filters[i].Length;
+        }
+
+        return count;
+    }
+
+    private void AppendNodeLabelFilter(
+        List<string> filterQueries,
+        Dictionary<string, object?> filterParams,
+        GraphProvider provider,
+        bool includeTarget)
+    {
+        if (_queryNodeLabels is not { Count: > 0 } nodeLabels)
+        {
+            return;
+        }
+
+        GraphitiHelpers.ValidateNodeLabels(nodeLabels);
+        // NOTE: LadybugDB is the primary provider target; Kuzu remains the Python-parity
+        // compatibility value. Preserve this interim behavior until LadybugDB owns it.
+        if (provider == GraphProvider.Kuzu)
+        {
+            filterQueries.Add(includeTarget
+                ? "list_has_all(n.labels, $labels) AND list_has_all(m.labels, $labels)"
+                : "list_has_all(n.labels, $labels)");
+            filterParams["labels"] = nodeLabels;
+            return;
+        }
+
+        var labels = JoinLabels(nodeLabels);
+        filterQueries.Add(includeTarget
+            ? string.Concat("n:", labels, " AND m:", labels)
+            : string.Concat("n:", labels));
+    }
+
+    private static string JoinLabels(List<string> labels)
+    {
+        var builder = new StringBuilder(labels.Count * 12);
+        builder.Append(labels[0]);
+        for (var i = 1; i < labels.Count; i++)
+        {
+            builder.Append('|');
+            builder.Append(labels[i]);
+        }
+
+        return builder.ToString();
     }
 
     public static bool DateFiltersMatch(DateTime? value, IReadOnlyList<List<DateFilter>>? filters) =>
@@ -557,13 +618,25 @@ internal sealed class CompiledSearchFilter
             return;
         }
 
-        var filterParts = new List<string>(filters.Length);
+        var builder = new StringBuilder(filters.Length * 64);
+        builder.Append('(');
         var parameterIndex = 0;
-        foreach (var orList in filters)
+        for (var branchIndex = 0; branchIndex < filters.Length; branchIndex++)
         {
-            var andFilters = new List<string>(orList.Length);
-            foreach (var dateFilter in orList)
+            if (branchIndex > 0)
             {
+                builder.Append(" OR ");
+            }
+
+            var orList = filters[branchIndex];
+            for (var filterIndex = 0; filterIndex < orList.Length; filterIndex++)
+            {
+                if (filterIndex > 0)
+                {
+                    builder.Append(" AND ");
+                }
+
+                var dateFilter = orList[filterIndex];
                 var parameterName = $"{paramPrefix}_{parameterIndex++}";
                 if (dateFilter.ComparisonOperator is not ComparisonOperator.IsNull
                     and not ComparisonOperator.IsNotNull)
@@ -571,16 +644,15 @@ internal sealed class CompiledSearchFilter
                     filterParams[parameterName] = dateFilter.Date;
                 }
 
-                andFilters.Add(SearchFilterQueryBuilder.DateFilterQueryConstructor(
+                builder.Append(SearchFilterQueryBuilder.DateFilterQueryConstructor(
                     valueName,
                     $"${parameterName}",
                     dateFilter.ComparisonOperator));
             }
-
-            filterParts.Add(string.Join(" AND ", andFilters));
         }
 
-        filterQueries.Add("(" + string.Join(" OR ", filterParts) + ")");
+        builder.Append(')');
+        filterQueries.Add(builder.ToString());
     }
 
     private readonly record struct CompiledPropertyFilter(
