@@ -16,11 +16,28 @@ internal static class CommunityClustering
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(edges);
 
-        return nodes
-            .GroupBy(node => node.GroupId, StringComparer.Ordinal)
-            .OrderBy(group => group.Key, StringComparer.Ordinal)
-            .SelectMany(group => BuildClustersForGroup(group.ToList(), edges))
-            .ToList();
+        var nodesByGroup = new Dictionary<string, List<EntityNode>>(StringComparer.Ordinal);
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            var node = nodes[i];
+            if (!nodesByGroup.TryGetValue(node.GroupId, out var groupNodes))
+            {
+                groupNodes = new List<EntityNode>();
+                nodesByGroup.Add(node.GroupId, groupNodes);
+            }
+
+            groupNodes.Add(node);
+        }
+
+        var groupIds = new List<string>(nodesByGroup.Keys);
+        groupIds.Sort(StringComparer.Ordinal);
+        var clusters = new List<List<EntityNode>>(nodes.Count);
+        for (var i = 0; i < groupIds.Count; i++)
+        {
+            clusters.AddRange(BuildClustersForGroup(nodesByGroup[groupIds[i]], edges));
+        }
+
+        return clusters;
     }
 
     private static List<List<EntityNode>> BuildClustersForGroup(
@@ -32,18 +49,22 @@ internal static class CommunityClustering
             return new List<List<EntityNode>>();
         }
 
-        var distinctNodes = nodes
-            .GroupBy(node => node.Uuid, StringComparer.Ordinal)
-            .Select(group => group.First())
-            .ToArray();
-        var indexByUuid = distinctNodes
-            .Select((node, index) => (node.Uuid, index))
-            .ToDictionary(item => item.Uuid, item => item.index, StringComparer.Ordinal);
+        var distinctNodes = new List<EntityNode>(nodes.Count);
+        var indexByUuid = new Dictionary<string, int>(nodes.Count, StringComparer.Ordinal);
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            var node = nodes[i];
+            if (indexByUuid.TryAdd(node.Uuid, distinctNodes.Count))
+            {
+                distinctNodes.Add(node);
+            }
+        }
+
         var adjacency = BuildAdjacency(indexByUuid, edges);
         var communities = LabelPropagate(adjacency);
         var clustersByCommunity = new Dictionary<int, List<EntityNode>>();
 
-        for (var index = 0; index < distinctNodes.Length; index++)
+        for (var index = 0; index < distinctNodes.Count; index++)
         {
             var community = communities[index];
             if (!clustersByCommunity.TryGetValue(community, out var cluster))
@@ -55,14 +76,15 @@ internal static class CommunityClustering
             cluster.Add(distinctNodes[index]);
         }
 
-        return clustersByCommunity.Values
-            .Select(cluster => cluster
-                .OrderBy(node => node.Name, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(node => node.Uuid, StringComparer.Ordinal)
-                .ToList())
-            .OrderBy(cluster => cluster[0].Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(cluster => cluster[0].Uuid, StringComparer.Ordinal)
-            .ToList();
+        var clusters = new List<List<EntityNode>>(clustersByCommunity.Count);
+        foreach (var cluster in clustersByCommunity.Values)
+        {
+            cluster.Sort(CompareClusterNodes);
+            clusters.Add(cluster);
+        }
+
+        clusters.Sort(CompareClusters);
+        return clusters;
     }
 
     private static Neighbor[][] BuildAdjacency(
@@ -90,10 +112,7 @@ internal static class CommunityClustering
         var adjacency = new Neighbor[builders.Length][];
         for (var index = 0; index < builders.Length; index++)
         {
-            adjacency[index] = builders[index]
-                .OrderBy(pair => pair.Key)
-                .Select(pair => new Neighbor(pair.Key, pair.Value))
-                .ToArray();
+            adjacency[index] = BuildSortedNeighbors(builders[index]);
         }
 
         return adjacency;
@@ -101,7 +120,12 @@ internal static class CommunityClustering
 
     private static int[] LabelPropagate(IReadOnlyList<Neighbor[]> adjacency)
     {
-        var current = Enumerable.Range(0, adjacency.Count).ToArray();
+        var current = new int[adjacency.Count];
+        for (var i = 0; i < current.Length; i++)
+        {
+            current[i] = i;
+        }
+
         var next = new int[adjacency.Count];
         var communityWeights = new int[adjacency.Count];
         var touchedCommunities = new int[adjacency.Count];
@@ -166,6 +190,38 @@ internal static class CommunityClustering
 
         return current;
     }
+
+    private static Neighbor[] BuildSortedNeighbors(Dictionary<int, int> neighbors)
+    {
+        if (neighbors.Count == 0)
+        {
+            return [];
+        }
+
+        var sorted = new Neighbor[neighbors.Count];
+        var index = 0;
+        foreach (var pair in neighbors)
+        {
+            sorted[index++] = new Neighbor(pair.Key, pair.Value);
+        }
+
+        Array.Sort(sorted, CompareNeighbors);
+        return sorted;
+    }
+
+    private static int CompareNeighbors(Neighbor left, Neighbor right) =>
+        left.NodeIndex.CompareTo(right.NodeIndex);
+
+    private static int CompareClusterNodes(EntityNode left, EntityNode right)
+    {
+        var nameComparison = string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase);
+        return nameComparison != 0
+            ? nameComparison
+            : string.CompareOrdinal(left.Uuid, right.Uuid);
+    }
+
+    private static int CompareClusters(List<EntityNode> left, List<EntityNode> right) =>
+        CompareClusterNodes(left[0], right[0]);
 
     private static void IncrementNeighbor(Dictionary<int, int> neighbors, int index)
     {

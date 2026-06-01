@@ -81,6 +81,42 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
+    public void CommunityClustering_SortsGroupsAndKeepsFirstDuplicateNode()
+    {
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var groupB = Entity("Aardvark", "group-b", now, "group-b-node");
+        var duplicateFirst = Entity("Beta", "group-a", now, "duplicate");
+        var other = Entity("Gamma", "group-a", now, "other");
+        var duplicateSecond = Entity("Alpha", "group-a", now, "duplicate");
+
+        var clusters = CommunityClustering.BuildClusters(
+            new[] { groupB, duplicateFirst, other, duplicateSecond },
+            Array.Empty<EntityEdge>());
+
+        Assert.Equal(
+            new[] { new[] { "duplicate" }, new[] { "other" }, new[] { "group-b-node" } },
+            ClusterUuids(clusters));
+        Assert.Same(duplicateFirst, clusters[0][0]);
+    }
+
+    [Fact]
+    public void CommunityClustering_IgnoresEdgeGroupAndSkipsMissingEndpoints()
+    {
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var laterUuid = Entity("Alpha", "group", now, "node-b");
+        var earlierUuid = Entity("alpha", "group", now, "node-a");
+        var missing = Entity("Missing", "group", now, "missing");
+        var crossGroupEdge = Relates(laterUuid, earlierUuid, "different-edge-group", now);
+        var missingEndpointEdge = Relates(laterUuid, missing, "group", now);
+
+        var clusters = CommunityClustering.BuildClusters(
+            new[] { laterUuid, earlierUuid },
+            new[] { missingEndpointEdge, crossGroupEdge });
+
+        Assert.Equal(new[] { new[] { "node-a", "node-b" } }, ClusterUuids(clusters));
+    }
+
+    [Fact]
     public async Task BuildCommunities_LabelPropagationUsesSynchronousPythonSemantics()
     {
         var driver = new InMemoryGraphDriver();

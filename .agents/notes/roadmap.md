@@ -268,6 +268,10 @@ shorter than the old working plans; expand items only when they become active.
   embedding generation, and rebuild community deletion. Incremental community updates count neighbor
   communities per neighboring entity and keep Python's first-seen tie behavior. Tests pin duplicate
   update suppression, mode and tie selection, deterministic community text, and community edge order.
+- Community clustering now uses explicit group buffers, first-wins UUID de-duplication, sorted
+  adjacency buffers, and named cluster comparers instead of LINQ grouping/projection chains while
+  preserving group-id ordering, input-order initial community ids, synchronous label propagation,
+  duplicate-node first-wins behavior, and deterministic cluster ordering.
 - `LlmClient.PrepareMessages` now clones messages with a pre-sized loop, and `CleanInput` has a
   validation fast path that returns the original string for clean valid UTF-16. Tests pin the
   zero-width/C0-control cleanup matrix, allowed control preservation, malformed surrogate dropping,
