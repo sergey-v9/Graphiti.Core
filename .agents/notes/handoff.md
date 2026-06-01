@@ -224,7 +224,8 @@ improving those providers unless it directly supports shared abstractions or Lad
   DTO type identities for cache/schema stability. Schema validation now materializes `JsonElement`
   directly instead of serializing to text and reparsing. The nested structured-response DTOs are now
   covered by the System.Text.Json source-generation context without renaming them or changing their
-  snake_case schema shape.
+  snake_case schema shape. Schema error formatting now walks the first five validation errors in one
+  pass instead of materializing a temporary list.
 - LLM cache-key construction now uses an internal typed `LlmCacheKeyPayload` covered by the
   System.Text.Json source-generation context instead of an anonymous-object payload. Existing hash
   tests pin byte-compatible cache-key JSON.
@@ -310,13 +311,13 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after default embedder batch shaping:
+Latest checkpoint on 2026-06-01 after structured-response error formatting:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused ModernInfrastructure/ConcurrencyHelper/Telemetry test filter passed with 105 tests.
+- The focused LLM-client/ModernInfrastructure/Telemetry test filter passed with 143 tests.
 - `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 799
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
@@ -469,7 +470,7 @@ These were previously audited and found faithful or intentionally different:
 - LLM generate-response pipeline order
 - Source-generated serializer metadata coverage for nested structured LLM response DTOs, while
   preserving snake_case prompt/schema names such as `entity_resolutions` and
-  `duplicate_candidate_id`
+  `duplicate_candidate_id`, plus allocation-light schema validation error formatting
 - Source-generated serializer metadata coverage for the typed LLM cache-key payload, while
   preserving existing cache-key hash bytes.
 - LLM response cache cloned payload, raw memory/SQLite/HybridCache payload shape,

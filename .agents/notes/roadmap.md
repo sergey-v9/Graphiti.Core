@@ -217,6 +217,9 @@ shorter than the old working plans; expand items only when they become active.
 - `MicrosoftExtensionsAIChatClient` now builds provider chat-message lists with a pre-sized loop
   instead of LINQ projection. Focused modern-infrastructure and telemetry tests pin provider calls,
   schema/response parsing, retries, rate limiting, and provider-call spans.
+- `StructuredResponseValidator` now formats schema validation failures by walking the first five
+  errors in one pass instead of materializing a temporary list, preserving the public exception
+  message shape.
 - Default `EmbedderClient.CreateBatchAsync` now snapshots input strings into a compact array and
   routes through `ThrottledWork.SelectAsync` instead of allocating one closure per input. Focused
   tests pin bounded concurrency, ordered results, mutable input snapshotting, non-`List<T>`

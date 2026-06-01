@@ -119,11 +119,29 @@ public static class StructuredResponseValidator
 
     private static string FormatErrors(EvaluationResults results)
     {
-        var errors = EnumerateErrors(results)
-            .Take(5)
-            .ToList();
+        StringBuilder? builder = null;
+        var count = 0;
+        foreach (var error in EnumerateErrors(results))
+        {
+            if (count == 5)
+            {
+                break;
+            }
 
-        return errors.Count == 0 ? "validation failed" : string.Join("; ", errors);
+            if (builder is null)
+            {
+                builder = new StringBuilder(error);
+            }
+            else
+            {
+                builder.Append("; ");
+                builder.Append(error);
+            }
+
+            count++;
+        }
+
+        return builder is null ? "validation failed" : builder.ToString();
     }
 
     private static IEnumerable<string> EnumerateErrors(EvaluationResults results)
