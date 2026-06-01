@@ -633,19 +633,13 @@ public static partial class ContentChunking
         int overlapTokenBudget,
         ITokenCounter tokenCounter)
     {
-        var sentences = SentenceSplitRegex().Split(text);
+        var sentences = MaterializeSentences(text);
         var chunks = new List<string>();
         var currentChunk = new List<string>();
         var currentSize = 0;
 
-        foreach (var rawSentence in sentences)
+        foreach (var sentence in sentences)
         {
-            var sentence = rawSentence.Trim();
-            if (sentence.Length == 0)
-            {
-                continue;
-            }
-
             var sentenceSize = MeasureBudgetSize(sentence, tokenCounter);
             if (sentenceSize > chunkTokenBudget)
             {
@@ -757,7 +751,7 @@ public static partial class ContentChunking
             return;
         }
 
-        if (chunks.LastOrDefault() == chunk)
+        if (chunks.Count > 0 && chunks[^1] == chunk)
         {
             return;
         }
@@ -1051,14 +1045,30 @@ public static partial class ContentChunking
 
     private static List<string> MaterializeSpeakerMessages(string content)
     {
-        var split = SpeakerSplitRegex().Split(content);
-        var messages = new List<string>(split.Length);
-        for (var i = 0; i < split.Length; i++)
+        var messages = new List<string>();
+        var start = 0;
+        foreach (var match in SpeakerSplitRegex().EnumerateMatches(content.AsSpan()))
         {
-            AddTrimmedSegment(split[i].AsSpan(), messages);
+            AddTrimmedSegment(content.AsSpan(start, match.Index - start), messages);
+            start = match.Index;
         }
 
+        AddTrimmedSegment(content.AsSpan(start), messages);
         return messages;
+    }
+
+    private static List<string> MaterializeSentences(string text)
+    {
+        var sentences = new List<string>();
+        var start = 0;
+        foreach (var match in SentenceSplitRegex().EnumerateMatches(text.AsSpan()))
+        {
+            AddTrimmedSegment(text.AsSpan(start, match.Index - start), sentences);
+            start = match.Index + match.Length;
+        }
+
+        AddTrimmedSegment(text.AsSpan(start), sentences);
+        return sentences;
     }
 
     private static List<string> MaterializeLines(string content)
