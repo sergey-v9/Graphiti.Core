@@ -76,9 +76,9 @@ no-incremental build, full test runs, and package builds at different points. Hi
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
 Latest checkpoint, 2026-06-01: `.\eng\Verify-GraphitiCore.ps1 -FocusedFilter ...` succeeded with a
-focused filter covering triplet label merge plus ambiguous/exact/fuzzy/bulk node-dedupe workflow
-cases. It ran locked restore, six focused cases, format verification, no-incremental build, the full
-test suite (`866` passed), and `dotnet pack` for `Graphiti.Core.2.0.0.nupkg`.
+focused filter covering saga summary prompts, saga fallback summaries, and saga episode content
+ordering. It ran locked restore, six focused cases, format verification, no-incremental build, the
+full test suite (`866` passed), and `dotnet pack` for `Graphiti.Core.2.0.0.nupkg`.
 
 Primary full verification command from the C# repo root:
 

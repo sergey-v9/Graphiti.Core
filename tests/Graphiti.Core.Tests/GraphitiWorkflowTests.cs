@@ -3489,15 +3489,27 @@ public class GraphitiWorkflowTests
             ValidAt = episodeTime,
             Content = "Launch moved to March 15."
         };
+        var followUpEpisode = new EpisodicNode
+        {
+            Name = "owner",
+            GroupId = "group",
+            CreatedAt = episodeTime.AddMinutes(1),
+            ValidAt = episodeTime.AddMinutes(1),
+            Content = "Marketing owns the launch checklist."
+        };
         await saga.SaveAsync(driver);
         await episode.SaveAsync(driver);
-        await new HasEpisodeEdge
+        await followUpEpisode.SaveAsync(driver);
+        foreach (var item in new[] { episode, followUpEpisode })
         {
-            SourceNodeUuid = saga.Uuid,
-            TargetNodeUuid = episode.Uuid,
-            GroupId = "group",
-            CreatedAt = episodeTime
-        }.SaveAsync(driver);
+            await new HasEpisodeEdge
+            {
+                SourceNodeUuid = saga.Uuid,
+                TargetNodeUuid = item.Uuid,
+                GroupId = "group",
+                CreatedAt = item.CreatedAt
+            }.SaveAsync(driver);
+        }
 
         var summarized = await graphiti.SummarizeSagaAsync(saga.Uuid);
 
@@ -3507,9 +3519,12 @@ public class GraphitiWorkflowTests
         Assert.Equal("SagaSummaryResponse", call.ResponseModel?.Name);
         Assert.Contains("Prior launch decision", userMessage.Content, StringComparison.Ordinal);
         Assert.Contains("topic \"launch\"", userMessage.Content, StringComparison.Ordinal);
-        Assert.Contains("Launch moved to March 15.", userMessage.Content, StringComparison.Ordinal);
+        Assert.Contains(
+            "Launch moved to March 15.\n---\nMarketing owns the launch checklist.",
+            userMessage.Content,
+            StringComparison.Ordinal);
         Assert.Equal("merged launch summary", summarized.Summary);
-        Assert.Equal(episodeTime, summarized.LastSummarizedEpisodeValidAt);
+        Assert.Equal(followUpEpisode.ValidAt, summarized.LastSummarizedEpisodeValidAt);
     }
 
     [Fact]

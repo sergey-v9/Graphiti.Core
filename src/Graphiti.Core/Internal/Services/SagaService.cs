@@ -27,10 +27,7 @@ internal sealed class SagaService(
                 return saga;
             }
 
-            var validAts = episodesData
-                .Where(item => item.ValidAt is not null)
-                .Select(item => item.ValidAt!.Value)
-                .ToList();
+            var maxValidAt = MaxValidAt(episodesData);
             var messages = BuildSagaSummaryMessages(saga, episodesData);
 
             try
@@ -51,13 +48,11 @@ internal sealed class SagaService(
             }
 
             saga.LastSummarizedAt = UtcNow();
-            if (validAts.Count > 0)
+            if (maxValidAt is not null
+                && (saga.LastSummarizedEpisodeValidAt is null
+                    || maxValidAt > saga.LastSummarizedEpisodeValidAt))
             {
-                var maxValidAt = validAts.Max();
-                if (saga.LastSummarizedEpisodeValidAt is null || maxValidAt > saga.LastSummarizedEpisodeValidAt)
-                {
-                    saga.LastSummarizedEpisodeValidAt = maxValidAt;
-                }
+                saga.LastSummarizedEpisodeValidAt = maxValidAt;
             }
 
             await saga.SaveAsync(driver, cancellationToken).ConfigureAwait(false);
@@ -181,9 +176,7 @@ internal sealed class SagaService(
         SagaNode saga,
         IReadOnlyList<SagaEpisodeContent> episodes)
     {
-        var episodesText = episodes.Count == 0
-            ? "(no messages)"
-            : string.Join("\n---\n", episodes.Select(episode => episode.Content));
+        var episodesText = JoinEpisodeContents(episodes, "\n---\n", "(no messages)");
         var existingSummarySection = string.IsNullOrWhiteSpace(saga.Summary)
             ? string.Empty
             : $"""
@@ -275,7 +268,59 @@ Write 2-6 dense sentences. Use third person. Preserve all names, dates, counts, 
                 : summary;
 
     private static string BuildFallbackSummary(IReadOnlyList<SagaEpisodeContent> episodesData) =>
-        string.Join("\n", episodesData.Select(item => item.Content));
+        JoinEpisodeContents(episodesData, "\n");
+
+    private static DateTime? MaxValidAt(IReadOnlyList<SagaEpisodeContent> episodes)
+    {
+        DateTime? maxValidAt = null;
+        for (var i = 0; i < episodes.Count; i++)
+        {
+            var validAt = episodes[i].ValidAt;
+            if (validAt is not null && (maxValidAt is null || validAt > maxValidAt))
+            {
+                maxValidAt = validAt;
+            }
+        }
+
+        return maxValidAt;
+    }
+
+    private static string JoinEpisodeContents(
+        IReadOnlyList<SagaEpisodeContent> episodes,
+        string separator,
+        string emptyValue = "")
+    {
+        if (episodes.Count == 0)
+        {
+            return emptyValue;
+        }
+
+        var length = separator.Length * (episodes.Count - 1);
+        for (var i = 0; i < episodes.Count; i++)
+        {
+            length += episodes[i].Content.Length;
+        }
+
+        return string.Create(length, (Episodes: episodes, Separator: separator), static (destination, state) =>
+        {
+            var offset = 0;
+            for (var i = 0; i < state.Episodes.Count; i++)
+            {
+                var content = state.Episodes[i].Content.AsSpan();
+                content.CopyTo(destination.Slice(offset));
+                offset += content.Length;
+
+                if (i == state.Episodes.Count - 1)
+                {
+                    continue;
+                }
+
+                var separator = state.Separator.AsSpan();
+                separator.CopyTo(destination.Slice(offset));
+                offset += separator.Length;
+            }
+        });
+    }
 
     private DateTime UtcNow() => timeProvider.GetUtcNow().UtcDateTime;
 
