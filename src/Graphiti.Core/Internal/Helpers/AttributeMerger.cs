@@ -154,15 +154,12 @@ internal static class AttributeMerger
 
         if (node is JsonObject jsonObject)
         {
-            return jsonObject.ToDictionary(
-                pair => pair.Key,
-                pair => JsonNodeToObject(pair.Value),
-                StringComparer.Ordinal);
+            return JsonObjectToDictionary(jsonObject);
         }
 
         if (node is JsonArray jsonArray)
         {
-            return jsonArray.Select(JsonNodeToObject).ToList();
+            return JsonArrayToList(jsonArray);
         }
 
         if (node is JsonValue value)
@@ -199,6 +196,28 @@ internal static class AttributeMerger
         }
 
         return node.ToJsonString(GraphitiJsonSerializer.Options);
+    }
+
+    private static Dictionary<string, object?> JsonObjectToDictionary(JsonObject jsonObject)
+    {
+        var result = new Dictionary<string, object?>(jsonObject.Count, StringComparer.Ordinal);
+        foreach (var pair in jsonObject)
+        {
+            result[pair.Key] = JsonNodeToObject(pair.Value);
+        }
+
+        return result;
+    }
+
+    private static List<object?> JsonArrayToList(JsonArray jsonArray)
+    {
+        var result = new List<object?>(jsonArray.Count);
+        foreach (var item in jsonArray)
+        {
+            result.Add(JsonNodeToObject(item));
+        }
+
+        return result;
     }
 
     private enum AttributeMergeMode

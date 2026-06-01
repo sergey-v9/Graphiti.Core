@@ -75,7 +75,7 @@ Ask first:
 Primary build/test command from this folder:
 
 ```powershell
-dotnet test "Graphiti.Core.CSharp.slnx" --verbosity minimal
+.\eng\Verify-GraphitiCore.ps1
 ```
 
 Keep the latest verification checkpoint in `.agents/notes/handoff.md`; do not duplicate volatile test

@@ -75,13 +75,28 @@ Recent 2026-06-01 checkpoints recorded successful locked restore, format verific
 no-incremental build, full test runs, and package builds at different points. Historical counts in old
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
-Useful commands from the C# repo root:
+Latest checkpoint, 2026-06-01: `.\eng\Verify-GraphitiCore.ps1 -FocusedFilter
+"FullyQualifiedName~AddEpisode_HydratesNestedStructuredAttributeResponses"` succeeded. It ran locked
+restore, the focused attribute-hydration workflow test, format verification, no-incremental build, the
+full test suite (`866` passed), and `dotnet pack` for `Graphiti.Core.2.0.0.nupkg`.
+
+Primary full verification command from the C# repo root:
+
+```powershell
+.\eng\Verify-GraphitiCore.ps1
+```
+
+Use `-FocusedFilter "FullyQualifiedName~..."` to run a VSTest-style focused filter before the full
+restore/format/build/test/pack pass.
+
+Equivalent manual commands:
 
 ```powershell
 dotnet restore Graphiti.Core.CSharp.slnx --locked-mode
 dotnet format Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal
 dotnet build Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal
 dotnet test Graphiti.Core.CSharp.slnx --no-build --verbosity minimal
+dotnet pack src\Graphiti.Core\Graphiti.Core.csproj --configuration Release --no-restore --verbosity minimal
 ```
 
 If a slice repeatedly needs the same focused tests plus broader build/test/format checks, create a

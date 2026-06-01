@@ -876,7 +876,19 @@ public class GraphitiWorkflowTests
             {
                 ["attributes"] = new JsonObject
                 {
-                    ["role"] = "engineer"
+                    ["role"] = "engineer",
+                    ["profile"] = new JsonObject
+                    {
+                        ["tags"] = new JsonArray("backend", "search"),
+                        ["history"] = new JsonArray
+                        {
+                            new JsonObject
+                            {
+                                ["company"] = "Acme",
+                                ["years"] = 2
+                            }
+                        }
+                    }
                 }
             },
             ["extract_edges.extract_attributes"] = new()
@@ -901,7 +913,8 @@ public class GraphitiWorkflowTests
                     "Person",
                     attributes: new Dictionary<string, EntityAttributeDefinition>
                     {
-                        ["role"] = new("Job title")
+                        ["role"] = new("Job title"),
+                        ["profile"] = new("Structured employment profile", "object")
                     })
             },
             edgeTypes: new Dictionary<string, EntityTypeDefinition>
@@ -921,6 +934,12 @@ public class GraphitiWorkflowTests
         var alice = Assert.Single(result.Nodes, node => node.Name == "Alice");
         var edge = Assert.Single(result.Edges);
         Assert.Equal("engineer", alice.Attributes["role"]);
+        var profile = Assert.IsType<Dictionary<string, object?>>(alice.Attributes["profile"]);
+        Assert.Equal(new object?[] { "backend", "search" }, Assert.IsType<List<object?>>(profile["tags"]));
+        var history = Assert.IsType<List<object?>>(profile["history"]);
+        var priorRole = Assert.IsType<Dictionary<string, object?>>(Assert.Single(history));
+        Assert.Equal("Acme", priorRole["company"]);
+        Assert.Equal(2, priorRole["years"]);
         Assert.Equal(0.91, edge.Attributes["confidence"]);
     }
 
