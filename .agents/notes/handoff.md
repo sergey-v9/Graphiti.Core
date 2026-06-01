@@ -76,10 +76,11 @@ no-incremental build, full test runs, and package builds at different points. Hi
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
 Latest checkpoint, 2026-06-02:
-`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Drivers.InMemoryGraphDriverCloneTests|FullyQualifiedName~Graphiti.Core.Tests.Drivers.InMemoryGraphDriverReadTests|FullyQualifiedName~Graphiti.Core.Tests.Drivers.InMemorySearchGraphDriverTests"`
-succeeded. It ran locked restore, focused InMemory clone/read/search coverage (`26` passed), format
-verification, no-incremental build, the full test suite (`867` passed), and `dotnet pack` for
-`Graphiti.Core.2.0.0-alpha.1.nupkg`.
+`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Drivers.InMemoryGraphDriverDeleteTests|FullyQualifiedName~Graphiti.Core.Tests.Drivers.InMemoryGraphDriverCancellationTests"`
+succeeded. It ran locked restore, focused InMemory delete/cancellation coverage (`15` passed),
+format verification, no-incremental build, the full test suite (`867` passed), and `dotnet pack` for
+`Graphiti.Core.2.0.0-alpha.1.nupkg`. The preceding checkpoint used the same verifier with focused
+InMemory clone/read/search coverage (`26` passed).
 
 Primary full verification command from the C# repo root:
 

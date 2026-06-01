@@ -170,9 +170,10 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
                 RemoveNodeIndexes(node);
             }
 
-            foreach (var edgeUuid in GetIndexedUuids(_incidentEdgeUuidsByNodeUuid, uuid).ToList())
+            var edgeUuids = MaterializeUuids(GetIndexedUuids(_incidentEdgeUuidsByNodeUuid, uuid));
+            for (var i = 0; i < edgeUuids.Count; i++)
             {
-                RemoveEdgeByUuid(edgeUuid);
+                RemoveEdgeByUuid(edgeUuids[i]);
             }
         }
 
@@ -194,7 +195,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         List<string> uuids;
         lock (_gate)
         {
-            uuids = GetIndexedUuids(_nodeUuidsByGroup, groupId).ToList();
+            uuids = MaterializeUuids(GetIndexedUuids(_nodeUuidsByGroup, groupId));
         }
 
         return DeleteNodesByUuidsAsync(uuids, batchSize, cancellationToken);
@@ -205,12 +206,14 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         ArgumentNullException.ThrowIfNull(uuids);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         cancellationToken.ThrowIfCancellationRequested();
-        foreach (var batch in uuids.ToList().Chunk(batchSize))
+        var uuidList = MaterializeUuids(uuids);
+        for (var batchStart = 0; batchStart < uuidList.Count; batchStart += batchSize)
         {
-            foreach (var uuid in batch)
+            var batchEnd = batchStart + Math.Min(batchSize, uuidList.Count - batchStart);
+            for (var i = batchStart; i < batchEnd; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await DeleteNodeAsync(uuid, cancellationToken).ConfigureAwait(false);
+                await DeleteNodeAsync(uuidList[i], cancellationToken).ConfigureAwait(false);
             }
         }
     }
@@ -230,7 +233,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
     {
         ArgumentNullException.ThrowIfNull(uuids);
         cancellationToken.ThrowIfCancellationRequested();
-        var uuidList = uuids.ToList();
+        var uuidList = MaterializeUuids(uuids);
         if (uuidList.Count == 0)
         {
             return Task.CompletedTask;
@@ -238,10 +241,10 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
 
         lock (_gate)
         {
-            foreach (var uuid in uuidList)
+            for (var i = 0; i < uuidList.Count; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                RemoveEdgeByUuid(uuid);
+                RemoveEdgeByUuid(uuidList[i]);
             }
         }
 
@@ -1592,6 +1595,18 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         index.TryGetValue(key, out var uuids)
             ? uuids
             : Array.Empty<string>();
+
+    private static List<string> MaterializeUuids(IEnumerable<string> uuids)
+    {
+        var capacity = uuids.TryGetNonEnumeratedCount(out var count) ? count : 0;
+        var results = capacity == 0 ? new List<string>() : new List<string>(capacity);
+        foreach (var uuid in uuids)
+        {
+            results.Add(uuid);
+        }
+
+        return results;
+    }
 
     private static List<string> MaterializeDistinctUuids(
         IEnumerable<string> uuids,
