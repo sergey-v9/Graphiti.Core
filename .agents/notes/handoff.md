@@ -209,7 +209,10 @@ improving those providers unless it directly supports shared abstractions or Lad
   `LadybugSearchExecutor` helpers now pin and exercise Kuzu full-text index/search statements, vector
   search, BFS statement plans, per-UUID ranker statements, Kuzu label filters, `RelatesToNode_`
   search shapes, result score extraction, BFS dedup/limit behavior, cancellation, and C# search-rank
-  ordering over the abstract executor. No LadybugDB package reference, native dependency, concrete
+  ordering over the abstract executor. The ranker path now builds first-seen score maps and statement
+  lists with explicit loops while preserving duplicate input collapse, center-node exclusion/query
+  synthesis, unknown backend UUID inclusion, last backend score wins, inclusive min-score filtering,
+  and missing-score defaults. No LadybugDB package reference, native dependency, concrete
   package adapter, DI wiring, `ISearchGraphDriver` implementation, or `GraphProvider.Kuzu` options
   validation support has been added yet. The C# foundation now resolves the current Python Kuzu
   saga schema/query and entity-edge `reference_time` inconsistencies ahead of runtime wiring by using
@@ -314,14 +317,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after Ladybug graph-driver projection shaping:
+Latest checkpoint on 2026-06-01 after Ladybug search-ranker shaping:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused Ladybug driver test filter passed with 32 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 800
+- The focused Ladybug driver test filter passed with 34 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 802
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.
@@ -466,7 +469,8 @@ These were previously audited and found faithful or intentionally different:
   mapping, individual bulk-save statement expansion, internal executor-backed non-search driver
   forwarding/mapping, allocation-light collection projection and first-seen group-id de-duplication,
   search statement plans for full-text/vector/BFS/rankers, internal search execution/mapping over
-  `ILadybugQueryExecutor`, and keeping provider status unsupported in DI/options.
+  `ILadybugQueryExecutor`, allocation-light ranker score/statement shaping with duplicate/unknown
+  UUID parity, and keeping provider status unsupported in DI/options.
 - Full-text query construction preserves Python-compatible Lucene literal-space query limits,
   Falkor RedisSearch stopword/operator query limits, and Kuzu whitespace word splitting/truncation
   while avoiding split-array allocation in the shared C# helper.

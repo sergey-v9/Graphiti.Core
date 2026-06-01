@@ -360,31 +360,51 @@ internal static class LadybugSearchStatementBuilder
         string centerNodeUuid)
     {
         ArgumentNullException.ThrowIfNull(nodeUuids);
-        return nodeUuids
-            .Where(uuid => !string.Equals(uuid, centerNodeUuid, StringComparison.Ordinal))
-            .Distinct(StringComparer.Ordinal)
-            .Select(uuid => new LadybugStatement(
+        var statements = new List<LadybugStatement>(nodeUuids.Count);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < nodeUuids.Count; i++)
+        {
+            var uuid = nodeUuids[i];
+            if (string.Equals(uuid, centerNodeUuid, StringComparison.Ordinal)
+                || !seen.Add(uuid))
+            {
+                continue;
+            }
+
+            statements.Add(new LadybugStatement(
                 """
                 MATCH (center:Entity {uuid: $center_uuid})-[:RELATES_TO]->(:RelatesToNode_)-[:RELATES_TO]-(n:Entity {uuid: $node_uuid})
                 RETURN 1 AS score, n.uuid AS uuid
                 """,
-                Parameters(("node_uuid", uuid), ("center_uuid", centerNodeUuid))))
-            .ToList();
+                Parameters(("node_uuid", uuid), ("center_uuid", centerNodeUuid))));
+        }
+
+        return statements;
     }
 
     internal static IReadOnlyList<LadybugStatement> BuildNodeEpisodeMentionsRankStatements(
         IReadOnlyList<string> nodeUuids)
     {
         ArgumentNullException.ThrowIfNull(nodeUuids);
-        return nodeUuids
-            .Distinct(StringComparer.Ordinal)
-            .Select(uuid => new LadybugStatement(
+        var statements = new List<LadybugStatement>(nodeUuids.Count);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < nodeUuids.Count; i++)
+        {
+            var uuid = nodeUuids[i];
+            if (!seen.Add(uuid))
+            {
+                continue;
+            }
+
+            statements.Add(new LadybugStatement(
                 """
                 MATCH (episode:Episodic)-[r:MENTIONS]->(n:Entity {uuid: $node_uuid})
                 RETURN count(*) AS score, n.uuid AS uuid
                 """,
-                Parameters(("node_uuid", uuid))))
-            .ToList();
+                Parameters(("node_uuid", uuid))));
+        }
+
+        return statements;
     }
 
     internal static LadybugStatement BuildEntityNodesByUuidsForRankStatement(

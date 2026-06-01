@@ -155,6 +155,73 @@ public class LadybugSearchExecutorTests
     }
 
     [Fact]
+    public async Task Rankers_PreserveFirstInputTiesUnknownRowsAndLastBackendScore()
+    {
+        var recorder = new RecordingLadybugExecutor();
+        recorder.EnqueueQuery(new Dictionary<string, object?> { ["uuid"] = "first", ["score"] = 2 });
+        recorder.EnqueueQuery(
+            new Dictionary<string, object?> { ["uuid"] = "dup", ["score"] = 1 },
+            new Dictionary<string, object?> { ["uuid"] = "dup", ["score"] = 3 });
+        recorder.EnqueueQuery(
+            new Dictionary<string, object?> { ["uuid"] = "unknown", ["score"] = 2 },
+            new Dictionary<string, object?> { ["uuid"] = "second", ["score"] = 2 });
+        recorder.EnqueueQuery(new Dictionary<string, object?> { ["uuid"] = "node-b", ["score"] = 5 });
+        recorder.EnqueueQuery(
+            new Dictionary<string, object?> { ["uuid"] = "node-a", ["score"] = 3 },
+            new Dictionary<string, object?> { ["uuid"] = "node-a", ["score"] = 1 });
+        recorder.EnqueueQuery(new Dictionary<string, object?> { ["uuid"] = "mention-unknown", ["score"] = 1 });
+        var search = new LadybugSearchExecutor(recorder);
+
+        var distance = await search.RankNodeDistanceAsync(
+            new[] { "first", "dup", "center", "dup", "second" },
+            "center",
+            minScore: 0);
+        var mentions = await search.RankNodeEpisodeMentionsAsync(
+            new[] { "node-b", "node-a", "node-b", "node-c" },
+            minScore: 0);
+
+        Assert.Equal(new[] { "center", "dup", "first", "second", "unknown" }, distance.Select(rank => rank.Uuid));
+        Assert.Equal(new[] { 10f, 3f, 2f, 2f, 2f }, distance.Select(rank => rank.Score));
+        Assert.Equal(new[] { "node-a", "mention-unknown", "node-b", "node-c" }, mentions.Select(rank => rank.Uuid));
+        Assert.Equal(1f, mentions[0].Score);
+        Assert.Equal(1f, mentions[1].Score);
+        Assert.Equal(5f, mentions[2].Score);
+        Assert.True(float.IsPositiveInfinity(mentions[3].Score));
+        Assert.DoesNotContain(
+            recorder.Queried,
+            statement => statement.Parameters.TryGetValue("node_uuid", out var uuid)
+                && uuid is string text
+                && string.Equals(text, "center", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Rankers_ApplyInclusiveMinimumScoreToDefaults()
+    {
+        var recorder = new RecordingLadybugExecutor();
+        recorder.EnqueueQuery();
+        recorder.EnqueueQuery();
+        recorder.EnqueueQuery();
+        var search = new LadybugSearchExecutor(recorder);
+
+        var distanceAtDefault = await search.RankNodeDistanceAsync(
+            new[] { "far" },
+            "center",
+            minScore: 0);
+        var distanceAboveDefault = await search.RankNodeDistanceAsync(
+            new[] { "far" },
+            "center",
+            minScore: 0.1f);
+        var mentions = await search.RankNodeEpisodeMentionsAsync(
+            new[] { "unmentioned" },
+            minScore: 100);
+
+        Assert.Equal("far", Assert.Single(distanceAtDefault).Uuid);
+        Assert.Empty(distanceAboveDefault);
+        Assert.Equal("unmentioned", Assert.Single(mentions).Uuid);
+        Assert.True(float.IsPositiveInfinity(mentions[0].Score));
+    }
+
+    [Fact]
     public async Task PreCanceledSearch_DoesNotQueryExecutor()
     {
         var recorder = new RecordingLadybugExecutor();

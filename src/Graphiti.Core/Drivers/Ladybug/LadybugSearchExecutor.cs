@@ -206,9 +206,7 @@ internal sealed class LadybugSearchExecutor
             return Array.Empty<SearchRank>();
         }
 
-        var scores = nodeUuids
-            .Distinct(StringComparer.Ordinal)
-            .ToDictionary(uuid => uuid, _ => 0f, StringComparer.Ordinal);
+        var scores = BuildScoreMap(nodeUuids, defaultScore: 0);
 
         foreach (var statement in LadybugSearchStatementBuilder.BuildNodeDistanceRankStatements(
                      nodeUuids,
@@ -220,17 +218,20 @@ internal sealed class LadybugSearchExecutor
             {
                 if (GetString(record, "uuid") is { Length: > 0 } uuid)
                 {
-                    scores[uuid] = GetScore(record, defaultScore: 0);
+                    var score = GetScore(record, defaultScore: 0);
+                    scores[uuid] = scores.TryGetValue(uuid, out var existing)
+                        ? (score, existing.Index)
+                        : (score, int.MaxValue);
                 }
             }
         }
 
-        if (nodeUuids.Contains(centerNodeUuid, StringComparer.Ordinal))
+        if (scores.TryGetValue(centerNodeUuid, out var center))
         {
-            scores[centerNodeUuid] = 10f;
+            scores[centerNodeUuid] = (10f, center.Index);
         }
 
-        return SortRanksByDescendingScore(scores, nodeUuids, minScore);
+        return SortRanksByDescendingScore(scores, minScore);
     }
 
     internal async Task<IReadOnlyList<SearchRank>> RankNodeEpisodeMentionsAsync(
@@ -244,9 +245,7 @@ internal sealed class LadybugSearchExecutor
             return Array.Empty<SearchRank>();
         }
 
-        var scores = nodeUuids
-            .Distinct(StringComparer.Ordinal)
-            .ToDictionary(uuid => uuid, _ => float.PositiveInfinity, StringComparer.Ordinal);
+        var scores = BuildScoreMap(nodeUuids, defaultScore: float.PositiveInfinity);
 
         foreach (var statement in LadybugSearchStatementBuilder.BuildNodeEpisodeMentionsRankStatements(nodeUuids))
         {
@@ -256,12 +255,15 @@ internal sealed class LadybugSearchExecutor
             {
                 if (GetString(record, "uuid") is { Length: > 0 } uuid)
                 {
-                    scores[uuid] = GetScore(record, defaultScore: float.PositiveInfinity);
+                    var score = GetScore(record, defaultScore: float.PositiveInfinity);
+                    scores[uuid] = scores.TryGetValue(uuid, out var existing)
+                        ? (score, existing.Index)
+                        : (score, int.MaxValue);
                 }
             }
         }
 
-        return SortRanksByAscendingScore(scores, nodeUuids, minScore);
+        return SortRanksByAscendingScore(scores, minScore);
     }
 
     private async Task<IReadOnlyList<SearchHit<T>>> QueryHitsAsync<T>(
@@ -271,9 +273,14 @@ internal sealed class LadybugSearchExecutor
     {
         cancellationToken.ThrowIfCancellationRequested();
         var records = await _executor.QueryAsync(statement, cancellationToken).ConfigureAwait(false);
-        return records
-            .Select(record => new SearchHit<T>(mapper(record), GetScore(record)))
-            .ToList();
+        var hits = new List<SearchHit<T>>(records.Count);
+        for (var i = 0; i < records.Count; i++)
+        {
+            var record = records[i];
+            hits.Add(new SearchHit<T>(mapper(record), GetScore(record)));
+        }
+
+        return hits;
     }
 
     private async Task<IReadOnlyList<SearchHit<T>>> QueryDistinctHitsAsync<T>(
@@ -313,39 +320,77 @@ internal sealed class LadybugSearchExecutor
         return hits;
     }
 
+    private static Dictionary<string, (float Score, int Index)> BuildScoreMap(
+        IReadOnlyList<string> nodeUuids,
+        float defaultScore)
+    {
+        var scores = new Dictionary<string, (float Score, int Index)>(
+            nodeUuids.Count,
+            StringComparer.Ordinal);
+        for (var i = 0; i < nodeUuids.Count; i++)
+        {
+            scores.TryAdd(nodeUuids[i], (defaultScore, i));
+        }
+
+        return scores;
+    }
+
     private static List<SearchRank> SortRanksByDescendingScore(
-        IReadOnlyDictionary<string, float> scores,
-        IReadOnlyList<string> inputUuids,
-        float minScore) =>
-        scores
-            .Where(pair => pair.Value >= minScore)
-            .OrderByDescending(pair => pair.Value)
-            .ThenBy(pair => FirstIndex(inputUuids, pair.Key))
-            .Select(pair => new SearchRank(pair.Key, pair.Value))
-            .ToList();
+        IReadOnlyDictionary<string, (float Score, int Index)> scores,
+        float minScore)
+    {
+        var ranked = FilterRanks(scores, minScore);
+        ranked.Sort(static (left, right) =>
+        {
+            var scoreComparison = right.Score.CompareTo(left.Score);
+            return scoreComparison != 0
+                ? scoreComparison
+                : left.Index.CompareTo(right.Index);
+        });
+        return ProjectRanks(ranked);
+    }
 
     private static List<SearchRank> SortRanksByAscendingScore(
-        IReadOnlyDictionary<string, float> scores,
-        IReadOnlyList<string> inputUuids,
-        float minScore) =>
-        scores
-            .Where(pair => pair.Value >= minScore)
-            .OrderBy(pair => pair.Value)
-            .ThenBy(pair => FirstIndex(inputUuids, pair.Key))
-            .Select(pair => new SearchRank(pair.Key, pair.Value))
-            .ToList();
-
-    private static int FirstIndex(IReadOnlyList<string> inputUuids, string uuid)
+        IReadOnlyDictionary<string, (float Score, int Index)> scores,
+        float minScore)
     {
-        for (var i = 0; i < inputUuids.Count; i++)
+        var ranked = FilterRanks(scores, minScore);
+        ranked.Sort(static (left, right) =>
         {
-            if (string.Equals(inputUuids[i], uuid, StringComparison.Ordinal))
+            var scoreComparison = left.Score.CompareTo(right.Score);
+            return scoreComparison != 0
+                ? scoreComparison
+                : left.Index.CompareTo(right.Index);
+        });
+        return ProjectRanks(ranked);
+    }
+
+    private static List<(string Uuid, float Score, int Index)> FilterRanks(
+        IReadOnlyDictionary<string, (float Score, int Index)> scores,
+        float minScore)
+    {
+        var ranked = new List<(string Uuid, float Score, int Index)>(scores.Count);
+        foreach (var (uuid, rank) in scores)
+        {
+            if (rank.Score >= minScore)
             {
-                return i;
+                ranked.Add((uuid, rank.Score, rank.Index));
             }
         }
 
-        return int.MaxValue;
+        return ranked;
+    }
+
+    private static List<SearchRank> ProjectRanks(
+        List<(string Uuid, float Score, int Index)> ranked)
+    {
+        var results = new List<SearchRank>(ranked.Count);
+        for (var i = 0; i < ranked.Count; i++)
+        {
+            results.Add(new SearchRank(ranked[i].Uuid, ranked[i].Score));
+        }
+
+        return results;
     }
 
     private static float GetScore(

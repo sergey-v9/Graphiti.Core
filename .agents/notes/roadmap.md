@@ -237,6 +237,10 @@ shorter than the old working plans; expand items only when they become active.
   projections with explicit loops and pre-sized buffers instead of LINQ iterator chains. Tests pin
   backend record-order preservation, group filtering, first-seen group-id de-duplication, and the
   internal-only provider boundary.
+- `LadybugSearchExecutor` and the Ladybug rank statement builder now shape per-UUID ranker score maps
+  and statements with explicit first-seen loops. Tests pin duplicate input collapse, center-node
+  query exclusion plus synthetic score, unknown backend UUID inclusion, last backend row wins,
+  inclusive min-score filtering, and missing default scores.
 - Good next allocation slice from the 2026-06-01 scans: continue with a fresh targeted scan before
   editing. Concrete candidates from the latest scan are Neo4j bulk-save parameter loop projection
   or moving back to LadybugDB package proof when provider work is the higher-leverage slice.

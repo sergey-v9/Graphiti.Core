@@ -21,7 +21,10 @@ being ported.
   index statements, `QUERY_FTS_INDEX` calls, `array_cosine_similarity` vector search, doubled-depth
   BFS plans over `RelatesToNode_`, per-UUID ranker statements, Kuzu label filters, score extraction,
   BFS dedup/limit behavior, and C# search-rank ordering over the abstract executor. They are not
-  wired into `LadybugGraphDriver` and do not make the driver implement `ISearchGraphDriver`.
+  wired into `LadybugGraphDriver` and do not make the driver implement `ISearchGraphDriver`. Their
+  per-UUID ranker paths use first-seen loop-built statement and score maps while preserving duplicate
+  input collapse, center-node handling, unknown backend rows, last-row-wins score updates, and
+  inclusive minimum-score filtering.
 - The driver should use the LadybugDB NuGet package (https://www.nuget.org/packages/LadybugDB).
 - `GraphProvider.Kuzu` remains in the enum today and should be treated as a pending compatibility
   value, not a rejected provider.

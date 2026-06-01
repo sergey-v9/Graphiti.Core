@@ -256,6 +256,7 @@ public class LadybugSearchStatementTests
             distance[0].Query,
             StringComparison.Ordinal);
         Assert.Equal("node-b", distance[0].Parameters["node_uuid"]);
+        Assert.Equal("node-c", distance[1].Parameters["node_uuid"]);
         Assert.Equal("center", distance[0].Parameters["center_uuid"]);
 
         Assert.Equal(2, mentions.Count);
@@ -265,6 +266,7 @@ public class LadybugSearchStatementTests
             mentions[0].Query,
             StringComparison.Ordinal);
         Assert.Equal("node-a", mentions[0].Parameters["node_uuid"]);
+        Assert.Equal("node-b", mentions[1].Parameters["node_uuid"]);
 
         Assert.Contains("WHERE n.uuid IN $uuids", fetch.Query, StringComparison.Ordinal);
         Assert.Equal(new[] { "node-b", "node-c" }, Assert.IsType<List<string>>(fetch.Parameters["uuids"]));
