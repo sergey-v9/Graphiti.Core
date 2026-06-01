@@ -107,12 +107,12 @@ internal sealed class EpisodeGraphExtractor(
                 usedHeuristicFallback = true;
             }
 
-            var excluded = (excludedEntityTypes ?? Array.Empty<string>()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var excluded = BuildExcludedEntityTypeSet(excludedEntityTypes);
             var skippedExcluded = 0;
             var nodes = new List<EntityNode>();
             foreach (var extracted in extractedNames)
             {
-                if (excluded.Contains(extracted.Type))
+                if (excluded is not null && excluded.Contains(extracted.Type))
                 {
                     skippedExcluded++;
                     continue;
@@ -134,7 +134,7 @@ internal sealed class EpisodeGraphExtractor(
                 nodes.Add(node);
             }
 
-            var attribution = nodes.ToDictionary(node => node.Uuid, _ => FirstEpisodeIndex, StringComparer.Ordinal);
+            var attribution = BuildFirstEpisodeAttribution(nodes);
             activity?.SetTag("graphiti.extraction.candidates", extractedNames.Count);
             activity?.SetTag("graphiti.extraction.fallback", usedHeuristicFallback);
             activity?.SetTag("graphiti.extraction.excluded", skippedExcluded);
@@ -147,6 +147,33 @@ internal sealed class EpisodeGraphExtractor(
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
         }
+    }
+
+    private static HashSet<string>? BuildExcludedEntityTypeSet(IReadOnlyList<string>? excludedEntityTypes)
+    {
+        if (excludedEntityTypes is null || excludedEntityTypes.Count == 0)
+        {
+            return null;
+        }
+
+        var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < excludedEntityTypes.Count; i++)
+        {
+            excluded.Add(excludedEntityTypes[i]);
+        }
+
+        return excluded;
+    }
+
+    private static Dictionary<string, IReadOnlyList<int>> BuildFirstEpisodeAttribution(List<EntityNode> nodes)
+    {
+        var attribution = new Dictionary<string, IReadOnlyList<int>>(nodes.Count, StringComparer.Ordinal);
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            attribution.Add(nodes[i].Uuid, FirstEpisodeIndex);
+        }
+
+        return attribution;
     }
 
     private async Task<List<Graphiti.ExtractedEdge>> ExtractEpisodeEdgesAsync(

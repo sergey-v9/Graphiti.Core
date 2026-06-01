@@ -1802,6 +1802,46 @@ public class GraphitiWorkflowTests
         Assert.Equal("Organization", factSignature["target"]?.GetValue<string>());
     }
 
+    [Fact]
+    public async Task AddEpisode_FiltersExcludedExtractedEntityTypes()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["extract_nodes.extract_message"] = new()
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                    new JsonObject { ["name"] = "Paris", ["entity_type"] = "Location" }
+                }
+            },
+            ["extract_edges.edge"] = new()
+            {
+                ["edges"] = new JsonArray()
+            }
+        });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Alice visited Paris.",
+            "message",
+            new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+            groupId: "group",
+            entityTypes: new Dictionary<string, EntityTypeDefinition>
+            {
+                ["Person"] = new("Person"),
+                ["Location"] = new("Location")
+            },
+            excludedEntityTypes: new[] { "Location" });
+
+        var node = Assert.Single(result.Nodes);
+        Assert.Equal("Alice", node.Name);
+        Assert.Equal(new[] { "Entity", "Person" }, node.Labels);
+        Assert.Empty(result.Edges);
+    }
+
     [Theory]
     [InlineData(EpisodeType.Message, "extract_nodes.extract_message")]
     [InlineData(EpisodeType.Text, "extract_nodes.extract_text")]

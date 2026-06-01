@@ -76,9 +76,9 @@ no-incremental build, full test runs, and package builds at different points. Hi
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
 Latest checkpoint, 2026-06-02: `.\eng\Verify-GraphitiCore.ps1 -FocusedFilter ...` succeeded with a
-focused filter covering declared node/edge attribute hydration and extracted attribute ordering. It
-ran locked restore, 2 focused cases, format verification, no-incremental build, the full test suite
-(`871` passed), and `dotnet pack` for `Graphiti.Core.2.0.0.nupkg`.
+focused filter covering episode node extraction, excluded entity filtering, and heuristic fallback.
+It ran locked restore, 3 focused cases, format verification, no-incremental build, the full test
+suite (`872` passed), and `dotnet pack` for `Graphiti.Core.2.0.0.nupkg`.
 
 Primary full verification command from the C# repo root:
 
