@@ -10,7 +10,7 @@ namespace Graphiti.Core.LlmClients;
 public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
 {
     private readonly IMemoryCache _cache;
-    private readonly AsyncSingleFlight<string, CachedResponse> _inflight = new(StringComparer.Ordinal);
+    private readonly AsyncSingleFlight<string, LlmResponseCachePayloadSnapshot> _inflight = new(StringComparer.Ordinal);
     private readonly bool _disposeCache;
     private readonly MemoryCacheEntryOptions _entryOptions;
     private bool _disposed;
@@ -61,10 +61,9 @@ public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
             {
                 if (TryGetPayload(key, out var cachedPayload))
                 {
-                    var cachedResponse = LlmResponseCachePayload.Clone(cachedPayload);
-                    if (cachedResponse is not null)
+                    if (LlmResponseCachePayload.TryCreateSnapshot(cachedPayload, out var cachedSnapshot))
                     {
-                        return new CachedResponse(cachedResponse);
+                        return cachedSnapshot;
                     }
 
                     _cache.Remove(key);
@@ -72,14 +71,13 @@ public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
 
                 var value = await factory(CancellationToken.None).ConfigureAwait(false);
                 var payload = LlmResponseCachePayload.Serialize(value);
-                var response = LlmResponseCachePayload.Clone(payload);
-                if (response is null)
+                if (!LlmResponseCachePayload.TryCreateSnapshot(payload, out var snapshot))
                 {
                     throw new InvalidOperationException("Regenerated LLM cache payload was not a JSON object.");
                 }
 
                 _cache.Set(key, payload, _entryOptions);
-                return new CachedResponse(response);
+                return snapshot;
             },
             cancellationToken).ConfigureAwait(false);
         return payload.CloneResponse();
@@ -95,19 +93,6 @@ public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
 
         payload = string.Empty;
         return false;
-    }
-
-    private readonly struct CachedResponse
-    {
-        private readonly JsonObject _response;
-
-        public CachedResponse(JsonObject response)
-        {
-            _response = response;
-        }
-
-        public JsonObject CloneResponse() =>
-            LlmResponseCachePayload.Clone(_response);
     }
 
     public void Dispose()

@@ -16,7 +16,7 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
         """;
 
     private readonly string _connectionString;
-    private readonly AsyncSingleFlight<string, string> _inflight = new(StringComparer.Ordinal);
+    private readonly AsyncSingleFlight<string, LlmResponseCachePayloadSnapshot> _inflight = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _initializeLock = new(1, 1);
     private int _initialized;
     private bool _disposed;
@@ -85,9 +85,9 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
                 var cachedPayload = await GetPayloadAsync(key, CancellationToken.None).ConfigureAwait(false);
                 if (cachedPayload is not null)
                 {
-                    if (LlmResponseCachePayload.Clone(cachedPayload) is not null)
+                    if (LlmResponseCachePayload.TryCreateSnapshot(cachedPayload, out var cachedSnapshot))
                     {
-                        return cachedPayload;
+                        return cachedSnapshot;
                     }
 
                     await RemoveAsync(key, CancellationToken.None).ConfigureAwait(false);
@@ -95,20 +95,16 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
 
                 var value = await factory(CancellationToken.None).ConfigureAwait(false);
                 var payload = LlmResponseCachePayload.Serialize(value);
+                if (!LlmResponseCachePayload.TryCreateSnapshot(payload, out var snapshot))
+                {
+                    throw new InvalidOperationException("Regenerated LLM cache payload was not a JSON object.");
+                }
+
                 await SetPayloadAsync(key, payload, CancellationToken.None).ConfigureAwait(false);
-                return payload;
+                return snapshot;
             },
             cancellationToken).ConfigureAwait(false);
-        var parsed = LlmResponseCachePayload.Clone(payload);
-        if (parsed is not null)
-        {
-            return parsed;
-        }
-
-        await RemoveAsync(key, cancellationToken).ConfigureAwait(false);
-        var regenerated = await factory(cancellationToken).ConfigureAwait(false);
-        await SetAsync(key, regenerated, cancellationToken).ConfigureAwait(false);
-        return regenerated;
+        return payload.CloneResponse();
     }
 
     private async Task EnsureInitializedAsync(CancellationToken cancellationToken)
