@@ -1989,9 +1989,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
                 Uuid = entity.Uuid,
                 Name = entity.Name,
                 GroupId = entity.GroupId,
-                Labels = entity.Labels.ToList(),
+                Labels = CopyList(entity.Labels),
                 CreatedAt = entity.CreatedAt,
-                NameEmbedding = entity.NameEmbedding?.ToList(),
+                NameEmbedding = CopyNullableList(entity.NameEmbedding),
                 Summary = entity.Summary,
                 Attributes = CloneDictionary(entity.Attributes)
             },
@@ -2000,13 +2000,13 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
                 Uuid = episode.Uuid,
                 Name = episode.Name,
                 GroupId = episode.GroupId,
-                Labels = episode.Labels.ToList(),
+                Labels = CopyList(episode.Labels),
                 CreatedAt = episode.CreatedAt,
                 Source = episode.Source,
                 SourceDescription = episode.SourceDescription,
                 Content = episode.Content,
                 ValidAt = episode.ValidAt,
-                EntityEdges = episode.EntityEdges.ToList(),
+                EntityEdges = CopyList(episode.EntityEdges),
                 EpisodeMetadata = episode.EpisodeMetadata is null ? null : CloneDictionary(episode.EpisodeMetadata)
             },
             CommunityNode community => new CommunityNode
@@ -2014,9 +2014,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
                 Uuid = community.Uuid,
                 Name = community.Name,
                 GroupId = community.GroupId,
-                Labels = community.Labels.ToList(),
+                Labels = CopyList(community.Labels),
                 CreatedAt = community.CreatedAt,
-                NameEmbedding = community.NameEmbedding?.ToList(),
+                NameEmbedding = CopyNullableList(community.NameEmbedding),
                 Summary = community.Summary
             },
             SagaNode saga => new SagaNode
@@ -2024,7 +2024,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
                 Uuid = saga.Uuid,
                 Name = saga.Name,
                 GroupId = saga.GroupId,
-                Labels = saga.Labels.ToList(),
+                Labels = CopyList(saga.Labels),
                 CreatedAt = saga.CreatedAt,
                 Summary = saga.Summary,
                 FirstEpisodeUuid = saga.FirstEpisodeUuid,
@@ -2063,8 +2063,8 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
                 CreatedAt = entity.CreatedAt,
                 Name = entity.Name,
                 Fact = entity.Fact,
-                FactEmbedding = entity.FactEmbedding?.ToList(),
-                Episodes = entity.Episodes.ToList(),
+                FactEmbedding = CopyNullableList(entity.FactEmbedding),
+                Episodes = CopyList(entity.Episodes),
                 ExpiredAt = entity.ExpiredAt,
                 ValidAt = entity.ValidAt,
                 InvalidAt = entity.InvalidAt,
@@ -2104,6 +2104,20 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return target;
     }
 
+    private static List<T> CopyList<T>(IReadOnlyList<T> source)
+    {
+        var copy = new List<T>(source.Count);
+        for (var i = 0; i < source.Count; i++)
+        {
+            copy.Add(source[i]);
+        }
+
+        return copy;
+    }
+
+    private static List<T>? CopyNullableList<T>(IReadOnlyList<T>? source) =>
+        source is null ? null : CopyList(source);
+
     private static Dictionary<string, object?> CloneDictionary(IDictionary<string, object?> source)
     {
         var clone = new Dictionary<string, object?>(source.Count, StringComparer.Ordinal);
@@ -2127,9 +2141,23 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
             JsonNode node => node.DeepClone(),
             JsonElement element => element.Clone(),
             IDictionary<string, object?> dictionary => CloneDictionary(dictionary),
-            IEnumerable<object?> values => values.Select(CloneMetadataValue).ToList(),
+            IEnumerable<object?> values => CloneMetadataValues(values),
             _ => CloneJsonCompatibleValue(value)
         };
+    }
+
+    private static List<object?> CloneMetadataValues(IEnumerable<object?> values)
+    {
+        var clone = values is ICollection<object?> collection
+            ? new List<object?>(collection.Count)
+            : [];
+
+        foreach (var value in values)
+        {
+            clone.Add(CloneMetadataValue(value));
+        }
+
+        return clone;
     }
 
     private static object? CloneJsonCompatibleValue(object value)
@@ -2142,14 +2170,33 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         node switch
         {
             null => null,
-            JsonObject jsonObject => jsonObject.ToDictionary(
-                pair => pair.Key,
-                pair => ConvertJsonNode(pair.Value),
-                StringComparer.Ordinal),
-            JsonArray jsonArray => jsonArray.Select(ConvertJsonNode).ToList(),
+            JsonObject jsonObject => ConvertJsonObject(jsonObject),
+            JsonArray jsonArray => ConvertJsonArray(jsonArray),
             JsonValue jsonValue => ConvertJsonValue(jsonValue),
             _ => node.ToJsonString(GraphitiJsonSerializer.Options)
         };
+
+    private static Dictionary<string, object?> ConvertJsonObject(JsonObject jsonObject)
+    {
+        var dictionary = new Dictionary<string, object?>(jsonObject.Count, StringComparer.Ordinal);
+        foreach (var pair in jsonObject)
+        {
+            dictionary[pair.Key] = ConvertJsonNode(pair.Value);
+        }
+
+        return dictionary;
+    }
+
+    private static List<object?> ConvertJsonArray(JsonArray jsonArray)
+    {
+        var values = new List<object?>(jsonArray.Count);
+        foreach (var item in jsonArray)
+        {
+            values.Add(ConvertJsonNode(item));
+        }
+
+        return values;
+    }
 
     private static object? ConvertJsonValue(JsonValue value)
     {

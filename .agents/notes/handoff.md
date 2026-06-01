@@ -75,8 +75,10 @@ Recent 2026-06-01 checkpoints recorded successful locked restore, format verific
 no-incremental build, full test runs, and package builds at different points. Historical counts in old
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
-Latest checkpoint, 2026-06-02: `.\eng\Verify-GraphitiCore.ps1` succeeded. It ran locked restore,
-format verification, no-incremental build, the full test suite (`867` passed), and `dotnet pack` for
+Latest checkpoint, 2026-06-02:
+`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Drivers.InMemoryGraphDriverCloneTests|FullyQualifiedName~Graphiti.Core.Tests.Drivers.InMemoryGraphDriverReadTests|FullyQualifiedName~Graphiti.Core.Tests.Drivers.InMemorySearchGraphDriverTests"`
+succeeded. It ran locked restore, focused InMemory clone/read/search coverage (`26` passed), format
+verification, no-incremental build, the full test suite (`867` passed), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`.
 
 Primary full verification command from the C# repo root:
