@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Graphiti.Core.Configuration;
 using Graphiti.Core.Drivers.Ladybug;
 using Microsoft.Extensions.Configuration;
@@ -64,6 +65,54 @@ public class LadybugRuntimeDriverTests
         Assert.Equal(edge.Uuid, fetchedEdge.Uuid);
         Assert.Equal(edge.Episodes, fetchedEdge.Episodes);
         Assert.Equal(edge.ReferenceTime, fetchedEdge.ReferenceTime);
+    }
+
+    [Fact]
+    public async Task LadybugGraphitiIngestsAndSearchesEpisodeEndToEnd()
+    {
+        await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
+        var llm = new StaticJsonLlmClient(_ => new JsonObject
+        {
+            ["extracted_entities"] = new JsonArray
+            {
+                new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                new JsonObject { ["name"] = "Acme", ["entity_type"] = "Organization" }
+            },
+            ["edges"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["source_entity_name"] = "Alice",
+                    ["target_entity_name"] = "Acme",
+                    ["relation_type"] = "WORKS_AT",
+                    ["fact"] = "Alice works at Acme."
+                }
+            }
+        });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm, embedder: new HashEmbedder(8));
+        var referenceTime = new DateTime(2026, 9, 10, 11, 12, 13, DateTimeKind.Utc);
+
+        await graphiti.BuildIndicesAndConstraintsAsync();
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Alice works at Acme.",
+            "message",
+            referenceTime,
+            groupId: "tenant");
+        var searchResults = await graphiti.SearchAdvancedAsync(
+            "Alice Acme",
+            SearchConfigRecipes.CombinedHybridSearchRrf,
+            groupIds: ["tenant"]);
+
+        Assert.Equal(GraphProvider.Kuzu, graphiti.Driver.Provider);
+        Assert.IsAssignableFrom<ISearchGraphDriver>(graphiti.Driver);
+        Assert.Equal(2, result.Nodes.Count);
+        Assert.Single(result.Edges);
+        Assert.Equal(result.Episode.Uuid, Assert.Single(result.Edges[0].Episodes));
+        Assert.Equal(result.Edges[0].Uuid, Assert.Single(searchResults.Edges).Uuid);
+        Assert.Contains(searchResults.Nodes, node => string.Equals(node.Name, "Alice", StringComparison.Ordinal));
+        Assert.Contains(searchResults.Nodes, node => string.Equals(node.Name, "Acme", StringComparison.Ordinal));
+        Assert.Equal(result.Episode.Uuid, Assert.Single(searchResults.Episodes).Uuid);
     }
 
     [Fact]

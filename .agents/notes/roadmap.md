@@ -35,10 +35,11 @@ shorter than the old working plans; expand items only when they become active.
    non-empty search-filter, and graph-maintenance statements against LadybugDB, including community-edge `UNION`, normalized list-backed
    deletes, grouped clear, and full clear. The optional `Graphiti.Core` package now owns
    the LadybugDB package/native dependency boundary, concrete package executor, public factory, and
-   optional provider DI helpers while core remains free of those references. Next provider work
-   should broaden end-to-end Graphiti workflow coverage on the runtime-backed driver or add only
-   runtime-driven host options, and avoid marking core DI support complete too early. Details are in
-   `kuzu-driver-port.md`.
+   optional provider DI helpers while core remains free of those references. Factory-backed group
+   clones now share the same package executor/database, and an initial runtime-backed `Graphiti`
+   `AddEpisodeAsync` plus `SearchAdvancedAsync` workflow passes with deterministic LLM extraction.
+   Next provider work should broaden workflow coverage, add runtime-driven host options only when
+   needed, and avoid marking core DI support complete too early. Details are in `kuzu-driver-port.md`.
 
 4. Finish low-risk XML documentation gaps.
 
@@ -263,15 +264,17 @@ shorter than the old working plans; expand items only when they become active.
   statements, and prove alias-based ordering needed after projected `RETURN` clauses. The optional
   `Graphiti.Core` package now carries the concrete package executor/factory, optional DI
   helper, and LadybugDB package references; `LadybugGraphDriver` now implements `ISearchGraphDriver`;
-  core still has no LadybugDB package reference and `GraphProvider.Kuzu` remains unsupported.
+  factory-backed clones share the same executor/package database for group-scoped Graphiti
+  operations; initial runtime-backed `AddEpisodeAsync` plus `SearchAdvancedAsync` is proved; core
+  still has no LadybugDB package reference and `GraphProvider.Kuzu` remains unsupported.
 - `LadybugStatementNormalizer` now implements the concrete package-execution strategy for the
   current LadybugDB binder gaps by inlining list/array/null literals while leaving scalar parameters
   bound. The test-only runtime executor uses it to round-trip entity-edge `reference_time`,
   list-valued columns, embeddings, episode retrieval/group filters, `MENTIONS` traversals, and null
   temporal fields against the real package.
-- Good next provider slice from the 2026-06-01 scans: broaden end-to-end Graphiti workflow coverage
-  on the optional runtime-backed driver, while keeping core provider support unwired until
-  end-to-end search and graph behavior pass.
+- Good next provider slice after the initial runtime-backed ingest/search proof: broaden workflow
+  coverage on the optional runtime-backed driver, add only runtime-driven host options, and keep core
+  provider support unwired until broader search and graph behavior pass.
 
 ## Graphiti Decomposition
 

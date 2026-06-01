@@ -6,33 +6,36 @@ namespace Graphiti.Core.Drivers.Ladybug;
 /// </summary>
 internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver
 {
+    private readonly SharedState _shared;
     private readonly ILadybugQueryExecutor _executor;
-    private readonly Func<string, ILadybugQueryExecutor>? _executorFactory;
     private readonly LadybugSearchExecutor _search;
-    private readonly SemaphoreSlim _schemaLock = new(1, 1);
+    private readonly bool _canClone;
+    private readonly bool _ownsExecutor;
     private bool _closed;
-    private bool _schemaBuilt;
 
     internal LadybugGraphDriver(ILadybugQueryExecutor executor, string database = "")
-        : this(executor, executorFactory: null, database)
+        : this(new SharedState(executor), database, canClone: false, ownsExecutor: true)
     {
     }
 
     internal LadybugGraphDriver(Func<string, ILadybugQueryExecutor> executorFactory, string database = "")
-        : this(executorFactory(database), executorFactory, database)
+        : this(new SharedState(executorFactory(database)), database, canClone: true, ownsExecutor: true)
     {
     }
 
     private LadybugGraphDriver(
-        ILadybugQueryExecutor executor,
-        Func<string, ILadybugQueryExecutor>? executorFactory,
-        string database)
+        SharedState shared,
+        string database,
+        bool canClone,
+        bool ownsExecutor)
         : base(GraphProvider.Kuzu, database)
     {
-        ArgumentNullException.ThrowIfNull(executor);
-        _executor = executor;
-        _executorFactory = executorFactory;
-        _search = new LadybugSearchExecutor(executor);
+        ArgumentNullException.ThrowIfNull(shared);
+        _shared = shared;
+        _executor = shared.Executor;
+        _search = shared.Search;
+        _canClone = canClone;
+        _ownsExecutor = ownsExecutor;
     }
 
     public override async Task BuildIndicesAndConstraintsAsync(
@@ -40,15 +43,15 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (_schemaBuilt)
+        if (_shared.SchemaBuilt)
         {
             return;
         }
 
-        await _schemaLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _shared.SchemaLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (_schemaBuilt)
+            if (_shared.SchemaBuilt)
             {
                 return;
             }
@@ -71,11 +74,11 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver
             await ExecuteAllAsync(
                 LadybugSearchStatementBuilder.BuildFulltextIndexStatements(),
                 cancellationToken).ConfigureAwait(false);
-            _schemaBuilt = true;
+            _shared.SchemaBuilt = true;
         }
         finally
         {
-            _schemaLock.Release();
+            _shared.SchemaLock.Release();
         }
     }
 
@@ -87,19 +90,39 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        await _executor.DisposeAsync().ConfigureAwait(false);
-        _schemaLock.Dispose();
         _closed = true;
+        if (!_ownsExecutor)
+        {
+            return;
+        }
+
+        await _executor.DisposeAsync().ConfigureAwait(false);
+        _shared.SchemaLock.Dispose();
     }
 
     public override IGraphDriver Clone(string database)
     {
-        if (_executorFactory is null)
+        if (!_canClone)
         {
             throw new NotSupportedException("Cloning a Ladybug graph driver requires an executor factory.");
         }
 
-        return new LadybugGraphDriver(_executorFactory, database);
+        return new LadybugGraphDriver(_shared, database, _canClone, ownsExecutor: false);
+    }
+
+    private sealed class SharedState
+    {
+        internal SharedState(ILadybugQueryExecutor executor)
+        {
+            ArgumentNullException.ThrowIfNull(executor);
+            Executor = executor;
+            Search = new LadybugSearchExecutor(executor);
+        }
+
+        internal ILadybugQueryExecutor Executor { get; }
+        internal LadybugSearchExecutor Search { get; }
+        internal SemaphoreSlim SchemaLock { get; } = new(1, 1);
+        internal bool SchemaBuilt { get; set; }
     }
 
     public override Task SaveNodeAsync(Node node, CancellationToken cancellationToken = default)

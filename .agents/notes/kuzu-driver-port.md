@@ -18,14 +18,17 @@ being ported.
   surface through an abstract `ILadybugQueryExecutor`, which keeps the core path testable without
   adding the LadybugDB package or native assets to the core project. Its current projection path uses
   explicit loops for bulk-save phase statements, read records, saga contents, and first-seen group-id
-  de-duplication.
+  de-duplication. Factory-created drivers can be cloned for group-scoped Graphiti operations; those
+  clones share the same executor/package database and leave disposal to the root driver.
 - `Graphiti.Core` is now the core LadybugDB driver boundary. It references
   `Graphiti.Core`, `LadybugDB`, and `LadybugDB.Native`, exposes `LadybugDbGraphDriverFactory`, and
   implements the concrete package executor for `ILadybugQueryExecutor`. It also exposes
   `LadybugDbOptions` and `AddLadybugDbGraphDriver` helpers that configure
   `GraphitiOptions.GraphDriverFactory` from the optional package. This keeps native/package
   dependencies out of `Graphiti.Core` while letting callers opt into runtime-backed drivers
-  explicitly. It still does not make `GraphProvider.Kuzu` valid through core provider validation.
+  explicitly. The factory-backed package path now has an initial `Graphiti` workflow proof for
+  schema build, deterministic LLM extraction, episode ingestion, and `SearchAdvancedAsync`. It still
+  does not make `GraphProvider.Kuzu` valid through core provider validation.
 - `LadybugRecordMapper` uses loop-built attribute/list materialization for Ladybug/Kuzu rows while
   preserving JSON clone semantics, ordinal dictionaries, source ordering, null handling, and
   invariant object conversion.
@@ -168,7 +171,8 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
 - Tests in `Drivers/Ladybug/LadybugGraphDriverTests.cs` pin the internal executor-backed driver core:
   schema execution, sequential Kuzu-style bulk writes with embedding backfill, node/edge deletion
   forwarding, not-found behavior, read mapping, saga/mention/community query forwarding,
-  search-surface delegation, close/dispose behavior, and no clone support without an executor factory.
+  search-surface delegation, close/dispose behavior, no clone support without an executor factory,
+  and factory-clone shared executor/disposal semantics.
 - Tests in `Drivers/Ladybug/LadybugSearchStatementTests.cs` and
   `Drivers/Ladybug/LadybugSearchExecutorTests.cs` pin the internal search statement/execution
   foundation, including search parameter snapshot behavior.
@@ -178,7 +182,8 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
   LadybugDB package reference.
 - Tests in `Drivers/Ladybug/LadybugProviderPackageTests.cs` pin the core LadybugDB driver factory
   and provider-package DI helper over the concrete LadybugDB package executor without changing core
-  DI/options support.
+  DI/options support, including the first runtime-backed `Graphiti` ingest/search workflow with a
+  deterministic `StaticJsonLlmClient`.
 
 ## Expected Implementation Work
 
@@ -192,11 +197,12 @@ If Graphiti provider implementation exposes a likely LadybugDB package or C# bin
    local `W:\code\ladybug` repair/package workflow.
 3. Extend optional-package host options only when real connection/runtime requirements appear; the
    current optional package exposes `LadybugDbOptions.DatabasePath` and DI helper registration.
-4. Keep `GraphProvider.Kuzu` unsupported in core DI/options until the remaining end-to-end provider
+4. Keep `GraphProvider.Kuzu` unsupported in core DI/options until broader end-to-end provider
    workflow is proven against the real backend and the driver-facing LadybugDB naming is settled.
    Save/get/delete, bulk paths, saga episode queries, fulltext, vector search, BFS, rerankers, graph
-   maintenance, concrete adapter execution, and optional-package DI now have focused proof. Keep the adapter
-   allocation-aware: avoid unnecessary per-row dictionaries/lists, closure-heavy query loops,
+   maintenance, concrete adapter execution, optional-package DI, and the first runtime-backed
+   `Graphiti` ingest/search workflow now have focused proof. Keep the adapter allocation-aware:
+   avoid unnecessary per-row dictionaries/lists, closure-heavy query loops,
    repeated JSON/string conversions, and exception-driven type coercion where the package API allows
    direct mapping.
 5. Prove the full C# Saga schema/save/get projections and entity-edge `reference_time` projections

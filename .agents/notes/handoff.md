@@ -231,13 +231,16 @@ pack a local NuGet, and wire Graphiti to the repaired package only as part of th
   through loop-built snapshots for read-only list inputs. Test-only private `LadybugDB` /
   `LadybugDB.Native` references now prove runtime package facts, and the optional
   `Graphiti.Core` package now owns the concrete LadybugDB package executor plus
-  `LadybugDbGraphDriverFactory`, `LadybugDbOptions`, and `AddLadybugDbGraphDriver` DI helpers. There
-  is still no core LadybugDB package reference, native dependency, core DI wiring,
-  or `GraphProvider.Kuzu` options validation support. The C#
-  foundation now resolves the current Python Kuzu
-  saga schema/query and entity-edge `reference_time` inconsistencies ahead of runtime wiring by using
-  the full `SagaNode` shape and returning entity-edge `reference_time`; the test-only package path
-  now gives those projections focused runtime proof, but they still need concrete-adapter coverage.
+  `LadybugDbGraphDriverFactory`, `LadybugDbOptions`, and `AddLadybugDbGraphDriver` DI helpers. The
+  factory-backed driver now shares one executor/package database across group-scoped Graphiti driver
+  clones, so `UseGroupDriver` operations no longer open a separate Ladybug database path. A first
+  runtime-backed `Graphiti` workflow now proves `BuildIndicesAndConstraintsAsync`,
+  `AddEpisodeAsync`, and `SearchAdvancedAsync` with deterministic LLM extraction. There is still no
+  core LadybugDB package reference, native dependency, core DI wiring, or `GraphProvider.Kuzu`
+  options validation support. The C# foundation now resolves the current Python Kuzu saga
+  schema/query and entity-edge `reference_time` inconsistencies ahead of runtime wiring by using the
+  full `SagaNode` shape and returning entity-edge `reference_time`; the test-only package path now
+  gives those projections focused runtime proof, but they still need concrete-adapter coverage.
 - A test-only LadybugDB package proof on 2026-06-01 now runs basic Cypher, the current schema through
   `LadybugGraphDriver`, scalar Saga save/read projections, `QueryResult.ColumnNames` / `Rows()`
   projection, `DateTime` parameters, and literal `array_cosine_similarity` against `Database("")`.
@@ -358,14 +361,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after making the Ladybug graph driver searchable:
+Latest checkpoint on 2026-06-01 after proving the runtime-backed Ladybug Graphiti workflow:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused Ladybug filter passed with 54 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 822
+- The focused Ladybug filter passed with 56 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 824
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration
   Release --verbosity minimal` passed, producing `Graphiti.Core.2.0.0-alpha.1.nupkg`.
@@ -611,10 +614,12 @@ the internal executor-backed driver core exists and implements `ISearchGraphDriv
 `LadybugSearchExecutor`. The internal search statement foundation has fake-executor
 execution/mapping coverage plus focused real-package proof for FTS/vector, BFS, ranker,
 search-filter, and graph-maintenance statements. The optional `Graphiti.Core` package now
-contains the concrete LadybugDB package executor, public factory, `LadybugDbOptions`, and DI helpers that configure
-`GraphitiOptions.GraphDriverFactory`, while `GraphProvider.Kuzu` stays unsupported in core DI/options
-until behavior is proved end to end. The next safe provider increment is more concrete-adapter/search
-coverage or richer optional-package host options. If implementation uncovers behavior that
+contains the concrete LadybugDB package executor, public factory, `LadybugDbOptions`, and DI helpers
+that configure `GraphitiOptions.GraphDriverFactory`, while `GraphProvider.Kuzu` stays unsupported in
+core DI/options. Factory-backed clones share the same package executor/database for group-scoped
+operations, and the first runtime-backed `Graphiti` ingest/search workflow is proved. The next safe
+provider increment is broader workflow coverage, richer optional-package host options, or native-
+gated integration smoke tests. If implementation uncovers behavior that
 appears to be a LadybugDB package bug, record it separately from Graphiti port TODOs. The local
 Ladybug repo is `W:\code\ladybug`, with C# bindings in `W:\code\ladybug\tools\csharp_api`; fixes can
 be made there on local branches, committed with PR-draft notes, built into local NuGet packages, and

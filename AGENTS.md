@@ -75,8 +75,8 @@ Verified build/test command from this folder:
 dotnet test "Graphiti.Core.CSharp.slnx" --verbosity minimal
 ```
 
-Verified on 2026-06-01 after making the Ladybug graph driver searchable:
-restore/format/build succeeded with 0 warnings, 822 tests passed, and
+Verified on 2026-06-01 after proving the runtime-backed Ladybug Graphiti workflow:
+restore/format/build succeeded with 0 warnings, 824 tests passed, and
 `Graphiti.Core` packed as `2.0.0-alpha.1`.
 
 Port contract:

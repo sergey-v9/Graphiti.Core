@@ -202,6 +202,34 @@ public class LadybugGraphDriverTests
         Assert.Equal("entity-1", executor.Queried[1].Parameters["node_uuid"]);
     }
 
+    [Fact]
+    public async Task CloneFromFactorySharesExecutorAndLeavesDisposalToRoot()
+    {
+        var executor = new RecordingLadybugExecutor();
+        var factoryDatabases = new List<string>();
+        var driver = new LadybugGraphDriver(
+            database =>
+            {
+                factoryDatabases.Add(database);
+                return executor;
+            },
+            database: "root");
+
+        var clone = driver.Clone("tenant");
+        await driver.BuildIndicesAndConstraintsAsync();
+        await clone.BuildIndicesAndConstraintsAsync();
+        await clone.DisposeAsync();
+
+        Assert.Equal(new[] { "root" }, factoryDatabases);
+        Assert.Equal("tenant", clone.Database);
+        Assert.Equal(7, executor.Executed.Count);
+        Assert.False(executor.Disposed);
+
+        await driver.CloseAsync();
+
+        Assert.True(executor.Disposed);
+    }
+
     private static Dictionary<string, object?> EntityRecord(string uuid, string groupId = "tenant") =>
         new(StringComparer.Ordinal)
         {
