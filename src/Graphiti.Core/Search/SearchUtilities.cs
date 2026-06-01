@@ -345,8 +345,26 @@ public static partial class SearchUtilities
             return $"({sanitized})";
         }
 
-        var groupFilter = string.Join(" OR ", groupIds.Select(groupId => $"group_id:\"{groupId}\""));
+        var groupFilter = BuildLuceneGroupFilter(groupIds);
         return $"({groupFilter}) AND ({sanitized})";
+    }
+
+    private static string BuildLuceneGroupFilter(IReadOnlyList<string> groupIds)
+    {
+        var builder = new StringBuilder(groupIds.Count * 24);
+        for (var i = 0; i < groupIds.Count; i++)
+        {
+            if (i > 0)
+            {
+                builder.Append(" OR ");
+            }
+
+            builder.Append("group_id:\"");
+            builder.Append(groupIds[i]);
+            builder.Append('"');
+        }
+
+        return builder.ToString();
     }
 
     // NOTE: Preserve current Kuzu-parity query semantics until the LadybugDB provider lands.
@@ -358,7 +376,7 @@ public static partial class SearchUtilities
     private static string BuildFalkorFulltextQuery(string query, IReadOnlyList<string>? groupIds)
     {
         var groupFilter = groupIds is { Count: > 0 }
-            ? $"(@group_id:{string.Join("|", groupIds.Select(groupId => $"\"{groupId}\""))})"
+            ? BuildFalkorGroupFilter(groupIds)
             : string.Empty;
 
         var queryPart = BuildFalkorQueryPart(
@@ -371,6 +389,26 @@ public static partial class SearchUtilities
         }
 
         return $"{groupFilter} ({queryPart})";
+    }
+
+    private static string BuildFalkorGroupFilter(IReadOnlyList<string> groupIds)
+    {
+        var builder = new StringBuilder(groupIds.Count * 16);
+        builder.Append("(@group_id:");
+        for (var i = 0; i < groupIds.Count; i++)
+        {
+            if (i > 0)
+            {
+                builder.Append('|');
+            }
+
+            builder.Append('"');
+            builder.Append(groupIds[i]);
+            builder.Append('"');
+        }
+
+        builder.Append(')');
+        return builder.ToString();
     }
 
     private static string SanitizeFalkorFulltextQuery(string query)
