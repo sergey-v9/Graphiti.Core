@@ -212,6 +212,25 @@ public class LadybugFoundationTests
     }
 
     [Fact]
+    public void StatementNormalizer_ReturnsScalarOnlyStatementUnchanged()
+    {
+        var parameters = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["uuid"] = "entity-1",
+            ["limit"] = 5,
+            ["active"] = true
+        };
+        var statement = new LadybugStatement(
+            "MATCH (n:Entity {uuid: $uuid}) RETURN $limit AS limit",
+            parameters);
+
+        var normalized = LadybugStatementNormalizer.NormalizeForPackageExecution(statement);
+
+        Assert.Equal(statement.Query, normalized.Query);
+        Assert.Same(parameters, normalized.Parameters);
+    }
+
+    [Fact]
     public void BuildSagaNodeSave_UsesFullSagaModelShapeForRuntimeWiring()
     {
         var createdAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);

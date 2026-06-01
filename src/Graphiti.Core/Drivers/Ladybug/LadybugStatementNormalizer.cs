@@ -17,6 +17,11 @@ internal static class LadybugStatementNormalizer
             return statement;
         }
 
+        if (!RequiresLiteralRewrite(statement.Parameters))
+        {
+            return statement;
+        }
+
         Dictionary<string, string>? literals = null;
         var parameters = new Dictionary<string, object?>(statement.Parameters.Count, StringComparer.Ordinal);
         foreach (var (name, value) in statement.Parameters)
@@ -34,6 +39,19 @@ internal static class LadybugStatementNormalizer
         return literals is null
             ? new LadybugStatement(statement.Query, parameters)
             : new LadybugStatement(RewriteParameterReferences(statement.Query, literals), parameters);
+    }
+
+    private static bool RequiresLiteralRewrite(IReadOnlyDictionary<string, object?> parameters)
+    {
+        foreach (var value in parameters.Values)
+        {
+            if (!CanBindDirectly(value))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool CanBindDirectly(object? value)
