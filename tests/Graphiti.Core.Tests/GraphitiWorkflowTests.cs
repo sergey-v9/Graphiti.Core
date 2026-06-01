@@ -1528,6 +1528,59 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisodeBulk_AssociatesSagaByValidAtWithoutReorderingResults()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: new StaticLlmClient(new JsonObject()));
+        var earliest = new DateTime(2026, 1, 1, 9, 0, 0, DateTimeKind.Utc);
+        var middle = earliest.AddHours(1);
+        var latest = earliest.AddHours(2);
+
+        var result = await graphiti.AddEpisodeBulkAsync(
+            new[]
+            {
+                new RawEpisode
+                {
+                    Name = "latest",
+                    Content = "Latest event.",
+                    SourceDescription = "message",
+                    ReferenceTime = latest
+                },
+                new RawEpisode
+                {
+                    Name = "earliest",
+                    Content = "Earliest event.",
+                    SourceDescription = "message",
+                    ReferenceTime = earliest
+                },
+                new RawEpisode
+                {
+                    Name = "middle",
+                    Content = "Middle event.",
+                    SourceDescription = "message",
+                    ReferenceTime = middle
+                }
+            },
+            groupId: "group",
+            saga: "launch");
+
+        var saga = await driver.FindSagaByNameAsync("launch", "group");
+        Assert.NotNull(saga);
+        var nextEdges = await NextEpisodeEdge.GetByGroupIdsAsync(driver, new[] { "group" });
+        var byName = result.Episodes.ToDictionary(episode => episode.Name, StringComparer.Ordinal);
+
+        Assert.Equal(new[] { "latest", "earliest", "middle" }, result.Episodes.Select(episode => episode.Name));
+        Assert.Equal(byName["earliest"].Uuid, saga.FirstEpisodeUuid);
+        Assert.Equal(byName["latest"].Uuid, saga.LastEpisodeUuid);
+        Assert.Contains(nextEdges, edge =>
+            edge.SourceNodeUuid == byName["earliest"].Uuid && edge.TargetNodeUuid == byName["middle"].Uuid);
+        Assert.Contains(nextEdges, edge =>
+            edge.SourceNodeUuid == byName["middle"].Uuid && edge.TargetNodeUuid == byName["latest"].Uuid);
+    }
+
+    [Fact]
     public async Task AddEpisodeBulk_DoesNotFinalBulkSaveAfterExtractionFailure()
     {
         var driver = new InMemoryGraphDriver();

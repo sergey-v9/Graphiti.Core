@@ -301,6 +301,11 @@ shorter than the old working plans; expand items only when they become active.
   `Chunk`/LINQ projection chains. Preserve batch-size validation before enumeration, sequential
   batches with per-batch concurrency capped at 8, typed delete filtering, empty-load no-ops,
   missing-stored-item behavior, null embedding clearing, and clone-isolated loaded vectors.
+- Bulk ingestion result and snapshot shaping now uses explicit pre-sized list, UUID-set, dictionary
+  value, and stable valid-time buffers instead of `Select`/`ToList`/`ToHashSet`/`OrderBy` chains.
+  Preserve result episode input order, entity-edge UUID order, known-candidate growth, per-episode
+  invalidation snapshots, dictionary insertion order for returned nodes/edges, and saga association
+  by `ValidAt` with input-order ties.
 - Materialized fallback full-text/vector search now uses predicate-aware BM25 and top-score overloads
   instead of `Where` iterator chains. This preserves filter order, stable ranking ties, endpoint
   filtering, strict vector min-score behavior, and BM25 document scoring without allocating full

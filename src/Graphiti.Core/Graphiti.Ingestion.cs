@@ -114,9 +114,10 @@ public sealed partial class Graphiti
                 entityTypes,
                 EdgeMergeHelpers.FilterEdgesByUuid(entityEdges, newEdgeUuids),
                 cancellationToken).ConfigureAwait(false);
-            var episodicEdges = MaintenanceUtilities.BuildEpisodicEdges(nodes, episode.Uuid, now, attribution).ToList();
+            var episodicEdges = CopyList(
+                MaintenanceUtilities.BuildEpisodicEdges(nodes, episode.Uuid, now, attribution));
 
-            episode.EntityEdges = entityEdges.Select(edge => edge.Uuid).ToList();
+            episode.EntityEdges = BuildEntityEdgeUuidList(entityEdges);
             if (!_storeRawEpisodeContent)
             {
                 episode.Content = string.Empty;
@@ -221,13 +222,10 @@ public sealed partial class Graphiti
                 Array.Empty<EntityEdge>(),
                 cancellationToken).ConfigureAwait(false);
 
-            var knownCandidateNodes = (await Driver.GetNodesByGroupIdsAsync<EntityNode>(
-                    new[] { groupId },
-                    cancellationToken: cancellationToken).ConfigureAwait(false))
-                .ToList();
-            var knownCandidateUuids = knownCandidateNodes
-                .Select(node => node.Uuid)
-                .ToHashSet(StringComparer.Ordinal);
+            var knownCandidateNodes = CopyList(await Driver.GetNodesByGroupIdsAsync<EntityNode>(
+                new[] { groupId },
+                cancellationToken: cancellationToken).ConfigureAwait(false));
+            var knownCandidateUuids = BuildEntityNodeUuidSet(knownCandidateNodes);
             var allNodesByUuid = new Dictionary<string, EntityNode>(StringComparer.Ordinal);
             var allEdgesByUuid = new Dictionary<string, EntityEdge>(StringComparer.Ordinal);
             var allEpisodicEdges = new List<EpisodicEdge>();
@@ -278,7 +276,7 @@ public sealed partial class Graphiti
                     groupId,
                     now,
                     cancellationToken,
-                    allEdgesByUuid.Values.ToList(),
+                    CopyDictionaryValues(allEdgesByUuid),
                     newlyCreatedEdgeUuids: newEdgeUuids).ConfigureAwait(false);
                 await _attributeExtractionService.ExtractAttributesFromEdgesAsync(
                     entityEdges,
@@ -294,7 +292,7 @@ public sealed partial class Graphiti
                     entityTypes,
                     EdgeMergeHelpers.FilterEdgesByUuid(entityEdges, newEdgeUuids),
                     cancellationToken).ConfigureAwait(false);
-                episode.EntityEdges = entityEdges.Select(edge => edge.Uuid).ToList();
+                episode.EntityEdges = BuildEntityEdgeUuidList(entityEdges);
                 EdgeMergeHelpers.UpsertCanonicalEdges(allEdgesByUuid, entityEdges);
                 allEpisodicEdges.AddRange(MaintenanceUtilities.BuildEpisodicEdges(resolvedNodes, episode.Uuid, now, attribution));
             }
@@ -307,7 +305,7 @@ public sealed partial class Graphiti
                 }
             }
 
-            var allEdges = allEdgesByUuid.Values.ToList();
+            var allEdges = CopyDictionaryValues(allEdgesByUuid);
             await SaveBulkWithTelemetryAsync(
                 "add_episode_bulk.graph",
                 groupId,
@@ -320,7 +318,8 @@ public sealed partial class Graphiti
             if (saga is not null)
             {
                 string? previousUuid = null;
-                foreach (var episode in episodes.OrderBy(episode => episode.ValidAt))
+                var episodesByValidAt = BuildStableValidAtOrder(episodes);
+                foreach (var episode in episodesByValidAt)
                 {
                     await _sagaService.AssociateAsync(
                         saga,
@@ -337,7 +336,7 @@ public sealed partial class Graphiti
             {
                 Episodes = episodes,
                 EpisodicEdges = allEpisodicEdges,
-                Nodes = allNodesByUuid.Values.ToList(),
+                Nodes = CopyDictionaryValues(allNodesByUuid),
                 Edges = allEdges,
                 Communities = new List<CommunityNode>(),
                 CommunityEdges = new List<CommunityEdge>()
@@ -564,4 +563,74 @@ public sealed partial class Graphiti
         List<EntityNode> Nodes,
         List<ExtractedEdge> Edges,
         Dictionary<string, IReadOnlyList<int>> Attribution);
+
+    private static List<T> CopyList<T>(IReadOnlyList<T> source)
+    {
+        var copy = new List<T>(source.Count);
+        for (var i = 0; i < source.Count; i++)
+        {
+            copy.Add(source[i]);
+        }
+
+        return copy;
+    }
+
+    private static HashSet<string> BuildEntityNodeUuidSet(List<EntityNode> nodes)
+    {
+        var uuids = new HashSet<string>(nodes.Count, StringComparer.Ordinal);
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            uuids.Add(nodes[i].Uuid);
+        }
+
+        return uuids;
+    }
+
+    private static List<string> BuildEntityEdgeUuidList(List<EntityEdge> edges)
+    {
+        var uuids = new List<string>(edges.Count);
+        for (var i = 0; i < edges.Count; i++)
+        {
+            uuids.Add(edges[i].Uuid);
+        }
+
+        return uuids;
+    }
+
+    private static List<TValue> CopyDictionaryValues<TKey, TValue>(Dictionary<TKey, TValue> source)
+        where TKey : notnull
+    {
+        var values = new List<TValue>(source.Count);
+        foreach (var value in source.Values)
+        {
+            values.Add(value);
+        }
+
+        return values;
+    }
+
+    private static List<EpisodicNode> BuildStableValidAtOrder(List<EpisodicNode> episodes)
+    {
+        var indexed = new List<IndexedEpisode>(episodes.Count);
+        for (var i = 0; i < episodes.Count; i++)
+        {
+            indexed.Add(new IndexedEpisode(episodes[i], i));
+        }
+
+        indexed.Sort(static (left, right) =>
+        {
+            var result = left.Episode.ValidAt.CompareTo(right.Episode.ValidAt);
+            return result != 0 ? result : left.Index.CompareTo(right.Index);
+        });
+
+        var sorted = new List<EpisodicNode>(indexed.Count);
+        for (var i = 0; i < indexed.Count; i++)
+        {
+            sorted.Add(indexed[i].Episode);
+        }
+
+        return sorted;
+    }
+
+    private readonly record struct IndexedEpisode(EpisodicNode Episode, int Index);
 }
