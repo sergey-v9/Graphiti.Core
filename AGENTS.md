@@ -8,8 +8,8 @@ identity, cache semantics, and performance/allocation discipline stay compatible
 context across agent sessions: `roadmap.md` (phase status / what's left), `handoff.md` (current state
 and verified context), and `decisions.md` (standing port/parity/design decisions). Start substantive
 work by reading the relevant note and update it in the same change when a standing fact changes.
-LadybugDB/Kuzu has its own focused handoff in `.agents/notes/kuzu-driver-port.md`. If the C# port
-tree is still broadly uncommitted, read `.agents/notes/commit-recovery.md` before continuing.
+LadybugDB/Kuzu has its own focused handoff in `.agents/notes/kuzu-driver-port.md`. For C# submodule
+commit rules, read `.agents/notes/commit-policy.md`.
 
 The notes can change outside your session. Re-read relevant notes before finalizing work that touches
 direction, architecture, providers, verification, or roadmap items; if current notes contradict your
@@ -53,6 +53,9 @@ Always:
   collections, spans, source generation, and non-throwing parse paths in hot/shared code when they
   preserve clarity; be skeptical of LINQ chains, closure captures, regex/split arrays, boxing, and
   extra materialization on frequently executed paths.
+- If an iteration keeps repeating the same build/test/format commands, create a small helper script
+  and run that instead of manually stepping through the loop. Commit the script when it becomes useful
+  workflow, and keep one-off throwaway scripts out of durable source.
 - Run the full C# verification command before handing off substantive changes, unless you report why
   it could not run.
 - Preserve active-driver scoping through `UseGroupDriver` / `AsyncLocal<IGraphDriver?>`.
@@ -69,15 +72,14 @@ Ask first:
 - Replacing cache, retry, telemetry, tokenizer, vector math, or graph driver infrastructure beyond
   the existing boundaries.
 
-Verified build/test command from this folder:
+Primary build/test command from this folder:
 
 ```powershell
 dotnet test "Graphiti.Core.CSharp.slnx" --verbosity minimal
 ```
 
-Verified on 2026-06-01 after the bulk saga association slice:
-locked restore, format verification, and no-incremental build succeeded with 0 warnings, 866 tests
-passed, and `Graphiti.Core` packed as `2.0.0`.
+Keep the latest verification checkpoint in `.agents/notes/handoff.md`; do not duplicate volatile test
+counts here.
 
 Port contract:
 - Preserve Python-compatible JSON shape: snake_case properties, relaxed escaping, and wire-value enum
@@ -90,8 +92,10 @@ Port contract:
 - `HybridCache`, Polly `ResiliencePipeline<T>`, `ActivitySource`, `Microsoft.ML.Tokenizers`, and
   tensor primitives are infrastructure choices, not permission to change Graphiti behavior or hide
   avoidable allocations behind fashionable abstractions.
-- Existing Neo4j/FalkorDB behavior may stay as reference coverage, but new provider investment should
-  focus on LadybugDB first.
+- Existing Neo4j/FalkorDB behavior may stay only as temporary reference coverage. FalkorDB is not
+  important for current work, Neo4j is expected to be removed later, and the in-memory driver is a
+  real deterministic test/reference backend rather than a product provider. New provider investment
+  should focus on LadybugDB.
 
 Generated vs hand-written:
 - There is no ClangSharp/native binding generator and no checked-in generated interop layer.
@@ -101,11 +105,8 @@ Generated vs hand-written:
 Provider/package facts:
 - This is currently a managed `net10.0` library with central package versions in
   `Directory.Packages.props`.
-- The NuGet package currently packs the C# README and managed assemblies; no `runtimes/{rid}/native`
-  asset layout is defined.
-- Current durable provider priority: LadybugDB is the main/default target, implemented via the
-  LadybugDB NuGet package while preserving Kuzu parity; InMemory and Neo4j can remain as reference
-  backends; FalkorDB is not an improvement target; Neptune is enum/wire compatibility only.
+- Durable provider policy lives in `.agents/notes/decisions.md`; detailed LadybugDB state lives in
+  `.agents/notes/kuzu-driver-port.md`.
 
 Pointers:
 - `.agents/notes/decisions.md` has standing port decisions and parity calls.

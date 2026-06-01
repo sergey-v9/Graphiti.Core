@@ -47,28 +47,15 @@ Graphiti semantics, wire compatibility, or performance/allocation discipline.
 - Response DTOs used for LLM structured output may remain nested under `Graphiti` when type identity
   affects response-format names, schema fingerprints, or cache keys.
 - `AsyncLocal<IGraphDriver?>` preserves active driver scoping for group-specific operations.
-- Keep the deterministic `InMemoryGraphDriver` as a reference implementation and test backend; use
-  real set collections for secondary index buckets and explicit ordering where index enumeration can
-  affect public results.
+- Keep the deterministic `InMemoryGraphDriver` as a real reference driver and test backend. It
+  implements broad persistence/search behavior and is useful for parity coverage, examples, and
+  ephemeral graphs. It is not a product provider investment target, so avoid deep optimization or
+  feature-polishing work unless that directly supports tests or LadybugDB.
 - DI-created supported graph drivers should honor `GraphitiOptions.Database`; for InMemory the
   database label remains distinct from `DefaultGroupId`.
-- Keep the official `Neo4j.Driver`; improve Cypher statement construction, session execution, and
-  record mapping through internal helpers rather than replacing it with an OGM.
-
-## Optional Local Skill Use
-
-- These rules apply when the corresponding optional `.agents/skills` files exist in the checkout.
-- Before changing test execution commands or filters, read `run-tests/SKILL.md`.
-- Before writing or modernizing MSTest tests, read `writing-mstest-tests/SKILL.md`; use the test
-  quality, coverage, and mutation-analysis skills only when that is the actual task.
-- Before making performance claims from code inspection, read
-  `analyzing-dotnet-performance/SKILL.md`; before adding BenchmarkDotNet benchmarks, read
-  `microbenchmarking/SKILL.md` and the reference files it requires.
-- Use the MCP, NuGet, P/Invoke, and file-based C# app skills only for those concrete task areas.
-- Treat `technology-selection/SKILL.md` as broad .NET AI/ML background, not a product mandate. For
-  Graphiti Core, `Microsoft.Extensions.AI` remains the adapter boundary; Microsoft Agent Framework,
-  Semantic Kernel, RAG/vector-store abstractions, or MCP patterns are not replacements for Graphiti's
-  temporal graph behavior.
+- Keep existing official `Neo4j.Driver` code working while it remains present, but do not invest in
+  Neo4j beyond avoiding regressions. Neo4j is expected to be removed later, not polished into another
+  first-class C# provider.
 
 ## Provider And Infrastructure Choices
 
@@ -154,19 +141,15 @@ Graphiti semantics, wire compatibility, or performance/allocation discipline.
   Kuzu fork. Kuzu remains the Python parity lineage and compatibility vocabulary, but the driver-facing
   provider name should move to LadybugDB as the port freezes. See `kuzu-driver-port.md`.
 - `GraphProvider.Neo4j`, `GraphProvider.FalkorDb`, and `GraphProvider.InMemory` may remain in the
-  current provider surface. Keep existing implemented behavior, but do not plan more Neo4j/FalkorDB
-  improvements unless needed to validate shared abstractions or avoid regressions while building
-  LadybugDB.
+  current provider surface for now. Keep existing behavior from regressing, but do not plan provider
+  improvements there: FalkorDB does not matter for the current port, Neo4j is expected to be removed,
+  and InMemory is a reference/test driver rather than a product provider. LadybugDB is the provider
+  path to invest in.
 - LadybugDB/Kuzu foundation helpers may land before final provider naming/wiring decisions, but they
-  must not make `GraphProvider.Kuzu` valid in core DI/options or imply full provider support until the
-  end-to-end driver is proven. The optional `Graphiti.Core` package may own the concrete
-  LadybugDB package adapter, DI helper, and searchable driver surface while core owns the LadybugDB dependency
-  and `GraphProvider.Kuzu` remains unsupported by core provider validation. First factory-backed
-  `Graphiti` ingest/search/removal, direct triplet, bulk duplicate-fact, saga association,
-  saga summarization, community build/rebuild/search, and incremental community update workflows are
-  proved, and configured file-backed `DatabasePath` persistence is proved, but broader workflow
-  coverage and the driver-facing LadybugDB naming decision are still required before core provider
-  wiring.
+  must not make `GraphProvider.Kuzu` valid in core DI/options or imply full provider support until
+  that product decision is explicit. The optional `Graphiti.Core` package may own the
+  concrete LadybugDB package adapter, DI helper, searchable driver surface, and runtime-backed proof
+  while core owns the LadybugDB dependency. See `kuzu-driver-port.md` for current runtime coverage.
 - LadybugDB package/backend behavior that appears buggy during driver implementation should be marked
   separately from C# port gaps. Work around proven backend limitations deliberately when useful, but
   keep them visible for later LadybugDB fixes.

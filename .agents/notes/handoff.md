@@ -1,39 +1,20 @@
 # C# Port Handoff
 
-This is the working handoff for agents continuing the C# Graphiti Core port.
+This is the working handoff for agents continuing the C# Graphiti Core port. Keep it current-state
+focused; do not turn it back into a per-commit changelog.
 
 ## Current Goal
 
-`csharp/src/Graphiti.Core` is a C# port of Python `graphiti_core/`: temporal context graphs for AI
-agents with episode ingestion, entity/fact extraction, deduplication, invalidation, communities,
-sagas, and hybrid search.
+`csharp/src/Graphiti.Core` is a managed C# port of Python `graphiti_core/`: temporal context graphs
+for AI agents with episode ingestion, entity/fact extraction, deduplication, invalidation,
+communities, sagas, and hybrid search.
 
-Python is still the source of truth for behavior. The C# port should be idiomatic .NET where that is
-compatible with Graphiti semantics, wire values, and performance/allocation discipline.
+Python remains the behavioral source of truth. The C# port should be idiomatic .NET where that is
+compatible with Graphiti semantics, wire values, cache/schema identity, and performance/allocation
+discipline.
 
-Modernization should not drift into abstraction for its own sake. For hot/shared paths, prefer C#
-code that is explicit, measurable, and allocation-aware: simple loops and pre-sized collections are
-often better than LINQ chains or helper layers that allocate; non-throwing parse paths are better
-than exception-driven control flow; source-generated serializers/logging/regexes are preferred where
-they avoid runtime reflection or repeated parsing. Keep this balanced with readability and parity.
-
-If a local `.agents/skills` corpus is present in the checkout, use it as practical C#/.NET reference
-material for the task at hand: test execution, MSTest authoring, performance scans,
-BenchmarkDotNet, NuGet publishing, MCP work, file-based C# experiments, and similar specialties.
-Those files are optional local tooling, not a second product roadmap. If a generic skill points
-toward agent frameworks, Semantic Kernel, vector-store replacement, MCP server patterns, or broad
-package churn, apply only the parts that fit Graphiti's existing boundaries and defer to
-`decisions.md`.
-
-Provider focus has shifted to LadybugDB. Treat Python's Kuzu behavior as the parity target, implement
-with the LadybugDB NuGet package, and aim for LadybugDB to become the driver-facing/default provider
-name. Existing Neo4j/FalkorDB work may remain as reference coverage, but do not spend new effort
-improving those providers unless it directly supports shared abstractions or LadybugDB validation.
-When LadybugDB driver work reveals behavior that appears to be a package/backend bug, mark it
-separately from C# port gaps so it can be fixed in LadybugDB later or worked around deliberately.
-If a confirmed package bug blocks the port, `W:\code\ladybug` may be patched locally without pushing;
-commit that repo separately, add a nearby markdown draft for the upstream `ladybug-dotnet` request,
-pack a local NuGet, and wire Graphiti to the repaired package only as part of that explicit repair.
+Provider work is focused on LadybugDB. The focused provider state lives in `kuzu-driver-port.md`; do
+not duplicate its proof matrix here.
 
 ## Current Layout
 
@@ -41,604 +22,108 @@ pack a local NuGet, and wire Graphiti to the repaired package only as part of th
   saga, community, infrastructure, and extraction parsing partials.
 - `Models/`: node, edge, result DTO, entity type, entity attribute, and episode type models.
 - `Drivers/`: `IGraphDriver`, base driver, deterministic in-memory reference driver, Neo4j driver,
-  statement builders, record mapper, session executor, provider enum, and saga episode content.
+  Ladybug internal driver foundation, statement builders, record mappers, session/executor helpers,
+  provider enum, and saga episode content.
 - `Namespaces/`: node and edge namespace facades over drivers.
 - `Search/`: search configs/results, hybrid search engine, rerankers, filter builders/matchers,
-  fallback graph materialization, search-result composition, search-driver retrieval adapter, and
-  search/reranker telemetry spans.
+  fallback graph materialization, search-result composition, and search-driver retrieval adapter.
 - `Maintenance/`: entity deduplication and community clustering.
 - `Text/`: chunking, token counting, text helpers, and Graphiti helper functions.
-- `LlmClients/`: LLM abstraction, Microsoft.Extensions.AI chat adapter, cache implementations,
-  structured response validation, messages, model size, and token usage.
-- `Embedding/`: embedder abstraction, hash embedder, Microsoft.Extensions.AI embedder adapter, and
-  embedding validation.
-- `CrossEncoder/`: reranker abstraction and identity/default implementations.
+- `LlmClients/`, `Embedding/`, `CrossEncoder/`: provider abstractions, Microsoft.Extensions.AI
+  adapters, deterministic/test implementations, cache/usage helpers, and rerankers.
 - `Configuration/`: options, validators, DI registration, cache/resilience settings.
 - `Telemetry/`: `ActivitySource` spans and source-generated logging.
 - `Serialization/`: System.Text.Json serializer and source-generated context.
 - `Internal/`: helper/services for extraction context, attribute merging, edge merging, type
-  resolution, deterministic text, throttling, provider rate limiting, saga/community/attribute/edge/
-  node services, and episode graph extraction.
+  resolution, deterministic text, throttling, rate limiting, saga/community/attribute/edge/node
+  services, and episode graph extraction.
+- `Graphiti.Core`: core LadybugDB driver that owns LadybugDB package/native references,
+  public factory/options, and DI helper wiring through `GraphitiOptions.GraphDriverFactory`.
 
-## Recent State
+## Current State
 
-- Folder and namespace modernization is complete. Source files now use folder-aligned namespaces.
-- Bundle decomposition is complete. Former large files such as `Models.cs`, `GraphitiTypes.cs`,
-  `Driver.cs`, and `MicrosoftAIAdapters.cs` were split by concern.
-- `Graphiti.cs` has been decomposed substantially. The root file is now thin and most behavior lives
-  in partials plus internal collaborators.
-- Search decomposition is in progress but already has important boundaries:
-  `SearchFallbackGraph`, `MaterializingSearchGraphDriver`, `SearchResultComposer`, and
-  `SearchRetrievalRunner`. `SearchEngine` remains the orchestration layer, `SearchResultComposer`
-  owns fusion/reranking/result shaping, and `SearchRetrievalRunner` owns driver-backed retrieval
-  forwarding plus BFS guard behavior. In-memory and materialized fallback full-text search now use an
-  internal corpus BM25 scorer while provider-backed full-text remains delegated. Search vector
-  fallback paths use a reusable cosine scorer with cached query norm, and node-distance/episode-
-  mentions reranker composition avoids duplicate dictionary lookups while preserving driver rank
-  order and edge fan-out behavior.
-- The fallback BM25 scorer now builds each document's matching query-term frequencies during the
-  initial tokenization pass, avoiding a second per-document scan and preserving distinct query-term
-  handling plus repeated document-term frequency scoring. Query-term de-duplication now also uses
-  the shared token visitor to build the distinct term list and lookup in one pass, and final
-  document score projection uses a pre-sized loop.
-- The default `IdentityCrossEncoderClient` now creates one reusable `TextScorer` per rank call
-  instead of tokenizing the query once per passage, and its public/indexed rank paths use pre-sized
-  loops plus explicit stable score/index sorting instead of LINQ projection/sort chains. Direct tests
-  pin score ordering, equal-score input order, and duplicate passage index preservation.
-- `SearchResultComposer.FuseRanks` now calls an internal direct RRF helper for ranked tuple inputs,
-  avoiding per-list item-only materialization while preserving rank-position-only scores, inclusive
-  min-score filtering, first-seen item retention, and stable tie order. The shared RRF projection
-  now uses a pre-sized loop, and the internal ranked-tuple helper returns the final list directly to
-  the composer instead of forcing an extra list copy.
-- `SearchUtilities.TopByScoreCore` now avoids LINQ sort/projection chains by materializing the
-  bounded priority-queue contents into a concrete buffer, sorting by descending score and first-seen
-  index, then projecting with a pre-sized loop. This keeps RRF/MMR/top-score ordering semantics
-  unchanged while reducing hot-path iterator allocations.
-- `SearchUtilities` now uses the same indexed-score projection helper for RRF and MMR, and the
-  item-only public MMR overload projects selected items with a pre-sized loop. The public
-  `IReadOnlyList` return contracts and Python score/tie behavior are unchanged.
-- `SearchEngine` now limits pure RRF branches inside fusion, truncates owned ranked lists with
-  `SearchResultComposer.LimitRanked`, routes MMR through an internal ranked-tuple helper instead of
-  materializing item-only lists, and uses a stable explicit helper for edge episode-mentions sorting.
-  Cross-encoder, node-distance, and episode-mentions driver rerankers still see the full preliminary
-  candidate pools needed for parity.
-- `SearchResultComposer.ApplyCrossEncoderRerankerAsync` now builds passages from the existing
-  indexed candidate list and projects final results with single-pass loops. It still preserves
-  passage order, invalid/duplicate indexed-rank suppression, inclusive min-score filtering, and
-  score-descending/original-index tie ordering. `ToRankedList` now also materializes search hits with
-  a pre-sized loop instead of LINQ projection.
-- `SearchResultComposer.MergeRankedCandidates` now sorts a concrete merged buffer and projects the
-  final ranked tuple list with a pre-sized loop. It still keeps the first candidate object for a key,
-  carries the maximum score across duplicates, and breaks score ties by first-seen order.
-- `SearchResultComposer` and `SearchUtilities` now have direct one/two/three ranked-list RRF and
-  two/three-list merge paths so `SearchEngine` no longer allocates small `IReadOnlyList[]` buffers
-  just to compose edge, node, episode, or community ranked branches. The enumerable overloads remain
-  for compatibility/tests, and focused tests pin the direct one-list episode RRF path, two-list
-  community RRF/merge paths, three-list edge/node parity, ignored input scores, inclusive min-score
-  filtering, first-seen item retention, max-score duplicate merging, and stable tie ordering.
-- `SearchEngine` now delegates final ranked tuple splitting to
-  `SearchResultComposer.SplitRankedResults`, building result lists and reranker-score lists in one
-  pass per search scope while preserving order, score conversion to `double`, and the public
-  `SearchResults` list shape.
-- `SearchUtilities` now has an internal token visitor used by `TextScorer` and fallback
-  `Bm25TextScorer` document paths. This preserves the existing materialized `Tokenize` helper,
-  Unicode token regex, invariant lowercase behavior, text-score formula, BM25 document-length
-  accounting, and stable ranking while avoiding per-candidate token-list allocations in scorer hot
-  paths.
-- `SearchEngine` now computes implicit BFS origin lists only inside the BFS branch. Explicit
-  `bfsOriginNodeUuids` still pass through unchanged, and implicit node/edge origins keep
-  text-before-vector, first-seen distinct ordering over node UUIDs and edge source-node UUIDs.
-- `SearchEngine` method-level retrieval orchestration now uses nullable task locals plus a two-task
-  await helper instead of disabled `Task.FromResult(new List<...>())` placeholders and per-method
-  task-list allocations. Empty disabled branches share typed empty arrays, while fault-first sibling
-  cancellation, cancellation-only behavior, disabled driver-call skipping, BFS origin derivation, and
-  `SearchRetrievalRunner` telemetry boundaries remain unchanged.
-- `SearchEngine.SearchAsync` top-level scope orchestration now awaits nullable edge/node/episode/
-  community scope tasks directly instead of allocating `List<Task>(4)` plus a copied remaining list.
-  It preserves fixed startup and result-assignment order, first-fault rethrow, fault-driven sibling
-  cancellation and drain, cancellation-only behavior, telemetry boundaries, and query-vector
-  materialization timing. The shared two-task await helper now also uses the span-based `WhenAll`
-  helper for final and drain waits.
-- Materialized fallback BFS and ranker shaping now uses allocation-light loops instead of
-  grouping/distinct/order LINQ chains. Node/edge BFS results keep the first traversal hit per target,
-  node-distance ranks use the known 10/1/0 score buckets over first-seen distinct inputs, episode-
-  mentions ranks use a counting dictionary plus explicit stable sort, and fallback traversal graph
-  and endpoint lookups preserve first-wins/group-filter behavior with loop-built dictionaries.
-- `InMemoryGraphDriver` BFS and node ranker paths now use allocation-light loop-built candidate
-  lookups, seen sets, and rank buckets instead of LINQ grouping/distinct/order pipelines,
-  preserving shortest first traversal hits, origin-group filtering, stable first-seen
-  de-duplication, node-distance buckets, episode-mention sort semantics, and final hit cloning.
-- Microsoft.Extensions.AI embedding vectors now validate and copy directly from provider
-  `ReadOnlyMemory<float>` into Graphiti-owned lists, avoiding the previous `ToArray()` plus second
-  validation copy while preserving dimension checks, non-finite rejection, rate-limit lease disposal,
-  retry telemetry, batch ordering, and returned-vector isolation.
-- Extraction JSON parsing now reuses stable entity-array keys and explicit `JsonArray` loops instead
-  of per-call key arrays, `OfType` iterators, and entity-type LINQ projections. This preserves key
-  order, non-object skipping, numeric/string `entity_type_id` coercion, JSON text fallback, optional
-  timestamp parsing, and heuristic entity de-duplication while avoiding ignored-name string copies.
-- Attribute extraction target/context construction now uses first-wins node UUID maps, loop-built
-  node/edge target lists, direct schema caches, shared JSON string-array construction, and
-  loop-based type-map checks instead of `GroupBy`/`Select`/`Where`/`Distinct`/`OrderBy` pipelines.
-  It preserves prompt JSON shape, type-map matching, sorted attribute/schema order, schema reuse,
-  bounded concurrency, and case-insensitive ontology lookup.
-- Bulk edge resolution now treats the in-batch edge snapshot as authoritative when graph/search
-  results return stale copies of the same UUID. `MergeEdgeOverrides` replaces source-position
-  matches with snapshot overrides, invalidation candidate shaping substitutes graph-ranked matches
-  with snapshot instances before de-duplication, and override filtering avoids LINQ projection
-  chains. This preserves graph ranking, same-pair `existing_edges`, cross-pair invalidation
-  offsets, ordered bulk episode semantics, and canonical edge coalescing.
-- Search fallback in-memory snapshot projection now uses explicit typed loops over cloned driver
-  snapshots instead of `OfType`/`Select` chains, preserving clone isolation, type filtering,
-  embedding stripping flags, and stable order. Edge endpoint lookup now accepts
-  `IReadOnlyList<EntityEdge>`, so materialized full-text fallback can pass its existing candidate
-  buffer without an extra list copy.
-- Shared full-text query construction now avoids split-array allocation on Lucene/Kuzu/Falkor paths
-  while preserving Python's literal-space query limit behavior for Lucene/Falkor, Kuzu whitespace
-  normalization and truncation, group-id validation, and provider-specific syntax.
-- `MaintenanceUtilities` has parity coverage for episodic/community edge construction and pointer
-  resolution. `ResolveEdgePointers` now accepts all `Edge` subtypes, matching Python's generic helper,
-  while still mutating the existing edge objects in place and doing one-hop UUID replacement.
-- Search tracing now emits child spans for edge, node, episode, and community search scopes, plus
-  retrieval driver calls and async cross-encoder, node-distance, and episode-mentions reranker work.
-  Tags include scope, methods, reranker, limits, candidate counts, min scores, query/vector sizes,
-  BFS depths/origin counts, group ids, and result counts where applicable.
-- Ingestion tracing now emits aggregate child spans for episode graph extraction, node/edge
-  extraction, node/edge resolution, and node/edge attribute extraction. Tags cover bounded input,
-  ontology, previous-episode, fallback/skipped, and result counts.
-- Ingestion write tracing now emits `Graphiti.GraphWrite.SaveBulk` spans around episode, bulk
-  episode, and direct triplet persistence. Tags include group id, provider, database, write phase,
-  node/edge type counts, and total node/edge counts.
-- Microsoft.Extensions.AI adapters now emit per-attempt provider-call spans for chat and embeddings.
-  These spans sit inside Polly delegates, so retries produce one span per actual downstream attempt;
-  failed attempts record exceptions while the parent logical LLM/embedder span can still complete.
-- The Microsoft.Extensions.AI chat adapter now materializes provider chat messages with a pre-sized
-  loop instead of a LINQ projection, preserving message order, provider call telemetry, retry/rate-
-  limit behavior, response parsing, and usage tracking.
-- Neo4j session execution now emits low-level graph-provider spans for read, write, write-scalar,
-  and write-batch operations. Tags intentionally include operation, database, query length,
-  parameter count, statement/result counts, and avoid query text or parameter values. Tests also pin
-  pre-canceled calls before session creation or activity emission.
-- Neo4j driver internals have been split into statement construction, search statement construction,
-  record mapping, session execution, and shared statement payloads.
-- LadybugDB/Kuzu provider foundation work has started without changing provider status. Internal
-  `Drivers/Ladybug` schema, statement-builder, and record-mapper helpers now pin Python Kuzu table
-  shapes, Kuzu save/get/delete/retrieve/load-embedding Cypher, individual bulk-save statement
-  expansion, JSON attribute storage, label-array behavior, simple-edge record mapping, and
-  `RelatesToNode_` entity-edge representation. An internal, non-wired `LadybugGraphDriver` now uses
-  those helpers through an abstract `ILadybugQueryExecutor` for graph-driver operations, including
-  schema/FTS index execution, save/bulk save, delete, get-by-id/group, retrieve episodes, mention/
-  community reads, and saga reads. Its bulk-save phase writes and read-side collection projections
-  now use explicit loops and pre-sized buffers while preserving backend record order, optional group
-  filtering, saga chronology, first-seen group-id de-duplication, and unsupported provider status.
-  `LadybugStatementBuilder` now also builds bulk-save statement phases and list-valued parameters
-  with explicit snapshots, copying `IReadOnlyList<T>` inputs by index while preserving ordered
-  parameter lists and provider statement order. `LadybugStatementNormalizer` now rewrites the
-  current LadybugDB package's unsupported list/array/null parameters into Kuzu literals while leaving
-  scalar parameters bound, providing the package-independent execution strategy for the future
-  concrete adapter.
-  `LadybugRecordMapper` now materializes attributes and list fields with explicit loops while
-  preserving ordinal attribute dictionaries, JSON string `JsonElement` clones, `JsonObject`
-  deep-clone semantics, shallow dictionary copies, JSON array null handling, invariant object
-  conversion, and source ordering.
-  Internal `LadybugSearchStatementBuilder` and
-  `LadybugSearchExecutor` helpers now pin and exercise Kuzu full-text index/search statements, vector
-  search, BFS statement plans, per-UUID ranker statements, Kuzu label filters, `RelatesToNode_`
-  search shapes, result score extraction, BFS dedup/limit behavior, cancellation, and C# search-rank
-  ordering over the abstract executor. The ranker path now builds first-seen score maps and statement
-  lists with explicit loops while preserving duplicate input collapse, center-node exclusion/query
-  synthesis, unknown backend UUID inclusion, last backend score wins, inclusive min-score filtering,
-  and missing-score defaults. Search vector, group-id, and rank-fetch parameters are also copied
-  through loop-built snapshots for read-only list inputs. Test-only private `LadybugDB` /
-  `LadybugDB.Native` references now prove runtime package facts, and the optional
-  `Graphiti.Core` package now owns the concrete LadybugDB package executor plus
-  `LadybugDbGraphDriverFactory`, `LadybugDbOptions`, and `AddLadybugDbGraphDriver` DI helpers. The
-  factory-backed driver now shares one executor/package database across group-scoped Graphiti driver
-  clones, so `UseGroupDriver` operations no longer open a separate Ladybug database path. A first
-  runtime-backed `Graphiti` workflow now proves `BuildIndicesAndConstraintsAsync`,
-  `AddEpisodeAsync`, and `SearchAdvancedAsync` with deterministic LLM extraction. runtime-backed
-  workflow coverage now also proves `GetNodesAndEdgesByEpisodeAsync` attribution and
-  `RemoveEpisodeAsync` cleanup for an ingested episode, plus `AddTripletAsync` direct fact
-  persistence and `SearchAsync` over that fact. `AddEpisodeBulkAsync` now has runtime-backed proof
-  for duplicate fact coalescing across two episodes, episode attribution, and search.
-  `AddEpisodeAsync` saga association now has runtime-backed proof for saga creation, first/last
-  episode pointers, `HAS_EPISODE` and `NEXT_EPISODE` edges, and saga content retrieval.
-  `SummarizeSagaAsync` now has runtime-backed proof for summary and watermark persistence.
-  `BuildCommunitiesAsync` now has runtime-backed proof for community nodes, rebuild cleanup,
-  membership edges, node-to-community lookup, and community search.
-  `AddEpisodeAsync(updateCommunities: true)` now has runtime-backed proof for attaching a newly
-  ingested entity to an existing community. Configured file-backed `LadybugDbOptions.DatabasePath`
-  now has runtime-backed persistence proof across scoped drivers. There is
-  still no core LadybugDB package reference, native dependency, core DI wiring, or
-  `GraphProvider.Kuzu` options validation support. The C# foundation now resolves the current Python
-  Kuzu saga schema/query and entity-edge `reference_time` inconsistencies ahead of runtime wiring by
-  using the full `SagaNode` shape and returning entity-edge `reference_time`; the test-only package
-  path now gives those projections focused runtime proof, but they still need concrete-adapter
-  coverage.
-- A test-only LadybugDB package proof on 2026-06-01 now runs basic Cypher, the current schema through
-  `LadybugGraphDriver`, scalar Saga save/read projections, `QueryResult.ColumnNames` / `Rows()`
-  projection, `DateTime` parameters, and literal `array_cosine_similarity` against `Database("")`.
-  It also pins current package blockers for direct statement execution: `List<string>`, `string[]`,
-  `float[]`, and `object[]` parameters throw `NotSupportedException`, and null parameters throw
-  `ArgumentNullException`. The test-only runtime executor now uses the normalizer to prove
-  entity-edge `reference_time`, list-valued `episodes` / embedding columns, group-id list filters,
-  episode retrieval, `MENTIONS` traversals, and null temporal fields against the real package. The
-  package FTS path is now positively proved when `INSTALL FTS; LOAD EXTENSION FTS;` runs before
-  `CREATE_FTS_INDEX` / `QUERY_FTS_INDEX`, and the internal `LadybugSearchExecutor` now has real-
-  package proof for entity-node, entity-edge, episode, and community FTS plus entity-node,
-  entity-edge, and community vector search statements. Runtime proof also showed LadybugDB needs
-  projected aliases in post-return `ORDER BY` clauses, so Ladybug statements now order by aliases
-  such as `uuid` and `valid_at` instead of node variables after projection. It now also proves
-  node/edge BFS plus node-distance and episode-mentions ranker statements against the real package.
-  That proof pins the Python Kuzu entity-origin edge BFS shape where a depth-2 origin returns the
-  second logical `RELATES_TO` fact edge through `RelatesToNode_`. The package path now also proves
-  community-edge `UNION` saves, normalized list-backed edge/node deletes, grouped clear, and full
-  clear through the internal driver. Non-empty Kuzu search filters are now package-proved for
-  `list_has_all(...)`, edge type lists, edge UUID lists, and group filters. Next provider work should
-  move toward a concrete executor adapter before provider wiring.
-- DI-created graph drivers now consistently receive `GraphitiOptions.Database` for both supported
-  providers, InMemory and Neo4j. For InMemory this sets the driver `Database` label but intentionally
-  does not change the provider default group id.
-- `GraphDriverBase.SaveBulkAsync` now observes cancellation before materializing bulk inputs and
-  between node/edge save plus embedding phases, avoiding wasted enumeration/work after cancellation.
-- In-memory driver secondary indexes now use `HashSet<string>` buckets instead of
-  dictionary-as-set values. Public entity-edge lookups, saga lookup tie-breaks, and BFS adjacency are
-  UUID-ordered to keep behavior deterministic.
-- LLM structured-response handling has a typed helper while preserving nested `Graphiti.*Response`
-  DTO type identities for cache/schema stability. Schema validation now materializes `JsonElement`
-  directly instead of serializing to text and reparsing. The nested structured-response DTOs are now
-  covered by the System.Text.Json source-generation context without renaming them or changing their
-  snake_case schema shape. Schema error formatting now walks the first five validation errors in one
-  pass instead of materializing a temporary list.
-- LLM cache-key construction now uses an internal typed `LlmCacheKeyPayload` covered by the
-  System.Text.Json source-generation context instead of an anonymous-object payload. Existing hash
-  tests pin byte-compatible cache-key JSON.
-- LLM response caches now share one payload serializer so memory, SQLite, and HybridCache entries
-  preserve the same JSON options. Single-flight fills recheck the backing cache before running the
-  expensive factory, and corrupt/non-object string payloads are removed and regenerated once under
-  concurrent misses. Memory, SQLite, and HybridCache `GetOrCreateAsync` now carry parsed payload
-  snapshots through single-flight so concurrent waiters clone those objects instead of reparsing the
-  same payload string; stored values remain raw JSON strings and public callers still receive
-  independent mutable `JsonObject` instances.
-- `LlmClient.PrepareMessages` now clones messages with a pre-sized loop instead of LINQ projection,
-  and `CleanInput` has a validation fast path that returns the original string for already-clean
-  valid UTF-16. The slow path still removes the same zero-width runes and C0 controls, preserves
-  newline/carriage-return/tab, drops malformed UTF-16 one code unit at a time, preserves valid
-  surrogate pairs, and leaves DEL/C1 controls intact. Cache keys still use the prepared/cleaned
-  messages, so inputs differing only by stripped characters coalesce.
-- Token usage tracking now mirrors Python's per-prompt prompt usage more closely: accumulated prompt
-  usage records call counts and average input/output tokens while preserving the existing C# total
-  token properties.
-- Embedding validation now rejects provider vectors containing NaN or infinite values before assigning
-  them to models or returning them from the Microsoft.Extensions.AI embedder adapter.
-- Resilience options validation now rejects undefined `ProviderQueueProcessingOrder` values before
-  they reach `ConcurrencyLimiterOptions`.
-- `AIProviderRateLimiter` has direct helper coverage for null limiters, acquired lease ownership,
-  pre-canceled acquisition, rejected lease disposal, and limiter exception propagation. The
-  Microsoft.Extensions.AI embedder adapter now also pins that the shared provider rate limiter bounds
-  concurrently scheduled batch chunks, not only single embedding calls. Chat and embedding adapters
-  now also pin rejected-permit behavior, queued cancellation skipping provider calls, and lease
-  disposal after post-provider parse/validation failures.
-- Shared concurrency helpers now fail fast on invalid throttling limits, preserve input order for
-  throttled selection over `IReadOnlyList<T>` inputs, and avoid starting unbounded
-  `SemaphoreGatherAsync` or pre-canceled throttled selection work when already canceled.
-- Saga summarization now uses the deterministic episode-content fallback when a typed LLM response is
-  unavailable or contains no summary, so the default no-op LLM no longer clears saga summaries.
-- Entity extraction context now uses Python's stronger default `Entity` type description, including
-  concrete-entity guardrails. Entity extraction parsing also accepts numeric-string
-  `entity_type_id` values, matching Pydantic-style coercion before falling back to `Entity` for
-  invalid or out-of-range ids.
-- Extraction and node-dedupe string parsing now use `JsonValue.TryGetValue<string>` plus the existing
-  JSON text fallback for non-string nodes, avoiding exception-driven parsing while preserving
-  lenient LLM output handling.
-- LLM node dedupe context now falls back to Python's `"Default Entity Type"` description when a node
-  has only generic labels or no configured entity type description. Node dedupe response parsing also
-  accepts numeric-string `id` and `duplicate_candidate_id` values before applying existing invalid
-  id fallback behavior.
-- Edge-resolution duplicate/contradiction id parsing now uses `JsonValue.TryGetValue` plus invariant
-  numeric-string coercion instead of exception-driven parsing, preserving invalid-value skip behavior
-  for LLM edge dedupe responses.
-- Shared database-date parsing now exposes an internal non-throwing `TryParseDbDate` path. Optional
-  LLM edge timestamps use it instead of `FormatException` control flow, while the public
-  `ParseDbDate` helper still returns null for null/blank values and throws `FormatException` for
-  invalid nonblank values.
-- Shared ontology validation now keeps protected entity-node attribute names in a `FrozenSet` and
-  validates node labels / excluded entity types with allocation-light loops on the valid path. Invalid
-  excluded entity types remain distinct and sorted in error messages, and protected attribute checks
-  remain case-insensitive.
-- Entity-key normalization now uses a single-pass helper instead of a regex replace while preserving
-  Python-style trimming, lowercase conversion, and whitespace collapse. This remains the shared key
-  path for entity deduplication and fact comparison.
-- Entity dedupe's entropy gate now counts whitespace-separated terms without allocating split arrays,
-  while preserving Python's rule that short but multi-token high-entropy names may still use the
-  fuzzy MinHash path.
-- `ContentChunking.TextLikelyDense` now scans whitespace-delimited words in one pass instead of
-  allocating a regex split array, while preserving Python's raw previous-word sentence detection,
-  ASCII punctuation trimming, all-caps exclusion, supplied-token denominator, and strict threshold
-  comparison.
-- `TextUtilities.ConcatenateEpisodes` now builds multi-episode saga prompt text with capacity-aware
-  `StringBuilder` loops instead of LINQ projection plus `string.Join`. The tuple overload also uses
-  the same direct construction path instead of allocating intermediate `SagaEpisodeContent` records.
-  Tests pin single-episode content-as-is behavior, timestamp formatting, blank-line separators,
-  unknown timestamps, and tuple overload parity.
-- `HybridCacheLlmResponseCache.GetOrCreateAsync` now coalesces the whole per-key get/create path
-  through Graphiti's `AsyncSingleFlight`, so corrupt or sentinel cache payload repair shares one
-  cancellation-isolated factory call instead of fanning out late repair callers. It now returns a
-  parsed payload snapshot from single-flight while continuing to store raw strings in HybridCache;
-  cache-key inputs, sentinel handling, and serialized JSON payload shape stay unchanged.
-- XML docs have been added across much of the public surface. Remaining low-priority gaps include
-  some internal utilities, deeper namespace member docs, and internal `Graphiti` helper details.
+- Decomposition is largely complete. `Graphiti` remains the public orchestrator; behavior lives in
+  partials plus internal services and helpers.
+- Search has stable internal boundaries: `SearchEngine` orchestrates, `SearchRetrievalRunner`
+  delegates driver-backed retrieval, and `SearchResultComposer` owns fusion/reranking/result shaping.
+- Performance work should preserve parity while avoiding avoidable hot-path allocations. Prefer
+  explicit loops, pre-sized buffers, visitor-style token scanning, source generation, and non-throwing
+  parse paths where they improve default implementation code without obscuring behavior.
+- The in-memory driver is a real deterministic reference/test driver with broad persistence/search
+  behavior. Keep it correct and deterministic, but do not treat it as a product provider investment
+  target.
+- Neo4j is present only as existing/reference behavior and is expected to be removed later. FalkorDB
+  is not a current C# provider investment. LadybugDB is where provider design and workflow coverage
+  should go.
+- Optional local `.agents/skills` files are specialist references only. Use them for matching tasks,
+  but do not let generic AI/ML/framework advice override `decisions.md`.
 
-## Verification History
+## LadybugDB / Kuzu
 
-Past notes record successful runs for locked restore, format verification, no-incremental builds,
-full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
-tests passing after search and Neo4j decompositions.
+LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
+vocabulary. `GraphProvider.Kuzu` is still not a supported core options/DI enum path; the optional
+`Graphiti.Core` package wires drivers through an explicit factory.
 
-Latest checkpoint on 2026-06-01 after proving file-backed Ladybug `DatabasePath` persistence:
+For provider status, package facts, package quirks, runtime proof, and remaining work, read
+`kuzu-driver-port.md`. If implementation uncovers a likely LadybugDB package/binding issue, record it
+separately from Graphiti port gaps and do not inspect local Ladybug sources unless a confirmed issue
+blocks Graphiti work.
 
-- `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
-- `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
-- `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
-  passed with 0 warnings.
-- The focused `ServiceCollectionExtensionUsesConfiguredDatabasePathAcrossScopes` filter passed with
-  1 test.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 832
-  tests.
-- `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration
-  Release --verbosity minimal` passed, producing `Graphiti.Core.2.0.0-alpha.1.nupkg`.
-- `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
-  minimal` passed at the previous structured-response serializer checkpoint.
-- `dotnet list csharp/Graphiti.Core.CSharp.slnx package --deprecated`, `--vulnerable`, and
-  `--outdated` passed with no findings at the previous embedding/resilience checkpoint.
+## Verification
 
-There was also an older transient warning that parallel work had broken `Graphiti.cs` around episode
-extraction response types. Treat that as historical context, not as current truth. Re-run the relevant
-build/test command before assuming the tree is red or green.
+Recent 2026-06-01 checkpoints recorded successful locked restore, format verification,
+no-incremental build, full test runs, and package builds at different points. Historical counts in old
+notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
 Useful commands from the C# repo root:
 
 ```powershell
-dotnet build csharp/src/Graphiti.Core/Graphiti.Core.csproj --no-restore --verbosity minimal
-dotnet test csharp/Graphiti.Core.CSharp.slnx
-dotnet test csharp/Graphiti.Core.CSharp.slnx --no-restore --verbosity minimal
+dotnet restore Graphiti.Core.CSharp.slnx --locked-mode
+dotnet format Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal
+dotnet build Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal
+dotnet test Graphiti.Core.CSharp.slnx --no-build --verbosity minimal
 ```
+
+If a slice repeatedly needs the same focused tests plus broader build/test/format checks, create a
+small helper script and run that sequence through the script. Commit the helper only when it is useful
+beyond a single throwaway investigation.
 
 ## Working Constraints
 
 - The repo may have parallel agent/user edits. Do not revert unrelated changes.
-- Avoid fighting active work in `Graphiti.cs` or extraction paths unless the user asks for that area.
-- Prefer new focused tests or isolated helpers when other agents are editing hot files.
+- Prefer focused tests or isolated helpers when other agents are editing hot files.
 - For parity investigations, verify against current Python symbols rather than stale line numbers.
-- Keep response DTO type identity stable when it participates in structured LLM cache keys.
+- Keep response DTO type identity stable when it participates in structured LLM schema/cache keys.
 - Preserve active-driver scoping through `UseGroupDriver` / `AsyncLocal`.
-- When changing shared ingestion, search, parsing, serialization, embedding/vector, or provider
-  paths, consider implicit allocations part of the review surface. Watch for split arrays, regex
-  matches, closure captures, iterator materialization, boxing, LINQ projection/sort chains, and
-  serialize/reparse loops before calling a modernization complete.
+- Treat implicit allocations as part of the review surface in shared ingestion, search, parsing,
+  serialization, embedding/vector, and provider paths.
+- Keep note updates scoped: durable decisions in `decisions.md`, current state or gotchas here,
+  planned work in `roadmap.md`, provider-specific details in `kuzu-driver-port.md`, and commit rules
+  in `commit-policy.md`.
+
+## Known Audited Areas
+
+The detailed invariant coverage is in tests and git history. These areas have had focused parity or
+allocation-sensitive coverage and should not be casually rewritten without targeted tests:
+
+- Search ranking/fusion/reranking: RRF, MMR, cross-encoder ordering, node-distance,
+  episode-mentions, fallback BM25, vector scoring, BFS origins, and result splitting.
+- Driver/reference behavior: in-memory deterministic indexes/cloning/search, materialized fallback
+  snapshots, Neo4j query/session telemetry boundaries, and Ladybug statement/mapper/executor shapes.
+- Ingestion and maintenance: extraction parsing, node/edge dedupe, invalidation windows, episode
+  removal, saga association/summarization, community build/rebuild/update, and bulk ingestion.
+- Serialization and provider infrastructure: structured LLM schema/cache identity, response-cache
+  payload clone isolation, token usage, embedding validation/materialization, rate limiting,
+  throttled work helpers, Polly resilience, and OpenTelemetry spans.
+- Text utilities: token counting, chunking, dense-text detection, sentence truncation, and
+  episode-concatenation formatting.
 
 ## Notes Coordination Protocol
 
-The markdown notes under `.agents/notes/` are live coordination files, not static background. They may
-be edited by users, another agent, or an external worker while a session is in progress.
-
 - At task start, read the relevant note(s). For broad port work, read `decisions.md`, `handoff.md`,
-  and `roadmap.md`; for provider work, also read any focused provider note such as
-  `kuzu-driver-port.md`.
+  and `roadmap.md`; for provider work, also read `kuzu-driver-port.md`.
 - Before finalizing work that changes direction, architecture, provider status, verification claims,
-  or roadmap scope, re-read the relevant note sections or search the notes for the affected symbols.
+  or roadmap scope, re-read or search the affected notes.
 - If the newest user instruction conflicts with the notes, follow the user and update the notes so
-  future agents do not inherit the old direction.
-- If notes changed externally and now conflict with your in-progress plan, reconcile before editing.
-  If the right direction is not obvious, stop and ask instead of guessing.
-- Prefer replacing stale guidance over preserving contradictory history. Use a short dated bullet in
-  this handoff only when the timing/context matters to future agents.
-- When adding a known direction change: put durable rules in `decisions.md`, current state or gotchas
-  in `handoff.md`, planned work in `roadmap.md`, and provider-specific details in the focused note.
-
-## Known Findings And Outcomes
-
-- Python parity aliases on the public API were removed in favor of idiomatic C# names.
-- Foldered namespaces are now the intended public API shape.
-- `LuceneSanitize` escaping of uppercase operator letters is intentionally preserved for parity.
-- Parenthesized Lucene group filters are intentional C# hardening.
-- Token counting defaults to tiktoken; heuristic counting remains available.
-- `HeuristicTokenCounter` floor division matches Python.
-- Chunk helper constants alias the live chunking defaults.
-- Cosine similarity now delegates the core operation to `TensorPrimitives.CosineSimilarity`, returns
-  zero for missing/zero/non-finite vectors, and fails fast on mismatched non-empty dimensions.
-- Community label propagation now preserves input order for initial community ids.
-- LLM retry/backoff defaults were aligned more closely with Python's attempt/backoff shape.
-- Structured-output prompt schema text was restored.
-- Date-filter Cypher uses unique params across OR branches by design.
-- Property filters are intentionally enforced in C#.
-- `ConcatenateEpisodes` timestamp formatting now follows Python's `isoformat()` shape where possible.
-- LLM input cleaning now drops malformed surrogate code units and returns the original string for
-  already-clean valid UTF-16.
-- LLM node dedup fallback was added after deterministic dedupe.
-- Saga summary truncation now hard-truncates like Python.
-- Saga summary generation falls back to deterministic episode content when the typed LLM path yields
-  no summary.
-
-## Areas Already Checked
-
-These were previously audited and found faithful or intentionally different:
-
-- `LuceneSanitize`
-- `ParseDbDate` / `TryParseDbDate`
-- `NormalizeL2`
-- `ValidateGroupId`, `ValidateNodeLabels`, `ValidateExcludedEntityTypes`, and `ValidateEntityTypes`
-- `NormalizeEntityKey` trimming, whitespace collapse, and lowercase behavior
-- Cosine similarity finite/non-finite, zero, and mismatched-dimension behavior
-- Reusable cosine scorer snapshot/cached-norm behavior
-- Reciprocal rank fusion
-- Direct ranked-tuple RRF fusion in `SearchResultComposer`, including ignored input scores,
-  first-seen tie order, inclusive minimum-score filtering, direct final-list return, and
-  allocation-light RRF score projection
-- Shared bounded top-k ranking in `SearchUtilities.TopByScoreCore`, including score-descending
-  ordering, first-seen tie order, limit/min-score filtering, and parity with the RRF/MMR full-sort
-  oracles
-- Non-RRF ranked-candidate merging in `SearchResultComposer`, including first-seen item retention,
-  maximum-score duplicate merging, and first-seen tie ordering
-- Direct ranked-list composition in `SearchResultComposer` / `SearchUtilities`, including direct
-  one-list RRF, two-list RRF/merge, three-list RRF/merge parity with enumerable composition, ignored
-  input scores for RRF, inclusive minimum-score filtering, first-seen item retention, max-score
-  duplicate merging, and stable tie ordering without `SearchEngine` ranked-list array allocation
-- Final search result list splitting in `SearchResultComposer`, including item order preservation and
-  score conversion to public `double` score lists
-- Maximal marginal relevance
-- Allocation-light MMR projection in `SearchUtilities`, including public item-only projection and
-  scored-result parity with the full-sort oracle
-- SearchEngine limiting/MMR shaping, including pure-RRF fusion limits, owned-list final truncation,
-  ranked-tuple MMR input preservation, input-score-ignoring MMR behavior, stable edge episode-
-  mentions sorting, and preserving full preliminary pools for cross-encoder/node-distance/episode-
-  mentions rerankers
-- In-memory/materialized fallback BM25 full-text ranking, including repeated-document-term scoring,
-  distinct repeated query terms, stable ties, and single-pass document query-term frequency
-  construction, allocation-light query-term de-duplication, pre-sized final score projection, and
-  non-query tokens still counted for length normalization
-- Node-distance reranker
-- Episode-mentions reranker
-- Identity cross-encoder lexical scoring, equal-score input-order preservation, and indexed
-  duplicate-passage rank preservation
-- `SearchResultComposer` cross-encoder reranking, including candidate passage order, invalid/duplicate
-  indexed rank suppression, inclusive minimum-score filtering, and score/original-index ordering
-- `SearchResultComposer` node-distance/episode-mentions rank mapping, including missing ranks,
-  driver-rank ordering, and edge fan-out by source UUID
-- Entity dedup deterministic stage, including the allocation-light entropy term counter and short
-  multi-token fuzzy-match path
-- Maintenance helper episodic/community edge construction, including attributed multi-episode
-  ordering, invalid-index suppression, group propagation, single-episode behavior, and generic
-  one-hop in-place pointer resolution for entity, episodic, and community edges
-- `EpisodeType` wire values
-- Embedding text newline replacement
-- Search config constants
-- `TruncateAtSentence`
-- `TextUtilities.ConcatenateEpisodes`, including single-episode content preservation,
-  multi-episode header/separator shape, Python-style timestamp formatting, null timestamp fallback,
-  and tuple overload parity without intermediate record allocation
-- `ContentChunking.TextLikelyDense` whitespace splitting, raw previous-word sentence boundary
-  behavior, Python punctuation trimming, all-caps exclusion, long sparse/entity-rich text behavior,
-  supplied-token denominator, and strict threshold comparison
-- Label-propagation core after the input-order fix
-- In-memory date-filter matching and deterministic HashSet-backed secondary indexes
-- DI database option propagation to InMemory and Neo4j graph drivers, with InMemory database kept
-  distinct from its default group id
-- LadybugDB/Kuzu foundation schema and save/get/delete/retrieve/load-embedding statement shapes,
-  including `RelatesToNode_`, full Saga model fields, entity-edge `reference_time` save/get/search
-  projections, label-array storage, JSON attribute serialization/deserialization, simple-edge record
-  mapping, individual bulk-save statement expansion, internal executor-backed driver forwarding/
-  mapping, allocation-light collection projection and first-seen group-id de-duplication,
-  allocation-light statement parameter snapshots from enumerable/read-only-list inputs, package-
-  execution normalization for list/array/null parameters,
-  allocation-light record-mapper attribute/list materialization with JSON clone/null behavior,
-  search statement plans for full-text/vector/BFS/rankers, internal search execution/mapping over
-  `ILadybugQueryExecutor`, allocation-light ranker score/statement shaping with duplicate/unknown
-  UUID parity, and keeping provider status unsupported in DI/options.
-- Full-text query construction preserves Python-compatible Lucene literal-space query limits,
-  Falkor RedisSearch stopword/operator query limits, and Kuzu whitespace word splitting/truncation
-  while avoiding split-array allocation in the shared C# helper.
-- LLM generate-response pipeline order
-- Source-generated serializer metadata coverage for nested structured LLM response DTOs, while
-  preserving snake_case prompt/schema names such as `entity_resolutions` and
-  `duplicate_candidate_id`, plus allocation-light schema validation error formatting
-- Source-generated serializer metadata coverage for the typed LLM cache-key payload, while
-  preserving existing cache-key hash bytes.
-- LLM response cache cloned payload, raw memory/SQLite/HybridCache payload shape,
-  cancellation-isolated fill, stale-miss recheck, distinct concurrent memory/SQLite/HybridCache
-  cache waiter responses, single-flight clone/parse coalescing, HybridCache sentinel cleanup, and
-  corrupt memory/SQLite/HybridCache payload repair behavior
-- LLM message preparation and input cleaning, including pre-sized message cloning, language/schema/
-  attribute ordering, clean-input same-instance fast path, zero-width/C0-control removal,
-  newline/carriage-return/tab preservation, DEL/C1 preservation, malformed surrogate dropping, valid
-  surrogate-pair preservation, and cache-key coalescing for inputs differing only by stripped
-  characters
-- HybridCache LLM response cache corrupt/sentinel payload repair coalescing, sentinel miss cleanup,
-  parsed-snapshot single-flight result, and cancellation-isolated shared fill behavior
-- Microsoft.Extensions.AI chat adapter message projection, provider-call telemetry, retry/rate-limit
-  behavior, response parsing, and usage tracking
-- Default embedder batch selection, including bounded concurrency, ordered results, mutable input
-  snapshotting, `IReadOnlyList<T>` throttled selection, and pre-canceled throttled selection
-- Token usage per-prompt totals, call counts, average tokens, snapshot immutability, and int64
-  accumulation behavior
-- Embedding dimension and finite-value validation for model assignment and M.E.AI adapter outputs
-- Resilience options validation, including provider queue ordering enum values
-- AI provider rate-limiter helper behavior for null/acquired/rejected/canceled/faulted acquisitions,
-  plus chat/single-embed retry reacquisition and batch-embed concurrency bounding through the
-  Microsoft.Extensions.AI adapters. Adapter-level rejected permits and queued cancellations skip
-  provider calls, and leases are released after chat parse failures and embedding validation
-  failures.
-- Saga summarization no-summary fallback with the default no-op LLM
-- Edge temporal invalidation and self-expiration
-- Similarity-search min-score operators
-- LLM edge and node deduplication passes, including edge duplicate/contradiction numeric-string id
-  coercion and invalid-value skipping
-- LLM node dedupe default generic entity-type description and numeric-string resolution ids
-- Entity extraction default `Entity` prompt description and numeric-string `entity_type_id`
-  coercion/fallback behavior, plus non-string JSON text fallback for extracted entity and edge
-  fields, and optional extracted/LLM edge timestamp parsing of valid dates plus invalid-date
-  suppression
-- Search driver-backed retrieval forwarding, including vector/fulltext argument propagation, BFS
-  empty-origin/max-depth guards, explicit BFS-origin pass-through, and implicit node/source-origin
-  first-seen distinct ordering
-- SearchEngine method-level retrieval task shaping, including first fault rethrow, sibling
-  cancellation on faults, cancellation-only behavior without internal sibling cancellation, disabled
-  node/edge/community driver-call skipping, and avoiding disabled completed-list task placeholders
-- SearchEngine top-level scope orchestration, including direct nullable edge/node/episode/community
-  scope task coordination without task-list allocation, four-scope concurrent startup/result
-  assignment, first fault rethrow, sibling cancellation on faults, cancellation-only behavior without
-  internal sibling cancellation, and final/drain waits through the span-based `WhenAll` helper
-- Materialized fallback BFS/ranker shaping, including shortest first traversal hit retention,
-  origin-group filtering, first-seen input de-duplication, stable ranker ties, node-distance score
-  buckets, and episode-mention count ranking
-- In-memory BFS/ranker shaping, including shortest first traversal hit retention, origin-group
-  filtering, first-seen input de-duplication, stable ranker ties, node-distance score buckets,
-  episode-mention count ranking, and final hit cloning
-- Microsoft.Extensions.AI embedding vector materialization, including direct `ReadOnlyMemory<float>`
-  validation/copying, dimension and non-finite checks, batch ordering, retry/rate-limit behavior, and
-  returned-vector isolation
-- Extraction JSON parser allocation shaping, including entity array key order, non-object skipping,
-  numeric-string `entity_type_id` coercion, JSON text fallback, optional date parsing, and heuristic
-  ignored-name handling
-- Attribute extraction target/context construction, including first-wins node UUID maps, loop-built
-  extraction targets, shared JSON string-array construction, schema reuse, sorted schema/attribute
-  order, type-map matching, and bounded concurrency
-- Bulk edge invalidation snapshots, including snapshot override replacement by UUID, graph-ranked
-  invalidation candidate substitution, same-pair `existing_edges`, cross-pair invalidation offsets,
-  duplicate fact collapse across bulk episodes, and no re-invalidation of already invalidated
-  in-batch edges
-- In-memory fallback snapshot projection, including typed filtering from cloned snapshots,
-  embedding stripping flags, stable projection order, and read-only edge endpoint lookup inputs
-- Content chunking tests that mutate the static token counter are serialized through a shared test
-  collection to avoid parallel test pollution.
-- Shared throttling helpers validate max degree of parallelism, preserve select result order, and
-  honor pre-canceled tokens before starting unbounded gather operations.
-- `GraphDriverBase.SaveBulkAsync` cancellation before enumerable materialization and between bulk
-  save/embedding phases.
-- Search scope, retrieval-driver, async reranker, ingestion extraction/resolution/attribute,
-  graph-write, Microsoft.Extensions.AI provider-call, and Neo4j session OpenTelemetry spans are
-  covered by tests. Neo4j session tests also cover pre-canceled no-session/no-span behavior and
-  guard against query text or parameter-value telemetry leakage.
-
-## LadybugDB / Kuzu
-
-LadybugDB is the main provider target, using the LadybugDB NuGet package from the alternative Kuzu
-fork while preserving Kuzu behavior for Python parity. Keep the separate `kuzu-driver-port.md` note
-visible for agents working on driver/provider work. The schema/statement/mapper foundation exists;
-the internal executor-backed driver core exists and implements `ISearchGraphDriver` by delegating to
-`LadybugSearchExecutor`. The internal search statement foundation has fake-executor
-execution/mapping coverage plus focused real-package proof for FTS/vector, BFS, ranker,
-search-filter, and graph-maintenance statements. The optional `Graphiti.Core` package now
-contains the concrete LadybugDB package executor, public factory, `LadybugDbOptions`, and DI helpers
-that configure `GraphitiOptions.GraphDriverFactory`, while `GraphProvider.Kuzu` stays unsupported in
-core DI/options. Factory-backed clones share the same package executor/database for group-scoped
-operations, and runtime-backed `Graphiti` ingest/search, episode-attribution, and episode-removal
-workflows are proved, along with direct triplet persistence/search and bulk duplicate-fact
-coalescing plus saga association/summarization, community build/rebuild/search, and incremental
-community updates. Configured file-backed `DatabasePath` persistence is also proved. The next safe
-provider increment is broader workflow coverage, richer optional-package host options, or
-native-gated integration smoke tests. If implementation
-uncovers behavior that
-appears to be a LadybugDB package bug, record it separately from Graphiti port TODOs. The local
-Ladybug repo is `W:\code\ladybug`, with C# bindings in `W:\code\ladybug\tools\csharp_api`; fixes can
-be made there on local branches, committed with PR-draft notes, built into local NuGet packages, and
-consumed by Graphiti without pushing the Ladybug repo.
+  future agents do not inherit stale direction.
+- Prefer replacing stale guidance over preserving contradictory history.
