@@ -169,6 +169,9 @@ public class LadybugFoundationTests
         Assert.Equal(new[] { "tenant", "archive" }, Assert.IsType<List<string>>(nodesByGroup.Parameters["group_ids"]));
         Assert.Equal(new[] { "tenant", "archive" }, Assert.IsType<List<string>>(edgesByGroup.Parameters["group_ids"]));
         Assert.Equal(new[] { "tenant", "archive" }, Assert.IsType<List<string>>(retrieve.Parameters["group_ids"]));
+        Assert.Contains("ORDER BY uuid DESC", nodesByGroup.Query, StringComparison.Ordinal);
+        Assert.Contains("ORDER BY uuid DESC", edgesByGroup.Query, StringComparison.Ordinal);
+        Assert.Contains("ORDER BY valid_at DESC", retrieve.Query, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -375,6 +378,7 @@ public class LadybugFoundationTests
         Assert.Contains("e.valid_at <= $reference_time", direct.Query, StringComparison.Ordinal);
         Assert.Contains("AND e.group_id IN $group_ids", direct.Query, StringComparison.Ordinal);
         Assert.Contains("AND e.source = $source", direct.Query, StringComparison.Ordinal);
+        Assert.Contains("ORDER BY valid_at DESC", direct.Query, StringComparison.Ordinal);
         Assert.Equal(referenceTime, direct.Parameters["reference_time"]);
         Assert.Equal("message", direct.Parameters["source"]);
 
@@ -382,6 +386,7 @@ public class LadybugFoundationTests
             "MATCH (s:Saga {name: $saga_name, group_id: $group_id})-[:HAS_EPISODE]->(e:Episodic)",
             saga.Query,
             StringComparison.Ordinal);
+        Assert.Contains("ORDER BY valid_at DESC", saga.Query, StringComparison.Ordinal);
         Assert.Equal("checkout", saga.Parameters["saga_name"]);
         Assert.Equal("tenant", saga.Parameters["group_id"]);
         Assert.Equal("json", saga.Parameters["source"]);

@@ -117,7 +117,7 @@ internal static class LadybugStatementBuilder
             {cursorClause}
             RETURN DISTINCT
             {NodeReturnClause<TNode>(variable, withEmbeddings)}
-            ORDER BY {variable}.uuid DESC
+            ORDER BY uuid DESC
             {limitClause}
             """,
             parameters);
@@ -237,7 +237,7 @@ internal static class LadybugStatementBuilder
             {cursorClause}
             RETURN
             {EdgeReturnClause<TEdge>(withEmbeddings)}
-            ORDER BY e.uuid DESC
+            ORDER BY uuid DESC
             {limitClause}
             """,
             parameters);
@@ -310,7 +310,7 @@ internal static class LadybugStatementBuilder
                 {{sourceClause}}
                 RETURN
                 {{NodeReturnClause<EpisodicNode>("e")}}
-                ORDER BY e.valid_at DESC
+                ORDER BY valid_at DESC
                 LIMIT $num_episodes
                 """,
                 parameters);
@@ -330,7 +330,7 @@ internal static class LadybugStatementBuilder
             {sourceClause}
             RETURN
             {NodeReturnClause<EpisodicNode>("e")}
-            ORDER BY e.valid_at DESC
+            ORDER BY valid_at DESC
             LIMIT $num_episodes
             """,
             parameters);
@@ -375,7 +375,7 @@ internal static class LadybugStatementBuilder
             RETURN
             """ + NodeReturnClause<SagaNode>("s") + """
 
-            ORDER BY s.uuid ASC
+            ORDER BY uuid ASC
             LIMIT 1
             """,
             Parameters(("name", name), ("group_id", groupId)));
@@ -387,8 +387,8 @@ internal static class LadybugStatementBuilder
             """
             MATCH (:Saga {uuid: $saga_uuid})-[:HAS_EPISODE]->(e:Episodic)
             WHERE e.uuid <> $current_episode_uuid
-            RETURN e.uuid AS uuid
-            ORDER BY e.valid_at DESC, e.created_at DESC
+            RETURN e.uuid AS uuid, e.valid_at AS valid_at, e.created_at AS created_at
+            ORDER BY valid_at DESC, created_at DESC
             LIMIT 1
             """,
             Parameters(
@@ -402,13 +402,13 @@ internal static class LadybugStatementBuilder
     {
         var sinceFilter = since is null ? string.Empty : "AND e.created_at > $since";
         var orderBy = since is null
-            ? "ORDER BY e.valid_at DESC, e.created_at DESC"
-            : "ORDER BY e.valid_at ASC, e.created_at ASC";
+            ? "ORDER BY valid_at DESC, created_at DESC"
+            : "ORDER BY valid_at ASC, created_at ASC";
         return new LadybugStatement(
             $$"""
             MATCH (:Saga {uuid: $saga_uuid})-[:HAS_EPISODE]->(e:Episodic)
             WHERE true {{sinceFilter}}
-            RETURN e.content AS content, e.valid_at AS valid_at
+            RETURN e.content AS content, e.valid_at AS valid_at, e.created_at AS created_at
             {{orderBy}}
             LIMIT $limit
             """,

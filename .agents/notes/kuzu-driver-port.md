@@ -73,15 +73,19 @@ being ported.
   Kuzu uses `':memory:'`.
 - A test-only in-memory package smoke confirms basic Cypher, current schema execution through the
   internal driver, scalar Saga save/read projections, `QueryResult.ColumnNames` / `Rows()` record
-  projection, `DateTime` parameters, and literal `array_cosine_similarity`.
+  projection, `DateTime` parameters, literal `array_cosine_similarity`, and explicit FTS extension
+  loading/search after `INSTALL FTS; LOAD EXTENSION FTS;`.
 - Current package binding does not accept the list/array and null parameter shapes Graphiti
   statements use today. `List<string>`, `string[]`, `float[]`, and `object[]` throw
   `NotSupportedException`; `null` throws `ArgumentNullException`. The normalizer handles these by
   inlining Kuzu literals at package execution time, and the test-only runtime executor proves this
-  strategy for entity-edge `reference_time`, list-valued `episodes` / embeddings, and null temporal
-  fields.
-- FTS calls currently throw until explicit extension handling (`INSTALL FTS; LOAD EXTENSION FTS;`) is
-  added before `CREATE_FTS_INDEX` / `QUERY_FTS_INDEX` proof.
+  strategy for entity-edge `reference_time`, list-valued `episodes` / embeddings, episode
+  retrieval/group filters, `MENTIONS` traversals, and null temporal fields.
+- FTS calls fail before extension loading with a catalog error, then `CALL CREATE_FTS_INDEX` and
+  parameterized `CALL QUERY_FTS_INDEX` work after `INSTALL FTS; LOAD EXTENSION FTS;`.
+- LadybugDB can reject post-projection ordering by node variables (`ORDER BY n.uuid` / `e.valid_at`).
+  Use projected aliases such as `uuid`, `valid_at`, and `created_at` in Kuzu/Ladybug statements after
+  `RETURN`.
 
 ## Facts To Confirm Before Driver Wiring
 
@@ -90,10 +94,7 @@ being ported.
   `UNION`.
 - Whether parameter names and binding use `$name` across prepared and direct execution paths.
 - Whether the normalizer's CLR literal strategy is enough for the remaining graph/search statements
-  beyond the current Saga and entity-edge runtime proofs.
-- Whether full-text functions used by Python Kuzu exist after extension loading in LadybugDB
-  `0.17.0-alpha.1`, especially `CALL CREATE_FTS_INDEX` and `CALL QUERY_FTS_INDEX`. Literal
-  `array_cosine_similarity` is already proven.
+  beyond the current Saga, entity-edge, episode retrieval, and mention traversal runtime proofs.
 - Whether native package dependencies are acceptable in `Graphiti.Core` or require an optional
   core driver.
 
@@ -125,8 +126,8 @@ being ported.
 
 1. Decide package/native dependency shape for the LadybugDB provider. Do not add core package
    references until this is explicit.
-2. Extend package-runtime proof from the current Saga/entity-edge coverage into remaining graph and
-   search statements, especially FTS extension loading.
+2. Extend package-runtime proof from the current Saga/entity-edge/episode/FTS coverage into remaining
+   graph and search statements, especially vector search statements, BFS, and rerankers.
 3. Add/use the LadybugDB package in the core driver/core boundary selected above and decide how
    its connections/options should be represented in `GraphitiOptions`.
 4. Add a concrete LadybugDB package adapter for `ILadybugQueryExecutor`. Keep `GraphProvider.Kuzu`

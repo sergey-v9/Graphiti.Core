@@ -235,12 +235,16 @@ improving those providers unless it directly supports shared abstractions or Lad
   `LadybugGraphDriver`, scalar Saga save/read projections, `QueryResult.ColumnNames` / `Rows()`
   projection, `DateTime` parameters, and literal `array_cosine_similarity` against `Database("")`.
   It also pins current package blockers for direct statement execution: `List<string>`, `string[]`,
-  `float[]`, and `object[]` parameters throw `NotSupportedException`, null parameters throw
-  `ArgumentNullException`, and FTS calls throw until extension loading is handled. The test-only
-  runtime executor now uses the normalizer to prove entity-edge `reference_time`, list-valued
-  `episodes` / embedding columns, group-id list filters, and null temporal fields against the real
-  package. The next runtime slice should extend package proof toward FTS extension loading and a
-  concrete executor adapter before provider wiring.
+  `float[]`, and `object[]` parameters throw `NotSupportedException`, and null parameters throw
+  `ArgumentNullException`. The test-only runtime executor now uses the normalizer to prove
+  entity-edge `reference_time`, list-valued `episodes` / embedding columns, group-id list filters,
+  episode retrieval, `MENTIONS` traversals, and null temporal fields against the real package. The
+  package FTS path is now positively proved when `INSTALL FTS; LOAD EXTENSION FTS;` runs before
+  `CREATE_FTS_INDEX` / `QUERY_FTS_INDEX`. Runtime proof also showed LadybugDB needs projected aliases
+  in post-return `ORDER BY` clauses, so Ladybug statements now order by aliases such as `uuid` and
+  `valid_at` instead of node variables after projection. The next runtime slice should extend package
+  proof toward the remaining search/BFS/ranker statements and a concrete executor adapter before
+  provider wiring.
 - DI-created graph drivers now consistently receive `GraphitiOptions.Database` for both supported
   providers, InMemory and Neo4j. For InMemory this sets the driver `Database` label but intentionally
   does not change the provider default group id.
@@ -340,14 +344,14 @@ Past notes record successful runs for locked restore, format verification, no-in
 full test suites, pack, and package audits at several checkpoints. Later entries recorded 587-588
 tests passing after search and Neo4j decompositions.
 
-Latest checkpoint on 2026-06-01 after LadybugDB statement normalization:
+Latest checkpoint on 2026-06-01 after LadybugDB package runtime expansion:
 
 - `dotnet restore csharp/Graphiti.Core.CSharp.slnx --locked-mode` passed.
 - `dotnet format csharp/Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal` passed.
 - `dotnet build csharp/Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal`
   passed with 0 warnings.
-- The focused Ladybug driver/package runtime test filter passed with 43 tests.
-- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 811
+- The focused Ladybug driver/package runtime test filter passed with 44 tests.
+- `dotnet test csharp/Graphiti.Core.CSharp.slnx --no-build --verbosity minimal` passed with 812
   tests.
 - `dotnet pack csharp/src/Graphiti.Core/Graphiti.Core.csproj --configuration Release --verbosity
   minimal` passed at the previous structured-response serializer checkpoint.

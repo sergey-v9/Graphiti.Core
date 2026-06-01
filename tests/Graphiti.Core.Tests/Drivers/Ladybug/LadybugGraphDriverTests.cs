@@ -148,7 +148,7 @@ public class LadybugGraphDriverTests
         Assert.Contains("MATCH (c:Community)-[:HAS_MEMBER]->(n:Entity)", executor.Queried[2].Query, StringComparison.Ordinal);
         Assert.Contains("MATCH (s:Saga {name: $name, group_id: $group_id})", executor.Queried[3].Query, StringComparison.Ordinal);
         Assert.Contains("WHERE e.uuid <> $current_episode_uuid", executor.Queried[4].Query, StringComparison.Ordinal);
-        Assert.Contains("ORDER BY e.valid_at DESC, e.created_at DESC", executor.Queried[5].Query, StringComparison.Ordinal);
+        Assert.Contains("ORDER BY valid_at DESC, created_at DESC", executor.Queried[5].Query, StringComparison.Ordinal);
     }
 
     [Fact]

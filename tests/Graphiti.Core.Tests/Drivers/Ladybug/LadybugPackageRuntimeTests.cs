@@ -107,6 +107,117 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_NormalizedStatementsRoundTripEpisodeMentionsAndGroupFilters()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var createdAt = new DateTime(2026, 3, 4, 5, 6, 7, DateTimeKind.Utc);
+        var referenceTime = createdAt.AddHours(1);
+        var entity = new EntityNode
+        {
+            Uuid = "entity-mentioned",
+            Name = "Alice",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [0.7f, 0.8f],
+            Summary = "mentioned entity"
+        };
+        var otherEntity = new EntityNode
+        {
+            Uuid = "entity-other",
+            Name = "Mallory",
+            GroupId = "other",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            NameEmbedding = [0.1f, 0.2f],
+            Summary = "other tenant entity"
+        };
+        var olderEpisode = new EpisodicNode
+        {
+            Uuid = "episode-older",
+            Name = "older",
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Alice opened the case.",
+            ValidAt = createdAt.AddMinutes(10),
+            EntityEdges = ["edge-older"]
+        };
+        var newerEpisode = new EpisodicNode
+        {
+            Uuid = "episode-newer",
+            Name = "newer",
+            GroupId = "tenant",
+            CreatedAt = createdAt.AddMinutes(1),
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Alice closed the case.",
+            ValidAt = createdAt.AddMinutes(20),
+            EntityEdges = ["edge-newer"]
+        };
+        var filteredOutEpisode = new EpisodicNode
+        {
+            Uuid = "episode-other",
+            Name = "other",
+            GroupId = "other",
+            CreatedAt = createdAt,
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Other tenant episode.",
+            ValidAt = createdAt.AddMinutes(15),
+            EntityEdges = ["edge-other"]
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(entity);
+        await driver.SaveNodeAsync(otherEntity);
+        await driver.SaveNodeAsync(olderEpisode);
+        await driver.SaveNodeAsync(newerEpisode);
+        await driver.SaveNodeAsync(filteredOutEpisode);
+        await driver.SaveEdgeAsync(new EpisodicEdge
+        {
+            Uuid = "mention-older",
+            GroupId = "tenant",
+            SourceNodeUuid = olderEpisode.Uuid,
+            TargetNodeUuid = entity.Uuid,
+            CreatedAt = createdAt
+        });
+        await driver.SaveEdgeAsync(new EpisodicEdge
+        {
+            Uuid = "mention-newer",
+            GroupId = "tenant",
+            SourceNodeUuid = newerEpisode.Uuid,
+            TargetNodeUuid = entity.Uuid,
+            CreatedAt = createdAt.AddMinutes(1)
+        });
+
+        var tenantEntities = await driver.GetNodesByGroupIdsAsync<EntityNode>(
+            ["tenant"],
+            withEmbeddings: true);
+        var retrieved = await driver.RetrieveEpisodesAsync(
+            referenceTime,
+            2,
+            ["tenant"],
+            EpisodeType.Message);
+        var episodesByEntity = await driver.GetEpisodesByEntityNodeUuidAsync(entity.Uuid);
+        var mentionedNodes = await driver.GetMentionedNodesAsync(retrieved);
+
+        var tenantEntity = Assert.Single(tenantEntities);
+        Assert.Equal(entity.Uuid, tenantEntity.Uuid);
+        Assert.Equal(new[] { "Person", "Entity" }, tenantEntity.Labels);
+        Assert.Equal(new[] { 0.7f, 0.8f }, tenantEntity.NameEmbedding);
+        Assert.Equal(new[] { olderEpisode.Uuid, newerEpisode.Uuid }, retrieved.Select(episode => episode.Uuid));
+        Assert.Equal(new[] { "edge-older" }, retrieved[0].EntityEdges);
+        Assert.Equal(new[] { "edge-newer" }, retrieved[1].EntityEdges);
+        Assert.Contains(episodesByEntity, episode => episode.Uuid == olderEpisode.Uuid);
+        Assert.Contains(episodesByEntity, episode => episode.Uuid == newerEpisode.Uuid);
+        Assert.DoesNotContain(episodesByEntity, episode => episode.Uuid == filteredOutEpisode.Uuid);
+        Assert.Equal(entity.Uuid, Assert.Single(mentionedNodes).Uuid);
+    }
+
+    [Fact]
     public void PackageRuntime_DoesNotBindGraphitiListArrayOrNullParametersDirectlyYet()
     {
         using var database = new Database("");
@@ -130,15 +241,34 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
-    public void PackageRuntime_FtsCallsRequireExtensionLoadingBeforeSearchProof()
+    public void PackageRuntime_FtsExtensionLoadingEnablesIndexAndSearchProof()
     {
         using var database = new Database("");
         using var connection = new Connection(database);
         connection.Query("CREATE NODE TABLE IF NOT EXISTS FtNode(uuid STRING PRIMARY KEY, name STRING);").Dispose();
+        connection.Query("CREATE (:FtNode {uuid: 'n1', name: 'Alice likes graph search'});").Dispose();
 
         Assert.ThrowsAny<LadybugException>(() => connection
             .Query("CALL CREATE_FTS_INDEX('FtNode', 'ft_node_name', ['name']);")
             .Dispose());
+
+        connection.Query("INSTALL FTS;").Dispose();
+        connection.Query("LOAD EXTENSION FTS;").Dispose();
+        connection.Query("CALL CREATE_FTS_INDEX('FtNode', 'ft_node_name', ['name']);").Dispose();
+        using var result = connection.Execute(
+            """
+            CALL QUERY_FTS_INDEX('FtNode', 'ft_node_name', $query, TOP := $limit)
+            RETURN node.uuid AS uuid, score AS score;
+            """,
+            new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["query"] = "Alice",
+                ["limit"] = 5
+            });
+
+        var row = Assert.Single(result.Rows());
+        Assert.Equal("n1", Assert.IsType<string>(row[0]));
+        Assert.True(Assert.IsType<double>(row[1]) > 0);
     }
 
     [Fact]

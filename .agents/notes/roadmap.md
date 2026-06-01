@@ -252,16 +252,18 @@ shorter than the old working plans; expand items only when they become active.
   support status.
 - A test-only LadybugDB package/runtime proof now uses private `LadybugDB` / `LadybugDB.Native`
   references to run the schema through the internal driver, round-trip a scalar Saga node, prove
-  `QueryResult` row projection, and pin package blockers for list/array/null parameter binding plus
-  FTS extension loading. Core still has no LadybugDB package reference and `GraphProvider.Kuzu`
-  remains unsupported.
+  `QueryResult` row projection, prove explicit FTS extension loading/search, pin package blockers for
+  list/array/null parameter binding, and prove alias-based ordering needed after projected `RETURN`
+  clauses. Core still has no LadybugDB package reference and `GraphProvider.Kuzu` remains
+  unsupported.
 - `LadybugStatementNormalizer` now implements the concrete package-execution strategy for the
   current LadybugDB binder gaps by inlining list/array/null literals while leaving scalar parameters
   bound. The test-only runtime executor uses it to round-trip entity-edge `reference_time`,
-  list-valued columns, embeddings, and null temporal fields against the real package.
+  list-valued columns, embeddings, episode retrieval/group filters, `MENTIONS` traversals, and null
+  temporal fields against the real package.
 - Good next provider slice from the 2026-06-01 scans: move from test-only runtime proof toward a
-  concrete LadybugDB executor adapter shape, including FTS extension loading and broader statement
-  coverage, while keeping provider support unwired until end-to-end search and graph behavior pass.
+  concrete LadybugDB executor adapter shape and broader search/BFS/ranker statement coverage, while
+  keeping provider support unwired until end-to-end search and graph behavior pass.
 
 ## Graphiti Decomposition
 
