@@ -311,6 +311,11 @@ shorter than the old working plans; expand items only when they become active.
   covering chunk item/index lists instead of LINQ projection/sort chains and small temporary index
   arrays. Preserve JSON element/property order, null literal handling, escaped key/value round trips,
   deterministic greedy candidate ordering, fallback pair ordering, and item/index mapping.
+- Content chunking paragraph/speaker/line splitter paths now use explicit segment and line
+  materialization plus reusable newline join/size helpers instead of LINQ trim/filter chains,
+  `Split('\n')`, repeated newline joins, and `Sum` projection. Preserve paragraph blank-line
+  semantics, trim/empty-skip behavior, speaker regex split semantics, line empty/trailing behavior,
+  and token-accurate overlap.
 - Materialized fallback full-text/vector search now uses predicate-aware BM25 and top-score overloads
   instead of `Where` iterator chains. This preserves filter order, stable ranking ties, endpoint
   filtering, strict vector min-score behavior, and BM25 document scoring without allocating full

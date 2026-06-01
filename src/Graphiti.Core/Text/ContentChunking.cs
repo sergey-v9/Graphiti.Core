@@ -268,11 +268,7 @@ public static partial class ContentChunking
             return new[] { content };
         }
 
-        var paragraphs = ParagraphSplitRegex()
-            .Split(content)
-            .Select(paragraph => paragraph.Trim())
-            .Where(paragraph => paragraph.Length > 0)
-            .ToList();
+        var paragraphs = MaterializeParagraphs(content);
         if (paragraphs.Count <= 1)
         {
             return NormalizeTextChunks(
@@ -847,10 +843,7 @@ public static partial class ContentChunking
         int overlapTokenBudget,
         ITokenCounter tokenCounter)
     {
-        var messages = SpeakerSplitRegex().Split(content)
-            .Select(message => message.Trim())
-            .Where(message => message.Length > 0)
-            .ToList();
+        var messages = MaterializeSpeakerMessages(content);
 
         if (messages.Count == 0)
         {
@@ -868,7 +861,7 @@ public static partial class ContentChunking
             {
                 if (currentMessages.Count > 0)
                 {
-                    chunks.Add(string.Join("\n", currentMessages));
+                    chunks.Add(JoinLines(currentMessages));
                     currentMessages.Clear();
                     currentSize = 0;
                 }
@@ -879,9 +872,9 @@ public static partial class ContentChunking
 
             if (currentMessages.Count > 0 && currentSize + messageSize + 1 > chunkTokenBudget)
             {
-                chunks.Add(string.Join("\n", currentMessages));
+                chunks.Add(JoinLines(currentMessages));
                 currentMessages = GetOverlapMessages(currentMessages, overlapTokenBudget, tokenCounter);
-                currentSize = currentMessages.Sum(message => MeasureBudgetSize(message, tokenCounter)) + Math.Max(0, currentMessages.Count - 1);
+                currentSize = MeasureJoinedLinesSize(currentMessages, tokenCounter);
             }
 
             currentMessages.Add(message);
@@ -890,7 +883,7 @@ public static partial class ContentChunking
 
         if (currentMessages.Count > 0)
         {
-            chunks.Add(string.Join("\n", currentMessages));
+            chunks.Add(JoinLines(currentMessages));
         }
 
         return chunks.Count > 0 ? chunks : new[] { content };
@@ -930,7 +923,7 @@ public static partial class ContentChunking
         int overlapTokenBudget,
         ITokenCounter tokenCounter)
     {
-        var lines = content.Split('\n');
+        var lines = MaterializeLines(content);
         var chunks = new List<string>();
         var currentLines = new List<string>();
         var currentSize = 0;
@@ -942,7 +935,7 @@ public static partial class ContentChunking
             {
                 if (currentLines.Count > 0)
                 {
-                    chunks.Add(string.Join("\n", currentLines));
+                    chunks.Add(JoinLines(currentLines));
                     currentLines.Clear();
                     currentSize = 0;
                 }
@@ -953,12 +946,13 @@ public static partial class ContentChunking
 
             if (currentLines.Count > 0 && currentSize + lineSize > chunkTokenBudget)
             {
-                chunks.Add(string.Join("\n", currentLines));
+                var joined = JoinLines(currentLines);
+                chunks.Add(joined);
 
-                var overlap = GetOverlapText(string.Join("\n", currentLines), overlapTokenBudget, tokenCounter);
+                var overlap = GetOverlapText(joined, overlapTokenBudget, tokenCounter);
                 if (overlap.Length > 0)
                 {
-                    currentLines = overlap.Split('\n').ToList();
+                    currentLines = MaterializeLines(overlap);
                     currentSize = MeasureBudgetSize(overlap, tokenCounter);
                 }
                 else
@@ -974,10 +968,137 @@ public static partial class ContentChunking
 
         if (currentLines.Count > 0)
         {
-            chunks.Add(string.Join("\n", currentLines));
+            chunks.Add(JoinLines(currentLines));
         }
 
         return chunks.Count > 0 ? chunks : new[] { content };
+    }
+
+    private static List<string> MaterializeParagraphs(string content)
+    {
+        var paragraphs = new List<string>();
+        var start = 0;
+        var index = 0;
+        while (index < content.Length)
+        {
+            if (content[index] != '\n')
+            {
+                index++;
+                continue;
+            }
+
+            var separatorEnd = index + 1;
+            var hasClosingNewline = false;
+            while (separatorEnd < content.Length && char.IsWhiteSpace(content[separatorEnd]))
+            {
+                if (content[separatorEnd] == '\n')
+                {
+                    hasClosingNewline = true;
+                }
+
+                separatorEnd++;
+            }
+
+            if (!hasClosingNewline)
+            {
+                index++;
+                continue;
+            }
+
+            AddTrimmedSegment(content.AsSpan(start, index - start), paragraphs);
+            start = separatorEnd;
+            index = separatorEnd;
+        }
+
+        AddTrimmedSegment(content.AsSpan(start), paragraphs);
+        return paragraphs;
+    }
+
+    private static List<string> MaterializeSpeakerMessages(string content)
+    {
+        var split = SpeakerSplitRegex().Split(content);
+        var messages = new List<string>(split.Length);
+        for (var i = 0; i < split.Length; i++)
+        {
+            AddTrimmedSegment(split[i].AsSpan(), messages);
+        }
+
+        return messages;
+    }
+
+    private static List<string> MaterializeLines(string content)
+    {
+        var lines = new List<string>();
+        var start = 0;
+        for (var i = 0; i < content.Length; i++)
+        {
+            if (content[i] != '\n')
+            {
+                continue;
+            }
+
+            lines.Add(content[start..i]);
+            start = i + 1;
+        }
+
+        lines.Add(content[start..]);
+        return lines;
+    }
+
+    private static void AddTrimmedSegment(ReadOnlySpan<char> segment, List<string> destination)
+    {
+        var trimmed = segment.Trim();
+        if (trimmed.Length > 0)
+        {
+            destination.Add(trimmed.ToString());
+        }
+    }
+
+    private static string JoinLines(List<string> lines)
+    {
+        if (lines.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        if (lines.Count == 1)
+        {
+            return lines[0];
+        }
+
+        var capacity = lines.Count - 1;
+        for (var i = 0; i < lines.Count; i++)
+        {
+            capacity += lines[i].Length;
+        }
+
+        var builder = new StringBuilder(capacity);
+        builder.Append(lines[0]);
+        for (var i = 1; i < lines.Count; i++)
+        {
+            builder.Append('\n');
+            builder.Append(lines[i]);
+        }
+
+        return builder.ToString();
+    }
+
+    private static int MeasureJoinedLinesSize(
+        List<string> lines,
+        ITokenCounter tokenCounter)
+    {
+        if (lines.Count == 0)
+        {
+            return 0;
+        }
+
+        var size = lines.Count - 1;
+        for (var i = 0; i < lines.Count; i++)
+        {
+            size += MeasureBudgetSize(lines[i], tokenCounter);
+        }
+
+        return size;
     }
 
     private static bool TryReadNextWhitespaceWord(
@@ -1605,9 +1726,6 @@ public static partial class ContentChunking
             _disposed = true;
         }
     }
-
-    [GeneratedRegex("\\n\\s*\\n", RegexOptions.CultureInvariant)]
-    private static partial Regex ParagraphSplitRegex();
 
     [GeneratedRegex("(?<=[.!?])\\s+", RegexOptions.CultureInvariant)]
     private static partial Regex SentenceSplitRegex();

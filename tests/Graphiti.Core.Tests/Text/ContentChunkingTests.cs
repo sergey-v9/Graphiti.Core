@@ -353,6 +353,27 @@ public class ContentChunkingTests
     }
 
     [Fact]
+    public void ChunkTextContent_ParagraphSplitterSkipsWhitespaceOnlySeparators()
+    {
+        var original = ContentChunking.TokenCounter;
+        try
+        {
+            ContentChunking.TokenCounter = new WordTokenCounter();
+
+            var chunks = ContentChunking.ChunkTextContent(
+                "  Alpha beta.  \r\n \t \n  Gamma delta.  \n\n   Epsilon zeta.   ",
+                chunkSizeTokens: 2,
+                overlapTokens: 0);
+
+            Assert.Equal(new[] { "Alpha beta.", "Gamma delta.", "Epsilon zeta." }, chunks);
+        }
+        finally
+        {
+            ContentChunking.TokenCounter = original;
+        }
+    }
+
+    [Fact]
     public void ChunkMessageContent_PreservesSpeakerMessageFormat()
     {
         var content = string.Join("\n", Enumerable.Range(0, 10).Select(index => $"Speaker{index}: This is message number {index}."));
@@ -396,6 +417,28 @@ public class ContentChunkingTests
                 overlapTokens: 1);
 
             Assert.Equal(new[] { "abcd", "defg", "ghij" }, chunks);
+            Assert.All(chunks, chunk => Assert.True(ContentChunking.EstimateTokens(chunk) <= 4));
+        }
+        finally
+        {
+            ContentChunking.TokenCounter = original;
+        }
+    }
+
+    [Fact]
+    public void ChunkMessageContent_LineFallbackPreservesEmptyAndTrailingLines()
+    {
+        var original = ContentChunking.TokenCounter;
+        try
+        {
+            ContentChunking.TokenCounter = new CharacterTokenCounter();
+
+            var chunks = ContentChunking.ChunkMessageContent(
+                "aa\n\nbb\n",
+                chunkSizeTokens: 4,
+                overlapTokens: 0);
+
+            Assert.Equal(new[] { "aa\n", "bb\n" }, chunks);
             Assert.All(chunks, chunk => Assert.True(ContentChunking.EstimateTokens(chunk) <= 4));
         }
         finally
