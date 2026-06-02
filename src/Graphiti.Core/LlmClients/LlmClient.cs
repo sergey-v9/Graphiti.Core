@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Graphiti.Core.LlmClients;
 
@@ -14,6 +15,9 @@ namespace Graphiti.Core.LlmClients;
 public abstract class LlmClient : ILlmClient, IDisposable
 {
     private const string AttributeExtractionSentinel = "<<graphiti.attr_extraction.preamble.v1>>";
+    private static readonly JsonTypeInfo<LlmCacheKeyPayload> CacheKeyPayloadJsonTypeInfo =
+        (JsonTypeInfo<LlmCacheKeyPayload>)GraphitiJsonSerializer.Options.GetTypeInfo(typeof(LlmCacheKeyPayload));
+
     private readonly bool _ownsCache;
     private bool _disposed;
 
@@ -352,9 +356,7 @@ public abstract class LlmClient : ILlmClient, IDisposable
             StructuredResponseValidator.GetSchemaFingerprint(responseModel, responseSchema),
             promptName,
             messages);
-        var keyBytes = JsonSerializer.SerializeToUtf8Bytes(
-            payload,
-            GraphitiJsonSerializer.Options);
+        var keyBytes = JsonSerializer.SerializeToUtf8Bytes(payload, CacheKeyPayloadJsonTypeInfo);
         var hash = SHA256.HashData(keyBytes);
         return Convert.ToHexStringLower(hash);
     }
