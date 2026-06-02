@@ -442,8 +442,8 @@ public sealed partial class Graphiti
                 edge.SourceNodeUuid,
                 edge.TargetNodeUuid,
                 cancellationToken).ConfigureAwait(false);
-            var duplicate = relatedEdges.FirstOrDefault(existing =>
-                EdgeResolutionService.NormalizeFact(existing.Fact) == EdgeResolutionService.NormalizeFact(edge.Fact));
+            var normalizedFact = EdgeResolutionService.NormalizeFact(edge.Fact);
+            var duplicate = EdgeResolutionService.FindDuplicateFact(relatedEdges, normalizedFact);
             var edges = new List<EntityEdge>();
             if (duplicate is not null)
             {

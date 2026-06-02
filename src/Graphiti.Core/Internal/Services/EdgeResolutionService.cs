@@ -147,7 +147,7 @@ internal sealed class EdgeResolutionService(
         }
     }
 
-    private static EntityEdge? FindDuplicateFact(IReadOnlyList<EntityEdge> relatedEdges, string normalizedFact)
+    internal static EntityEdge? FindDuplicateFact(IReadOnlyList<EntityEdge> relatedEdges, string normalizedFact)
     {
         for (var i = 0; i < relatedEdges.Count; i++)
         {
