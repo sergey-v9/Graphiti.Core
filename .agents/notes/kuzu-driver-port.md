@@ -17,9 +17,10 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
   driver.
 - Runtime proof covers the main ingest/search/removal/triplet/bulk/saga/community workflows and
   file-backed `DatabasePath` persistence. Treat tests as the detailed proof source.
-- Ladybug sources are available at `W:\code\ladybug`, including C# bindings and the base library. Do
-  not inspect them during Graphiti work unless a confirmed Ladybug issue blocks progress; if that
-  happens, keep any Ladybug fix as a separate local commit.
+- The LadybugDB package has a nearby source checkout at `W:\code\ladybug`; this is background
+  provenance for the NuGet/API surface. Graphiti work operates against package-facing behavior and
+  Graphiti tests. When package or binding behavior looks suspect, capture the observed symptom here as
+  a LadybugDB follow-up and keep the Graphiti change focused on its package-facing contract.
 
 ## Provider Policy
 

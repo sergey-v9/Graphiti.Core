@@ -65,9 +65,9 @@ LadybugDB-backed driver. `AddLadybugDbGraphDriver` remains the explicit host-fac
 helper for `DatabasePath`.
 
 For provider status, package facts, package quirks, runtime proof, and remaining work, read
-`kuzu-driver-port.md`. If implementation uncovers a likely LadybugDB package/binding issue, record it
-separately from Graphiti port gaps and do not inspect local Ladybug sources unless a confirmed issue
-blocks Graphiti work.
+`kuzu-driver-port.md`. If implementation uncovers a likely LadybugDB package/binding issue, record the
+observed symptom as a backend follow-up and keep the Graphiti change scoped to its package-facing
+contract.
 
 ## Verification
 
@@ -76,16 +76,17 @@ no-incremental build, full test runs, and package builds at different points. Hi
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
 Latest checkpoint, 2026-06-02:
-`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Drivers.Ladybug.LadybugFoundationTests|FullyQualifiedName~Graphiti.Core.Tests.Drivers.Ladybug.LadybugGraphDriverTests|FullyQualifiedName~Graphiti.Core.Tests.Drivers.Ladybug.LadybugSearchExecutorTests"`
-succeeded. It ran locked restore, focused Ladybug foundation/mock-driver/search-executor coverage
-(`35` passed), format verification, no-incremental build, the full test suite (`871` passed), and
-`dotnet pack` for `Graphiti.Core.2.0.0-alpha.1.nupkg`. Recent preceding checkpoints used the same
-verifier with focused Graphiti workflow/edge-merge/Ladybug runtime coverage (`99` passed), search
-utility/RRF/driver-backed coverage (`95` passed), Ladybug foundation/runtime coverage (`26` passed),
-model/namespace/driver-base coverage (`26` passed), workflow/Ladybug runtime coverage (`96` passed),
-namespace coverage (`10` passed), Ladybug mock-driver/runtime coverage (`18` passed), Graphiti
-workflow/telemetry coverage (`98` passed), InMemory delete/cancellation coverage (`15` passed), and
-InMemory clone/read/search coverage (`26` passed).
+`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.GraphitiWorkflowTests|FullyQualifiedName~Graphiti.Core.Tests.Maintenance.EntityNodeDeduplicationTests"`
+succeeded. It ran locked restore, focused workflow/node-dedup coverage (`88` passed), format
+verification, no-incremental build, the full test suite (`872` passed), and `dotnet pack` for
+`Graphiti.Core.2.0.0-alpha.1.nupkg`. Recent preceding checkpoints used the same verifier with
+focused extraction parsing/workflow coverage (`87` passed), Ladybug foundation/mock-driver/search-
+executor coverage (`35` passed), Graphiti workflow/edge-merge/Ladybug runtime coverage (`99`
+passed), search utility/RRF/driver-backed coverage (`95` passed), Ladybug foundation/runtime coverage
+(`26` passed), model/namespace/driver-base coverage (`26` passed), workflow/Ladybug runtime coverage
+(`96` passed), namespace coverage (`10` passed), Ladybug mock-driver/runtime coverage (`18` passed),
+Graphiti workflow/telemetry coverage (`98` passed), InMemory delete/cancellation coverage
+(`15` passed), and InMemory clone/read/search coverage (`26` passed).
 
 Primary full verification command from the C# repo root:
 
