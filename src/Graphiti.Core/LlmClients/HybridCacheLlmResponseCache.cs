@@ -80,16 +80,23 @@ public sealed class HybridCacheLlmResponseCache : ILlmResponseCache
         string key,
         Func<CancellationToken, Task<JsonObject>> factory)
     {
+        LlmResponseCachePayloadSnapshot? generatedSnapshot = null;
         var payload = await _cache.GetOrCreateAsync(
             key,
             async _ =>
             {
                 var value = await factory(CancellationToken.None).ConfigureAwait(false);
-                return LlmResponseCachePayload.Serialize(value);
+                generatedSnapshot = LlmResponseCachePayload.CreateSnapshot(value, out var generatedPayload);
+                return generatedPayload;
             },
             _entryOptions,
             _tags,
             CancellationToken.None).ConfigureAwait(false);
+
+        if (generatedSnapshot is { } generated)
+        {
+            return generated;
+        }
 
         return payload != CacheMissSentinel
             && LlmResponseCachePayload.TryCreateSnapshot(payload, out var snapshot)
@@ -111,12 +118,7 @@ public sealed class HybridCacheLlmResponseCache : ILlmResponseCache
 
         await _cache.RemoveAsync(key, CancellationToken.None).ConfigureAwait(false);
         var value = await factory(CancellationToken.None).ConfigureAwait(false);
-        var regeneratedPayload = LlmResponseCachePayload.Serialize(value);
-        if (!LlmResponseCachePayload.TryCreateSnapshot(regeneratedPayload, out var regeneratedSnapshot))
-        {
-            throw new InvalidOperationException("Regenerated LLM cache payload was not a JSON object.");
-        }
-
+        var regeneratedSnapshot = LlmResponseCachePayload.CreateSnapshot(value, out var regeneratedPayload);
         await _cache.SetAsync(
             key,
             regeneratedPayload,

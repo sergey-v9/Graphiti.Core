@@ -8,6 +8,15 @@ internal static class LlmResponseCachePayload
     public static string Serialize(JsonObject value) =>
         value.ToJsonString(GraphitiJsonSerializer.Options);
 
+    public static LlmResponseCachePayloadSnapshot CreateSnapshot(
+        JsonObject value,
+        out string payload)
+    {
+        var response = Clone(value);
+        payload = Serialize(response);
+        return new LlmResponseCachePayloadSnapshot(response);
+    }
+
     public static bool TryCreateSnapshot(
         string payload,
         out LlmResponseCachePayloadSnapshot snapshot)

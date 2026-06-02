@@ -70,12 +70,7 @@ public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
                 }
 
                 var value = await factory(CancellationToken.None).ConfigureAwait(false);
-                var payload = LlmResponseCachePayload.Serialize(value);
-                if (!LlmResponseCachePayload.TryCreateSnapshot(payload, out var snapshot))
-                {
-                    throw new InvalidOperationException("Regenerated LLM cache payload was not a JSON object.");
-                }
-
+                var snapshot = LlmResponseCachePayload.CreateSnapshot(value, out var payload);
                 _cache.Set(key, payload, _entryOptions);
                 return snapshot;
             },

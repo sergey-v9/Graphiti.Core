@@ -133,6 +133,14 @@ public class LlmResponseCacheTests
     }
 
     [Fact]
+    public async Task MemoryLlmResponseCache_FreshMissDoesNotSnapshotFactoryObject()
+    {
+        using var cache = new MemoryLlmResponseCache();
+
+        await FreshMissDoesNotSnapshotFactoryObjectAsync(cache);
+    }
+
+    [Fact]
     public async Task MemoryLlmResponseCache_CancelledCorruptRepairWaitDoesNotCancelSharedFill()
     {
         using var backingCache = new MemoryCache(new MemoryCacheOptions());
@@ -292,6 +300,22 @@ public class LlmResponseCacheTests
     }
 
     [Fact]
+    public async Task SqliteLlmResponseCache_FreshMissDoesNotSnapshotFactoryObject()
+    {
+        var tempDir = CreateTempCacheDirectory();
+        var cache = new SqliteLlmResponseCache(tempDir);
+        try
+        {
+            await FreshMissDoesNotSnapshotFactoryObjectAsync(cache);
+        }
+        finally
+        {
+            cache.Dispose();
+            DeleteCacheDirectory(tempDir);
+        }
+    }
+
+    [Fact]
     public async Task SqliteLlmResponseCache_CancelledCorruptRepairWaitDoesNotCancelSharedFill()
     {
         var tempDir = CreateTempCacheDirectory();
@@ -416,6 +440,15 @@ public class LlmResponseCacheTests
         Assert.Equal(1, cached["value"]?.GetValue<int>());
     }
 
+    [Fact]
+    public async Task HybridCacheLlmResponseCache_FreshMissDoesNotSnapshotFactoryObject()
+    {
+        using var provider = BuildHybridCacheProvider();
+        var cache = new HybridCacheLlmResponseCache(provider.GetRequiredService<HybridCache>());
+
+        await FreshMissDoesNotSnapshotFactoryObjectAsync(cache);
+    }
+
     [Theory]
     [InlineData("{not-json")]
     [InlineData("[1,2,3]")]
@@ -499,6 +532,22 @@ public class LlmResponseCacheTests
         var services = new ServiceCollection();
         services.AddHybridCache();
         return services.BuildServiceProvider();
+    }
+
+    private static async Task FreshMissDoesNotSnapshotFactoryObjectAsync(ILlmResponseCache cache)
+    {
+        var generated = new JsonObject { ["value"] = 1 };
+        var created = await cache.GetOrCreateAsync(
+            "shared-key",
+            _ => Task.FromResult(generated));
+
+        generated["value"] = 99;
+        created["value"] = 2;
+        var cached = await cache.GetOrCreateAsync(
+            "shared-key",
+            _ => Task.FromResult(new JsonObject { ["value"] = 3 }));
+
+        Assert.Equal(1, cached["value"]?.GetValue<int>());
     }
 
     private static string CreateTempCacheDirectory() =>
