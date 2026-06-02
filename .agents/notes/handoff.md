@@ -57,6 +57,19 @@ not duplicate its proof matrix here.
 - Optional local `.agents/skills` files are specialist references only. Use them for matching tasks,
   but do not let generic AI/ML/framework advice override `decisions.md`.
 
+## Paused Modernization Queue
+
+Broad modernization is paused after the bounded span-based token-boundary slice. Do not continue
+implementing these automatically; when work resumes, pick one small reviewable slice and verify it
+before committing.
+
+1. Reduce repeated JSON chunking serialization in `ContentChunking` by caching per-entry/per-element
+   serialized text and token sizes from the existing serializer paths.
+2. Revisit `AttributeMerger` only if more allocation work is wanted; preserve case-insensitive
+   response matching, overlong-drop semantics, prior-value retention, and replace-mode stale removal.
+3. Audit `ExtractionContextBuilder` duplicate edge-type signature construction if prompt/cache byte
+   shape can be proven unchanged by focused tests.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
