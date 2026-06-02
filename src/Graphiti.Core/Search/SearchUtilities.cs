@@ -1105,7 +1105,7 @@ public static partial class SearchUtilities
         }
     }
 
-    private sealed record MmrCandidate<T>(T Item, float[] Vector, int Index);
+    private readonly record struct MmrCandidate<T>(T Item, float[] Vector, int Index);
 
     private readonly record struct ScoredCandidate<T>(T Item, float Score, int Index);
 
