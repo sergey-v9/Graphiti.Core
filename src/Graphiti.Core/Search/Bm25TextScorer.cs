@@ -128,39 +128,13 @@ internal static class Bm25TextScorer
         List<Document<T>> documents,
         ref int totalDocumentLength)
     {
-        var length = 0;
-        Dictionary<string, int>? termFrequencies = null;
-        SearchUtilities.VisitTokens(
+        var state = new DocumentBuildState(queryTerms.TermSet, documentFrequencies);
+        SearchUtilities.VisitTokens<DocumentBuildState, DocumentTokenVisitor>(
             textSelector(candidate),
-            queryTerms.TermSet,
-            (token, terms) =>
-        {
-            length++;
-            if (!terms.Contains(token))
-            {
-                return;
-            }
+            ref state);
 
-            termFrequencies ??= new Dictionary<string, int>(StringComparer.Ordinal);
-            ref var frequency = ref CollectionsMarshal.GetValueRefOrAddDefault(
-                termFrequencies,
-                token,
-                out var exists);
-            frequency++;
-            if (exists)
-            {
-                return;
-            }
-
-            ref var documentFrequency = ref CollectionsMarshal.GetValueRefOrAddDefault(
-                documentFrequencies,
-                token,
-                out _);
-            documentFrequency++;
-        });
-
-        documents.Add(new Document<T>(candidate, length, termFrequencies));
-        totalDocumentLength += length;
+        documents.Add(new Document<T>(candidate, state.Length, state.TermFrequencies));
+        totalDocumentLength += state.Length;
     }
 
     private static QueryTerms BuildDistinctQueryTerms(string query)
@@ -260,4 +234,43 @@ internal static class Bm25TextScorer
         T Item,
         int Length,
         Dictionary<string, int>? QueryTermFrequencies);
+
+    private record struct DocumentBuildState(
+        HashSet<string> QueryTerms,
+        Dictionary<string, int> DocumentFrequencies)
+    {
+        public int Length { get; set; }
+
+        public Dictionary<string, int>? TermFrequencies { get; set; }
+    }
+
+    private readonly record struct DocumentTokenVisitor
+        : SearchUtilities.ITokenVisitor<DocumentBuildState>
+    {
+        public static void Visit(string token, ref DocumentBuildState state)
+        {
+            state.Length++;
+            if (!state.QueryTerms.Contains(token))
+            {
+                return;
+            }
+
+            state.TermFrequencies ??= new Dictionary<string, int>(StringComparer.Ordinal);
+            ref var frequency = ref CollectionsMarshal.GetValueRefOrAddDefault(
+                state.TermFrequencies,
+                token,
+                out var exists);
+            frequency++;
+            if (exists)
+            {
+                return;
+            }
+
+            ref var documentFrequency = ref CollectionsMarshal.GetValueRefOrAddDefault(
+                state.DocumentFrequencies,
+                token,
+                out _);
+            documentFrequency++;
+        }
+    }
 }

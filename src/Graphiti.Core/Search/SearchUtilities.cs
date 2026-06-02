@@ -965,17 +965,35 @@ public static partial class SearchUtilities
         var source = text ?? string.Empty;
         foreach (var match in SearchTokenRegex().EnumerateMatches(source.AsSpan()))
         {
-            visitor(
-                string.Create(
-                    match.Length,
-                    (Text: source, match.Index),
-                    static (destination, state) =>
-                    {
-                        _ = state.Text.AsSpan(state.Index, destination.Length).ToLowerInvariant(destination);
-                    }),
-                state);
+            visitor(CreateToken(source, match.Index, match.Length), state);
         }
     }
+
+    internal static void VisitTokens<TState, TVisitor>(
+        string? text,
+        ref TState state)
+        where TVisitor : struct, ITokenVisitor<TState>
+    {
+        var source = text ?? string.Empty;
+        foreach (var match in SearchTokenRegex().EnumerateMatches(source.AsSpan()))
+        {
+            TVisitor.Visit(CreateToken(source, match.Index, match.Length), ref state);
+        }
+    }
+
+    internal interface ITokenVisitor<TState>
+    {
+        static abstract void Visit(string token, ref TState state);
+    }
+
+    private static string CreateToken(string source, int index, int length) =>
+        string.Create(
+            length,
+            (Text: source, Index: index),
+            static (destination, state) =>
+            {
+                _ = state.Text.AsSpan(state.Index, destination.Length).ToLowerInvariant(destination);
+            });
 
     private static List<T> ProjectItems<T>(IReadOnlyList<(T Item, float Score)> ranked)
     {

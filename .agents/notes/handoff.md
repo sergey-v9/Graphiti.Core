@@ -76,14 +76,15 @@ no-incremental build, full test runs, and package builds at different points. Hi
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
 Latest checkpoint, 2026-06-02:
-`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Drivers.Ladybug.LadybugFoundationTests|FullyQualifiedName~Graphiti.Core.Tests.Drivers.Ladybug.LadybugPackageRuntimeTests"`
-succeeded. It ran locked restore, focused Ladybug foundation/runtime coverage (`26` passed), format
-verification, no-incremental build, the full test suite (`870` passed), and `dotnet pack` for
-`Graphiti.Core.2.0.0-alpha.1.nupkg`. Recent preceding checkpoints used the same verifier with
-focused model/namespace/driver-base coverage (`26` passed), workflow/Ladybug runtime coverage
-(`96` passed), namespace coverage (`10` passed), Ladybug mock-driver/runtime coverage (`18` passed),
-Graphiti workflow/telemetry coverage (`98` passed), InMemory delete/cancellation coverage
-(`15` passed), and InMemory clone/read/search coverage (`26` passed).
+`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Search.SearchUtilitiesTests|FullyQualifiedName~Graphiti.Core.Tests.Search.SearchEngineRrfTests|FullyQualifiedName~Graphiti.Core.Tests.Search.SearchEngineDriverBackedTests"`
+succeeded. It ran locked restore, focused search utility/RRF/driver-backed coverage (`95` passed),
+format verification, no-incremental build, the full test suite (`870` passed), and `dotnet pack`
+for `Graphiti.Core.2.0.0-alpha.1.nupkg`. Recent preceding checkpoints used the same verifier with
+focused Ladybug foundation/runtime coverage (`26` passed), model/namespace/driver-base coverage
+(`26` passed), workflow/Ladybug runtime coverage (`96` passed), namespace coverage (`10` passed),
+Ladybug mock-driver/runtime coverage (`18` passed), Graphiti workflow/telemetry coverage
+(`98` passed), InMemory delete/cancellation coverage (`15` passed), and InMemory clone/read/search
+coverage (`26` passed).
 
 Primary full verification command from the C# repo root:
 

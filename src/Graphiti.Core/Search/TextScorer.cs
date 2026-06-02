@@ -28,31 +28,43 @@ public sealed class TextScorer
             return 0;
         }
 
-        var textTermCount = 0;
-        var matchCount = 0;
-        HashSet<string>? distinctMatches = null;
-        SearchUtilities.VisitTokens(
+        var state = new ScoreState(_queryTerms);
+        SearchUtilities.VisitTokens<ScoreState, ScoreTokenVisitor>(
             text,
-            _queryTerms,
-            (term, queryTerms) =>
-        {
-            textTermCount++;
-            if (!queryTerms.Contains(term))
-            {
-                return;
-            }
+            ref state);
 
-            matchCount++;
-            distinctMatches ??= new HashSet<string>(StringComparer.Ordinal);
-            distinctMatches.Add(term);
-        });
-
-        if (textTermCount == 0)
+        if (state.TextTermCount == 0)
         {
             return 0;
         }
 
-        return (float)((matchCount + (distinctMatches?.Count ?? 0))
-                       / (double)(textTermCount + _queryTerms.Count));
+        return (float)((state.MatchCount + (state.DistinctMatches?.Count ?? 0))
+                       / (double)(state.TextTermCount + _queryTerms.Count));
+    }
+
+    private record struct ScoreState(FrozenSet<string> QueryTerms)
+    {
+        public int TextTermCount { get; set; }
+
+        public int MatchCount { get; set; }
+
+        public HashSet<string>? DistinctMatches { get; set; }
+    }
+
+    private readonly record struct ScoreTokenVisitor
+        : SearchUtilities.ITokenVisitor<ScoreState>
+    {
+        public static void Visit(string term, ref ScoreState state)
+        {
+            state.TextTermCount++;
+            if (!state.QueryTerms.Contains(term))
+            {
+                return;
+            }
+
+            state.MatchCount++;
+            state.DistinctMatches ??= new HashSet<string>(StringComparer.Ordinal);
+            state.DistinctMatches.Add(term);
+        }
     }
 }
