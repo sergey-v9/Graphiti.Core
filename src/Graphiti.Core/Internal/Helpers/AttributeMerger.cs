@@ -89,6 +89,11 @@ internal static class AttributeMerger
         }
 
         var replaced = new Dictionary<string, object?>(capped.Kept, StringComparer.Ordinal);
+        if (capped.Dropped is null)
+        {
+            return replaced;
+        }
+
         foreach (var droppedField in capped.Dropped)
         {
             if (priorAttributes.TryGetValue(droppedField, out var priorValue))
@@ -105,12 +110,12 @@ internal static class AttributeMerger
     {
         var maxLength = ResolveAttributeMaxLength();
         var kept = new Dictionary<string, object?>(StringComparer.Ordinal);
-        var dropped = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<string>? dropped = null;
         foreach (var pair in attributes)
         {
             if (AttributeExceedsCap(pair.Value, maxLength))
             {
-                dropped.Add(pair.Key);
+                (dropped ??= new HashSet<string>(StringComparer.Ordinal)).Add(pair.Key);
                 continue;
             }
 
@@ -241,5 +246,5 @@ internal static class AttributeMerger
 
     private sealed record AttributeCapResult(
         Dictionary<string, object?> Kept,
-        HashSet<string> Dropped);
+        HashSet<string>? Dropped);
 }
