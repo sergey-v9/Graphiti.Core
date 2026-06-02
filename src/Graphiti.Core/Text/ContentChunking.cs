@@ -786,7 +786,7 @@ public static partial class ContentChunking
                 break;
             }
 
-            var nextStart = start + GetOverlapStart(text[start..end], overlapTokenBudget, tokenCounter);
+            var nextStart = start + GetOverlapStart(text.AsSpan(start, end - start), overlapTokenBudget, tokenCounter);
             if (nextStart <= start)
             {
                 nextStart = start + 1;
@@ -803,7 +803,7 @@ public static partial class ContentChunking
         int overlapTokenBudget,
         ITokenCounter tokenCounter)
     {
-        var overlapStart = GetOverlapStart(text, overlapTokenBudget, tokenCounter);
+        var overlapStart = GetOverlapStart(text.AsSpan(), overlapTokenBudget, tokenCounter);
         return overlapStart < text.Length ? text[overlapStart..] : string.Empty;
     }
 
@@ -814,7 +814,7 @@ public static partial class ContentChunking
         ITokenCounter tokenCounter)
     {
         if (tokenCounter is ITokenBoundaryProvider boundaryProvider
-            && boundaryProvider.TryGetIndexByTokenCount(text[start..], chunkTokenBudget, out var tokenEnd)
+            && boundaryProvider.TryGetIndexByTokenCount(text.AsSpan(start), chunkTokenBudget, out var tokenEnd)
             && tokenEnd > 0)
         {
             return start + tokenEnd;
@@ -825,7 +825,7 @@ public static partial class ContentChunking
     }
 
     private static int GetOverlapStart(
-        string text,
+        ReadOnlySpan<char> text,
         int overlapTokenBudget,
         ITokenCounter tokenCounter)
     {
@@ -846,12 +846,12 @@ public static partial class ContentChunking
         }
 
         var overlapStart = text.Length - overlapChars;
-        var spaceIndex = text.IndexOf(' ', overlapStart);
-        return spaceIndex != -1 ? spaceIndex + 1 : overlapStart;
+        var spaceIndex = text[overlapStart..].IndexOf(' ');
+        return spaceIndex != -1 ? overlapStart + spaceIndex + 1 : overlapStart;
     }
 
     private static bool TryGetTokenBoundaryStart(
-        string text,
+        ReadOnlySpan<char> text,
         int overlapTokenBudget,
         ITokenCounter tokenCounter,
         out int index)

@@ -76,19 +76,20 @@ no-incremental build, full test runs, and package builds at different points. Hi
 notes drifted as tests were added, so rerun verification before claiming the tree is green.
 
 Latest checkpoint, 2026-06-02:
-`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Internal.AttributeMergerTests|FullyQualifiedName~Graphiti.Core.Tests.GraphitiWorkflowTests"`
-succeeded. It ran locked restore, focused attribute-merger/workflow coverage (`84` passed), format
-verification, no-incremental build, the full test suite (`877` passed), and `dotnet pack` for
+`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Text.ContentChunkingTests"`
+succeeded. It ran locked restore, focused text chunking coverage (`47` passed), format verification,
+no-incremental build, the full test suite (`878` passed), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. Recent preceding checkpoints used the same verifier with
-focused LLM response-cache coverage (`26` passed), LLM client/cache-key coverage (`50` passed),
-search utility/MMR coverage (`39` passed), workflow/node-dedup coverage (`88` passed), extraction
-parsing/workflow coverage (`87` passed), Ladybug foundation/mock-driver/search-executor coverage
-(`35` passed), Graphiti workflow/edge-merge/Ladybug runtime coverage (`99` passed), search
-utility/RRF/driver-backed coverage (`95` passed), Ladybug foundation/runtime coverage (`26` passed),
-model/namespace/driver-base coverage (`26` passed), workflow/Ladybug runtime coverage (`96` passed),
-namespace coverage (`10` passed), Ladybug mock-driver/runtime coverage (`18` passed), Graphiti
-workflow/telemetry coverage (`98` passed), InMemory delete/cancellation coverage (`15` passed), and
-InMemory clone/read/search coverage (`26` passed).
+focused attribute-merger/workflow coverage (`84` passed), LLM response-cache coverage (`26` passed),
+LLM client/cache-key coverage (`50` passed), search utility/MMR coverage (`39` passed),
+workflow/node-dedup coverage (`88` passed), extraction parsing/workflow coverage (`87` passed),
+Ladybug foundation/mock-driver/search-executor coverage (`35` passed), Graphiti workflow/edge-merge/
+Ladybug runtime coverage (`99` passed), search utility/RRF/driver-backed coverage (`95` passed),
+Ladybug foundation/runtime coverage (`26` passed), model/namespace/driver-base coverage (`26`
+passed), workflow/Ladybug runtime coverage (`96` passed), namespace coverage (`10` passed), Ladybug
+mock-driver/runtime coverage (`18` passed), Graphiti workflow/telemetry coverage (`98` passed),
+InMemory delete/cancellation coverage (`15` passed), and InMemory clone/read/search coverage (`26`
+passed).
 
 Primary full verification command from the C# repo root:
 

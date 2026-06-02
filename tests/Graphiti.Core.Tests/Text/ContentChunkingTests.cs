@@ -45,6 +45,22 @@ public class ContentChunkingTests
     }
 
     [Fact]
+    public void TiktokenTokenCounter_TokenBoundaryMethodsAcceptSpanInputs()
+    {
+        if (TiktokenTokenCounter.CreateDefault() is not TiktokenTokenCounter counter)
+        {
+            return;
+        }
+
+        const string text = "one two three four five six";
+
+        Assert.True(counter.TryGetIndexByTokenCount(text.AsSpan(), 2, out var end));
+        Assert.InRange(end, 1, text.Length);
+        Assert.True(counter.TryGetIndexByTokenCountFromEnd(text.AsSpan(), 2, out var start));
+        Assert.InRange(start, 0, text.Length - 1);
+    }
+
+    [Fact]
     public void ChunkTextContent_UsesConfiguredTokenCounterForBudgeting()
     {
         var original = ContentChunking.TokenCounter;
@@ -708,13 +724,13 @@ public class ContentChunkingTests
     {
         public int CountTokens(string? text) => text?.Length ?? 0;
 
-        public bool TryGetIndexByTokenCount(string text, int maxTokens, out int index)
+        public bool TryGetIndexByTokenCount(ReadOnlySpan<char> text, int maxTokens, out int index)
         {
             index = maxTokens <= 0 ? 0 : Math.Min(text.Length, maxTokens);
             return true;
         }
 
-        public bool TryGetIndexByTokenCountFromEnd(string text, int maxTokens, out int index)
+        public bool TryGetIndexByTokenCountFromEnd(ReadOnlySpan<char> text, int maxTokens, out int index)
         {
             index = maxTokens <= 0 ? text.Length : Math.Max(0, text.Length - maxTokens);
             return true;

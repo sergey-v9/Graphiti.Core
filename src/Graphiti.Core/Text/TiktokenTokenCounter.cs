@@ -33,7 +33,7 @@ public sealed class TiktokenTokenCounter : ITokenCounter, ITokenBoundaryProvider
     /// <paramref name="maxTokens"/> tokens, measuring from the start. Returns <c>false</c> if the
     /// tokenizer renormalized the text or produced an out-of-range index.
     /// </summary>
-    public bool TryGetIndexByTokenCount(string text, int maxTokens, out int index)
+    public bool TryGetIndexByTokenCount(ReadOnlySpan<char> text, int maxTokens, out int index)
     {
         if (maxTokens <= 0)
         {
@@ -48,7 +48,7 @@ public sealed class TiktokenTokenCounter : ITokenCounter, ITokenBoundaryProvider
             out _,
             considerPreTokenization: true,
             considerNormalization: true);
-        return string.Equals(processedText, text, StringComparison.Ordinal)
+        return (processedText is null || processedText.AsSpan().SequenceEqual(text))
             && index is >= 0
             && index <= text.Length;
     }
@@ -58,7 +58,7 @@ public sealed class TiktokenTokenCounter : ITokenCounter, ITokenBoundaryProvider
     /// <paramref name="maxTokens"/> tokens, measuring from the end. Returns <c>false</c> on
     /// renormalization or out-of-range results.
     /// </summary>
-    public bool TryGetIndexByTokenCountFromEnd(string text, int maxTokens, out int index)
+    public bool TryGetIndexByTokenCountFromEnd(ReadOnlySpan<char> text, int maxTokens, out int index)
     {
         if (maxTokens <= 0)
         {
@@ -73,7 +73,7 @@ public sealed class TiktokenTokenCounter : ITokenCounter, ITokenBoundaryProvider
             out _,
             considerPreTokenization: true,
             considerNormalization: true);
-        return string.Equals(processedText, text, StringComparison.Ordinal)
+        return (processedText is null || processedText.AsSpan().SequenceEqual(text))
             && index is >= 0
             && index <= text.Length;
     }
