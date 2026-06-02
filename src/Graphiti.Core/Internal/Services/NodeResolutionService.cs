@@ -582,24 +582,35 @@ For every entity, provide:
     private static List<string> MergeLabels(List<string> first, List<string> second)
     {
         var labels = new List<string>(first.Count + second.Count);
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        AddLabels(first, labels, seen);
-        AddLabels(second, labels, seen);
+        AddLabels(first, labels);
+        AddLabels(second, labels);
         return labels;
     }
 
     private static void AddLabels(
         List<string> source,
-        List<string> target,
-        HashSet<string> seen)
+        List<string> target)
     {
         for (var i = 0; i < source.Count; i++)
         {
             var label = source[i];
-            if (seen.Add(label))
+            if (!ContainsLabel(target, label))
             {
                 target.Add(label);
             }
         }
+    }
+
+    private static bool ContainsLabel(List<string> labels, string label)
+    {
+        for (var i = 0; i < labels.Count; i++)
+        {
+            if (string.Equals(labels[i], label, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

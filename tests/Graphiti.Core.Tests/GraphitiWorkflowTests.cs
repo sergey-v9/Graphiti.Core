@@ -97,7 +97,7 @@ public class GraphitiWorkflowTests
             Uuid = existingSource.Uuid,
             Name = "Alice",
             GroupId = "group",
-            Labels = new List<string> { "Employee" },
+            Labels = new List<string> { "Person", "Employee", "Person" },
             CreatedAt = now,
             Summary = "Updated summary",
             Attributes = new Dictionary<string, object?> { ["age"] = 31, ["department"] = "Engineering" }
@@ -126,8 +126,7 @@ public class GraphitiWorkflowTests
         Assert.Equal("New York", storedSource.Attributes["city"]);
         Assert.Equal("Engineering", storedSource.Attributes["department"]);
         Assert.Equal("Updated summary", storedSource.Summary);
-        Assert.Contains("Person", storedSource.Labels);
-        Assert.Contains("Employee", storedSource.Labels);
+        Assert.Equal(new[] { "Person", "Employee" }, storedSource.Labels);
     }
 
     [Fact]
