@@ -14,7 +14,7 @@ public sealed partial class Graphiti
         IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
     {
         var results = new List<(string Name, string Type)>();
-        var entityTypeNamesById = BuildEntityTypeNamesById(entityTypes);
+        IReadOnlyList<string>? entityTypeNamesById = null;
         foreach (var key in EntityExtractionArrayKeys)
         {
             if (response.TryGetPropertyValue(key, out var node) && node is JsonArray array)
@@ -36,7 +36,7 @@ public sealed partial class Graphiti
 
                     var type = ReadString(item, "entity_type")
                                ?? ReadString(item, "type")
-                               ?? ReadEntityTypeById(item, entityTypeNamesById)
+                               ?? ReadEntityTypeById(item, entityTypes, ref entityTypeNamesById)
                                ?? "Entity";
                     results.Add((name, type));
                 }
@@ -63,7 +63,10 @@ public sealed partial class Graphiti
         return names;
     }
 
-    private static string? ReadEntityTypeById(JsonObject item, IReadOnlyList<string> entityTypeNamesById)
+    private static string? ReadEntityTypeById(
+        JsonObject item,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes,
+        ref IReadOnlyList<string>? entityTypeNamesById)
     {
         if (!item.TryGetPropertyValue("entity_type_id", out var node) || node is null)
         {
@@ -72,6 +75,7 @@ public sealed partial class Graphiti
 
         if (TryReadEntityTypeId(node, out var id))
         {
+            entityTypeNamesById ??= BuildEntityTypeNamesById(entityTypes);
             return id >= 0 && id < entityTypeNamesById.Count ? entityTypeNamesById[id] : null;
         }
 

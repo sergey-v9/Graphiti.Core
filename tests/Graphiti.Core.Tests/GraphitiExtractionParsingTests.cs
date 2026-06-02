@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Text.Json.Nodes;
 
 namespace Graphiti.Core.Tests;
@@ -55,6 +56,25 @@ public class GraphitiExtractionParsingTests
     }
 
     [Fact]
+    public void ExtractEntityNames_DoesNotEnumerateEntityTypesWhenTypeIsExplicit()
+    {
+        var response = new JsonObject
+        {
+            ["extracted_entities"] = new JsonArray
+            {
+                new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                new JsonObject { ["name"] = "Acme", ["type"] = "Organization" }
+            }
+        };
+
+        var extracted = Graphiti.ExtractEntityNames(
+            response,
+            new ThrowingEnumerationEntityTypes());
+
+        Assert.Equal(new[] { ("Alice", "Person"), ("Acme", "Organization") }, extracted);
+    }
+
+    [Fact]
     public void ExtractEdges_UsesJsonTextFallbackForNonStringValues()
     {
         var response = new JsonObject
@@ -101,5 +121,26 @@ public class GraphitiExtractionParsingTests
 
         Assert.Equal(new DateTime(2026, 1, 2, 1, 34, 5, DateTimeKind.Utc), edge.ValidAt);
         Assert.Null(edge.InvalidAt);
+    }
+
+    private sealed class ThrowingEnumerationEntityTypes : IReadOnlyDictionary<string, EntityTypeDefinition>
+    {
+        public EntityTypeDefinition this[string key] => throw new NotSupportedException();
+
+        public IEnumerable<string> Keys => throw new NotSupportedException();
+
+        public IEnumerable<EntityTypeDefinition> Values => throw new NotSupportedException();
+
+        public int Count => 1;
+
+        public bool ContainsKey(string key) => throw new NotSupportedException();
+
+        public IEnumerator<KeyValuePair<string, EntityTypeDefinition>> GetEnumerator() =>
+            throw new InvalidOperationException("Entity types should not be enumerated without entity_type_id.");
+
+        public bool TryGetValue(string key, out EntityTypeDefinition value) =>
+            throw new NotSupportedException();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }
