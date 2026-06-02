@@ -4,6 +4,8 @@ namespace Graphiti.Core.Drivers.Ladybug;
 
 internal static class LadybugStatementBuilder
 {
+    private const string EmptyAttributesJson = "{}";
+
     internal static LadybugStatement BuildNodeSave(Node node) =>
         node switch
         {
@@ -907,23 +909,30 @@ internal static class LadybugStatementBuilder
     private static List<string> EntityLabels(EntityNode node)
     {
         var labels = new List<string>(node.Labels.Count + 1);
-        var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var label in node.Labels)
         {
-            if (seen.Add(label))
-            {
-                labels.Add(label);
-            }
+            AddLabelIfMissing(labels, label);
         }
 
-        if (seen.Add("Entity"))
-        {
-            labels.Add("Entity");
-        }
-
+        AddLabelIfMissing(labels, "Entity");
         return labels;
     }
 
+    private static void AddLabelIfMissing(List<string> labels, string label)
+    {
+        for (var i = 0; i < labels.Count; i++)
+        {
+            if (string.Equals(labels[i], label, StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+
+        labels.Add(label);
+    }
+
     private static string SerializeAttributes(Dictionary<string, object?> attributes) =>
-        JsonSerializer.Serialize(attributes, GraphitiJsonSerializer.Options);
+        attributes.Count == 0
+            ? EmptyAttributesJson
+            : JsonSerializer.Serialize(attributes, GraphitiJsonSerializer.Options);
 }

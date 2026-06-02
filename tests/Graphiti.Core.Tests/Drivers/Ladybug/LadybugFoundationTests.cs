@@ -65,6 +65,32 @@ public class LadybugFoundationTests
     }
 
     [Fact]
+    public void BuildEntityNodeSave_DeduplicatesLabelsAndUsesCanonicalEmptyAttributes()
+    {
+        var node = new EntityNode
+        {
+            Uuid = "entity-1",
+            Name = "Alice",
+            GroupId = "tenant",
+            Labels = ["Entity", "Person", "Entity"]
+        };
+        var edge = new EntityEdge
+        {
+            Uuid = "edge-1",
+            SourceNodeUuid = "source-1",
+            TargetNodeUuid = "target-1",
+            GroupId = "tenant"
+        };
+
+        var nodeStatement = LadybugStatementBuilder.BuildNodeSave(node);
+        var edgeStatement = LadybugStatementBuilder.BuildEdgeSave(edge);
+
+        Assert.Equal(new[] { "Entity", "Person" }, Assert.IsType<List<string>>(nodeStatement.Parameters["labels"]));
+        Assert.Equal("{}", nodeStatement.Parameters["attributes"]);
+        Assert.Equal("{}", edgeStatement.Parameters["attributes"]);
+    }
+
+    [Fact]
     public void BuildEntityEdgeSave_UsesRelatesToNodeAndJsonAttributes()
     {
         var referenceTime = new DateTime(2026, 2, 3, 4, 5, 6, DateTimeKind.Utc);
