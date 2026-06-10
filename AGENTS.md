@@ -21,8 +21,9 @@ Optional local .NET skills:
 - If `.agents/skills/*/SKILL.md` exists in your checkout, treat those files as task-specific C#/.NET
   operating guidance. Before doing substantive work in an area covered there, read the matching
   skill and any referenced files it says are required.
-- Use `run-tests` before changing `dotnet test` commands or filters; use `writing-mstest-tests` for
-  MSTest authoring; use `test-gap-analysis`, `test-anti-patterns`, `assertion-quality`, or
+- Use `run-tests` before changing `dotnet test` commands or filters. Tests use xUnit v3; do not
+  apply MSTest-specific guidance unless the test framework changes. Use `test-gap-analysis`,
+  `test-anti-patterns`, `assertion-quality`, or
   `coverage-analysis` only when evaluating test quality or coverage; use
   `analyzing-dotnet-performance` and `microbenchmarking` when performance claims need a systematic
   scan or BenchmarkDotNet evidence; use the MCP and NuGet skills only for those specific packaging,
@@ -44,8 +45,9 @@ Never:
   impact is deliberate and tested.
 - Do not add native binaries, RID packaging, or provider-specific SDK dependencies beyond the current
   core graph-provider dependencies without an explicit packaging/provider decision.
-- Do not spend more effort improving Neo4j or FalkorDB unless it is needed to preserve existing
-  behavior, validate shared abstractions, or unblock LadybugDB work.
+- Do not spend more effort improving Neo4j unless it is needed to preserve existing behavior,
+  validate shared abstractions, or unblock LadybugDB work. Do not add FalkorDB or Neptune provider
+  support unless a separate provider decision changes the C# scope.
 
 Always:
 - Treat Python `graphiti_core/` in this repo as the behavioral source of truth; keep C# idiomatic
@@ -93,10 +95,10 @@ Port contract:
 - `HybridCache`, Polly `ResiliencePipeline<T>`, `ActivitySource`, `Microsoft.ML.Tokenizers`, and
   tensor primitives are infrastructure choices, not permission to change Graphiti behavior or hide
   avoidable allocations behind fashionable abstractions.
-- Existing Neo4j/FalkorDB behavior may stay only as temporary reference coverage. FalkorDB is not
-  important for current work, Neo4j is expected to be removed later, LadybugDB is the core provider
-  investment target, and the in-memory driver is a real deterministic test/reference backend rather
-  than a product provider.
+- Existing Neo4j behavior may stay only as temporary reference coverage. FalkorDB and Neptune are
+  compatibility/helper surfaces, not supported configured C# providers today. Neo4j is expected to
+  be removed later, LadybugDB is the core provider investment target, and the in-memory driver is a
+  real deterministic test/reference backend rather than a product provider.
 
 Generated vs hand-written:
 - There is no ClangSharp/native binding generator and no checked-in generated interop layer.

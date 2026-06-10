@@ -49,7 +49,7 @@ file; use `evolution.md` for milestone history and `handoff.md` for current-stat
   polish it as a product provider unless tests or LadybugDB-facing abstractions require it.
 - Neo4j may remain only as existing/reference behavior while present; avoid new investment because it
   is expected to be removed later.
-- FalkorDB is not a C# provider investment target.
+- FalkorDB is enum/helper compatibility only unless a separate decision changes that.
 - Neptune is enum/wire compatibility only unless a separate decision changes that.
 
 ## Search And Retrieval Direction
@@ -67,7 +67,7 @@ file; use `evolution.md` for milestone history and `handoff.md` for current-stat
 
 - Continue using `Microsoft.Extensions.AI` for chat and embeddings.
 - Keep non-graph provider SDKs in external adapters or host configuration helpers where possible.
-- Preserve `ILLmClient`, `IEmbedderClient`, and `ICrossEncoderClient` compatibility while adapters
+- Preserve `ILlmClient`, `IEmbedderClient`, and `ICrossEncoderClient` compatibility while adapters
   mature.
 - Use `HybridCache` for expensive deterministic LLM responses.
 - Keep Polly resilience pipelines around provider calls and allow host apps to replace pipelines.

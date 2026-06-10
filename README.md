@@ -5,13 +5,15 @@ This folder contains the C# port of `graphiti_core/` as a reusable .NET library.
 ## Projects
 
 - `src/Graphiti.Core`: core library models, `Graphiti` orchestration, graph drivers, search, maintenance helpers, LLM/embedder/reranker contracts, LadybugDB integration, and tested utility behavior.
-- `tests/Graphiti.Core.Tests`: parity-oriented xUnit tests for search config/filter defaults, text and content chunking, LLM base behavior, and in-memory graph workflows.
+- `tests/Graphiti.Core.Tests`: parity-oriented xUnit tests for ingestion workflows, search and ranking behavior, text utilities, provider infrastructure, serialization/cache behavior, and graph-driver contracts.
 
 ## Current Drivers
 
 - `InMemoryGraphDriver`: executable deterministic driver for local embedding, ingestion, retrieval, search, triplets, saga links, and tests.
-- `Neo4jGraphDriver`: Neo4j-backed semantic operation driver using `Neo4j.Driver`.
-- LadybugDB: core LadybugDB-backed driver, factory, and DI helpers. Graphiti ingestion, attribution
+- `Neo4jGraphDriver`: existing Neo4j-backed reference driver using `Neo4j.Driver`; kept working while
+  present, but not a current provider investment target.
+- LadybugDB: primary provider target with a core LadybugDB-backed driver, factory, and DI helpers.
+  Graphiti ingestion, attribution
   lookup, episode removal, advanced search, direct triplet persistence/search, bulk duplicate-fact
   ingestion, saga association plus summarization, community build/rebuild/search, incremental
   community updates, and configured file-backed `DatabasePath` persistence have end-to-end proof.
@@ -24,12 +26,12 @@ everything else lives under a matching sub-namespace:
 
 | Sub-namespace | Contents |
 |---|---|
-| `Graphiti.Core` | `Graphiti` orchestrator, `GraphitiException` and the error hierarchy |
+| `Graphiti.Core` | `Graphiti` orchestrator, `GraphitiException` and the exception hierarchy |
 | `Graphiti.Core.Models` | `EpisodeType`, `EntityTypeDefinition`, `EntityAttributeDefinition` |
 | `Graphiti.Core.Models.Nodes` | `Node`, `EntityNode`, `EpisodicNode`, `CommunityNode`, `SagaNode` |
 | `Graphiti.Core.Models.Edges` | `Edge`, `EntityEdge`, `EpisodicEdge`, `CommunityEdge`, `HasEpisodeEdge`, `NextEpisodeEdge` |
 | `Graphiti.Core.Models.Results` | `AddEpisodeResults`, `AddBulkEpisodeResults`, `AddTripletResults`, `RawEpisode`, `GraphitiClients` |
-| `Graphiti.Core.Drivers` | `IGraphDriver`, `GraphDriverBase`, `InMemoryGraphDriver`, `Neo4jGraphDriver`, `GraphProvider` |
+| `Graphiti.Core.Drivers` | `IGraphDriver`, `GraphDriverBase`, `InMemoryGraphDriver`, `Neo4jGraphDriver`, `GraphProvider`, `SagaEpisodeContent` |
 | `Graphiti.Core.Drivers.Ladybug` | LadybugDB driver factory and provider internals |
 | `Graphiti.Core.Search` | search engine, configuration, filters, and reranking |
 | `Graphiti.Core.LlmClients` | `ILlmClient`, `LlmClient`, `LlmConfig`, response caches, token usage |
@@ -56,5 +58,8 @@ is now `Graphiti.Llm.GenerateResponse` (was `Graphiti.LLM.GenerateResponse`).
 ## Verify
 
 ```powershell
-dotnet test csharp\Graphiti.Core.CSharp.slnx
+.\eng\Verify-GraphitiCore.ps1
 ```
+
+The verifier runs restore, formatting checks, build, tests, and package creation. For a quick local
+test-only loop from this folder, use `dotnet test Graphiti.Core.CSharp.slnx`.

@@ -52,8 +52,8 @@ not duplicate its proof matrix here.
   behavior. Keep it correct and deterministic, but do not treat it as a product provider investment
   target.
 - Neo4j is present only as existing/reference behavior and is expected to be removed later. FalkorDB
-  is not a current C# provider investment. LadybugDB is where provider design and workflow coverage
-  should go.
+  and Neptune are compatibility/helper surfaces, not supported configured C# providers today.
+  LadybugDB is where provider design and workflow coverage should go.
 - Optional local `.agents/skills` files are specialist references only. Use them for matching tasks,
   but do not let generic AI/ML/framework advice override `decisions.md`.
 
@@ -84,25 +84,13 @@ contract.
 
 ## Verification
 
-Recent 2026-06-01 checkpoints recorded successful locked restore, format verification,
-no-incremental build, full test runs, and package builds at different points. Historical counts in old
-notes drifted as tests were added, so rerun verification before claiming the tree is green.
+Rerun verification before claiming the tree is green; historical test counts drift as coverage is
+added.
 
-Latest checkpoint, 2026-06-02:
-`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Text.ContentChunkingTests"`
-succeeded. It ran locked restore, focused text chunking coverage (`47` passed), format verification,
+Latest checkpoint, 2026-06-11:
+`.\eng\Verify-GraphitiCore.ps1` succeeded. It ran locked restore, format verification,
 no-incremental build, the full test suite (`878` passed), and `dotnet pack` for
-`Graphiti.Core.2.0.0-alpha.1.nupkg`. Recent preceding checkpoints used the same verifier with
-focused attribute-merger/workflow coverage (`84` passed), LLM response-cache coverage (`26` passed),
-LLM client/cache-key coverage (`50` passed), search utility/MMR coverage (`39` passed),
-workflow/node-dedup coverage (`88` passed), extraction parsing/workflow coverage (`87` passed),
-Ladybug foundation/mock-driver/search-executor coverage (`35` passed), Graphiti workflow/edge-merge/
-Ladybug runtime coverage (`99` passed), search utility/RRF/driver-backed coverage (`95` passed),
-Ladybug foundation/runtime coverage (`26` passed), model/namespace/driver-base coverage (`26`
-passed), workflow/Ladybug runtime coverage (`96` passed), namespace coverage (`10` passed), Ladybug
-mock-driver/runtime coverage (`18` passed), Graphiti workflow/telemetry coverage (`98` passed),
-InMemory delete/cancellation coverage (`15` passed), and InMemory clone/read/search coverage (`26`
-passed).
+`Graphiti.Core.2.0.0-alpha.1.nupkg`.
 
 Primary full verification command from the C# repo root:
 

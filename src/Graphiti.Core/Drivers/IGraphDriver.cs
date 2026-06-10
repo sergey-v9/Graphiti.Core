@@ -3,7 +3,8 @@ namespace Graphiti.Core.Drivers;
 /// <summary>
 /// The graph storage contract Graphiti depends on. A driver persists and retrieves nodes and edges,
 /// manages indices/constraints, and exposes the higher-level traversal and saga queries the
-/// ingestion and search pipelines need. Implementations exist for Neo4j and an in-memory backend.
+/// ingestion and search pipelines need. Implementations exist for LadybugDB, Neo4j, and the
+/// deterministic in-memory reference backend.
 /// </summary>
 public interface IGraphDriver : IAsyncDisposable
 {

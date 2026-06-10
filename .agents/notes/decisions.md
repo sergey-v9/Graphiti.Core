@@ -34,7 +34,7 @@ semantics, wire compatibility, or performance/allocation discipline.
   `Graphiti.Core.Search`, `Graphiti.Core.Models`, `Graphiti.Core.LlmClients`, and
   `Graphiti.Core.Embedding`.
 - Root orchestration files stay in `Graphiti.Core`, especially `Graphiti.cs`, `Graphiti.*.cs`
-  partials, and `Errors.cs`.
+  partials, and `Exceptions.cs`.
 - Prefer one public type per file.
 - XML comments are useful but missing-doc warnings are not enabled; add comments incrementally where
   they improve the public surface.
@@ -61,7 +61,7 @@ semantics, wire compatibility, or performance/allocation discipline.
 ## Provider And Infrastructure Choices
 
 - Use `Microsoft.Extensions.AI` as the primary adapter boundary for chat and embeddings.
-- Keep `ILLmClient`, `IEmbedderClient`, and `ICrossEncoderClient` as Graphiti-facing abstractions.
+- Keep `ILlmClient`, `IEmbedderClient`, and `ICrossEncoderClient` as Graphiti-facing abstractions.
 - Use official provider SDKs behind adapters where possible. LadybugDB is the core graph-provider
   investment target and its package/native references are owned by `Graphiti.Core`.
 - Use `HybridCache` for LLM response caching and preserve cache-key semantics for parity-sensitive
@@ -141,11 +141,12 @@ semantics, wire compatibility, or performance/allocation discipline.
 - The LadybugDB provider should use the LadybugDB NuGet package, which comes from the alternative
   Kuzu fork. Kuzu remains the Python parity lineage and compatibility vocabulary, but the driver-facing
   provider name should move to LadybugDB as the port freezes. See `kuzu-driver-port.md`.
-- `GraphProvider.Neo4j`, `GraphProvider.FalkorDb`, and `GraphProvider.InMemory` may remain in the
-  current provider surface for now. Keep existing behavior from regressing, but do not plan provider
-  improvements there: FalkorDB does not matter for the current port, Neo4j is expected to be removed,
-  and InMemory is a reference/test driver rather than a product provider. LadybugDB is the provider
-  path to invest in.
+- `GraphProvider.Neo4j` and `GraphProvider.InMemory` may remain in the current provider surface for
+  now. Keep existing Neo4j behavior from regressing, but do not plan provider improvements there:
+  Neo4j is expected to be removed, and InMemory is a reference/test driver rather than a product
+  provider. `GraphProvider.FalkorDb` and `GraphProvider.Neptune` remain enum/helper compatibility
+  surfaces and are rejected by default options validation unless a separate provider decision changes
+  that. LadybugDB is the provider path to invest in.
 - `GraphProvider.Kuzu` is valid in core DI/options and creates the LadybugDB-backed driver. Kuzu
   remains the compatibility enum value until the final driver-facing LadybugDB naming decision is
   explicit. See `kuzu-driver-port.md` for current runtime coverage.

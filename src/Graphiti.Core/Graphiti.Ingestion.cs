@@ -185,6 +185,13 @@ public sealed partial class Graphiti
     /// </summary>
     /// <param name="bulkEpisodes">The episodes to ingest.</param>
     /// <param name="groupId">Graph partition to write to; the default group is used when omitted.</param>
+    /// <param name="entityTypes">Optional entity ontology used for extraction and attribute hydration.</param>
+    /// <param name="excludedEntityTypes">Entity type names to suppress during extraction.</param>
+    /// <param name="edgeTypes">Optional edge ontology used for edge type and attribute extraction.</param>
+    /// <param name="edgeTypeMap">Allowed edge types by source/target entity type pair.</param>
+    /// <param name="customExtractionInstructions">Additional extraction instructions sent to the LLM.</param>
+    /// <param name="saga">Optional saga descriptor or node to associate with the ingested episodes.</param>
+    /// <param name="cancellationToken">Token used to cancel extraction, persistence, and maintenance work.</param>
     public async Task<AddBulkEpisodeResults> AddEpisodeBulkAsync(
         IReadOnlyList<RawEpisode> bulkEpisodes,
         string? groupId = null,
