@@ -239,7 +239,7 @@ public static partial class ContentChunking
 
         return data switch
         {
-            JsonArray array => ChunkJsonArray(MaterializeJsonArrayElements(array), chunkTokenBudget, overlapTokenBudget, tokenCounter),
+            JsonArray array => ChunkJsonArray(MaterializeJsonArrayElements(array, tokenCounter), chunkTokenBudget, overlapTokenBudget, tokenCounter),
             JsonObject jsonObject => ChunkJsonObject(jsonObject, chunkTokenBudget, overlapTokenBudget, tokenCounter),
             _ => new[] { content }
         };
@@ -364,7 +364,7 @@ public static partial class ContentChunking
             var node = JsonNode.Parse(content);
             if (node is JsonArray array)
             {
-                return ChunkJsonArray(MaterializeJsonArrayElements(array), chunkTokenBudget, overlapTokenBudget, tokenCounter);
+                return ChunkJsonArray(MaterializeJsonArrayElements(array, tokenCounter), chunkTokenBudget, overlapTokenBudget, tokenCounter);
             }
         }
         catch (JsonException)
@@ -481,19 +481,24 @@ public static partial class ContentChunking
         return chunks;
     }
 
-    private static List<string> MaterializeJsonArrayElements(JsonArray array)
+    private static List<JsonArrayChunkElement> MaterializeJsonArrayElements(
+        JsonArray array,
+        ITokenCounter tokenCounter)
     {
-        var elements = new List<string>(array.Count);
+        var elements = new List<JsonArrayChunkElement>(array.Count);
         for (var i = 0; i < array.Count; i++)
         {
-            elements.Add(array[i]?.ToJsonString(JsonOptions) ?? "null");
+            var elementJson = array[i]?.ToJsonString(JsonOptions) ?? "null";
+            elements.Add(new JsonArrayChunkElement(
+                elementJson,
+                MeasureBudgetSize(elementJson, tokenCounter) + 1));
         }
 
         return elements;
     }
 
     private static List<string> ChunkJsonArray(
-        List<string> elements,
+        List<JsonArrayChunkElement> elements,
         int chunkTokenBudget,
         int overlapTokenBudget,
         ITokenCounter tokenCounter)
@@ -504,13 +509,12 @@ public static partial class ContentChunking
         }
 
         var chunks = new List<string>();
-        var currentElements = new List<string>();
+        var currentElements = new List<JsonArrayChunkElement>();
         var currentSize = MeasureBudgetSize("[]", tokenCounter);
 
-        foreach (var elementJson in elements)
+        foreach (var element in elements)
         {
-            var elementSize = MeasureBudgetSize(elementJson, tokenCounter) + 1;
-            if (currentElements.Count > 0 && currentSize + elementSize > chunkTokenBudget)
+            if (currentElements.Count > 0 && currentSize + element.BudgetSize > chunkTokenBudget)
             {
                 chunks.Add(SerializeArray(currentElements));
                 currentElements = GetOverlapElements(currentElements, overlapTokenBudget, tokenCounter);
@@ -519,8 +523,8 @@ public static partial class ContentChunking
                     : MeasureBudgetSize("[]", tokenCounter);
             }
 
-            currentElements.Add(elementJson);
-            currentSize += elementSize;
+            currentElements.Add(element);
+            currentSize += element.BudgetSize;
         }
 
         if (currentElements.Count > 0)
@@ -531,31 +535,32 @@ public static partial class ContentChunking
         return chunks.Count > 0 ? chunks : new List<string> { "[]" };
     }
 
-    private static List<string> GetOverlapElements(
-        List<string> elements,
+    private static List<JsonArrayChunkElement> GetOverlapElements(
+        List<JsonArrayChunkElement> elements,
         int overlapTokenBudget,
         ITokenCounter tokenCounter)
     {
         if (elements.Count == 0)
         {
-            return new List<string>();
+            return new List<JsonArrayChunkElement>();
         }
 
-        var overlapElements = new List<string>();
+        var overlapElements = new List<JsonArrayChunkElement>();
         var currentSize = MeasureBudgetSize("[]", tokenCounter);
 
         for (var i = elements.Count - 1; i >= 0; i--)
         {
-            var elementSize = MeasureBudgetSize(elements[i], tokenCounter) + 1;
-            if (currentSize + elementSize > overlapTokenBudget)
+            var element = elements[i];
+            if (currentSize + element.BudgetSize > overlapTokenBudget)
             {
                 break;
             }
 
-            overlapElements.Insert(0, elements[i]);
-            currentSize += elementSize;
+            overlapElements.Add(element);
+            currentSize += element.BudgetSize;
         }
 
+        overlapElements.Reverse();
         return overlapElements;
     }
 
@@ -565,20 +570,19 @@ public static partial class ContentChunking
         int overlapTokenBudget,
         ITokenCounter tokenCounter)
     {
-        var entries = MaterializeJsonObjectEntries(data);
+        var entries = MaterializeJsonObjectEntries(data, tokenCounter);
         if (entries.Count == 0)
         {
             return new[] { "{}" };
         }
 
         var chunks = new List<string>();
-        var currentEntries = new List<KeyValuePair<string, string>>();
+        var currentEntries = new List<JsonObjectChunkEntry>();
         var currentSize = MeasureBudgetSize("{}", tokenCounter);
 
         foreach (var entry in entries)
         {
-            var entrySize = MeasureBudgetSize(SerializeObjectEntry(entry), tokenCounter);
-            if (currentEntries.Count > 0 && currentSize + entrySize > chunkTokenBudget)
+            if (currentEntries.Count > 0 && currentSize + entry.BudgetSize > chunkTokenBudget)
             {
                 chunks.Add(SerializeObject(currentEntries));
                 currentEntries = GetOverlapEntries(currentEntries, overlapTokenBudget, tokenCounter);
@@ -588,7 +592,7 @@ public static partial class ContentChunking
             }
 
             currentEntries.Add(entry);
-            currentSize += entrySize;
+            currentSize += entry.BudgetSize;
         }
 
         if (currentEntries.Count > 0)
@@ -599,31 +603,32 @@ public static partial class ContentChunking
         return chunks.Count > 0 ? chunks : new[] { "{}" };
     }
 
-    private static List<KeyValuePair<string, string>> GetOverlapEntries(
-        List<KeyValuePair<string, string>> entries,
+    private static List<JsonObjectChunkEntry> GetOverlapEntries(
+        List<JsonObjectChunkEntry> entries,
         int overlapTokenBudget,
         ITokenCounter tokenCounter)
     {
         if (entries.Count == 0)
         {
-            return new List<KeyValuePair<string, string>>();
+            return new List<JsonObjectChunkEntry>();
         }
 
-        var overlapEntries = new List<KeyValuePair<string, string>>();
+        var overlapEntries = new List<JsonObjectChunkEntry>();
         var currentSize = MeasureBudgetSize("{}", tokenCounter);
 
         for (var i = entries.Count - 1; i >= 0; i--)
         {
-            var entrySize = MeasureBudgetSize(SerializeObjectEntry(entries[i]), tokenCounter);
-            if (currentSize + entrySize > overlapTokenBudget)
+            var entry = entries[i];
+            if (currentSize + entry.BudgetSize > overlapTokenBudget)
             {
                 break;
             }
 
-            overlapEntries.Insert(0, entries[i]);
-            currentSize += entrySize;
+            overlapEntries.Add(entry);
+            currentSize += entry.BudgetSize;
         }
 
+        overlapEntries.Reverse();
         return overlapEntries;
     }
 
@@ -1241,7 +1246,7 @@ public static partial class ContentChunking
         return Math.Max(1, EstimateTokens(text, tokenCounter));
     }
 
-    private static string SerializeArray(IEnumerable<string> elements)
+    private static string SerializeArray(IEnumerable<JsonArrayChunkElement> elements)
     {
         var buffer = new ArrayBufferWriter<byte>();
         using (var writer = new Utf8JsonWriter(buffer))
@@ -1249,7 +1254,7 @@ public static partial class ContentChunking
             writer.WriteStartArray();
             foreach (var element in elements)
             {
-                writer.WriteRawValue(element);
+                writer.WriteRawValue(element.Json);
             }
 
             writer.WriteEndArray();
@@ -1258,7 +1263,7 @@ public static partial class ContentChunking
         return Encoding.UTF8.GetString(buffer.WrittenSpan);
     }
 
-    private static string SerializeObject(IEnumerable<KeyValuePair<string, string>> entries)
+    private static string SerializeObject(IEnumerable<JsonObjectChunkEntry> entries)
     {
         var buffer = new ArrayBufferWriter<byte>();
         using (var writer = new Utf8JsonWriter(buffer))
@@ -1267,7 +1272,7 @@ public static partial class ContentChunking
             foreach (var entry in entries)
             {
                 writer.WritePropertyName(entry.Key);
-                writer.WriteRawValue(entry.Value);
+                writer.WriteRawValue(entry.ValueJson);
             }
 
             writer.WriteEndObject();
@@ -1276,32 +1281,40 @@ public static partial class ContentChunking
         return Encoding.UTF8.GetString(buffer.WrittenSpan);
     }
 
-    private static string SerializeObjectEntry(KeyValuePair<string, string> entry)
+    private static string SerializeObjectEntry(string key, string valueJson)
     {
         var buffer = new ArrayBufferWriter<byte>();
         using (var writer = new Utf8JsonWriter(buffer))
         {
             writer.WriteStartObject();
-            writer.WritePropertyName(entry.Key);
-            writer.WriteRawValue(entry.Value);
+            writer.WritePropertyName(key);
+            writer.WriteRawValue(valueJson);
             writer.WriteEndObject();
         }
 
         return Encoding.UTF8.GetString(buffer.WrittenSpan);
     }
 
-    private static List<KeyValuePair<string, string>> MaterializeJsonObjectEntries(JsonObject data)
+    private static List<JsonObjectChunkEntry> MaterializeJsonObjectEntries(
+        JsonObject data,
+        ITokenCounter tokenCounter)
     {
-        var entries = new List<KeyValuePair<string, string>>(data.Count);
+        var entries = new List<JsonObjectChunkEntry>(data.Count);
         foreach (var property in data)
         {
-            entries.Add(new KeyValuePair<string, string>(
+            var valueJson = property.Value?.ToJsonString(JsonOptions) ?? "null";
+            entries.Add(new JsonObjectChunkEntry(
                 property.Key,
-                property.Value?.ToJsonString(JsonOptions) ?? "null"));
+                valueJson,
+                MeasureBudgetSize(SerializeObjectEntry(property.Key, valueJson), tokenCounter)));
         }
 
         return entries;
     }
+
+    private readonly record struct JsonArrayChunkElement(string Json, int BudgetSize);
+
+    private readonly record struct JsonObjectChunkEntry(string Key, string ValueJson, int BudgetSize);
 
     private static bool CombinationCountExceeds(int n, int k, int limit)
     {

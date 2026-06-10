@@ -63,11 +63,9 @@ Broad modernization is paused after the bounded span-based token-boundary slice.
 implementing these automatically; when work resumes, pick one small reviewable slice and verify it
 before committing.
 
-1. Reduce repeated JSON chunking serialization in `ContentChunking` by caching per-entry/per-element
-   serialized text and token sizes from the existing serializer paths.
-2. Revisit `AttributeMerger` only if more allocation work is wanted; preserve case-insensitive
+1. Revisit `AttributeMerger` only if more allocation work is wanted; preserve case-insensitive
    response matching, overlong-drop semantics, prior-value retention, and replace-mode stale removal.
-3. Audit `ExtractionContextBuilder` duplicate edge-type signature construction if prompt/cache byte
+2. Audit `ExtractionContextBuilder` duplicate edge-type signature construction if prompt/cache byte
    shape can be proven unchanged by focused tests.
 
 ## LadybugDB / Kuzu
@@ -88,7 +86,8 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest checkpoint, 2026-06-11:
-`.\eng\Verify-GraphitiCore.ps1` succeeded. It ran locked restore, format verification,
+`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Text.ContentChunkingTests"`
+succeeded. It ran locked restore, focused text chunking coverage (`47` passed), format verification,
 no-incremental build, the full test suite (`878` passed), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`.
 
