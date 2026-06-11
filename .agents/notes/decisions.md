@@ -83,6 +83,11 @@ semantics, wire compatibility, or performance/allocation discipline.
 
 - Use `Microsoft.Extensions.AI` as the primary adapter boundary for chat and embeddings.
 - Keep `ILlmClient`, `IEmbedderClient`, and `ICrossEncoderClient` as Graphiti-facing abstractions.
+- `IdentityCrossEncoderClient` remains the C# constructor/DI default so Graphiti Core works without
+  an external provider. This deliberately differs from Python's default `OpenAIRerankerClient`.
+  Real-provider hosts should opt into `MicrosoftExtensionsAICrossEncoderClient`; the OpenAI sample
+  does this. The M.E.AI cross-encoder uses a structured boolean+confidence response because generic
+  M.E.AI does not expose OpenAI top-logprob controls needed for Python's exact reranker scoring.
 - Use official provider SDKs behind adapters where possible. LadybugDB is the core graph-provider
   investment target and its package/native references are owned by `Graphiti.Core`.
 - Use `HybridCache` for LLM response caching and preserve cache-key semantics for parity-sensitive

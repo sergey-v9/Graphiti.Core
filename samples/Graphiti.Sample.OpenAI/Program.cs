@@ -1,5 +1,6 @@
 using System.Globalization;
 using Graphiti.Core;
+using Graphiti.Core.CrossEncoder;
 using Graphiti.Core.Drivers;
 using Graphiti.Core.Embedding;
 using Graphiti.Core.LlmClients;
@@ -14,12 +15,15 @@ var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 if (string.IsNullOrWhiteSpace(apiKey))
 {
     Console.Error.WriteLine("Set OPENAI_API_KEY before running this sample.");
-    Console.Error.WriteLine("Optional: OPENAI_CHAT_MODEL, OPENAI_SMALL_MODEL, OPENAI_EMBEDDING_MODEL, OPENAI_EMBEDDING_DIMENSIONS.");
+    Console.Error.WriteLine("Optional: OPENAI_CHAT_MODEL, OPENAI_SMALL_MODEL, OPENAI_RERANKER_MODEL, OPENAI_EMBEDDING_MODEL, OPENAI_EMBEDDING_DIMENSIONS.");
     return 2;
 }
 
 var chatModel = GetEnvironmentValue("OPENAI_CHAT_MODEL", "gpt-4.1-mini");
 var smallModel = GetEnvironmentValue("OPENAI_SMALL_MODEL", chatModel);
+var rerankerModel = GetEnvironmentValue(
+    "OPENAI_RERANKER_MODEL",
+    MicrosoftExtensionsAICrossEncoderClient.DefaultModel);
 var embeddingModel = GetEnvironmentValue("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small");
 var embeddingDimensions = GetEnvironmentInt("OPENAI_EMBEDDING_DIMENSIONS", 1536);
 
@@ -41,10 +45,20 @@ var embedder = new MicrosoftExtensionsAIEmbedderClient(
     modelId: embeddingModel,
     batchSize: 16,
     batchConcurrency: 2);
+var crossEncoder = new MicrosoftExtensionsAICrossEncoderClient(
+    chatClient,
+    new LlmConfig
+    {
+        Model = rerankerModel,
+        SmallModel = rerankerModel,
+        Temperature = 0,
+        MaxTokens = 64
+    });
 
 await using var graphiti = new global::Graphiti.Core.Graphiti(
     llmClient: llmClient,
     embedder: embedder,
+    crossEncoder: crossEncoder,
     graphDriver: new InMemoryGraphDriver("sample-openai"),
     maxCoroutines: 2);
 
@@ -100,7 +114,7 @@ var episodes = new[]
         start.AddMinutes(25))
 };
 
-Console.WriteLine($"Using chat model {chatModel}, embedding model {embeddingModel} ({embeddingDimensions.ToString(CultureInfo.InvariantCulture)} dimensions).");
+Console.WriteLine($"Using chat model {chatModel}, reranker model {rerankerModel}, embedding model {embeddingModel} ({embeddingDimensions.ToString(CultureInfo.InvariantCulture)} dimensions).");
 Console.WriteLine("Ingesting episodes...");
 foreach (var episode in episodes)
 {

@@ -6,7 +6,7 @@ This folder contains the C# port of `graphiti_core/` as a reusable .NET library.
 
 - `src/Graphiti.Core`: core library models, `Graphiti` orchestration, graph drivers, search, maintenance helpers, LLM/embedder/reranker contracts, LadybugDB integration, and tested utility behavior.
 - `tests/Graphiti.Core.Tests`: parity-oriented xUnit tests for ingestion workflows, search and ranking behavior, text utilities, provider infrastructure, serialization/cache behavior, and graph-driver contracts.
-- `samples/Graphiti.Sample.OpenAI`: console host that wires the C# core to real OpenAI chat and embedding providers through `Microsoft.Extensions.AI.OpenAI`.
+- `samples/Graphiti.Sample.OpenAI`: console host that wires the C# core to real OpenAI chat, embedding, and reranking providers through `Microsoft.Extensions.AI.OpenAI`.
 
 ## Current Drivers
 

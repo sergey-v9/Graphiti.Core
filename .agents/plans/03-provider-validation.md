@@ -43,11 +43,19 @@ host project own provider packages); no CI wiring yet; no perf measurement.
         acceptance test covering ingestion DTOs, optional/internal DTOs, and runtime attribute
         schemas. No-key skip path was verified (`2` skipped, `0` failed). No live provider run was
         performed in this environment, so the phase-level "passed at least once" gate remains open.
-- [ ] 3. Cross-encoder reality check. Default DI currently injects lexical
+- [x] 3. Cross-encoder reality check. Default DI currently injects lexical
       `IdentityCrossEncoderClient`. Implement the M.E.AI-based reranker path equivalent to
       Python `openai_reranker_client.py` (boolean classification; use logprobs if the adapter
       exposes them, otherwise the structured boolean+confidence variant) and use it in the
       sample. Decide+document the default (`decisions.md`).
+      - Done 2026-06-11: added `MicrosoftExtensionsAICrossEncoderClient`, an opt-in
+        M.E.AI-backed reranker that issues one structured boolean relevance classification per
+        passage and converts decision confidence to relevance probability. Generic M.E.AI does not
+        expose OpenAI top-logprob controls, so this uses the planned structured boolean+confidence
+        fallback rather than Python's exact logprob scoring. The OpenAI sample now passes the real
+        reranker into `Graphiti`; DI/default construction intentionally still uses
+        `IdentityCrossEncoderClient` as the provider-free default and records that decision in
+        `decisions.md`.
 - [ ] 4. (Optional, with user buy-in) Port the eval harness: Python `prompts/eval.py` +
       `tests/evals/` give scored end-to-end extraction comparisons. This is the durable answer to
       "is the C# port as good as Python" — propose before building.

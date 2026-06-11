@@ -51,6 +51,7 @@ namespace Graphiti.Core.Serialization;
 [JsonSerializable(typeof(List<int>))]
 [JsonSerializable(typeof(LlmCacheKeyPayload))]
 [JsonSerializable(typeof(Message))]
+[JsonSerializable(typeof(MicrosoftExtensionsAICrossEncoderClient.RerankerRelevanceResponse))]
 [JsonSerializable(typeof(NextEpisodeEdge))]
 [JsonSerializable(typeof(NodeSearchConfig))]
 [JsonSerializable(typeof(PropertyFilter))]
