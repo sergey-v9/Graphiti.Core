@@ -386,6 +386,137 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_RetrieveEpisodesWithSagaUsesFirstGroupSourceAndReferenceTime()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var createdAt = new DateTime(2026, 3, 5, 6, 7, 8, DateTimeKind.Utc);
+        var referenceTime = createdAt.AddMinutes(30);
+        var tenantASaga = new GraphitiSagaNode
+        {
+            Uuid = "saga-retrieve-tenant-a",
+            Name = "onboarding",
+            GroupId = "tenant-a",
+            CreatedAt = createdAt,
+            Summary = "tenant a onboarding"
+        };
+        var tenantBSaga = new GraphitiSagaNode
+        {
+            Uuid = "saga-retrieve-tenant-b",
+            Name = "onboarding",
+            GroupId = "tenant-b",
+            CreatedAt = createdAt,
+            Summary = "tenant b onboarding"
+        };
+        var olderTenantA = new EpisodicNode
+        {
+            Uuid = "episode-saga-tenant-a-older",
+            Name = "tenant a older",
+            GroupId = "tenant-a",
+            CreatedAt = createdAt,
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Tenant A older onboarding message.",
+            ValidAt = createdAt.AddMinutes(10),
+            EntityEdges = []
+        };
+        var newerTenantA = new EpisodicNode
+        {
+            Uuid = "episode-saga-tenant-a-newer",
+            Name = "tenant a newer",
+            GroupId = "tenant-a",
+            CreatedAt = createdAt.AddMinutes(1),
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Tenant A newer onboarding message.",
+            ValidAt = createdAt.AddMinutes(20),
+            EntityEdges = []
+        };
+        var wrongSourceTenantA = new EpisodicNode
+        {
+            Uuid = "episode-saga-tenant-a-wrong-source",
+            Name = "tenant a wrong source",
+            GroupId = "tenant-a",
+            CreatedAt = createdAt.AddMinutes(2),
+            Source = EpisodeType.Text,
+            SourceDescription = "document",
+            Content = "Tenant A text source.",
+            ValidAt = createdAt.AddMinutes(25),
+            EntityEdges = []
+        };
+        var futureTenantA = new EpisodicNode
+        {
+            Uuid = "episode-saga-tenant-a-future",
+            Name = "tenant a future",
+            GroupId = "tenant-a",
+            CreatedAt = createdAt.AddMinutes(3),
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Tenant A future onboarding message.",
+            ValidAt = createdAt.AddMinutes(40),
+            EntityEdges = []
+        };
+        var tenantB = new EpisodicNode
+        {
+            Uuid = "episode-saga-tenant-b",
+            Name = "tenant b",
+            GroupId = "tenant-b",
+            CreatedAt = createdAt.AddMinutes(4),
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Tenant B onboarding message.",
+            ValidAt = createdAt.AddMinutes(15),
+            EntityEdges = []
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(tenantASaga);
+        await driver.SaveNodeAsync(tenantBSaga);
+        await driver.SaveNodeAsync(olderTenantA);
+        await driver.SaveNodeAsync(newerTenantA);
+        await driver.SaveNodeAsync(wrongSourceTenantA);
+        await driver.SaveNodeAsync(futureTenantA);
+        await driver.SaveNodeAsync(tenantB);
+        await driver.SaveEdgeAsync(HasEpisode(tenantASaga.Uuid, olderTenantA.Uuid, "has-tenant-a-older", "tenant-a", createdAt));
+        await driver.SaveEdgeAsync(HasEpisode(tenantASaga.Uuid, newerTenantA.Uuid, "has-tenant-a-newer", "tenant-a", createdAt));
+        await driver.SaveEdgeAsync(HasEpisode(tenantASaga.Uuid, wrongSourceTenantA.Uuid, "has-tenant-a-wrong-source", "tenant-a", createdAt));
+        await driver.SaveEdgeAsync(HasEpisode(tenantASaga.Uuid, futureTenantA.Uuid, "has-tenant-a-future", "tenant-a", createdAt));
+        await driver.SaveEdgeAsync(HasEpisode(tenantBSaga.Uuid, tenantB.Uuid, "has-tenant-b", "tenant-b", createdAt));
+
+        var retrieved = await driver.RetrieveEpisodesAsync(
+            referenceTime,
+            lastN: 2,
+            groupIds: ["tenant-a", "tenant-b"],
+            source: EpisodeType.Message,
+            saga: "onboarding");
+        var missingFirstGroup = await driver.RetrieveEpisodesAsync(
+            referenceTime,
+            lastN: 2,
+            groupIds: ["missing", "tenant-b"],
+            source: EpisodeType.Message,
+            saga: "onboarding");
+
+        Assert.Equal(new[] { olderTenantA.Uuid, newerTenantA.Uuid }, retrieved.Select(episode => episode.Uuid));
+        Assert.All(retrieved, episode => Assert.Equal("tenant-a", episode.GroupId));
+        Assert.Empty(missingFirstGroup);
+
+        static HasEpisodeEdge HasEpisode(
+            string sagaUuid,
+            string episodeUuid,
+            string uuid,
+            string groupId,
+            DateTime createdAt) =>
+            new()
+            {
+                Uuid = uuid,
+                SourceNodeUuid = sagaUuid,
+                TargetNodeUuid = episodeUuid,
+                GroupId = groupId,
+                CreatedAt = createdAt
+            };
+    }
+
+    [Fact]
     public async Task PackageRuntime_GraphDriverEnumeratesEntityAndCommunityGroupIds()
     {
         await using var executor = new PackageLadybugExecutor();

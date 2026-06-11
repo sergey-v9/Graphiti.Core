@@ -186,10 +186,10 @@ The C# port is moving toward a LadybugDB-centered provider model:
 - `kuzu-driver-port.md` records detailed package facts, provider policy, runtime proof, quirks, and
   remaining work.
 - Tests provide runtime proof for main ingest/search/removal/triplet/bulk/saga/community workflows,
-  package/native execution, directed endpoint-pair and incident entity-edge reads, core DI
-  registration, `GraphProvider.Kuzu` resolution, file-backed `DatabasePath` persistence, core
-  `GraphProvider.Kuzu` `Database` persistence, `':memory:'` sentinel compatibility, and active
-  Ladybug-owned full-text/label-filter construction.
+  package/native execution, saga-scoped retrieval, directed endpoint-pair and incident entity-edge
+  reads, core DI registration, `GraphProvider.Kuzu` resolution, file-backed `DatabasePath`
+  persistence, core `GraphProvider.Kuzu` `Database` persistence, `':memory:'` sentinel
+  compatibility, and active Ladybug-owned full-text/label-filter construction.
 
 ### Boundaries
 

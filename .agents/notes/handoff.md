@@ -122,14 +122,14 @@ added.
 
 Latest checkpoint, 2026-06-11:
 
-Succeeded after proving LadybugDB endpoint-pair entity-edge reads:
+Succeeded after proving LadybugDB saga-scoped retrieval and predecessor lookup:
 
 ```powershell
 .\eng\Verify-GraphitiCore.ps1
 ```
 
 Restore, format verification, solution build including `Graphiti.Sample.OpenAI`, full test suite
-(`937` passed, `2` skipped, `939` total), and `dotnet pack` for
+(`938` passed, `2` skipped, `940` total), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` was unset; the two skipped tests were
 `OpenAIProviderIntegrationTests.StructuredResponseSchemas_WithOpenAIProvider_AreAccepted` and
 `OpenAIProviderIntegrationTests.AddEpisodeAsync_WithOpenAIProvider_IngestsResolvedTemporalGraph`.
@@ -158,9 +158,9 @@ with `16` Ladybug runtime tests passed.
 dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~LadybugPackageRuntimeTests" --verbosity minimal
 ```
 
-with `12` Ladybug package-runtime tests passed, including actual package/native proof for directed
-endpoint-pair edge reads, incident entity-edge reads, and group-id enumeration. Focused
-edge-attribute and telemetry tests also passed earlier:
+with `13` Ladybug package-runtime tests passed, including actual package/native proof for
+saga-scoped retrieval, directed endpoint-pair edge reads, incident entity-edge reads, and group-id
+enumeration. Focused edge-attribute and telemetry tests also passed earlier:
 
 ```powershell
 dotnet test Graphiti.Core.CSharp.slnx --no-build --filter "FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_HydratesDeclaredEdgeAttributes|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_NonFastDuplicateEdgeAttributeHydrationDropsOverlongStringsAndReplacesOmittedFields|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_ExactDuplicatePreservesExistingEdgeAttributesAndSkipsEdgeAttributePrompt|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_ReusesEdgeAttributeSchemaForSameTypeBatch|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_EdgeAttributeExtractionRunsDuringResolution|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_SkipsEdgeAttributePromptWhenTypeMapDoesNotMatchEndpoints" --verbosity minimal
