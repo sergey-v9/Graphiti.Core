@@ -73,8 +73,10 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
   schema-validation `JsonException`s get Python's two repair attempts with a validation-error user
   message, while retry feedback stays out of the cache key and only final validated responses are
   cached.
-- **Never exercised:** any real LLM/embedding provider, end to end. The deterministic suite cannot
-  see prompt or schema-acceptance problems (plan 03).
+- **Never exercised:** any real LLM/embedding provider, end to end. `samples/Graphiti.Sample.OpenAI`
+  now provides a runnable OpenAI host and has been compile-verified plus no-key-path verified, but
+  no provider call has been executed. The deterministic suite cannot see prompt or
+  schema-acceptance problems (plan 03).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority").
   Performance/allocation rework is on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
@@ -105,15 +107,23 @@ added.
 
 Latest checkpoint, 2026-06-11:
 
-Succeeded after validation-failure re-prompting:
+Succeeded after adding the OpenAI sample host:
 
 ```powershell
-.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~LlmClientTests|FullyQualifiedName~ModernInfrastructureTests"
+.\eng\Verify-GraphitiCore.ps1
 ```
 
-Locked restore, focused LLM/infrastructure tests (`131` passed), format verification,
-no-incremental build, full test suite (`921` passed), and `dotnet pack` for
-`Graphiti.Core.2.0.0-alpha.1.nupkg`. No real-provider run has ever been executed (plan 03).
+Restore, format verification, solution build including `Graphiti.Sample.OpenAI`, full test suite
+(`921` passed), and `dotnet pack` for `Graphiti.Core.2.0.0-alpha.1.nupkg`.
+
+Sample no-key path was also verified:
+
+```powershell
+dotnet run --project samples\Graphiti.Sample.OpenAI\Graphiti.Sample.OpenAI.csproj --no-restore
+```
+
+with `OPENAI_API_KEY` unset. It prints setup guidance and exits `2` as expected. No real-provider
+run has ever been executed (plan 03).
 
 Primary full verification command from the C# repo root:
 

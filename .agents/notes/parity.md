@@ -94,5 +94,5 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | LLM/embedder adapters via Microsoft.Extensions.AI | DIVERGENT | Documented decision; structured output + Polly retries in place |
 | Retry-on-validation-failure with error feedback message | llm_client/client.py retry loop | OK | Ported 2026-06-11 in base `LlmClient`: `JsonException` parse/schema failures get two Python-style validation-feedback re-prompts, cache keys remain based on the original prepared messages, and only validated final responses are cached |
 | GLiNER2 local extraction client | N/A | Specialized optional Python feature; out of scope unless requested |
-| Real-provider end-to-end validation | MISSING | Never run; no sample app, no env-gated integration test. See plan 03 |
+| Real-provider end-to-end validation | PARTIAL | `samples/Graphiti.Sample.OpenAI` added 2026-06-11 and compile-verified; no live provider run or env-gated integration test yet. See plan 03 |
 | eval harness (eval prompts, add-episode eval) | MISSING | Optional; see plan 03 |

@@ -48,11 +48,12 @@ pass decision.
 Done when: the ingestion-pipeline table in `parity.md` has no `MISSING` rows and every `PARTIAL`
 is either closed or converted to a documented `DIVERGENT` decision.
 
-## Phase 3 — Real-provider validation (BLOCKED on 1, can start once 1 lands)
+## Phase 3 — Real-provider validation (ACTIVE; provider run pending)
 
 Prove the library end-to-end with a real LLM + embedder. Work order:
-`.agents/plans/03-provider-validation.md`. A port of an LLM-driven library that has never talked
-to an LLM is unverified by definition; this phase is the acceptance test for Phases 1–2.
+`.agents/plans/03-provider-validation.md`. A sample OpenAI host now exists, but the port still has
+not been run against a real LLM/embedding provider. A port of an LLM-driven library that has never
+talked to an LLM is unverified by definition; this phase is the acceptance test for Phases 1–2.
 
 Done when: an env-gated integration test (or sample app run) ingests episodes through a real
 provider, produces a graph whose entities/edges/summaries are sane on manual inspection, and hybrid
