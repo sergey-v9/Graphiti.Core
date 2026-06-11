@@ -319,8 +319,8 @@ public static partial class SearchUtilities
 
         return provider switch
         {
-            // NOTE: LadybugDB is the primary provider target; Kuzu remains the Python-parity
-            // compatibility value. Preserve this interim behavior until LadybugDB owns the query.
+            // NOTE: LadybugDB owns active driver query construction; keep this branch for
+            // GraphProvider.Kuzu compatibility callers that still use SearchUtilities directly.
             GraphProvider.Kuzu => BuildKuzuFulltextQuery(query),
             GraphProvider.FalkorDb => BuildFalkorFulltextQuery(query, groupIds),
             _ => BuildLuceneFulltextQuery(query, groupIds)
@@ -367,7 +367,7 @@ public static partial class SearchUtilities
         return builder.ToString();
     }
 
-    // NOTE: Preserve current Kuzu-parity query semantics until the LadybugDB provider lands.
+    // NOTE: Preserve Kuzu-parity semantics for compatibility callers outside the Ladybug driver.
     private static string BuildKuzuFulltextQuery(string query)
     {
         return JoinFirstWhitespaceTerms(query, MaxQueryLength);

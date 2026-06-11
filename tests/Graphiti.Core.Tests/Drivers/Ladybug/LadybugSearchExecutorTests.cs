@@ -38,6 +38,59 @@ public class LadybugSearchExecutorTests
     }
 
     [Fact]
+    public async Task FulltextSearch_UsesLadybugRawWhitespaceQuerySemantics()
+    {
+        var recorder = new RecordingLadybugExecutor();
+        var search = new LadybugSearchExecutor(recorder);
+        var longQuery = string.Join(" ", Enumerable.Repeat("term", SearchUtilities.MaxQueryLength + 1));
+
+        await search.SearchEntityNodesFulltextAsync(
+            "  Alice+(Bob)\tgroup_id:tenant/one\r\nCarol  ",
+            new SearchFilters(),
+            new[] { "tenant" },
+            limit: 5);
+        await search.SearchEntityEdgesFulltextAsync(
+            longQuery,
+            new SearchFilters(),
+            groupIds: null,
+            limit: 5);
+        await search.SearchEpisodesFulltextAsync(
+            "  Episode\tQuery  ",
+            new SearchFilters(),
+            new[] { "tenant" },
+            limit: 5);
+        await search.SearchCommunitiesFulltextAsync(
+            "  Community+(Team)\r\nLaunch  ",
+            new[] { "tenant" },
+            limit: 5);
+
+        Assert.Equal(4, recorder.Queried.Count);
+        Assert.Equal("Alice+(Bob) group_id:tenant/one Carol", recorder.Queried[0].Parameters["query"]);
+        Assert.Equal(
+            string.Join(" ", Enumerable.Repeat("term", SearchUtilities.MaxQueryLength)),
+            recorder.Queried[1].Parameters["query"]);
+        Assert.Equal("Episode Query", recorder.Queried[2].Parameters["query"]);
+        Assert.Equal("Community+(Team) Launch", recorder.Queried[3].Parameters["query"]);
+        Assert.Equal(new[] { "tenant" }, Assert.IsType<List<string>>(recorder.Queried[0].Parameters["group_ids"]));
+    }
+
+    [Fact]
+    public async Task FulltextSearch_ValidatesGroupIdsBeforeQuerying()
+    {
+        var recorder = new RecordingLadybugExecutor();
+        var search = new LadybugSearchExecutor(recorder);
+
+        await Assert.ThrowsAsync<GroupIdValidationException>(
+            () => search.SearchEntityNodesFulltextAsync(
+                "   ",
+                new SearchFilters(),
+                new[] { "tenant:bad" },
+                limit: 5));
+
+        Assert.Empty(recorder.Queried);
+    }
+
+    [Fact]
     public async Task EdgeEmbeddingSearch_ForwardsEndpointFiltersAndMapsScoredEdges()
     {
         var recorder = new RecordingLadybugExecutor();

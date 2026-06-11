@@ -102,6 +102,9 @@ vocabulary. `GraphProvider.Kuzu` is a supported core options/DI enum path that c
 LadybugDB-backed driver. `AddLadybugDbGraphDriver` remains the explicit host-facing configuration
 helper for `DatabasePath`. The LadybugDB factory accepts both the native empty-string in-memory path
 and Python Kuzu's `':memory:'` sentinel, normalizing the sentinel at the Graphiti boundary.
+Active Ladybug full-text search builds Python Kuzu-style raw whitespace queries inside
+`Drivers/Ladybug/LadybugFulltextQuery`; `SearchUtilities` keeps a separate `GraphProvider.Kuzu`
+branch only for compatibility callers outside the driver.
 
 For provider status, package facts, package quirks, runtime proof, and remaining work, read
 `kuzu-driver-port.md`. If implementation uncovers a likely LadybugDB package/binding issue, mark it
@@ -117,18 +120,24 @@ added.
 
 Latest checkpoint, 2026-06-11:
 
-Succeeded after adding LadybugDB/Kuzu `':memory:'` sentinel compatibility:
+Succeeded after moving active LadybugDB full-text query construction into the Ladybug driver:
 
 ```powershell
 .\eng\Verify-GraphitiCore.ps1
 ```
 
 Restore, format verification, solution build including `Graphiti.Sample.OpenAI`, full test suite
-(`930` passed, `2` skipped, `932` total), and `dotnet pack` for
+(`932` passed, `2` skipped, `934` total), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` was unset; the two skipped tests were
 `OpenAIProviderIntegrationTests.StructuredResponseSchemas_WithOpenAIProvider_AreAccepted` and
 `OpenAIProviderIntegrationTests.AddEpisodeAsync_WithOpenAIProvider_IngestsResolvedTemporalGraph`.
-No live provider run has passed yet. Focused Ladybug runtime tests also passed:
+No live provider run has passed yet. Focused Ladybug search executor and runtime tests also passed:
+
+```powershell
+dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~LadybugSearchExecutorTests" --verbosity minimal
+```
+
+with `10` Ladybug search executor tests passed.
 
 ```powershell
 dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~LadybugRuntimeDriverTests" --verbosity minimal

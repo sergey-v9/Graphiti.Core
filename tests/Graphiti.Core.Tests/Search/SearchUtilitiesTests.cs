@@ -425,8 +425,8 @@ public class SearchUtilitiesTests
         Assert.Equal(string.Empty, fulltextQuery);
     }
 
-    // NOTE: Kuzu remains the LadybugDB parity/compatibility value. These tests pin the interim
-    // full-text behavior that the LadybugDB provider should preserve or deliberately replace.
+    // NOTE: Kuzu remains the LadybugDB parity/compatibility value. These tests pin the shared
+    // compatibility utility; the active Ladybug driver path has separate executor coverage.
     [Fact]
     public void FulltextQuery_UsesKuzuRawQuerySemantics()
     {

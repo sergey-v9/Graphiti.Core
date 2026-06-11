@@ -91,7 +91,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Search config recipes, reranker enums, wire values | OK | Verified equivalent, parity-tested |
 | Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | OK | Deterministic parts well tested |
 | Community label propagation | OK | Algorithmically equivalent |
-| Graph drivers: InMemory (reference), LadybugDB (investment target), Neo4j (legacy reference) | OK | Runtime proof for Ladybug workflows, file-backed paths, and Kuzu `':memory:'` sentinel compatibility; see kuzu-driver-port.md |
+| Graph drivers: InMemory (reference), LadybugDB (investment target), Neo4j (legacy reference) | OK | Runtime proof for Ladybug workflows, file-backed paths, Kuzu `':memory:'` sentinel compatibility, and Ladybug-owned raw full-text query construction; see kuzu-driver-port.md |
 | LLM/embedder/reranker adapters via Microsoft.Extensions.AI | DIVERGENT | Documented decision; structured output + Polly retries in place. `MicrosoftExtensionsAICrossEncoderClient` uses structured boolean+confidence scoring because generic M.E.AI lacks OpenAI top-logprob controls |
 | Retry-on-validation-failure with error feedback message | llm_client/client.py retry loop | OK | Ported 2026-06-11 in base `LlmClient`: `JsonException` parse/schema failures get two Python-style validation-feedback re-prompts, cache keys remain based on the original prepared messages, and only validated final responses are cached |
 | GLiNER2 local extraction client | N/A | Specialized optional Python feature; out of scope unless requested |

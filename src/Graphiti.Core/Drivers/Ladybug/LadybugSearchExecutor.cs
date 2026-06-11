@@ -20,7 +20,7 @@ internal sealed class LadybugSearchExecutor
         int limit,
         CancellationToken cancellationToken = default)
     {
-        var fulltextQuery = SearchUtilities.FulltextQuery(query, groupIds, GraphProvider.Kuzu);
+        var fulltextQuery = LadybugFulltextQuery.Build(query, groupIds);
         if (fulltextQuery.Length == 0)
         {
             return Array.Empty<SearchHit<EntityNode>>();
@@ -60,7 +60,7 @@ internal sealed class LadybugSearchExecutor
         int limit,
         CancellationToken cancellationToken = default)
     {
-        var fulltextQuery = SearchUtilities.FulltextQuery(query, groupIds, GraphProvider.Kuzu);
+        var fulltextQuery = LadybugFulltextQuery.Build(query, groupIds);
         if (fulltextQuery.Length == 0)
         {
             return Array.Empty<SearchHit<EntityEdge>>();
@@ -142,7 +142,7 @@ internal sealed class LadybugSearchExecutor
         int limit,
         CancellationToken cancellationToken = default)
     {
-        var fulltextQuery = SearchUtilities.FulltextQuery(query, groupIds, GraphProvider.Kuzu);
+        var fulltextQuery = LadybugFulltextQuery.Build(query, groupIds);
         if (fulltextQuery.Length == 0)
         {
             return Array.Empty<SearchHit<EpisodicNode>>();
@@ -164,7 +164,7 @@ internal sealed class LadybugSearchExecutor
         int limit,
         CancellationToken cancellationToken = default)
     {
-        var fulltextQuery = SearchUtilities.FulltextQuery(query, groupIds, GraphProvider.Kuzu);
+        var fulltextQuery = LadybugFulltextQuery.Build(query, groupIds);
         if (fulltextQuery.Length == 0)
         {
             return Array.Empty<SearchHit<CommunityNode>>();
