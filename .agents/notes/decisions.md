@@ -147,10 +147,11 @@ semantics, wire compatibility, or performance/allocation discipline.
   Lucene/Falkor sanitization or rejecting over-limit queries. Active Ladybug search owns this behavior
   in `Drivers/Ladybug/LadybugFulltextQuery`; `SearchUtilities` keeps the `GraphProvider.Kuzu` branch
   for compatibility callers outside the driver.
-- LadybugDB/Kuzu foundation uses the full C# `SagaNode` model shape for Saga schema/save/get and
-  includes entity-edge `reference_time` in save/get/search projections. This deliberately fixes
-  Python Kuzu operation mismatches so the C# runtime path can persist and read Graphiti's model
-  fields consistently when backend wiring lands.
+- LadybugDB/Kuzu foundation uses the full C# `SagaNode` model shape for Saga schema/save/get,
+  includes entity-edge `reference_time` in save/get/search projections, and returns entity edges
+  incident to either endpoint from `GetEntityEdgesByNodeUuidAsync`. This deliberately fixes Python
+  Kuzu operation mismatches so the C# runtime path can persist and read Graphiti's model fields
+  consistently.
 - Real tiktoken-based chunking is the default, but callers can register `HeuristicTokenCounter(4)`
   when they need Python's exact token estimate.
 - Saga summaries hard-truncate like Python. Community/entity summary paths keep sentence-aware

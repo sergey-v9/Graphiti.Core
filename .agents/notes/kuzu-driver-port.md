@@ -17,14 +17,14 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 - `GraphProvider.Kuzu` is a supported core options/DI path and resolves to the LadybugDB-backed
   driver.
 - Runtime proof covers the main ingest/search/removal/triplet/bulk/saga/community workflows,
-  group-id enumeration, file-backed `DatabasePath` persistence, core `GraphProvider.Kuzu`
-  `Database` persistence, and Python Kuzu `':memory:'` sentinel compatibility. Treat tests as the
-  detailed proof source.
+  incident entity-edge reads, group-id enumeration, file-backed `DatabasePath` persistence, core
+  `GraphProvider.Kuzu` `Database` persistence, and Python Kuzu `':memory:'` sentinel compatibility.
+  Treat tests as the detailed proof source.
 - `LadybugPackageRuntimeTests` exercise the actual LadybugDB package/native path in normal
   verification, including schema creation, list/null normalization, FTS loading/search, vector
-  search, filters, group-id enumeration, BFS/rankers, and delete/clear flows. Do not add a separate
-  native-gated smoke suite unless it covers a new runtime requirement or CI/platform constraint the
-  current package runtime tests do not cover.
+  search, filters, incident edge reads, group-id enumeration, BFS/rankers, and delete/clear flows.
+  Do not add a separate native-gated smoke suite unless it covers a new runtime requirement or
+  CI/platform constraint the current package runtime tests do not cover.
 - The LadybugDB package has a nearby source checkout at `W:\code\ladybug`; this is background
   provenance for the NuGet/API surface. Graphiti work operates against package-facing behavior and
   Graphiti tests. When package or binding behavior looks suspect, mark the symptom separately from
@@ -72,9 +72,11 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
   parameters throw `ArgumentNullException`.
 - `LadybugStatementNormalizer` is the current execution strategy for those binder gaps. It rewrites
   list/array/null values into Kuzu literals while leaving scalar values bound for prepared execution.
-- The current Python Kuzu code has provider-specific inconsistencies around Saga schema/query fields
-  and entity-edge `reference_time`. The C# foundation intentionally uses the full `SagaNode` shape and
-  saves/returns entity-edge `reference_time`.
+- The current Python Kuzu code has provider-specific inconsistencies around Saga schema/query fields,
+  entity-edge `reference_time`, and source-only `EntityEdge.get_by_node_uuid` reads. The C#
+  foundation intentionally uses the full `SagaNode` shape, saves/returns entity-edge
+  `reference_time`, and keeps `GetEntityEdgesByNodeUuidAsync` incident to either endpoint like the
+  public graph-driver contract.
 
 ## Existing Touchpoints
 

@@ -260,7 +260,8 @@ internal static class LadybugStatementBuilder
     internal static LadybugStatement BuildEntityEdgesByNodeUuidGet(string nodeUuid) =>
         new(
             """
-            MATCH (n:Entity {uuid: $node_uuid})-[:RELATES_TO]->(e:RelatesToNode_)-[:RELATES_TO]->(m:Entity)
+            MATCH (n:Entity)-[:RELATES_TO]->(e:RelatesToNode_)-[:RELATES_TO]->(m:Entity)
+            WHERE n.uuid = $node_uuid OR m.uuid = $node_uuid
             RETURN
             """ + EdgeReturnClause<EntityEdge>(),
             Parameters(("node_uuid", nodeUuid)));

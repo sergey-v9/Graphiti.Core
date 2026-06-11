@@ -108,6 +108,94 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_GraphDriverReturnsEntityEdgesIncidentToEitherEndpoint()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var referenceTime = new DateTime(2026, 2, 4, 5, 6, 7, DateTimeKind.Utc);
+        var alice = new EntityNode
+        {
+            Uuid = "entity-incident-alice",
+            Name = "Alice",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            Summary = "incident center"
+        };
+        var bob = new EntityNode
+        {
+            Uuid = "entity-incident-bob",
+            Name = "Bob",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            Summary = "outgoing target"
+        };
+        var carol = new EntityNode
+        {
+            Uuid = "entity-incident-carol",
+            Name = "Carol",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            Summary = "incoming source"
+        };
+        var dave = new EntityNode
+        {
+            Uuid = "entity-incident-dave",
+            Name = "Dave",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            Summary = "unrelated source"
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(alice);
+        await driver.SaveNodeAsync(bob);
+        await driver.SaveNodeAsync(carol);
+        await driver.SaveNodeAsync(dave);
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-incident-outgoing",
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            GroupId = "tenant",
+            Name = "MENTORS",
+            Fact = "Alice mentors Bob",
+            CreatedAt = referenceTime,
+            ValidAt = referenceTime,
+            ReferenceTime = referenceTime
+        });
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-incident-incoming",
+            SourceNodeUuid = carol.Uuid,
+            TargetNodeUuid = alice.Uuid,
+            GroupId = "tenant",
+            Name = "SUPPORTS",
+            Fact = "Carol supports Alice",
+            CreatedAt = referenceTime,
+            ValidAt = referenceTime,
+            ReferenceTime = referenceTime
+        });
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-incident-unrelated",
+            SourceNodeUuid = dave.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            GroupId = "tenant",
+            Name = "KNOWS",
+            Fact = "Dave knows Bob",
+            CreatedAt = referenceTime,
+            ValidAt = referenceTime,
+            ReferenceTime = referenceTime
+        });
+
+        var incidentEdges = await driver.GetEntityEdgesByNodeUuidAsync(alice.Uuid);
+
+        Assert.Equal(
+            new[] { "edge-incident-incoming", "edge-incident-outgoing" },
+            incidentEdges.Select(edge => edge.Uuid).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public async Task PackageRuntime_NormalizedStatementsRoundTripEpisodeMentionsAndGroupFilters()
     {
         await using var executor = new PackageLadybugExecutor();

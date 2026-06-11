@@ -380,7 +380,11 @@ public class LadybugFoundationTests
         Assert.Contains("AND e.uuid < $uuid", byGroup.Query, StringComparison.Ordinal);
         Assert.Contains("LIMIT $limit", byGroup.Query, StringComparison.Ordinal);
         Assert.Contains("m:Entity {uuid: $target_node_uuid}", between.Query, StringComparison.Ordinal);
-        Assert.Contains("n:Entity {uuid: $node_uuid}", byNode.Query, StringComparison.Ordinal);
+        Assert.Contains(
+            "MATCH (n:Entity)-[:RELATES_TO]->(e:RelatesToNode_)-[:RELATES_TO]->(m:Entity)",
+            byNode.Query,
+            StringComparison.Ordinal);
+        Assert.Contains("WHERE n.uuid = $node_uuid OR m.uuid = $node_uuid", byNode.Query, StringComparison.Ordinal);
         Assert.Contains("RETURN e.fact_embedding AS fact_embedding", loadOne.Query, StringComparison.Ordinal);
         Assert.Contains("WHERE e.uuid IN $edge_uuids", loadMany.Query, StringComparison.Ordinal);
         Assert.Equal(new[] { "edge-1", "edge-2" }, Assert.IsType<List<string>>(loadMany.Parameters["edge_uuids"]));
