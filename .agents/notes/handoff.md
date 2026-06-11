@@ -129,7 +129,7 @@ Succeeded after moving active LadybugDB label-filter construction into the Ladyb
 ```
 
 Restore, format verification, solution build including `Graphiti.Sample.OpenAI`, full test suite
-(`932` passed, `2` skipped, `934` total), and `dotnet pack` for
+(`933` passed, `2` skipped, `935` total), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` was unset; the two skipped tests were
 `OpenAIProviderIntegrationTests.StructuredResponseSchemas_WithOpenAIProvider_AreAccepted` and
 `OpenAIProviderIntegrationTests.AddEpisodeAsync_WithOpenAIProvider_IngestsResolvedTemporalGraph`.
