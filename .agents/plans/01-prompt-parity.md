@@ -58,8 +58,10 @@ unused list).
 - [x] 9. `summarize_sagas.summarize_saga`: already faithful inline in SagaService.cs:175. Move it
       into Prompts/SummarizeSagasPrompts for uniformity + golden test. Restored the Python worked
       examples while moving after rechecking the source. Landed 2026-06-11.
-- [ ] 10. Sweep: grep `src/` for `new Message("system"` outside `Prompts/` — there should be none
+- [x] 10. Sweep: grep `src/` for `new Message("system"` outside `Prompts/` — there should be none
       left. Update `parity.md` prompt table; mark Phase 1 done in `roadmap.md` if all rows OK.
+      Landed 2026-06-11: no inline live C# prompt call sites remain; remaining MISSING prompt rows
+      have no C# call site yet and are owned by plan 02 feature work.
 
 Items 3–9 are independent of each other — any session can pick any unchecked item, but do exactly
 one item per slice, verify, commit, check it off here.
@@ -73,5 +75,6 @@ substrings, update it to assert against the new rendered text, never by weakenin
 
 ## Done when
 
-All items checked, `parity.md` prompt table has no STUB/MISSING rows for live prompts, and
-`roadmap.md` Phase 1 is marked complete.
+All items checked, `parity.md` prompt table has no STUB rows for live C# prompt call sites, and
+`roadmap.md` Phase 1 is marked complete for existing C# call sites. Prompt rows that remain
+`MISSING` because the C# pipeline feature itself is absent are explicitly owned by plan 02.

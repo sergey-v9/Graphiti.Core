@@ -52,7 +52,8 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
   a structurally valid but semantically poor graph with a real LLM. Node/edge extraction prompts and
   edge timestamp extraction prompts, node dedupe prompts, edge dedupe prompts, node/edge attribute
   extraction prompts, community summary/name prompts, and saga summary prompts were ported
-  2026-06-11 (`Prompts/`); the remaining prompt rows in `parity.md` are still MISSING. Entity
+  2026-06-11 (`Prompts/`). There are no inline live C# prompt call sites left; remaining `MISSING`
+  prompt rows in `parity.md` have no C# call site because their pipeline feature is absent. Entity
   summaries are never generated during ingestion. Several invented fallbacks mask LLM failures and
   must be removed (plan 02).
 - **Never exercised:** any real LLM/embedding provider, end to end. The deterministic suite cannot

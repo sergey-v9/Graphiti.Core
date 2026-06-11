@@ -26,7 +26,9 @@ context exist" does NOT make a prompt ported — the instruction text must be po
 prompt-quality gaps because it uses fake LLM clients.
 
 Live Python pipeline call sites (everything else in `prompts/` is currently unused by the Python
-pipeline — do not port without a reason):
+pipeline — do not port without a reason). Rows marked `MISSING` below have no C# call site yet
+because the corresponding pipeline feature is absent; they are owned by plan 02 and should be
+ported with that feature instead of as dead prompt code:
 
 | Prompt | Python source | C# call site | Status | Notes |
 |---|---|---|---|---|

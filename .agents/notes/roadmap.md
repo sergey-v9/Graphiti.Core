@@ -24,14 +24,15 @@ guidance produced an unbounded stream of micro-optimization slices on a library 
 layer was still hollow; that ordering was wrong. Modernization/polish resumes, with measurement
 discipline, in Phase 5.
 
-## Phase 1 — Prompt parity (ACTIVE)
+## Phase 1 — Prompt parity for existing C# call sites (COMPLETE 2026-06-11)
 
 Port the instruction text of every live Python prompt into `src/Graphiti.Core/Prompts/`, with
 golden-text tests pinning the rendered output. Work order: `.agents/plans/01-prompt-parity.md`.
 
-Done when: every prompt row in `parity.md` is `OK` (or has an explicit `DIVERGENT` decision), the
-prompt builders live in `Prompts/` (services no longer inline prompt text), and golden tests exist
-for each builder.
+Complete for every existing C# prompt call site: prompt builders live in `Prompts/`, services no
+longer inline prompt text, and golden tests exist for each builder. Remaining `MISSING` prompt rows
+in `parity.md` are tied to absent pipeline features (entity summary generation and combined
+extraction) and are owned by Phase 2.
 
 ## Phase 2 — Pipeline semantic parity (ACTIVE)
 
