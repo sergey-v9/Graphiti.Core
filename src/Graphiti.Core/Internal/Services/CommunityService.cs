@@ -253,11 +253,7 @@ internal sealed class CommunityService(
         try
         {
             var response = await llmClient.GenerateTypedResponseAsync<Graphiti.CommunitySummaryResponse>(
-                new[]
-                {
-                    new Message("system", "Summarize this cluster of related entities as a concise community."),
-                    new Message("user", deterministicSummary)
-                },
+                SummarizeNodesPrompts.BuildSummarizePair(left, right),
                 promptName: "summarize_nodes.summarize_pair",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -283,11 +279,7 @@ internal sealed class CommunityService(
         try
         {
             var response = await llmClient.GenerateTypedResponseAsync<Graphiti.CommunityNameResponse>(
-                new[]
-                {
-                    new Message("system", "Name this entity community in five words or fewer."),
-                    new Message("user", summary)
-                },
+                SummarizeNodesPrompts.BuildSummaryDescription(summary),
                 promptName: "summarize_nodes.summary_description",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 

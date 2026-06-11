@@ -43,8 +43,8 @@ pipeline — do not port without a reason):
 | `extract_nodes_and_edges.extract_message` | prompts/extract_nodes_and_edges.py | — | MISSING | Combined single-call extraction; see pipeline row below |
 | `extract_nodes.extract_summaries_batch` | prompts/extract_nodes.py:509 | — | MISSING | C# never generates entity summaries during ingestion |
 | `extract_nodes.extract_entity_summaries_from_episodes` | prompts/extract_nodes.py:613 | — | MISSING | Same area |
-| `summarize_nodes.summarize_pair` | prompts/summarize_nodes.py:54 | CommunityService.cs:255 | STUB | C# sends deterministic pre-built text + one-line system msg instead of Python's synthesize-two-summaries prompt |
-| `summarize_nodes.summary_description` | prompts/summarize_nodes.py:119 | CommunityService.cs:285 | STUB | One-line paraphrase |
+| `summarize_nodes.summarize_pair` | prompts/summarize_nodes.py:54 | CommunityService → Prompts/SummarizeNodesPrompts | OK | Ported 2026-06-11; sends the two source summaries as JSON like Python, deterministic text remains only no-LLM fallback |
+| `summarize_nodes.summary_description` | prompts/summarize_nodes.py:119 | CommunityService → Prompts/SummarizeNodesPrompts | OK | Ported 2026-06-11; golden-text tests pin one-sentence description prompt |
 | `summarize_sagas.summarize_saga` | prompts/summarize_sagas.py | SagaService.cs:175 | OK | Near-verbatim port (verified word-for-word); the model for how the rest should look |
 
 Unused-in-pipeline Python prompts (verify before porting; as of the baseline these have no live

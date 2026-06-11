@@ -772,6 +772,18 @@ public class GraphitiCommunityTests
         private static string ReadCommunityName(IReadOnlyList<Message> messages)
         {
             var content = messages.Count == 0 ? string.Empty : messages[^1].Content;
+            const string marker = "Summary:\n";
+            var markerIndex = content.IndexOf(marker, StringComparison.Ordinal);
+            if (markerIndex >= 0)
+            {
+                var summaryJson = content[(markerIndex + marker.Length)..].Trim();
+                var summary = JsonNode.Parse(summaryJson)?.GetValue<string>() ?? string.Empty;
+                var summarySeparator = summary.IndexOf(':', StringComparison.Ordinal);
+                return summarySeparator > 0
+                    ? summary[..summarySeparator]
+                    : summary.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "Unknown";
+            }
+
             var separator = content.IndexOf(':', StringComparison.Ordinal);
             return separator > 0
                 ? content[..separator]

@@ -49,11 +49,12 @@ unused list).
 - [x] 7. `extract_edges.extract_attributes` → ExtractEdgesPrompts.BuildExtractAttributes; wire
       AttributeExtractionService.cs:45. Python: prompts/extract_edges.py:181-239. Same HARD RULES
       remark. Landed 2026-06-11.
-- [ ] 8. `summarize_nodes.summarize_pair` + `summary_description` → new SummarizeNodesPrompts;
+- [x] 8. `summarize_nodes.summarize_pair` + `summary_description` → new SummarizeNodesPrompts;
       wire CommunityService.cs:255/285. Python: prompts/summarize_nodes.py:54-135. Note: Python
       sends the two source summaries in the prompt and lets the LLM synthesize;
       C# currently pre-builds a deterministic text and asks the LLM to compress it. Align with
-      Python; keep the deterministic builder only as the documented no-LLM fallback.
+      Python; keep the deterministic builder only as the documented no-LLM fallback. Landed
+      2026-06-11.
 - [ ] 9. `summarize_sagas.summarize_saga`: already faithful inline in SagaService.cs:175. Move it
       into Prompts/SummarizeSagasPrompts for uniformity + golden test. Pure mechanical move.
 - [ ] 10. Sweep: grep `src/` for `new Message("system"` outside `Prompts/` — there should be none

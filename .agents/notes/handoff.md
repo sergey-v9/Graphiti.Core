@@ -45,14 +45,14 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
 
 - **Solid and verified:** project/infrastructure shape (net10.0, analyzers, packaging), drivers
   (InMemory reference, LadybugDB runtime proof, Neo4j legacy), search ranking/fusion/reranking,
-  community label propagation, text utilities, serialization/cache identity, DI/options. 891
+  community label propagation, text utilities, serialization/cache identity, DI/options. 893
   deterministic tests green.
 - **Hollow until plans 01–02 land:** the LLM-facing semantic layer. Most prompt instruction text
   was never ported — services sent one-line system messages plus raw JSON context, which produces
   a structurally valid but semantically poor graph with a real LLM. Node/edge extraction prompts and
-  edge timestamp extraction prompts, node dedupe prompts, edge dedupe prompts, node attribute
-  extraction prompts, and edge attribute extraction prompts were ported 2026-06-11 (`Prompts/`);
-  the remaining prompt rows in `parity.md` are still STUB or MISSING. Entity summaries are never
+  edge timestamp extraction prompts, node dedupe prompts, edge dedupe prompts, node/edge attribute
+  extraction prompts, and community summary/name prompts were ported 2026-06-11 (`Prompts/`); the
+  remaining prompt rows in `parity.md` are still STUB or MISSING. Entity summaries are never
   generated during ingestion. Several invented fallbacks mask LLM failures and must be removed
   (plan 02).
 - **Never exercised:** any real LLM/embedding provider, end to end. The deterministic suite cannot
@@ -87,8 +87,8 @@ added.
 
 Latest checkpoint, 2026-06-11:
 `.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Prompts"`
-succeeded after the edge attribute prompt port: locked restore, focused prompt golden tests (`13`
-passed), format verification, no-incremental build, full test suite (`891` passed), and `dotnet pack`
+succeeded after the community summary/name prompt port: locked restore, focused prompt golden tests
+(`15` passed), format verification, no-incremental build, full test suite (`893` passed), and `dotnet pack`
 for `Graphiti.Core.2.0.0-alpha.1.nupkg`. No real-provider run has ever been executed (plan 03).
 
 Primary full verification command from the C# repo root:
