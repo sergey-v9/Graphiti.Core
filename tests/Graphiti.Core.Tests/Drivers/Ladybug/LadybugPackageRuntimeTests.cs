@@ -50,6 +50,103 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_SaveBulkPersistsGeneratedEmbeddingsAndRelationships()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var createdAt = new DateTime(2026, 2, 2, 3, 4, 5, DateTimeKind.Utc);
+        var episode = new EpisodicNode
+        {
+            Uuid = "bulk-episode",
+            Name = "bulk episode",
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Alice introduced Bob during the bulk save.",
+            ValidAt = createdAt.AddMinutes(1),
+            EntityEdges = ["bulk-edge"]
+        };
+        var source = new EntityNode
+        {
+            Uuid = "bulk-alice",
+            Name = "Bulk Alice",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            Summary = "source saved through direct bulk driver flow"
+        };
+        var target = new EntityNode
+        {
+            Uuid = "bulk-bob",
+            Name = "Bulk Bob",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            Summary = "target saved through direct bulk driver flow"
+        };
+        var mention = new EpisodicEdge
+        {
+            Uuid = "bulk-mention",
+            SourceNodeUuid = episode.Uuid,
+            TargetNodeUuid = source.Uuid,
+            GroupId = "tenant",
+            CreatedAt = createdAt
+        };
+        var fact = new EntityEdge
+        {
+            Uuid = "bulk-edge",
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = target.Uuid,
+            GroupId = "tenant",
+            Name = "INTRODUCED",
+            Fact = "Bulk Alice introduced Bulk Bob.",
+            Episodes = [episode.Uuid],
+            CreatedAt = createdAt,
+            ValidAt = createdAt.AddMinutes(1),
+            ReferenceTime = createdAt.AddMinutes(1)
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveBulkAsync(
+            [episode],
+            [mention],
+            [source, target],
+            [fact],
+            new HashEmbedder(4));
+
+        var storedEpisode = await driver.GetNodeByUuidAsync<EpisodicNode>(episode.Uuid);
+        var storedNodes = await driver.GetNodesByGroupIdsAsync<EntityNode>(
+            ["tenant"],
+            withEmbeddings: true);
+        var storedFact = Assert.Single(await driver.GetEdgesByGroupIdsAsync<EntityEdge>(
+            ["tenant"],
+            withEmbeddings: true));
+        var storedMention = Assert.Single(await driver.GetEdgesByUuidsAsync<EpisodicEdge>(
+            [mention.Uuid]));
+        var episodesByEntity = await driver.GetEpisodesByEntityNodeUuidAsync(source.Uuid);
+        var mentionedNodes = await driver.GetMentionedNodesAsync([episode]);
+
+        Assert.Equal(episode.Uuid, storedEpisode.Uuid);
+        Assert.Equal(new[] { fact.Uuid }, storedEpisode.EntityEdges);
+        Assert.Equal(new[] { source.Uuid, target.Uuid }, storedNodes.Select(node => node.Uuid).Order(StringComparer.Ordinal));
+        Assert.All(storedNodes, node =>
+        {
+            Assert.NotNull(node.NameEmbedding);
+            Assert.Equal(4, node.NameEmbedding.Count);
+        });
+        Assert.Equal(source.Uuid, storedFact.SourceNodeUuid);
+        Assert.Equal(target.Uuid, storedFact.TargetNodeUuid);
+        Assert.Equal(new[] { episode.Uuid }, storedFact.Episodes);
+        Assert.NotNull(storedFact.FactEmbedding);
+        Assert.Equal(4, storedFact.FactEmbedding.Count);
+        Assert.Equal(episode.Uuid, storedMention.SourceNodeUuid);
+        Assert.Equal(source.Uuid, storedMention.TargetNodeUuid);
+        Assert.Equal(episode.Uuid, Assert.Single(episodesByEntity).Uuid);
+        Assert.Equal(source.Uuid, Assert.Single(mentionedNodes).Uuid);
+    }
+
+    [Fact]
     public async Task PackageRuntime_NormalizedStatementsRoundTripEntityEdgeListsAndNulls()
     {
         await using var executor = new PackageLadybugExecutor();
