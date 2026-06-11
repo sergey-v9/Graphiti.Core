@@ -19,6 +19,11 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 - Runtime proof covers the main ingest/search/removal/triplet/bulk/saga/community workflows,
   file-backed `DatabasePath` persistence, and Python Kuzu `':memory:'` sentinel compatibility.
   Treat tests as the detailed proof source.
+- `LadybugPackageRuntimeTests` exercise the actual LadybugDB package/native path in normal
+  verification, including schema creation, list/null normalization, FTS loading/search, vector
+  search, filters, BFS/rankers, and delete/clear flows. Do not add a separate native-gated smoke
+  suite unless it covers a new runtime requirement or CI/platform constraint the current package
+  runtime tests do not cover.
 - The LadybugDB package has a nearby source checkout at `W:\code\ladybug`; this is background
   provenance for the NuGet/API surface. Graphiti work operates against package-facing behavior and
   Graphiti tests. When package or binding behavior looks suspect, mark the symptom separately from
@@ -92,7 +97,8 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
    ingest/search/removal/triplet/bulk/saga/community tests.
 2. Add host-facing options only when real runtime requirements appear. `DatabasePath` exists; avoid
    speculative options.
-3. Add native-gated integration smoke tests if they provide coverage beyond the current runtime tests.
+3. Add native-gated integration smoke tests only if they provide coverage beyond the current package
+   runtime tests or solve a CI/platform constraint.
 4. Decide the final driver-facing naming beyond the current `GraphProvider.Kuzu` compatibility value.
 5. Revisit any remaining interim Kuzu query/filter helpers and move provider-specific behavior into
    the driver when appropriate. Active Ladybug full-text query construction now lives in
