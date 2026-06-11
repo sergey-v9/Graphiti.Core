@@ -45,11 +45,17 @@ and check off here.**
         broad unfiltered edge hybrid search and excludes related duplicate candidates. Added a
         regression test proving a new fact can invalidate an older edge attached to a different
         target node.
-- [ ] 4. Multi-episode attribution. Python tracks per-node/per-edge `episode_indices`
+- [x] 4. Multi-episode attribution. Python tracks per-node/per-edge `episode_indices`
       (`node_operations.py:103-112,283-306`, `edge_operations.py` episode_attribution) and the
       prompts ask for them; C# hardcodes attribution to episode [0]. Port the attribution plumbing
       (extraction response → `node_episode_index_map` equivalent → episodic edges) — matters for
       `add_episode_bulk` correctness.
+      - Done 2026-06-11: C# now preserves node and edge `episode_indices` from structured
+        extraction responses, normalizes invalid or empty indices with Python's fallback-to-all
+        semantics, remaps node attribution through node resolution, feeds node attribution into
+        episodic edge creation, and uses edge attribution for fact `Episodes`/`ReferenceTime`.
+        This does not change C# bulk ingestion's per-episode loop or batch dedupe/resolve
+        semantics, which remain item 6.
 - [ ] 5. Combined extraction path. Python's newer single-call node+edge extraction
       (`utils/maintenance/combined_extraction.py`, prompt `extract_nodes_and_edges.extract_message`,
       batch timestamps via `extract_edges.extract_timestamps_batch`). Decide with the user whether

@@ -4,8 +4,6 @@ internal sealed class EpisodeGraphExtractor(
     ILlmClient llmClient,
     Func<DateTime> utcNow)
 {
-    private static readonly IReadOnlyList<int> FirstEpisodeIndex = Array.AsReadOnly(new[] { 0 });
-
     public async Task<(List<EntityNode> Nodes, List<Graphiti.ExtractedEdge> Edges, Dictionary<string, IReadOnlyList<int>> Attribution)> ExtractEpisodeGraphAsync(
         EpisodicNode episode,
         IReadOnlyList<EpisodicNode> previousEpisodes,
@@ -88,12 +86,13 @@ internal sealed class EpisodeGraphExtractor(
                 promptName: NodeExtractionPromptName(episode.Source),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            var extractedNames = Graphiti.ExtractEntityNames(llmResponse, entityTypes);
+            var extractedEntities = Graphiti.ExtractEntities(llmResponse, entityTypes);
 
             var excluded = BuildExcludedEntityTypeSet(excludedEntityTypes);
             var skippedExcluded = 0;
             var nodes = new List<EntityNode>();
-            foreach (var extracted in extractedNames)
+            var attribution = new Dictionary<string, IReadOnlyList<int>>(StringComparer.Ordinal);
+            foreach (var extracted in extractedEntities)
             {
                 if (excluded is not null && excluded.Contains(extracted.Type))
                 {
@@ -115,10 +114,12 @@ internal sealed class EpisodeGraphExtractor(
                     CreatedAt = utcNow()
                 };
                 nodes.Add(node);
+                attribution[node.Uuid] = EpisodeAttribution.NormalizeIndices(
+                    extracted.EpisodeIndices,
+                    episodeCount: 1);
             }
 
-            var attribution = BuildFirstEpisodeAttribution(nodes);
-            activity?.SetTag("graphiti.extraction.candidates", extractedNames.Count);
+            activity?.SetTag("graphiti.extraction.candidates", extractedEntities.Count);
             activity?.SetTag("graphiti.extraction.fallback", false);
             activity?.SetTag("graphiti.extraction.excluded", skippedExcluded);
             activity?.SetTag("graphiti.result.nodes", nodes.Count);
@@ -146,17 +147,6 @@ internal sealed class EpisodeGraphExtractor(
         }
 
         return excluded;
-    }
-
-    private static Dictionary<string, IReadOnlyList<int>> BuildFirstEpisodeAttribution(List<EntityNode> nodes)
-    {
-        var attribution = new Dictionary<string, IReadOnlyList<int>>(nodes.Count, StringComparer.Ordinal);
-        for (var i = 0; i < nodes.Count; i++)
-        {
-            attribution.Add(nodes[i].Uuid, FirstEpisodeIndex);
-        }
-
-        return attribution;
     }
 
     private async Task<List<Graphiti.ExtractedEdge>> ExtractEpisodeEdgesAsync(

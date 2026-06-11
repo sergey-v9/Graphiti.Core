@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Text.Json.Nodes;
+using Graphiti.Core.Internal.Helpers;
 
 namespace Graphiti.Core.Tests;
 
@@ -75,6 +76,42 @@ public class GraphitiExtractionParsingTests
     }
 
     [Fact]
+    public void ExtractEntities_PreservesEpisodeIndicesAndDefaultsMissingIndices()
+    {
+        var response = new JsonObject
+        {
+            ["extracted_entities"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["name"] = "Alice",
+                    ["entity_type"] = "Person",
+                    ["episode_indices"] = new JsonArray { "2", 0, -1 }
+                },
+                new JsonObject { ["name"] = "Bob", ["entity_type"] = "Person" },
+                new JsonObject
+                {
+                    ["name"] = "Carol",
+                    ["entity_type"] = "Person",
+                    ["episode_indices"] = new JsonArray()
+                }
+            }
+        };
+
+        var extracted = Graphiti.ExtractEntities(response, entityTypes: null);
+
+        Assert.Collection(
+            extracted,
+            item =>
+            {
+                Assert.Equal("Alice", item.Name);
+                Assert.Equal(new[] { 2, 0, -1 }, item.EpisodeIndices);
+            },
+            item => Assert.Equal(new[] { 0 }, item.EpisodeIndices),
+            item => Assert.Empty(item.EpisodeIndices));
+    }
+
+    [Fact]
     public void ExtractEdges_UsesJsonTextFallbackForNonStringValues()
     {
         var response = new JsonObject
@@ -121,6 +158,95 @@ public class GraphitiExtractionParsingTests
 
         Assert.Equal(new DateTime(2026, 1, 2, 1, 34, 5, DateTimeKind.Utc), edge.ValidAt);
         Assert.Null(edge.InvalidAt);
+    }
+
+    [Fact]
+    public void ExtractEdges_PreservesEpisodeIndicesAndDefaultsMissingIndices()
+    {
+        var response = new JsonObject
+        {
+            ["edges"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["source"] = "Alice",
+                    ["target"] = "Bob",
+                    ["fact"] = "Alice knows Bob.",
+                    ["episode_indices"] = new JsonArray { 1, "0", 99 }
+                },
+                new JsonObject
+                {
+                    ["source"] = "Alice",
+                    ["target"] = "Acme",
+                    ["fact"] = "Alice works at Acme."
+                },
+                new JsonObject
+                {
+                    ["source"] = "Bob",
+                    ["target"] = "Acme",
+                    ["fact"] = "Bob works at Acme.",
+                    ["episode_indices"] = new JsonArray()
+                }
+            }
+        };
+
+        var edges = Graphiti.ExtractEdges(response);
+
+        Assert.Collection(
+            edges,
+            item => Assert.Equal(new[] { 1, 0, 99 }, item.EpisodeIndices),
+            item => Assert.Equal(new[] { 0 }, item.EpisodeIndices),
+            item => Assert.Empty(item.EpisodeIndices));
+    }
+
+    [Fact]
+    public void EpisodeAttribution_NormalizesIndicesLikePythonExtraction()
+    {
+        Assert.Equal(
+            new[] { 2, 0 },
+            EpisodeAttribution.NormalizeIndices(new[] { 2, 0, -1, 99 }, episodeCount: 3));
+        Assert.Equal(
+            new[] { 0, 1, 2 },
+            EpisodeAttribution.NormalizeIndices(Array.Empty<int>(), episodeCount: 3));
+        Assert.Equal(
+            new[] { 0, 1 },
+            EpisodeAttribution.NormalizeIndices(null, episodeCount: 2));
+    }
+
+    [Fact]
+    public void EpisodeAttribution_RemapsExtractedNodeIndicesToResolvedNodes()
+    {
+        var singleRemap = EpisodeAttribution.RemapNodeIndexMap(
+            new[] { new EntityNode { Uuid = "ordered-extracted", Name = "Ordered" } },
+            new Dictionary<string, IReadOnlyList<int>>(StringComparer.Ordinal)
+            {
+                ["ordered-extracted"] = new[] { 2, 0 }
+            },
+            new Dictionary<string, EntityNode>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Ordered"] = new EntityNode { Uuid = "ordered-resolved", Name = "Ordered" }
+            });
+
+        Assert.Equal(new[] { 2, 0 }, Assert.Single(singleRemap).Value);
+
+        var firstExtracted = new EntityNode { Uuid = "first-extracted", Name = "Alice" };
+        var secondExtracted = new EntityNode { Uuid = "second-extracted", Name = "Alicia" };
+        var resolved = new EntityNode { Uuid = "resolved-alice", Name = "Alice" };
+
+        var remapped = EpisodeAttribution.RemapNodeIndexMap(
+            new[] { firstExtracted, secondExtracted },
+            new Dictionary<string, IReadOnlyList<int>>(StringComparer.Ordinal)
+            {
+                ["first-extracted"] = new[] { 2, 0 },
+                ["second-extracted"] = new[] { 1, 2 }
+            },
+            new Dictionary<string, EntityNode>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Alice"] = resolved,
+                ["Alicia"] = resolved
+            });
+
+        Assert.Equal(new[] { 0, 1, 2 }, Assert.Single(remapped).Value);
     }
 
     private sealed class ThrowingEnumerationEntityTypes : IReadOnlyDictionary<string, EntityTypeDefinition>

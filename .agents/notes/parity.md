@@ -61,7 +61,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 |---|---|---|---|---|
 | Episode bookkeeping, previous-episode window | graphiti.py | Graphiti.Ingestion.cs | OK | |
 | Node extraction (LLM) | node_operations.extract_nodes | EpisodeGraphExtractor | OK | Prompts ported 2026-06-11 |
-| Multi-episode node attribution | node_operations.py:103-112, 283-306 | — | PARTIAL | C# always attributes nodes to episode [0]; bulk loses per-episode granularity |
+| Multi-episode node/fact attribution | node_operations.py:103-112, 283-306; edge_operations.py:170-180, 290-313 | EpisodeGraphExtractor → EpisodeAttribution → MaintenanceUtilities.BuildEpisodicEdges / EdgeResolutionService | OK | C# parses `episode_indices` for extracted nodes and facts, remaps node attribution through resolution before building episodic edges, and maps fact attribution to edge `Episodes`/`ReferenceTime`; true bulk dedupe/resolve semantics remain tracked in the bulk ingestion row |
 | Node resolution: deterministic + embedding + LLM dedup | node_operations.resolve_extracted_nodes | NodeResolutionService | OK | Prompt ported 2026-06-11; deterministic, embedding, and LLM dedupe stages covered |
 | Entity attribute extraction | node_operations.extract_attributes_from_nodes | AttributeExtractionService | OK | Overlay merge and anti-hallucination prompt ported 2026-06-11 |
 | Entity summary generation (batch, fact-appending) | node_operations.py:833-1000 | EntitySummaryService | OK | Ported 2026-06-11; appends short new edge facts, batches 30-node LLM flights, supports internal filter/episode-prompt hooks, truncates LLM summaries |

@@ -38,8 +38,8 @@ extraction) and are owned by Phase 2.
 
 Close the behavioral gaps in ingestion that survive even with good prompts. Work order:
 `.agents/plans/02-pipeline-parity.md`. Entity summary generation, removal/constraining of invented
-LLM-failure fallbacks, and broad invalidation-candidate search are closed as of 2026-06-11.
-Remaining headline items: multi-episode attribution, combined extraction path, bulk true-batch
+LLM-failure fallbacks, broad invalidation-candidate search, and multi-episode attribution are
+closed as of 2026-06-11. Remaining headline items: combined extraction path, bulk true-batch
 semantics, validation-failure re-prompting in the LLM client.
 
 Done when: the ingestion-pipeline table in `parity.md` has no `MISSING` rows and every `PARTIAL`

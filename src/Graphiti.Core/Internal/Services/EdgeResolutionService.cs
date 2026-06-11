@@ -50,6 +50,7 @@ internal sealed class EdgeResolutionService(
             var resultUuids = new HashSet<string>(StringComparer.Ordinal);
             var seen = new HashSet<(string SourceUuid, string TargetUuid, string NormalizedFact)>();
             var skippedEdges = 0;
+            var episodes = new[] { episode };
             foreach (var extracted in extractedEdges)
             {
                 if (!nodesByExtractedName.TryGetValue(extracted.SourceName, out var sourceNode)
@@ -79,10 +80,13 @@ internal sealed class EdgeResolutionService(
                     CreatedAt = now,
                     Name = string.IsNullOrWhiteSpace(extracted.RelationType) ? "RELATES_TO" : extracted.RelationType,
                     Fact = extracted.Fact,
-                    Episodes = new List<string> { episode.Uuid },
+                    Episodes = EpisodeAttribution.MapIndicesToEpisodeUuids(extracted.EpisodeIndices, episodes),
                     ValidAt = extracted.ValidAt,
                     InvalidAt = extracted.InvalidAt,
-                    ReferenceTime = episode.ValidAt
+                    ReferenceTime = EpisodeAttribution.ReferenceTimeForFirstValidIndex(
+                        extracted.EpisodeIndices,
+                        episodes,
+                        episode.ValidAt)
                 };
 
                 if (candidate.InvalidAt is not null)
@@ -101,7 +105,7 @@ internal sealed class EdgeResolutionService(
                 var duplicate = FindDuplicateFact(relatedEdges, key.NormalizedFact);
                 if (duplicate is not null)
                 {
-                    EdgeMergeHelpers.AddEpisodeIfMissing(duplicate, episode.Uuid);
+                    AddEpisodesIfMissing(duplicate, candidate.Episodes, episode.Uuid);
                     EdgeMergeHelpers.AddResolvedEdge(result, resultUuids, duplicate);
                     continue;
                 }
@@ -260,7 +264,7 @@ internal sealed class EdgeResolutionService(
             : extractedEdge;
         if (resolvedEdge.Uuid != extractedEdge.Uuid)
         {
-            EdgeMergeHelpers.AddEpisodeIfMissing(resolvedEdge, episode.Uuid);
+            AddEpisodesIfMissing(resolvedEdge, extractedEdge.Episodes, episode.Uuid);
         }
 
         var invalidationCandidates = new List<EntityEdge>();
@@ -370,7 +374,7 @@ internal sealed class EdgeResolutionService(
         try
         {
             var response = await llmClient.GenerateTypedResponseAsync<Graphiti.EdgeTimestampResponse>(
-                ExtractEdgesPrompts.BuildExtractTimestamps(edge.Fact, episode.ValidAt),
+                ExtractEdgesPrompts.BuildExtractTimestamps(edge.Fact, edge.ReferenceTime ?? episode.ValidAt),
                 modelSize: ModelSize.Small,
                 promptName: "extract_edges.extract_timestamps",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -396,5 +400,22 @@ internal sealed class EdgeResolutionService(
         }
 
         return GraphitiHelpers.TryParseDbDate(value, out var parsed) ? parsed : null;
+    }
+
+    private static void AddEpisodesIfMissing(
+        EntityEdge edge,
+        List<string> episodeUuids,
+        string fallbackEpisodeUuid)
+    {
+        if (episodeUuids.Count == 0)
+        {
+            EdgeMergeHelpers.AddEpisodeIfMissing(edge, fallbackEpisodeUuid);
+            return;
+        }
+
+        for (var i = 0; i < episodeUuids.Count; i++)
+        {
+            EdgeMergeHelpers.AddEpisodeIfMissing(edge, episodeUuids[i]);
+        }
     }
 }

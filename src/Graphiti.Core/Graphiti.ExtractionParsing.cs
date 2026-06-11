@@ -12,7 +12,21 @@ public sealed partial class Graphiti
         JsonObject response,
         IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
     {
-        var results = new List<(string Name, string Type)>();
+        var entities = ExtractEntities(response, entityTypes);
+        var results = new List<(string Name, string Type)>(entities.Count);
+        for (var i = 0; i < entities.Count; i++)
+        {
+            results.Add((entities[i].Name, entities[i].Type));
+        }
+
+        return results;
+    }
+
+    internal static List<ExtractedEntity> ExtractEntities(
+        JsonObject response,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
+    {
+        var results = new List<ExtractedEntity>();
         IReadOnlyList<string>? entityTypeNamesById = null;
         foreach (var key in EntityExtractionArrayKeys)
         {
@@ -37,7 +51,7 @@ public sealed partial class Graphiti
                                ?? ReadString(item, "type")
                                ?? ReadEntityTypeById(item, entityTypes, ref entityTypeNamesById)
                                ?? "Entity";
-                    results.Add((name, type));
+                    results.Add(new ExtractedEntity(name, type, ReadEpisodeIndices(item)));
                 }
             }
         }
@@ -72,7 +86,7 @@ public sealed partial class Graphiti
             return null;
         }
 
-        if (TryReadEntityTypeId(node, out var id))
+        if (TryReadInt(node, out var id))
         {
             entityTypeNamesById ??= BuildEntityTypeNamesById(entityTypes);
             return id >= 0 && id < entityTypeNamesById.Count ? entityTypeNamesById[id] : null;
@@ -81,7 +95,7 @@ public sealed partial class Graphiti
         return null;
     }
 
-    private static bool TryReadEntityTypeId(JsonNode node, out int id)
+    private static bool TryReadInt(JsonNode node, out int id)
     {
         if (node is JsonValue value)
         {
@@ -124,7 +138,14 @@ public sealed partial class Graphiti
             var invalidAt = ParseOptionalDate(ReadString(item, "invalid_at"));
             if (!string.IsNullOrWhiteSpace(source) && !string.IsNullOrWhiteSpace(target))
             {
-                results.Add(new ExtractedEdge(source, target, relation, fact, validAt, invalidAt));
+                results.Add(new ExtractedEdge(
+                    source,
+                    target,
+                    relation,
+                    fact,
+                    validAt,
+                    invalidAt,
+                    ReadEpisodeIndices(item)));
             }
         }
 
@@ -156,13 +177,64 @@ public sealed partial class Graphiti
         return GraphitiHelpers.TryParseDbDate(value, out var parsed) ? parsed : null;
     }
 
-    internal sealed record ExtractedEdge(
-        string SourceName,
-        string TargetName,
-        string RelationType,
-        string Fact,
-        DateTime? ValidAt,
-        DateTime? InvalidAt);
+    private static IReadOnlyList<int> ReadEpisodeIndices(JsonObject item)
+    {
+        if (!item.TryGetPropertyValue("episode_indices", out var node) || node is not JsonArray array)
+        {
+            return EpisodeAttribution.FirstEpisodeIndex;
+        }
+
+        var indices = new List<int>(array.Count);
+        for (var i = 0; i < array.Count; i++)
+        {
+            if (array[i] is not null && TryReadInt(array[i]!, out var index))
+            {
+                indices.Add(index);
+            }
+        }
+
+        return indices;
+    }
+
+    internal sealed record ExtractedEntity(
+        string Name,
+        string Type,
+        IReadOnlyList<int> EpisodeIndices);
+
+    internal sealed record ExtractedEdge
+    {
+        public ExtractedEdge(
+            string sourceName,
+            string targetName,
+            string relationType,
+            string fact,
+            DateTime? validAt,
+            DateTime? invalidAt,
+            IReadOnlyList<int>? episodeIndices = null)
+        {
+            SourceName = sourceName;
+            TargetName = targetName;
+            RelationType = relationType;
+            Fact = fact;
+            ValidAt = validAt;
+            InvalidAt = invalidAt;
+            EpisodeIndices = episodeIndices ?? EpisodeAttribution.FirstEpisodeIndex;
+        }
+
+        public string SourceName { get; init; }
+
+        public string TargetName { get; init; }
+
+        public string RelationType { get; init; }
+
+        public string Fact { get; init; }
+
+        public DateTime? ValidAt { get; init; }
+
+        public DateTime? InvalidAt { get; init; }
+
+        public IReadOnlyList<int> EpisodeIndices { get; init; }
+    }
 
     internal sealed class EpisodeNodeExtractionResponse
     {
