@@ -1344,8 +1344,8 @@ public class GraphitiWorkflowTests
         var extractionCalls = llm.Calls
             .Where(call => call.PromptName == "extract_nodes.extract_message")
             .ToList();
-        var secondContext = JsonNode.Parse(extractionCalls[1].Messages[^1].Content)!.AsObject();
-        var previousEpisodes = secondContext["previous_episodes"]!.AsArray();
+        var previousEpisodes = JsonNode.Parse(
+            ReadPromptSection(extractionCalls[1].Messages[^1].Content, "PREVIOUS MESSAGES"))!.AsArray();
 
         Assert.Contains(
             previousEpisodes,
@@ -1384,8 +1384,8 @@ public class GraphitiWorkflowTests
         var messageExtractionCall = Assert.Single(
             llm.Calls,
             call => call.PromptName == "extract_nodes.extract_message");
-        var context = JsonNode.Parse(messageExtractionCall.Messages[^1].Content)!.AsObject();
-        var previousEpisodes = context["previous_episodes"]!.AsArray();
+        var previousEpisodes = JsonNode.Parse(
+            ReadPromptSection(messageExtractionCall.Messages[^1].Content, "PREVIOUS MESSAGES"))!.AsArray();
 
         Assert.Contains(
             previousEpisodes,
@@ -1426,10 +1426,10 @@ public class GraphitiWorkflowTests
             },
             groupId: "group");
 
-        var context = JsonNode.Parse(llm.Calls[0].Messages[^1].Content)!.AsObject();
-
         Assert.Equal(existing.Uuid, Assert.Single(result.Episodes).Uuid);
-        Assert.Equal("Stored episode content.", context["episode_content"]?.GetValue<string>());
+        Assert.Equal(
+            "Stored episode content.",
+            ReadPromptSection(llm.Calls[0].Messages[^1].Content, "CURRENT MESSAGE"));
     }
 
     [Fact]
@@ -1488,8 +1488,8 @@ public class GraphitiWorkflowTests
         var extractionCalls = llm.Calls
             .Where(call => call.PromptName == "extract_nodes.extract_message")
             .ToList();
-        var secondContext = JsonNode.Parse(extractionCalls[1].Messages[^1].Content)!.AsObject();
-        var previousEpisodes = secondContext["previous_episodes"]!.AsArray();
+        var previousEpisodes = JsonNode.Parse(
+            ReadPromptSection(extractionCalls[1].Messages[^1].Content, "PREVIOUS MESSAGES"))!.AsArray();
         var storedEpisodes = await EpisodicNode.GetByUuidsAsync(
             driver,
             result.Episodes.Select(episode => episode.Uuid));
@@ -1763,13 +1763,12 @@ public class GraphitiWorkflowTests
 
         var nodeExtractionCall = Assert.Single(llm.Calls, call => call.PromptName == "extract_nodes.extract_message");
         var edgeExtractionCall = Assert.Single(llm.Calls, call => call.PromptName == "extract_edges.edge");
-        var payload = Assert.IsType<JsonObject>(JsonNode.Parse(nodeExtractionCall.Messages[1].Content));
-        Assert.Equal("Alice works at Acme.", payload["episode_content"]?.GetValue<string>());
-        Assert.Equal("Only extract durable workplace facts.", payload["custom_extraction_instructions"]?.GetValue<string>());
+        var nodePrompt = nodeExtractionCall.Messages[^1].Content;
+        Assert.Equal("Alice works at Acme.", ReadPromptSection(nodePrompt, "CURRENT MESSAGE"));
+        Assert.EndsWith("\n\nOnly extract durable workplace facts.\n", nodePrompt);
         Assert.Equal("EpisodeNodeExtractionResponse", nodeExtractionCall.ResponseModel?.Name);
 
-        var entityTypes = Assert.IsType<JsonArray>(payload["entity_types"]);
-        Assert.Contains(entityTypes.OfType<JsonObject>(), item => item["name"]?.GetValue<string>() == "Person");
+        var entityTypes = JsonNode.Parse(ReadPromptSection(nodePrompt, "ENTITY TYPES"))!.AsArray();
         var defaultEntityType = Assert.Single(
             entityTypes.OfType<JsonObject>(),
             item => item["entity_type_id"]?.GetValue<int>() == 0
@@ -1777,28 +1776,24 @@ public class GraphitiWorkflowTests
         var defaultEntityTypeDescription = defaultEntityType["entity_type_description"]!.GetValue<string>();
         Assert.Contains("specific, identifiable entity", defaultEntityTypeDescription, StringComparison.Ordinal);
         Assert.Contains("When in doubt, do not extract the entity.", defaultEntityTypeDescription, StringComparison.Ordinal);
-        Assert.Equal(defaultEntityTypeDescription, defaultEntityType["description"]?.GetValue<string>());
         Assert.Contains(
             entityTypes.OfType<JsonObject>(),
             item => item["entity_type_id"]?.GetValue<int>() == 1
                     && item["entity_type_name"]?.GetValue<string>() == "Person");
-        var excludedTypes = Assert.IsType<JsonArray>(payload["excluded_entity_types"]);
-        Assert.Contains(excludedTypes, item => item?.GetValue<string>() == "Location");
 
-        var edgePayload = Assert.IsType<JsonObject>(JsonNode.Parse(edgeExtractionCall.Messages[1].Content));
+        var edgePrompt = edgeExtractionCall.Messages[^1].Content;
         Assert.Equal("EpisodeEdgeExtractionResponse", edgeExtractionCall.ResponseModel?.Name);
-        Assert.Contains(
-            Assert.IsType<JsonArray>(edgePayload["nodes"]).OfType<JsonObject>(),
-            item => item["name"]?.GetValue<string>() == "Alice");
-        var edgeType = Assert.Single(Assert.IsType<JsonArray>(edgePayload["edge_types"]).OfType<JsonObject>());
-        Assert.Equal("WORKS_AT", edgeType["name"]?.GetValue<string>());
+        Assert.Contains("Only extract durable workplace facts.", edgePrompt, StringComparison.Ordinal);
+        var entities = JsonNode.Parse(ReadPromptSection(edgePrompt, "ENTITIES"))!.AsArray();
+        Assert.Contains(entities.OfType<JsonObject>(), item => item["name"]?.GetValue<string>() == "Alice");
+        var edgeType = Assert.Single(
+            JsonNode.Parse(ReadPromptSection(edgePrompt, "FACT_TYPES"))!.AsArray().OfType<JsonObject>());
         Assert.Equal("WORKS_AT", edgeType["fact_type_name"]?.GetValue<string>());
-        var signature = Assert.Single(Assert.IsType<JsonArray>(edgeType["signatures"]).OfType<JsonObject>());
-        Assert.Equal("Person", signature["source"]?.GetValue<string>());
-        Assert.Equal("Organization", signature["target"]?.GetValue<string>());
-        var factSignature = Assert.Single(Assert.IsType<JsonArray>(edgeType["fact_type_signatures"]).OfType<JsonObject>());
-        Assert.Equal("Person", factSignature["source"]?.GetValue<string>());
-        Assert.Equal("Organization", factSignature["target"]?.GetValue<string>());
+        Assert.Equal("Employment relationship", edgeType["fact_type_description"]?.GetValue<string>());
+        var signature = Assert.Single(Assert.IsType<JsonArray>(edgeType["fact_type_signatures"]));
+        Assert.Equal(
+            new[] { "Person", "Organization" },
+            signature!.AsArray().Select(part => part!.GetValue<string>()));
     }
 
     [Fact]
@@ -4235,8 +4230,39 @@ public class GraphitiWorkflowTests
 
     private static string ReadEpisodeContent(IReadOnlyList<Message> messages)
     {
-        var context = JsonNode.Parse(messages[^1].Content)!.AsObject();
-        return context["episode_content"]!.GetValue<string>();
+        var prompt = messages[^1].Content;
+        foreach (var sectionName in new[] { "CURRENT MESSAGE", "CURRENT_MESSAGE", "TEXT", "JSON" })
+        {
+            var content = TryReadPromptSection(prompt, sectionName);
+            if (content is not null)
+            {
+                return content;
+            }
+        }
+
+        throw new InvalidOperationException("No episode content section found in extraction prompt.");
+    }
+
+    private static string ReadPromptSection(string promptText, string sectionName)
+    {
+        var section = TryReadPromptSection(promptText, sectionName);
+        Assert.True(section is not null, $"Prompt does not contain a <{sectionName}> section.");
+        return section!;
+    }
+
+    private static string? TryReadPromptSection(string promptText, string sectionName)
+    {
+        var openTag = "<" + sectionName + ">\n";
+        var closeTag = "\n</" + sectionName + ">";
+        var start = promptText.IndexOf(openTag, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return null;
+        }
+
+        start += openTag.Length;
+        var end = promptText.IndexOf(closeTag, start, StringComparison.Ordinal);
+        return end < start ? null : promptText[start..end];
     }
 
     private static bool IsNodeExtractionPrompt(string? promptName) =>

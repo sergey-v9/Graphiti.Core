@@ -38,6 +38,7 @@ everything else lives under a matching sub-namespace:
 | `Graphiti.Core.Embedding` | `IEmbedderClient`, `EmbedderClient`, `HashEmbedder` |
 | `Graphiti.Core.CrossEncoder` | `ICrossEncoderClient`, `CrossEncoderClient` and rerankers |
 | `Graphiti.Core.Maintenance` | dedup and community clustering |
+| `Graphiti.Core.Prompts` | LLM prompt builders ported from Python `graphiti_core/prompts/` |
 | `Graphiti.Core.Text` | content chunking, token counting, text helpers |
 | `Graphiti.Core.Namespaces` | node/edge namespace facades |
 | `Graphiti.Core.Telemetry` | `ActivitySource` and logging |

@@ -1,5 +1,3 @@
-using System.Text.Json.Nodes;
-
 namespace Graphiti.Core.Internal.Services;
 
 internal sealed class EpisodeGraphExtractor(
@@ -31,13 +29,10 @@ internal sealed class EpisodeGraphExtractor(
 
         try
         {
-            var nodeExtractionContext = ExtractionContextBuilder.BuildExtractionContext(
+            var nodeExtractionContext = ExtractNodesPrompts.BuildContext(
                 episode,
                 previousEpisodes,
                 entityTypes,
-                excludedEntityTypes,
-                edgeTypes,
-                edgeTypeMap,
                 customExtractionInstructions);
             var (nodes, attribution) = await ExtractEpisodeNodesAsync(
                 episode,
@@ -45,15 +40,13 @@ internal sealed class EpisodeGraphExtractor(
                 entityTypes,
                 excludedEntityTypes,
                 cancellationToken).ConfigureAwait(false);
-            var edgeExtractionContext = ExtractionContextBuilder.BuildExtractionContext(
+            var edgeExtractionContext = ExtractEdgesPrompts.BuildContext(
                 episode,
                 previousEpisodes,
-                entityTypes,
-                excludedEntityTypes,
+                nodes,
                 edgeTypes,
                 edgeTypeMap,
-                customExtractionInstructions,
-                nodes);
+                customExtractionInstructions);
             var extractedEdges = await ExtractEpisodeEdgesAsync(
                 episode,
                 edgeExtractionContext,
@@ -75,7 +68,7 @@ internal sealed class EpisodeGraphExtractor(
 
     private async Task<(List<EntityNode> Nodes, Dictionary<string, IReadOnlyList<int>> Attribution)> ExtractEpisodeNodesAsync(
         EpisodicNode episode,
-        JsonObject extractionContext,
+        ExtractNodesPrompts.NodeExtractionContext extractionContext,
         IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes,
         IReadOnlyList<string>? excludedEntityTypes,
         CancellationToken cancellationToken)
@@ -89,11 +82,7 @@ internal sealed class EpisodeGraphExtractor(
         try
         {
             var llmResponse = await llmClient.GenerateResponseAsync(
-                new[]
-                {
-                    new Message("system", "Extract entities from the episode."),
-                    new Message("user", extractionContext.ToJsonString(GraphitiJsonSerializer.Options))
-                },
+                ExtractNodesPrompts.Build(episode.Source, extractionContext),
                 responseModel: typeof(Graphiti.EpisodeNodeExtractionResponse),
                 groupId: episode.GroupId,
                 promptName: NodeExtractionPromptName(episode.Source),
@@ -178,7 +167,7 @@ internal sealed class EpisodeGraphExtractor(
 
     private async Task<List<Graphiti.ExtractedEdge>> ExtractEpisodeEdgesAsync(
         EpisodicNode episode,
-        JsonObject extractionContext,
+        ExtractEdgesPrompts.EdgeExtractionContext extractionContext,
         List<EntityNode> nodes,
         CancellationToken cancellationToken)
     {
@@ -189,11 +178,7 @@ internal sealed class EpisodeGraphExtractor(
         try
         {
             var llmResponse = await llmClient.GenerateResponseAsync(
-                new[]
-                {
-                    new Message("system", "Extract facts between the provided entities."),
-                    new Message("user", extractionContext.ToJsonString(GraphitiJsonSerializer.Options))
-                },
+                ExtractEdgesPrompts.BuildEdge(extractionContext),
                 responseModel: typeof(Graphiti.EpisodeEdgeExtractionResponse),
                 maxTokens: 16_384,
                 groupId: episode.GroupId,

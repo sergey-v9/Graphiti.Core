@@ -12,6 +12,7 @@ global using Graphiti.Core.Models.Edges;
 global using Graphiti.Core.Models.Nodes;
 global using Graphiti.Core.Models.Results;
 global using Graphiti.Core.Namespaces;
+global using Graphiti.Core.Prompts;
 global using Graphiti.Core.Search;
 global using Graphiti.Core.Serialization;
 global using Graphiti.Core.Telemetry;
