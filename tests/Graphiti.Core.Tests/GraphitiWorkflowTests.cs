@@ -838,12 +838,12 @@ public class GraphitiWorkflowTests
                 var schema = JsonNode.Parse(call.ResponseSchema!.SchemaElement.GetRawText())!.AsObject();
                 var schemaAttributes = schema["properties"]!["attributes"]!["properties"]!.AsObject();
                 Assert.Equal(new[] { "active", "role" }, schemaAttributes.Select(pair => pair.Key));
-                var context = JsonNode.Parse(call.Messages[^1].Content)!.AsObject();
-                var attributes = context["entity_type"]!["attributes"]!.AsObject();
-                Assert.Equal(new[] { "active", "role" }, attributes.Select(pair => pair.Key));
-                Assert.Contains(
-                    context["connected_facts"]!.AsArray(),
-                    fact => fact?.GetValue<string>() == "Alice knows Bob.");
+                var userPrompt = call.Messages[^1].Content;
+                Assert.Contains("<MESSAGES>", userPrompt, StringComparison.Ordinal);
+                Assert.Contains("<ENTITY>", userPrompt, StringComparison.Ordinal);
+                Assert.Contains("\"entity_types\":[\"Entity\",\"Person\"]", userPrompt, StringComparison.Ordinal);
+                Assert.Contains("HARD RULES", userPrompt, StringComparison.Ordinal);
+                Assert.DoesNotContain("connected_facts", userPrompt, StringComparison.Ordinal);
             });
     }
 
@@ -1073,8 +1073,8 @@ public class GraphitiWorkflowTests
         Assert.Equal(2, attributeCalls.Count);
         Assert.All(attributeCalls, call =>
         {
-            var context = JsonNode.Parse(call.Messages[^1].Content)!.AsObject();
-            Assert.Empty(context["connected_facts"]!.AsArray());
+            Assert.Contains("<ENTITY>", call.Messages[^1].Content, StringComparison.Ordinal);
+            Assert.DoesNotContain("connected_facts", call.Messages[^1].Content, StringComparison.Ordinal);
         });
     }
 

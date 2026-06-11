@@ -42,10 +42,10 @@ unused list).
       it carries most of the prompt's precision. Landed 2026-06-11.
 - [x] 5. `dedupe_edges.resolve_edge` → new DedupeEdgesPrompts; wire EdgeResolutionService.cs:246.
       Python: prompts/dedupe_edges.py:43-100. Landed 2026-06-11.
-- [ ] 6. `extract_nodes.extract_attributes` → ExtractNodesPrompts.BuildExtractAttributes; wire
+- [x] 6. `extract_nodes.extract_attributes` → ExtractNodesPrompts.BuildExtractAttributes; wire
       AttributeExtractionService.cs:122. Python: prompts/extract_nodes.py:383-464. The HARD RULES
       anti-hallucination block is the point of this prompt (upstream commit 7514b44); port it
-      exactly.
+      exactly. Landed 2026-06-11.
 - [ ] 7. `extract_edges.extract_attributes` → ExtractEdgesPrompts.BuildExtractAttributes; wire
       AttributeExtractionService.cs:45. Python: prompts/extract_edges.py:181-239. Same HARD RULES
       remark.

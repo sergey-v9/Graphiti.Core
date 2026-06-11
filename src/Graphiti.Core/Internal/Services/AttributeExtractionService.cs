@@ -100,7 +100,6 @@ internal sealed class AttributeExtractionService(
                 return;
             }
 
-            var edgesByNode = EntityTypeResolver.BuildEdgesByNode(edges);
             var extractionTargets = BuildNodeExtractionTargets(nodes, entityTypes);
             activity?.SetTag("graphiti.extraction.targets", extractionTargets.Count);
             activity?.SetTag("graphiti.extraction.skipped", extractionTargets.Count == 0);
@@ -110,21 +109,12 @@ internal sealed class AttributeExtractionService(
                 extractionTargets,
                 async (target, token) =>
                 {
-                    var connectedEdges = edgesByNode.TryGetValue(target.Node.Uuid, out var edgesForNode)
-                        ? (IReadOnlyList<EntityEdge>)edgesForNode
-                        : Array.Empty<EntityEdge>();
-                    var context = BuildAttributeExtractionContext(
+                    var context = ExtractNodesPrompts.BuildExtractAttributesContext(
                         target.Node,
-                        target.EntityType,
                         episode,
-                        previousEpisodes,
-                        connectedEdges);
+                        previousEpisodes);
                     var response = await llmClient.GenerateResponseAsync(
-                        new[]
-                        {
-                            new Message("system", "Extract structured attributes for the entity."),
-                            new Message("user", context.ToJsonString(GraphitiJsonSerializer.Options))
-                        },
+                        ExtractNodesPrompts.BuildExtractAttributes(context),
                         responseSchema: target.AttributeSchema,
                         modelSize: ModelSize.Small,
                         groupId: target.Node.GroupId,
@@ -273,55 +263,6 @@ internal sealed class AttributeExtractionService(
             ["entity_types"] = ExtractionContextBuilder.BuildStringArray(
                 node is null ? ExtractionContextBuilder.DefaultEntityLabels : node.Labels)
         };
-
-    private static JsonObject BuildAttributeExtractionContext(
-        EntityNode node,
-        EntityTypeDefinition entityType,
-        EpisodicNode episode,
-        IReadOnlyList<EpisodicNode> previousEpisodes,
-        IReadOnlyList<EntityEdge> connectedEdges)
-    {
-        var previous = new JsonArray();
-        foreach (var previousEpisode in previousEpisodes)
-        {
-            previous.Add(new JsonObject
-            {
-                ["uuid"] = previousEpisode.Uuid,
-                ["content"] = previousEpisode.Content,
-                ["valid_at"] = GraphitiHelpers.EnsureUtc(previousEpisode.ValidAt).ToString("O")
-            });
-        }
-
-        var facts = new JsonArray();
-        foreach (var edge in connectedEdges)
-        {
-            facts.Add(edge.Fact);
-        }
-
-        return new JsonObject
-        {
-            ["entity"] = new JsonObject
-            {
-                ["name"] = node.Name,
-                ["entity_types"] = ExtractionContextBuilder.BuildStringArray(node.Labels),
-                ["attributes"] = JsonSerializer.SerializeToNode(node.Attributes, GraphitiJsonSerializer.Options)
-            },
-            ["entity_type"] = new JsonObject
-            {
-                ["name"] = entityType.Name,
-                ["description"] = entityType.Description,
-                ["attributes"] = ExtractionContextBuilder.BuildAttributeSchema(entityType)
-            },
-            ["episode"] = new JsonObject
-            {
-                ["uuid"] = episode.Uuid,
-                ["content"] = episode.Content,
-                ["valid_at"] = GraphitiHelpers.EnsureUtc(episode.ValidAt).ToString("O")
-            },
-            ["previous_episodes"] = previous,
-            ["connected_facts"] = facts
-        };
-    }
 
     private sealed record EdgeAttributeExtractionTarget(
         EntityEdge Edge,

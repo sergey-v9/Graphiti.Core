@@ -34,7 +34,7 @@ pipeline — do not port without a reason):
 | `extract_nodes.extract_text` | prompts/extract_nodes.py | same | OK | same |
 | `extract_nodes.extract_json` | prompts/extract_nodes.py | same | OK | same; C# previously never branched to a JSON-specific prompt |
 | `extract_edges.edge` | prompts/extract_edges.py | EpisodeGraphExtractor → Prompts/ExtractEdgesPrompts | OK | Ported 2026-06-11; golden-text tests pin content |
-| `extract_nodes.extract_attributes` | prompts/extract_nodes.py:383 | AttributeExtractionService.cs:122 | STUB | One-line system msg + raw JSON context; Python HARD RULES anti-hallucination prose missing |
+| `extract_nodes.extract_attributes` | prompts/extract_nodes.py:383 | AttributeExtractionService → Prompts/ExtractNodesPrompts | OK | Ported 2026-06-11; golden-text tests pin HARD RULES anti-hallucination block |
 | `extract_edges.extract_attributes` | prompts/extract_edges.py:181 | AttributeExtractionService.cs:45 | STUB | Same pattern; Python HARD RULES missing |
 | `extract_edges.extract_timestamps` | prompts/extract_edges.py:242 | EdgeResolutionService → Prompts/ExtractEdgesPrompts | OK | Ported 2026-06-11; golden-text tests pin content |
 | `extract_edges.extract_timestamps_batch` | prompts/extract_edges.py:274 | — | MISSING | Used by Python combined extraction |
