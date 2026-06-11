@@ -65,3 +65,11 @@ is now `Graphiti.Llm.GenerateResponse` (was `Graphiti.LLM.GenerateResponse`).
 
 The verifier runs restore, formatting checks, build, tests, and package creation. For a quick local
 test-only loop from this folder, use `dotnet test Graphiti.Core.CSharp.slnx`.
+
+OpenAI provider integration tests are included in `tests/Graphiti.Core.Tests` and skip unless
+`OPENAI_API_KEY` is set. To run just those tests with real providers:
+
+```powershell
+$env:OPENAI_API_KEY = "..."
+dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~OpenAIProviderIntegrationTests"
+```

@@ -73,10 +73,12 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
   schema-validation `JsonException`s get Python's two repair attempts with a validation-error user
   message, while retry feedback stays out of the cache key and only final validated responses are
   cached.
-- **Never exercised:** any real LLM/embedding provider, end to end. `samples/Graphiti.Sample.OpenAI`
-  now provides a runnable OpenAI host and has been compile-verified plus no-key-path verified, but
-  no provider call has been executed. The deterministic suite cannot see prompt or
-  schema-acceptance problems (plan 03).
+- **Never exercised live:** any real LLM/embedding provider, end to end.
+  `samples/Graphiti.Sample.OpenAI` now provides a runnable OpenAI host and
+  `OpenAIProviderIntegrationTests` provides env-gated provider tests. The sample is
+  compile/no-key-path verified, and the tests skip cleanly without `OPENAI_API_KEY`, but no
+  provider call has been executed. The deterministic suite cannot see prompt or schema-acceptance
+  problems (plan 03).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority").
   Performance/allocation rework is on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
@@ -107,14 +109,18 @@ added.
 
 Latest checkpoint, 2026-06-11:
 
-Succeeded after adding the OpenAI sample host:
+Succeeded after adding env-gated OpenAI provider integration tests:
 
 ```powershell
 .\eng\Verify-GraphitiCore.ps1
 ```
 
 Restore, format verification, solution build including `Graphiti.Sample.OpenAI`, full test suite
-(`921` passed), and `dotnet pack` for `Graphiti.Core.2.0.0-alpha.1.nupkg`.
+(`921` passed, `2` skipped, `923` total), and `dotnet pack` for
+`Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` was unset; the two skipped tests were
+`OpenAIProviderIntegrationTests.StructuredResponseSchemas_WithOpenAIProvider_AreAccepted` and
+`OpenAIProviderIntegrationTests.AddEpisodeAsync_WithOpenAIProvider_IngestsResolvedTemporalGraph`.
+No live provider run has passed yet.
 
 Sample no-key path was also verified:
 

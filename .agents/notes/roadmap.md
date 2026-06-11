@@ -9,12 +9,13 @@ in `parity.md`. Keep completed history out of this file (`evolution.md` owns mil
 
 The infrastructure is real and green: builds clean, deterministic tests pass, packaging works,
 drivers (InMemory, LadybugDB, Neo4j-legacy) have runtime proof, search/ranking/community algorithms
-have genuine parity coverage. What is NOT done is the LLM-facing semantic layer: most prompt
-instruction text was never ported (one-line system messages + raw JSON context stand in for
-Python's engineered prompts), entity summaries are never generated, combined extraction is absent,
-and no end-to-end run against a real LLM provider has ever happened. A library in this state
-produces a structurally valid but semantically poor graph with a real LLM. Closing that gap is the
-whole near-term roadmap. `parity.md` has the row-by-row truth.
+have genuine parity coverage, and the live Python prompt instruction text has been ported into C#.
+Phase 2 has closed the largest ingestion semantic gaps: entity summaries, invented fallback
+removal, broad invalidation candidates, multi-episode attribution, true-batch bulk ingestion, and
+validation-failure re-prompting. The remaining Phase 2 items are explicit decisions: whether/how to
+activate combined extraction and whether to keep the C#-only per-edge attribute pass. Phase 3 now
+has a runnable OpenAI sample host and env-gated OpenAI tests, but no end-to-end run against a real
+LLM provider has passed yet. `parity.md` has the row-by-row truth.
 
 ## Performance/allocation moratorium
 
@@ -51,9 +52,10 @@ is either closed or converted to a documented `DIVERGENT` decision.
 ## Phase 3 — Real-provider validation (ACTIVE; provider run pending)
 
 Prove the library end-to-end with a real LLM + embedder. Work order:
-`.agents/plans/03-provider-validation.md`. A sample OpenAI host now exists, but the port still has
-not been run against a real LLM/embedding provider. A port of an LLM-driven library that has never
-talked to an LLM is unverified by definition; this phase is the acceptance test for Phases 1–2.
+`.agents/plans/03-provider-validation.md`. A sample OpenAI host and env-gated OpenAI integration
+tests now exist, but the port still has not been run successfully against a real LLM/embedding
+provider. A port of an LLM-driven library that has never talked to an LLM is unverified by
+definition; this phase is the acceptance test for Phases 1–2.
 
 Done when: an env-gated integration test (or sample app run) ingests episodes through a real
 provider, produces a graph whose entities/edges/summaries are sane on manual inspection, and hybrid

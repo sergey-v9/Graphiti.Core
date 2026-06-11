@@ -31,13 +31,18 @@ host project own provider packages); no CI wiring yet; no perf measurement.
         `OPENAI_API_KEY`, optional model/dimension env vars, ingests six Atlas-project episodes,
         and prints entities, facts, summaries, and search results. Compile-verified and no-key path
         verified; no live provider run was performed in this environment.
-- [ ] 2. Env-gated integration tests. xUnit collection gated on `OPENAI_API_KEY` presence
+- [x] 2. Env-gated integration tests. xUnit collection gated on `OPENAI_API_KEY` presence
       (skip otherwise, like the `_int` convention in the Python repo): one test ingests two
       related episodes and asserts structural invariants (entities resolved across episodes, at
       least one edge with extracted timestamp, dedup did not duplicate the shared entity), one
       test exercises structured-output schema acceptance for every response model the pipeline
       uses (catches providers rejecting `additionalProperties`/required-field schemas).
       Record model + date + outcome in `handoff.md` checkpoint when run.
+      - Done 2026-06-11: added `OpenAIProviderIntegrationTests`, gated by
+        `OPENAI_API_KEY`, with a two-episode ingestion test and a structured-output schema
+        acceptance test covering ingestion DTOs, optional/internal DTOs, and runtime attribute
+        schemas. No-key skip path was verified (`2` skipped, `0` failed). No live provider run was
+        performed in this environment, so the phase-level "passed at least once" gate remains open.
 - [ ] 3. Cross-encoder reality check. Default DI currently injects lexical
       `IdentityCrossEncoderClient`. Implement the M.E.AI-based reranker path equivalent to
       Python `openai_reranker_client.py` (boolean classification; use logprobs if the adapter
