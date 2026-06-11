@@ -100,7 +100,8 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
 vocabulary. `GraphProvider.Kuzu` is a supported core options/DI enum path that creates the
 LadybugDB-backed driver. `AddLadybugDbGraphDriver` remains the explicit host-facing configuration
-helper for `DatabasePath`.
+helper for `DatabasePath`. The LadybugDB factory accepts both the native empty-string in-memory path
+and Python Kuzu's `':memory:'` sentinel, normalizing the sentinel at the Graphiti boundary.
 
 For provider status, package facts, package quirks, runtime proof, and remaining work, read
 `kuzu-driver-port.md`. If implementation uncovers a likely LadybugDB package/binding issue, mark it
@@ -116,19 +117,25 @@ added.
 
 Latest checkpoint, 2026-06-11:
 
-Succeeded after aligning edge attribute extraction into edge resolution and marking Phase 2
-complete:
+Succeeded after adding LadybugDB/Kuzu `':memory:'` sentinel compatibility:
 
 ```powershell
 .\eng\Verify-GraphitiCore.ps1
 ```
 
 Restore, format verification, solution build including `Graphiti.Sample.OpenAI`, full test suite
-(`929` passed, `2` skipped, `931` total), and `dotnet pack` for
+(`930` passed, `2` skipped, `932` total), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` was unset; the two skipped tests were
 `OpenAIProviderIntegrationTests.StructuredResponseSchemas_WithOpenAIProvider_AreAccepted` and
 `OpenAIProviderIntegrationTests.AddEpisodeAsync_WithOpenAIProvider_IngestsResolvedTemporalGraph`.
-No live provider run has passed yet. Focused edge-attribute and telemetry tests also passed:
+No live provider run has passed yet. Focused Ladybug runtime tests also passed:
+
+```powershell
+dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~LadybugRuntimeDriverTests" --verbosity minimal
+```
+
+with `15` Ladybug runtime tests passed. Focused edge-attribute and telemetry tests also passed
+earlier:
 
 ```powershell
 dotnet test Graphiti.Core.CSharp.slnx --no-build --filter "FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_HydratesDeclaredEdgeAttributes|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_NonFastDuplicateEdgeAttributeHydrationDropsOverlongStringsAndReplacesOmittedFields|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_ExactDuplicatePreservesExistingEdgeAttributesAndSkipsEdgeAttributePrompt|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_ReusesEdgeAttributeSchemaForSameTypeBatch|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_EdgeAttributeExtractionRunsDuringResolution|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_SkipsEdgeAttributePromptWhenTypeMapDoesNotMatchEndpoints" --verbosity minimal

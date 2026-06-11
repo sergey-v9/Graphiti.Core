@@ -68,6 +68,33 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
+    public async Task FactoryTreatsKuzuMemorySentinelAsInMemoryDatabase()
+    {
+        await using var driver = LadybugDbGraphDriverFactory.Create(":memory:");
+        var createdAt = new DateTime(2026, 9, 19, 10, 11, 12, DateTimeKind.Utc);
+        var node = new EntityNode
+        {
+            Uuid = "ladybug-memory-sentinel-node",
+            Name = "Memory Sentinel",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            NameEmbedding = [1.0f, 0.0f],
+            CreatedAt = createdAt,
+            Summary = "created through the Kuzu in-memory sentinel path"
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(node);
+        var fetched = await driver.GetNodeByUuidAsync<EntityNode>(node.Uuid);
+
+        Assert.Equal(string.Empty, driver.Database);
+        Assert.Equal(GraphProvider.Kuzu, driver.Provider);
+        Assert.Equal(node.Uuid, fetched.Uuid);
+        Assert.Equal("Memory Sentinel", fetched.Name);
+        Assert.Equal("tenant", fetched.GroupId);
+    }
+
+    [Fact]
     public async Task LadybugBackedGraphitiIngestsAndSearchesEpisodeEndToEnd()
     {
         await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();

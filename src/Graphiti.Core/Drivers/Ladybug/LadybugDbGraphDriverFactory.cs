@@ -7,6 +7,8 @@ namespace Graphiti.Core.Drivers.Ladybug;
 /// </summary>
 public static class LadybugDbGraphDriverFactory
 {
+    private const string KuzuInMemoryDatabasePath = ":memory:";
+
     /// <summary>
     /// Creates an in-memory LadybugDB-backed graph driver.
     /// </summary>
@@ -16,13 +18,17 @@ public static class LadybugDbGraphDriverFactory
     /// Creates a LadybugDB-backed graph driver for <paramref name="databasePath"/>.
     /// </summary>
     /// <param name="databasePath">
-    /// The LadybugDB database path. Use an empty string for an in-memory database.
+    /// The LadybugDB database path. Use an empty string or the Python Kuzu <c>:memory:</c>
+    /// sentinel for an in-memory database.
     /// </param>
     public static IGraphDriver Create(string databasePath)
     {
         ArgumentNullException.ThrowIfNull(databasePath);
+        var normalizedPath = string.Equals(databasePath, KuzuInMemoryDatabasePath, StringComparison.Ordinal)
+            ? string.Empty
+            : databasePath;
         return new LadybugGraphDriver(
             path => new LadybugDbQueryExecutor(path),
-            databasePath);
+            normalizedPath);
     }
 }

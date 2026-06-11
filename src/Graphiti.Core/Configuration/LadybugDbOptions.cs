@@ -8,7 +8,8 @@ namespace Graphiti.Core.Configuration;
 public sealed class LadybugDbOptions
 {
     /// <summary>
-    /// LadybugDB database path. The empty string uses the package's in-memory database.
+    /// LadybugDB database path. The empty string, and the Python Kuzu <c>:memory:</c> sentinel,
+    /// use the package's in-memory database.
     /// </summary>
     public string DatabasePath { get; set; } = string.Empty;
 }

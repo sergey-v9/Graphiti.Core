@@ -15,8 +15,9 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
   configuration.
 - `GraphProvider.Kuzu` is a supported core options/DI path and resolves to the LadybugDB-backed
   driver.
-- Runtime proof covers the main ingest/search/removal/triplet/bulk/saga/community workflows and
-  file-backed `DatabasePath` persistence. Treat tests as the detailed proof source.
+- Runtime proof covers the main ingest/search/removal/triplet/bulk/saga/community workflows,
+  file-backed `DatabasePath` persistence, and Python Kuzu `':memory:'` sentinel compatibility.
+  Treat tests as the detailed proof source.
 - The LadybugDB package has a nearby source checkout at `W:\code\ladybug`; this is background
   provenance for the NuGet/API surface. Graphiti work operates against package-facing behavior and
   Graphiti tests. When package or binding behavior looks suspect, mark the symptom separately from
@@ -24,6 +25,9 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
   C# driver: patch and commit LadybugDB changes only in `W:\code\ladybug`, do not push remotely,
   draft a nearby markdown request for `ladybug-dotnet`, build a local NuGet package, and connect
   Graphiti to that local package for validation.
+- As of 2026-06-11, the nearby Ladybug checkout may show a locally advanced `extension` submodule and
+  an untracked `tools/csharp_api/` checkout with reference material. Treat that as preserved
+  recovery/provenance state; do not clean or overwrite it while working on Graphiti.
 
 ## Provider Policy
 
@@ -47,7 +51,8 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 - The API appears synchronous. A single `Connection` serializes operations internally according to
   package docs.
 - `Database(string databasePath, SystemConfig)` uses an empty string for in-memory databases; Python
-  Kuzu uses `':memory:'`.
+  Kuzu uses `':memory:'`. `LadybugDbGraphDriverFactory` normalizes the Kuzu sentinel to the
+  LadybugDB empty-string path at the Graphiti boundary.
 - FTS calls require explicit `INSTALL FTS; LOAD EXTENSION FTS;` before `CREATE_FTS_INDEX` /
   `QUERY_FTS_INDEX`.
 - LadybugDB can reject post-projection ordering by node variables such as `ORDER BY n.uuid`; use
