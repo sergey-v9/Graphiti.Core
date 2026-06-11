@@ -1,6 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
-
 namespace Graphiti.Core.Internal.Services;
 
 internal sealed class AttributeExtractionService(
@@ -43,15 +40,10 @@ internal sealed class AttributeExtractionService(
                 async (target, token) =>
                 {
                     var response = await llmClient.GenerateResponseAsync(
-                        new[]
-                        {
-                            new Message("system", "Extract structured attributes for the fact."),
-                            new Message("user", BuildEdgeAttributeExtractionContext(
-                                target.Edge,
-                                target.EdgeType,
-                                episode,
-                                nodesByUuid).ToJsonString(GraphitiJsonSerializer.Options))
-                        },
+                        ExtractEdgesPrompts.BuildExtractAttributes(
+                            target.Edge.Fact,
+                            episode.ValidAt,
+                            target.Edge.Attributes),
                         responseSchema: target.AttributeSchema,
                         modelSize: ModelSize.Small,
                         groupId: target.Edge.GroupId,
@@ -229,40 +221,6 @@ internal sealed class AttributeExtractionService(
             targets[i] = target with { AttributeSchema = schema };
         }
     }
-
-    private static JsonObject BuildEdgeAttributeExtractionContext(
-        EntityEdge edge,
-        EntityTypeDefinition edgeType,
-        EpisodicNode episode,
-        Dictionary<string, EntityNode> nodesByUuid)
-    {
-        nodesByUuid.TryGetValue(edge.SourceNodeUuid, out var sourceNode);
-        nodesByUuid.TryGetValue(edge.TargetNodeUuid, out var targetNode);
-        return new JsonObject
-        {
-            ["fact"] = edge.Fact,
-            ["relation_type"] = edge.Name,
-            ["reference_time"] = GraphitiHelpers.EnsureUtc(episode.ValidAt).ToString("O"),
-            ["existing_attributes"] = JsonSerializer.SerializeToNode(edge.Attributes, GraphitiJsonSerializer.Options),
-            ["source"] = NodeReference(sourceNode, edge.SourceNodeUuid),
-            ["target"] = NodeReference(targetNode, edge.TargetNodeUuid),
-            ["edge_type"] = new JsonObject
-            {
-                ["name"] = edgeType.Name,
-                ["description"] = edgeType.Description,
-                ["attributes"] = ExtractionContextBuilder.BuildAttributeSchema(edgeType)
-            }
-        };
-    }
-
-    private static JsonObject NodeReference(EntityNode? node, string uuid) =>
-        new()
-        {
-            ["uuid"] = uuid,
-            ["name"] = node?.Name ?? string.Empty,
-            ["entity_types"] = ExtractionContextBuilder.BuildStringArray(
-                node is null ? ExtractionContextBuilder.DefaultEntityLabels : node.Labels)
-        };
 
     private sealed record EdgeAttributeExtractionTarget(
         EntityEdge Edge,

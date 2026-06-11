@@ -46,9 +46,9 @@ unused list).
       AttributeExtractionService.cs:122. Python: prompts/extract_nodes.py:383-464. The HARD RULES
       anti-hallucination block is the point of this prompt (upstream commit 7514b44); port it
       exactly. Landed 2026-06-11.
-- [ ] 7. `extract_edges.extract_attributes` → ExtractEdgesPrompts.BuildExtractAttributes; wire
+- [x] 7. `extract_edges.extract_attributes` → ExtractEdgesPrompts.BuildExtractAttributes; wire
       AttributeExtractionService.cs:45. Python: prompts/extract_edges.py:181-239. Same HARD RULES
-      remark.
+      remark. Landed 2026-06-11.
 - [ ] 8. `summarize_nodes.summarize_pair` + `summary_description` → new SummarizeNodesPrompts;
       wire CommunityService.cs:255/285. Python: prompts/summarize_nodes.py:54-135. Note: Python
       sends the two source summaries in the prompt and lets the LLM synthesize;

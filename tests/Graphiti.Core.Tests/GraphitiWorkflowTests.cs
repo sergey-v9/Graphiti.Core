@@ -2085,9 +2085,11 @@ public class GraphitiWorkflowTests
         var schema = JsonNode.Parse(call.ResponseSchema!.SchemaElement.GetRawText())!.AsObject();
         var schemaAttributes = schema["properties"]!["attributes"]!["properties"]!.AsObject();
         Assert.Equal(new[] { "confidence", "role" }, schemaAttributes.Select(pair => pair.Key));
-        var context = JsonNode.Parse(call.Messages[^1].Content)!.AsObject();
-        var attributes = context["edge_type"]!["attributes"]!.AsObject();
-        Assert.Equal(new[] { "confidence", "role" }, attributes.Select(pair => pair.Key));
+        var userPrompt = call.Messages[^1].Content;
+        Assert.Contains("<FACT>\nAlice works at Acme.\n</FACT>", userPrompt, StringComparison.Ordinal);
+        Assert.Contains("<REFERENCE TIME>\n2026-01-01T12:00:00.0000000Z\n</REFERENCE TIME>", userPrompt, StringComparison.Ordinal);
+        Assert.Contains("<EXISTING ATTRIBUTES>\n{}\n</EXISTING ATTRIBUTES>", userPrompt, StringComparison.Ordinal);
+        Assert.Contains("HARD RULES", userPrompt, StringComparison.Ordinal);
     }
 
     [Fact]
