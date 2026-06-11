@@ -45,7 +45,7 @@ pipeline — do not port without a reason):
 | `extract_nodes.extract_entity_summaries_from_episodes` | prompts/extract_nodes.py:613 | — | MISSING | Same area |
 | `summarize_nodes.summarize_pair` | prompts/summarize_nodes.py:54 | CommunityService → Prompts/SummarizeNodesPrompts | OK | Ported 2026-06-11; sends the two source summaries as JSON like Python, deterministic text remains only no-LLM fallback |
 | `summarize_nodes.summary_description` | prompts/summarize_nodes.py:119 | CommunityService → Prompts/SummarizeNodesPrompts | OK | Ported 2026-06-11; golden-text tests pin one-sentence description prompt |
-| `summarize_sagas.summarize_saga` | prompts/summarize_sagas.py | SagaService.cs:175 | OK | Near-verbatim port (verified word-for-word); the model for how the rest should look |
+| `summarize_sagas.summarize_saga` | prompts/summarize_sagas.py | SagaService → Prompts/SummarizeSagasPrompts | OK | Ported to prompt builder 2026-06-11; golden-text tests pin content, including worked examples |
 
 Unused-in-pipeline Python prompts (verify before porting; as of the baseline these have no live
 call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,

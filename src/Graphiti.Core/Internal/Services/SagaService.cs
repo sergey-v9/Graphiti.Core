@@ -28,12 +28,10 @@ internal sealed class SagaService(
             }
 
             var maxValidAt = MaxValidAt(episodesData);
-            var messages = BuildSagaSummaryMessages(saga, episodesData);
-
             try
             {
                 var response = await llmClient.GenerateTypedResponseAsync<Graphiti.SagaSummaryResponse>(
-                    messages,
+                    SummarizeSagasPrompts.BuildSummarizeSaga(saga, episodesData),
                     promptName: "summarize_sagas.summarize_saga",
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -170,53 +168,6 @@ internal sealed class SagaService(
         }
 
         await sagaNode.SaveAsync(driver, cancellationToken).ConfigureAwait(false);
-    }
-
-    private static Message[] BuildSagaSummaryMessages(
-        SagaNode saga,
-        IReadOnlyList<SagaEpisodeContent> episodes)
-    {
-        var episodesText = JoinEpisodeContents(episodes, "\n---\n", "(no messages)");
-        var existingSummarySection = string.IsNullOrWhiteSpace(saga.Summary)
-            ? string.Empty
-            : $"""
-
-<EXISTING_KNOWLEDGE>
-{saga.Summary}
-</EXISTING_KNOWLEDGE>
-The EXISTING_KNOWLEDGE contains previously extracted facts. Merge any new facts from MESSAGES into it. When newer messages contradict older facts, prefer the newer fact. If MESSAGES add no new durable facts, return the existing knowledge unchanged.
-""";
-
-        return new[]
-        {
-            new Message(
-                "system",
-                $"You extract durable knowledge from message threads. Output a factual knowledge brief - facts, decisions, preferences, plans, entities, and relationships - that stands alone without reference to the original messages. Stay under {TextUtilities.MaxSummaryChars} characters."),
-            new Message(
-                "user",
-                $"""
-NEVER use meta-language verbs: "mentioned", "discussed", "noted", "stated", "described", "referenced", "indicated", "reported", "talked about", "brought up" - these describe conversational dynamics, not knowledge. State facts directly instead.
-NEVER refer to the messages, conversation, thread, or participants' communicative acts. The output must read as if no conversation happened - only the facts matter.
-NEVER begin with "This conversation", "The thread", "In this thread", or "The discussion".
-NEVER infer preferences or habits from a single passing mention. When a person explicitly states a preference ("I prefer X", "I love X", "I always do X"), capture it as a stated preference attributed to that person.
-
-Your task: extract all durable knowledge from the MESSAGES below and produce a factual knowledge brief for the topic "{saga.Name}".
-
-Capture explicitly stated:
-- Facts and concrete details (names, dates, numbers, locations)
-- Decisions and their outcomes
-- Preferences and requirements (when a person explicitly claims them)
-- Plans, next steps, and commitments
-- Relationships between entities (who works where, who owns what)
-- State changes (what was X, now is Y)
-
-Write 2-6 dense sentences. Use third person. Preserve all names, dates, counts, and temporal qualifiers. Lead with the most important fact or decision.
-{existingSummarySection}
-<MESSAGES>
-{episodesText}
-</MESSAGES>
-""")
-        };
     }
 
     private static async Task<SagaNode> GetOrCreateAsync(

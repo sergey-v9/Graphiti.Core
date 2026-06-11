@@ -55,8 +55,9 @@ unused list).
       C# currently pre-builds a deterministic text and asks the LLM to compress it. Align with
       Python; keep the deterministic builder only as the documented no-LLM fallback. Landed
       2026-06-11.
-- [ ] 9. `summarize_sagas.summarize_saga`: already faithful inline in SagaService.cs:175. Move it
-      into Prompts/SummarizeSagasPrompts for uniformity + golden test. Pure mechanical move.
+- [x] 9. `summarize_sagas.summarize_saga`: already faithful inline in SagaService.cs:175. Move it
+      into Prompts/SummarizeSagasPrompts for uniformity + golden test. Restored the Python worked
+      examples while moving after rechecking the source. Landed 2026-06-11.
 - [ ] 10. Sweep: grep `src/` for `new Message("system"` outside `Prompts/` — there should be none
       left. Update `parity.md` prompt table; mark Phase 1 done in `roadmap.md` if all rows OK.
 
