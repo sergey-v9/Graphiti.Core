@@ -147,6 +147,66 @@ public class LadybugSearchStatementTests
     }
 
     [Fact]
+    public void BuildEdgeQuery_PreservesAllFiltersThroughLadybugAdapter()
+    {
+        var validAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        var invalidAt = validAt.AddDays(1);
+        var createdAt = validAt.AddDays(-1);
+        var expiredAt = validAt.AddDays(2);
+        var filters = new SearchFilters
+        {
+            EdgeTypes = new List<string> { "KNOWS" },
+            EdgeUuids = new List<string> { "edge-1" },
+            NodeLabels = new List<string> { "Person" },
+            ValidAt = new List<List<DateFilter>>
+            {
+                new() { new DateFilter(ComparisonOperator.GreaterThanEqual, validAt) }
+            },
+            InvalidAt = new List<List<DateFilter>>
+            {
+                new() { new DateFilter(ComparisonOperator.LessThan, invalidAt) }
+            },
+            CreatedAt = new List<List<DateFilter>>
+            {
+                new() { new DateFilter(ComparisonOperator.Equals, createdAt) }
+            },
+            ExpiredAt = new List<List<DateFilter>>
+            {
+                new() { new DateFilter(ComparisonOperator.Equals, expiredAt) }
+            },
+            PropertyFilters = new List<PropertyFilter>
+            {
+                new("confidence", ComparisonOperator.GreaterThan, 0.5)
+            }
+        };
+
+        var (queries, parameters) = LadybugSearchFilter.BuildEdgeQuery(filters);
+
+        Assert.Equal(
+            new[]
+            {
+                "e.name in $edge_types",
+                "e.uuid in $edge_uuids",
+                "list_has_all(n.labels, $labels) AND list_has_all(m.labels, $labels)",
+                "((e.valid_at >= $valid_at_0))",
+                "((e.invalid_at < $invalid_at_0))",
+                "((e.created_at = $created_at_0))",
+                "((e.expired_at = $expired_at_0))",
+                "(e[$edge_property_name_0] > $edge_property_value_0)"
+            },
+            queries);
+        Assert.Equal(new[] { "KNOWS" }, parameters["edge_types"]);
+        Assert.Equal(new[] { "edge-1" }, parameters["edge_uuids"]);
+        Assert.Equal(new[] { "Person" }, Assert.IsType<List<string>>(parameters["labels"]));
+        Assert.Equal(validAt, parameters["valid_at_0"]);
+        Assert.Equal(invalidAt, parameters["invalid_at_0"]);
+        Assert.Equal(createdAt, parameters["created_at_0"]);
+        Assert.Equal(expiredAt, parameters["expired_at_0"]);
+        Assert.Equal("confidence", parameters["edge_property_name_0"]);
+        Assert.Equal(0.5, parameters["edge_property_value_0"]);
+    }
+
+    [Fact]
     public void BuildEpisodeAndCommunitySearchStatements_PreserveKuzuIndexesAndVectors()
     {
         var episode = LadybugSearchStatementBuilder.BuildEpisodeFulltextSearchStatement(

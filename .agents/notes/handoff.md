@@ -140,7 +140,7 @@ executor, and runtime tests also passed:
 dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~LadybugSearchStatementTests|FullyQualifiedName~SearchFilterTests" --verbosity minimal
 ```
 
-with `34` Ladybug statement/shared search-filter tests passed.
+with `35` Ladybug statement/shared search-filter tests passed.
 
 ```powershell
 dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~LadybugSearchExecutorTests" --verbosity minimal
