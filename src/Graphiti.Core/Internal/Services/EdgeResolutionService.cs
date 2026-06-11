@@ -35,10 +35,44 @@ internal sealed class EdgeResolutionService(
         IReadOnlyList<EntityEdge>? existingEdgesOverride = null,
         HashSet<string>? newlyCreatedEdgeUuids = null)
     {
+        var candidates = BuildExtractedEdgeCandidates(
+            extractedEdges,
+            nodesByExtractedName,
+            new[] { episode },
+            groupId,
+            now,
+            out _);
+
+        return await ResolveEntityEdgesAsync(
+            candidates,
+            episode,
+            groupId,
+            now,
+            cancellationToken,
+            existingEdgesOverride,
+            newlyCreatedEdgeUuids,
+            inputNodeCount: nodesByExtractedName.Count).ConfigureAwait(false);
+    }
+
+    public async Task<List<EntityEdge>> ResolveEntityEdgesAsync(
+        IReadOnlyList<EntityEdge> extractedEdges,
+        EpisodicNode episode,
+        string groupId,
+        DateTime now,
+        CancellationToken cancellationToken,
+        IReadOnlyList<EntityEdge>? existingEdgesOverride = null,
+        HashSet<string>? newlyCreatedEdgeUuids = null,
+        Dictionary<string, string>? resolvedEdgeUuidMap = null,
+        int? inputNodeCount = null)
+    {
         using var activity = GraphitiTelemetry.StartActivity("Resolution.Edges");
         activity?.SetTag("graphiti.group_id", groupId);
         activity?.SetTag("graphiti.input.edges", extractedEdges.Count);
-        activity?.SetTag("graphiti.input.nodes", nodesByExtractedName.Count);
+        if (inputNodeCount is { } nodeCount)
+        {
+            activity?.SetTag("graphiti.input.nodes", nodeCount);
+        }
+
         activity?.SetTag("graphiti.existing_edges.override", existingEdgesOverride is not null);
         activity?.SetTag("graphiti.existing_edges.override_count", existingEdgesOverride?.Count ?? 0);
         var newlyCreatedEdgeStartCount = newlyCreatedEdgeUuids?.Count ?? 0;
@@ -48,65 +82,60 @@ internal sealed class EdgeResolutionService(
             var driver = driverAccessor();
             var result = new List<EntityEdge>();
             var resultUuids = new HashSet<string>(StringComparer.Ordinal);
-            var seen = new HashSet<(string SourceUuid, string TargetUuid, string NormalizedFact)>();
+            var seen = new Dictionary<(string SourceUuid, string TargetUuid, string NormalizedFact), EntityEdge>();
             var skippedEdges = 0;
-            var episodes = new[] { episode };
-            foreach (var extracted in extractedEdges)
+            foreach (var candidate in extractedEdges)
             {
-                if (!nodesByExtractedName.TryGetValue(extracted.SourceName, out var sourceNode)
-                    || !nodesByExtractedName.TryGetValue(extracted.TargetName, out var targetNode)
-                    || (!extracted.AllowSelfEdge && sourceNode.Uuid == targetNode.Uuid)
-                    || string.IsNullOrWhiteSpace(extracted.Fact))
+                if (string.IsNullOrWhiteSpace(candidate.SourceNodeUuid)
+                    || string.IsNullOrWhiteSpace(candidate.TargetNodeUuid)
+                    || candidate.SourceNodeUuid == candidate.TargetNodeUuid
+                    || string.IsNullOrWhiteSpace(candidate.Fact))
                 {
                     skippedEdges++;
                     continue;
                 }
 
                 var key = (
-                    SourceUuid: sourceNode.Uuid,
-                    TargetUuid: targetNode.Uuid,
-                    NormalizedFact: NormalizeFact(extracted.Fact));
-                if (!seen.Add(key))
+                    SourceUuid: candidate.SourceNodeUuid,
+                    TargetUuid: candidate.TargetNodeUuid,
+                    NormalizedFact: NormalizeFact(candidate.Fact));
+                if (seen.TryGetValue(key, out var duplicateCandidate))
                 {
+                    AddEpisodesIfMissing(duplicateCandidate, candidate.Episodes, episode.Uuid);
+                    resolvedEdgeUuidMap?.TryAdd(candidate.Uuid, duplicateCandidate.Uuid);
                     skippedEdges++;
                     continue;
                 }
 
-                var candidate = new EntityEdge
+                seen.Add(key, candidate);
+                if (string.IsNullOrWhiteSpace(candidate.GroupId))
                 {
-                    SourceNodeUuid = sourceNode.Uuid,
-                    TargetNodeUuid = targetNode.Uuid,
-                    GroupId = groupId,
-                    CreatedAt = now,
-                    Name = string.IsNullOrWhiteSpace(extracted.RelationType) ? "RELATES_TO" : extracted.RelationType,
-                    Fact = extracted.Fact,
-                    Episodes = EpisodeAttribution.MapIndicesToEpisodeUuids(extracted.EpisodeIndices, episodes),
-                    ValidAt = extracted.ValidAt,
-                    InvalidAt = extracted.InvalidAt,
-                    ReferenceTime = extracted.ReferenceTime
-                                    ?? EpisodeAttribution.ReferenceTimeForFirstValidIndex(
-                                        extracted.EpisodeIndices,
-                                        episodes,
-                                        episode.ValidAt)
-                };
+                    candidate.GroupId = groupId;
+                }
+
+                if (candidate.CreatedAt == GraphitiHelpers.DefaultTimestamp)
+                {
+                    candidate.CreatedAt = now;
+                }
 
                 if (candidate.InvalidAt is not null)
                 {
-                    candidate.ExpiredAt = now;
+                    candidate.ExpiredAt ??= now;
                 }
 
                 var relatedEdges = await driver.GetEntityEdgesBetweenNodesAsync(
-                    sourceNode.Uuid,
-                    targetNode.Uuid,
+                    candidate.SourceNodeUuid,
+                    candidate.TargetNodeUuid,
                     cancellationToken).ConfigureAwait(false);
                 relatedEdges = EdgeMergeHelpers.MergeEdgeOverrides(
                     relatedEdges,
                     existingEdgesOverride,
-                    edge => edge.SourceNodeUuid == sourceNode.Uuid && edge.TargetNodeUuid == targetNode.Uuid);
+                    edge => edge.SourceNodeUuid == candidate.SourceNodeUuid && edge.TargetNodeUuid == candidate.TargetNodeUuid);
                 var duplicate = FindDuplicateFact(relatedEdges, key.NormalizedFact);
                 if (duplicate is not null)
                 {
                     AddEpisodesIfMissing(duplicate, candidate.Episodes, episode.Uuid);
+                    resolvedEdgeUuidMap?.TryAdd(candidate.Uuid, duplicate.Uuid);
                     EdgeMergeHelpers.AddResolvedEdge(result, resultUuids, duplicate);
                     continue;
                 }
@@ -129,6 +158,7 @@ internal sealed class EdgeResolutionService(
                     newlyCreatedEdgeUuids?.Add(resolvedEdge.Uuid);
                 }
 
+                resolvedEdgeUuidMap?.TryAdd(candidate.Uuid, resolvedEdge.Uuid);
                 EdgeMergeHelpers.AddResolvedEdge(result, resultUuids, resolvedEdge);
                 foreach (var invalidatedEdge in invalidatedEdges)
                 {
@@ -149,6 +179,73 @@ internal sealed class EdgeResolutionService(
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
         }
+    }
+
+    internal static List<EntityEdge> BuildExtractedEdgeCandidates(
+        IReadOnlyList<Graphiti.ExtractedEdge> extractedEdges,
+        IReadOnlyDictionary<string, EntityNode> nodesByExtractedName,
+        IReadOnlyList<EpisodicNode> episodes,
+        string groupId,
+        DateTime now,
+        out int skippedEdges)
+    {
+        skippedEdges = 0;
+        var candidates = new List<EntityEdge>(extractedEdges.Count);
+        var seen = new HashSet<(string SourceUuid, string TargetUuid, string NormalizedFact)>();
+        if (episodes.Count == 0)
+        {
+            skippedEdges = extractedEdges.Count;
+            return candidates;
+        }
+
+        var fallbackEpisode = episodes[0];
+        foreach (var extracted in extractedEdges)
+        {
+            if (!nodesByExtractedName.TryGetValue(extracted.SourceName, out var sourceNode)
+                || !nodesByExtractedName.TryGetValue(extracted.TargetName, out var targetNode)
+                || (!extracted.AllowSelfEdge && sourceNode.Uuid == targetNode.Uuid)
+                || string.IsNullOrWhiteSpace(extracted.Fact))
+            {
+                skippedEdges++;
+                continue;
+            }
+
+            var key = (
+                SourceUuid: sourceNode.Uuid,
+                TargetUuid: targetNode.Uuid,
+                NormalizedFact: NormalizeFact(extracted.Fact));
+            if (!seen.Add(key))
+            {
+                skippedEdges++;
+                continue;
+            }
+
+            var candidate = new EntityEdge
+            {
+                SourceNodeUuid = sourceNode.Uuid,
+                TargetNodeUuid = targetNode.Uuid,
+                GroupId = groupId,
+                CreatedAt = now,
+                Name = string.IsNullOrWhiteSpace(extracted.RelationType) ? "RELATES_TO" : extracted.RelationType,
+                Fact = extracted.Fact,
+                Episodes = EpisodeAttribution.MapIndicesToEpisodeUuids(extracted.EpisodeIndices, episodes),
+                ValidAt = extracted.ValidAt,
+                InvalidAt = extracted.InvalidAt,
+                ReferenceTime = extracted.ReferenceTime
+                                ?? EpisodeAttribution.ReferenceTimeForFirstValidIndex(
+                                    extracted.EpisodeIndices,
+                                    episodes,
+                                    fallbackEpisode.ValidAt)
+            };
+            if (candidate.InvalidAt is not null)
+            {
+                candidate.ExpiredAt = now;
+            }
+
+            candidates.Add(candidate);
+        }
+
+        return candidates;
     }
 
     internal static EntityEdge? FindDuplicateFact(IReadOnlyList<EntityEdge> relatedEdges, string normalizedFact)

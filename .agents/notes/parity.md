@@ -70,7 +70,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Combined node+edge extraction path | utils/maintenance/combined_extraction.py | EpisodeGraphExtractor.ExtractCombinedEpisodeGraphAsync | PARTIAL | Internal path ported 2026-06-11: single LLM call, orphan dropping, node attribution from facts, self-fact preservation, and batch timestamps. Not wired into public ingestion because current Python baseline keeps `use_combined_extraction=False`; needs user decision on C# default vs option |
 | Edge attribute extraction during add_episode | not done in Python single-episode flow | Graphiti.Ingestion.cs:103 | DIVERGENT | C# added a per-edge attribute pass; decide keep-or-align in plan 02 |
 | Episodic edge building | edge_operations.build_episodic_edges | MaintenanceUtilities | OK | |
-| Bulk ingestion (true batch dedup/resolve) | bulk_utils, graphiti.py:1230+ | Graphiti.Ingestion.cs:195+ | PARTIAL | C# loops per-episode with accumulated candidates instead of Python's batch dedup/resolve |
+| Bulk ingestion (true batch dedup/resolve) | bulk_utils, graphiti.py:1230+ | Graphiti.Ingestion.cs:195+ | OK | Ported 2026-06-11; staged extraction, first-pass node resolution against live graph, directed node UUID maps, cross-batch node/edge dedupe, final node/edge resolution, pointer remapping, and per-episode provenance are covered |
 | Saga association + episode-time watermarks | graphiti.py | SagaService | OK | Watermarks present |
 | Community update on ingest | graphiti.py | CommunityService | OK | Flow parity; community summary/name prompts ported 2026-06-11 |
 

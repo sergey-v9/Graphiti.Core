@@ -240,7 +240,7 @@ internal static class EdgeMergeHelpers
         }
     }
 
-    private static void MergeCanonicalEdge(EntityEdge target, EntityEdge source)
+    internal static void MergeCanonicalEdge(EntityEdge target, EntityEdge source)
     {
         if (ReferenceEquals(target, source))
         {

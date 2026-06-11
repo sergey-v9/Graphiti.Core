@@ -240,13 +240,9 @@ public sealed partial class Graphiti
                 Array.Empty<EntityEdge>(),
                 cancellationToken).ConfigureAwait(false);
 
-            var knownCandidateNodes = CopyList(await Driver.GetNodesByGroupIdsAsync<EntityNode>(
+            var existingNodes = CopyList(await Driver.GetNodesByGroupIdsAsync<EntityNode>(
                 new[] { groupId },
                 cancellationToken: cancellationToken).ConfigureAwait(false));
-            var knownCandidateUuids = BuildEntityNodeUuidSet(knownCandidateNodes);
-            var allNodesByUuid = new Dictionary<string, EntityNode>(StringComparer.Ordinal);
-            var allEdgesByUuid = new Dictionary<string, EntityEdge>(StringComparer.Ordinal);
-            var allEpisodicEdges = new List<EpisodicEdge>();
             var extractedEpisodes = await SelectThrottledAsync(
                 episodes,
                 async (episode, token) => await ExtractBulkEpisodeAsync(
@@ -260,49 +256,87 @@ public sealed partial class Graphiti
                     token).ConfigureAwait(false),
                 cancellationToken).ConfigureAwait(false);
 
+            var nodeBatch = await DedupeBulkNodesAsync(
+                extractedEpisodes,
+                groupId,
+                entityTypes,
+                existingNodes,
+                cancellationToken).ConfigureAwait(false);
+            var allEpisodicEdges = BuildBulkEpisodicEdges(extractedEpisodes, nodeBatch, now);
+            var edgeCandidatesByEpisode = BuildBulkEdgeCandidates(
+                extractedEpisodes,
+                nodeBatch,
+                groupId,
+                now);
+            foreach (var edges in edgeCandidatesByEpisode.Values)
+            {
+                MaintenanceUtilities.ResolveEdgePointers(edges, nodeBatch.UuidMap);
+            }
+
+            var edgesByEpisode = await DedupeBulkEdgesAsync(
+                edgeCandidatesByEpisode,
+                extractedEpisodes,
+                now,
+                cancellationToken).ConfigureAwait(false);
+            var finalNodeBatch = await ResolveBulkNodesFinalAsync(
+                nodeBatch.NodesByEpisode,
+                extractedEpisodes,
+                groupId,
+                entityTypes,
+                cancellationToken).ConfigureAwait(false);
+
+            MaintenanceUtilities.ResolveEdgePointers(allEpisodicEdges, finalNodeBatch.UuidMap);
+            foreach (var edges in edgesByEpisode.Values)
+            {
+                MaintenanceUtilities.ResolveEdgePointers(edges, finalNodeBatch.UuidMap);
+            }
+
+            var allNodesByUuid = new Dictionary<string, EntityNode>(StringComparer.Ordinal);
+            var allEdgesByUuid = new Dictionary<string, EntityEdge>(StringComparer.Ordinal);
+            var finalEdgeUuidPairs = new List<UuidMapPair>();
+            var resolvedEdgesByEpisode = new Dictionary<string, List<EntityEdge>>(StringComparer.Ordinal);
+            var seenFinalEdgeUuids = new HashSet<string>(StringComparer.Ordinal);
             foreach (var extractedEpisode in extractedEpisodes)
             {
                 var episode = extractedEpisode.Episode;
-                var nodes = extractedEpisode.Nodes;
-                var extractedEdges = extractedEpisode.Edges;
-                var attribution = extractedEpisode.Attribution;
                 var previousEpisodes = extractedEpisode.PreviousEpisodes;
-
-                var nodeResolution = await _nodeResolutionService.ResolveExtractedNodesAsync(
-                    nodes,
-                    groupId,
-                    episode,
-                    previousEpisodes,
-                    entityTypes,
-                    knownCandidateNodes,
-                    cancellationToken).ConfigureAwait(false);
-                var resolvedNodes = nodeResolution.Nodes;
-                var resolvedAttribution = EpisodeAttribution.RemapNodeIndexMap(
-                    nodes,
-                    attribution,
-                    nodeResolution.NodesByExtractedName);
-                foreach (var node in resolvedNodes)
+                var resolvedNodes = finalNodeBatch.NodesByEpisode.TryGetValue(episode.Uuid, out var episodeNodes)
+                    ? episodeNodes
+                    : new List<EntityNode>();
+                var extractedEdges = edgesByEpisode.TryGetValue(episode.Uuid, out var episodeEdges)
+                    ? episodeEdges
+                    : new List<EntityEdge>();
+                var uniqueExtractedEdges = new List<EntityEdge>();
+                for (var i = 0; i < extractedEdges.Count; i++)
                 {
-                    allNodesByUuid[node.Uuid] = node;
-                    if (knownCandidateUuids.Add(node.Uuid))
+                    var edge = extractedEdges[i];
+                    if (seenFinalEdgeUuids.Add(edge.Uuid))
                     {
-                        knownCandidateNodes.Add(node);
+                        uniqueExtractedEdges.Add(edge);
                     }
                 }
 
                 var newEdgeUuids = new HashSet<string>(StringComparer.Ordinal);
-                var entityEdges = await _edgeResolutionService.ResolveExtractedEdgesAsync(
-                    extractedEdges,
-                    nodeResolution.NodesByExtractedName,
+                var edgeUuidMap = new Dictionary<string, string>(StringComparer.Ordinal);
+                var entityEdges = await _edgeResolutionService.ResolveEntityEdgesAsync(
+                    uniqueExtractedEdges,
                     episode,
                     groupId,
                     now,
                     cancellationToken,
                     CopyDictionaryValues(allEdgesByUuid),
-                    newlyCreatedEdgeUuids: newEdgeUuids).ConfigureAwait(false);
+                    newlyCreatedEdgeUuids: newEdgeUuids,
+                    resolvedEdgeUuidMap: edgeUuidMap,
+                    inputNodeCount: finalNodeBatch.AllNodes.Count).ConfigureAwait(false);
+                foreach (var pair in edgeUuidMap)
+                {
+                    finalEdgeUuidPairs.Add(new UuidMapPair(pair.Key, pair.Value));
+                }
+
+                resolvedEdgesByEpisode[episode.Uuid] = entityEdges;
                 await _attributeExtractionService.ExtractAttributesFromEdgesAsync(
                     entityEdges,
-                    resolvedNodes,
+                    finalNodeBatch.AllNodes,
                     episode,
                     edgeTypes,
                     edgeTypeMap,
@@ -320,9 +354,31 @@ public sealed partial class Graphiti
                     previousEpisodes,
                     EdgeMergeHelpers.FilterEdgesByUuid(entityEdges, newEdgeUuids),
                     cancellationToken).ConfigureAwait(false);
-                episode.EntityEdges = BuildEntityEdgeUuidList(entityEdges);
                 EdgeMergeHelpers.UpsertCanonicalEdges(allEdgesByUuid, entityEdges);
-                allEpisodicEdges.AddRange(MaintenanceUtilities.BuildEpisodicEdges(resolvedNodes, episode.Uuid, now, resolvedAttribution));
+                for (var i = 0; i < resolvedNodes.Count; i++)
+                {
+                    allNodesByUuid[resolvedNodes[i].Uuid] = resolvedNodes[i];
+                }
+            }
+
+            var finalEdgeUuidMap = BuildDirectedUuidMap(finalEdgeUuidPairs);
+            foreach (var extractedEpisode in extractedEpisodes)
+            {
+                var episode = extractedEpisode.Episode;
+                var currentEpisodeEdges = edgesByEpisode.TryGetValue(episode.Uuid, out var episodeEdges)
+                    ? episodeEdges
+                    : new List<EntityEdge>();
+                var entityEdgeUuids = BuildEntityEdgeUuidList(currentEpisodeEdges, finalEdgeUuidMap);
+                if (resolvedEdgesByEpisode.TryGetValue(episode.Uuid, out var resolvedEpisodeEdges))
+                {
+                    AddResolvedEntityEdgeUuids(
+                        entityEdgeUuids,
+                        resolvedEpisodeEdges,
+                        currentEpisodeEdges,
+                        finalEdgeUuidMap);
+                }
+
+                episode.EntityEdges = entityEdgeUuids;
             }
 
             if (!_storeRawEpisodeContent)
@@ -409,6 +465,376 @@ public sealed partial class Graphiti
             cancellationToken).ConfigureAwait(false);
 
         return new BulkEpisodeExtraction(episode, previousEpisodes, nodes, edges, attribution);
+    }
+
+    private async Task<BulkNodeDedupeResult> DedupeBulkNodesAsync(
+        IReadOnlyList<BulkEpisodeExtraction> extractedEpisodes,
+        string groupId,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes,
+        IReadOnlyList<EntityNode> existingNodes,
+        CancellationToken cancellationToken)
+    {
+        var firstPassResults = await SelectThrottledAsync(
+            extractedEpisodes.ToList(),
+            async (extraction, token) =>
+            {
+                var resolution = await _nodeResolutionService.ResolveExtractedNodesAsync(
+                    extraction.Nodes,
+                    groupId,
+                    extraction.Episode,
+                    extraction.PreviousEpisodes,
+                    entityTypes,
+                    CloneEntityNodes(existingNodes),
+                    token).ConfigureAwait(false);
+                return new BulkNodeFirstPass(extraction, resolution);
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        var canonicalNodes = new Dictionary<string, EntityNode>(StringComparer.Ordinal);
+        var uuidPairs = new List<UuidMapPair>();
+        foreach (var firstPass in firstPassResults)
+        {
+            foreach (var pair in firstPass.Resolution.UuidMap)
+            {
+                uuidPairs.Add(new UuidMapPair(pair.Key, pair.Value));
+            }
+
+            uuidPairs.AddRange(firstPass.Resolution.DuplicatePairs);
+        }
+
+        foreach (var firstPass in firstPassResults)
+        {
+            foreach (var node in firstPass.Resolution.Nodes)
+            {
+                if (canonicalNodes.Count == 0)
+                {
+                    canonicalNodes[node.Uuid] = node;
+                    continue;
+                }
+
+                if (canonicalNodes.ContainsKey(node.Uuid))
+                {
+                    continue;
+                }
+
+                var normalized = GraphitiHelpers.NormalizeEntityKey(node.Name);
+                var exactMatch = FindCanonicalNodeByNormalizedName(canonicalNodes.Values, normalized);
+                if (exactMatch is not null)
+                {
+                    if (!string.Equals(node.Uuid, exactMatch.Uuid, StringComparison.Ordinal))
+                    {
+                        uuidPairs.Add(new UuidMapPair(node.Uuid, exactMatch.Uuid));
+                    }
+
+                    continue;
+                }
+
+                var deterministic = EntityNodeDeduplicator.Resolve(
+                    new List<EntityNode> { node },
+                    CopyDictionaryValues(canonicalNodes),
+                    NodeResolutionService.MergeExtractedNode);
+                var resolved = deterministic.Nodes.Count == 0 ? node : deterministic.Nodes[0];
+                if (string.Equals(resolved.Uuid, node.Uuid, StringComparison.Ordinal))
+                {
+                    canonicalNodes[node.Uuid] = node;
+                    continue;
+                }
+
+                canonicalNodes.TryAdd(resolved.Uuid, resolved);
+                uuidPairs.Add(new UuidMapPair(node.Uuid, resolved.Uuid));
+            }
+        }
+
+        var compressedMap = BuildDirectedUuidMap(uuidPairs);
+        var nodesByEpisode = new Dictionary<string, List<EntityNode>>(StringComparer.Ordinal);
+        var nodesByExtractedNameByEpisode = new Dictionary<string, Dictionary<string, EntityNode>>(StringComparer.Ordinal);
+        var attributionByEpisode = new Dictionary<string, Dictionary<string, IReadOnlyList<int>>>(StringComparer.Ordinal);
+        foreach (var firstPass in firstPassResults)
+        {
+            var episodeUuid = firstPass.Extraction.Episode.Uuid;
+            var dedupedNodes = new List<EntityNode>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var node in firstPass.Resolution.Nodes)
+            {
+                var canonicalUuid = ResolveUuid(node.Uuid, compressedMap);
+                if (!seen.Add(canonicalUuid))
+                {
+                    continue;
+                }
+
+                dedupedNodes.Add(canonicalNodes.TryGetValue(canonicalUuid, out var canonicalNode)
+                    ? canonicalNode
+                    : node);
+            }
+
+            nodesByEpisode[episodeUuid] = dedupedNodes;
+            var nodesByExtractedName = new Dictionary<string, EntityNode>(StringComparer.OrdinalIgnoreCase);
+            foreach (var extractedNode in firstPass.Extraction.Nodes)
+            {
+                if (!firstPass.Resolution.NodesByExtractedName.TryGetValue(extractedNode.Name, out var resolvedNode))
+                {
+                    continue;
+                }
+
+                var canonicalUuid = ResolveUuid(resolvedNode.Uuid, compressedMap);
+                nodesByExtractedName[extractedNode.Name] = canonicalNodes.TryGetValue(canonicalUuid, out var canonicalNode)
+                    ? canonicalNode
+                    : resolvedNode;
+            }
+
+            nodesByExtractedNameByEpisode[episodeUuid] = nodesByExtractedName;
+            attributionByEpisode[episodeUuid] = EpisodeAttribution.RemapNodeIndexMap(
+                firstPass.Extraction.Nodes,
+                firstPass.Extraction.Attribution,
+                nodesByExtractedName);
+        }
+
+        return new BulkNodeDedupeResult(
+            nodesByEpisode,
+            nodesByExtractedNameByEpisode,
+            attributionByEpisode,
+            compressedMap);
+    }
+
+    private static List<EpisodicEdge> BuildBulkEpisodicEdges(
+        IReadOnlyList<BulkEpisodeExtraction> extractedEpisodes,
+        BulkNodeDedupeResult nodeBatch,
+        DateTime now)
+    {
+        var episodicEdges = new List<EpisodicEdge>();
+        foreach (var extraction in extractedEpisodes)
+        {
+            if (!nodeBatch.NodesByEpisode.TryGetValue(extraction.Episode.Uuid, out var nodes))
+            {
+                continue;
+            }
+
+            nodeBatch.AttributionByEpisode.TryGetValue(extraction.Episode.Uuid, out var attribution);
+            episodicEdges.AddRange(MaintenanceUtilities.BuildEpisodicEdges(
+                nodes,
+                extraction.Episode.Uuid,
+                now,
+                attribution));
+        }
+
+        return episodicEdges;
+    }
+
+    private static Dictionary<string, List<EntityEdge>> BuildBulkEdgeCandidates(
+        IReadOnlyList<BulkEpisodeExtraction> extractedEpisodes,
+        BulkNodeDedupeResult nodeBatch,
+        string groupId,
+        DateTime now)
+    {
+        var edgesByEpisode = new Dictionary<string, List<EntityEdge>>(StringComparer.Ordinal);
+        foreach (var extraction in extractedEpisodes)
+        {
+            if (!nodeBatch.NodesByExtractedNameByEpisode.TryGetValue(
+                    extraction.Episode.Uuid,
+                    out var nodesByExtractedName))
+            {
+                edgesByEpisode[extraction.Episode.Uuid] = new List<EntityEdge>();
+                continue;
+            }
+
+            edgesByEpisode[extraction.Episode.Uuid] = EdgeResolutionService.BuildExtractedEdgeCandidates(
+                extraction.Edges,
+                nodesByExtractedName,
+                new[] { extraction.Episode },
+                groupId,
+                now,
+                out _);
+        }
+
+        return edgesByEpisode;
+    }
+
+    private async Task<Dictionary<string, List<EntityEdge>>> DedupeBulkEdgesAsync(
+        Dictionary<string, List<EntityEdge>> extractedEdgesByEpisode,
+        IReadOnlyList<BulkEpisodeExtraction> extractedEpisodes,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var allEdges = new List<EntityEdge>();
+        foreach (var edges in extractedEdgesByEpisode.Values)
+        {
+            allEdges.AddRange(edges);
+        }
+
+        await MaintenanceUtilities.CreateEntityEdgeEmbeddingsAsync(
+            Embedder,
+            allEdges,
+            cancellationToken).ConfigureAwait(false);
+
+        var duplicatePairs = new List<UuidMapPair>();
+        foreach (var extraction in extractedEpisodes)
+        {
+            if (!extractedEdgesByEpisode.TryGetValue(extraction.Episode.Uuid, out var edges))
+            {
+                continue;
+            }
+
+            for (var i = 0; i < edges.Count; i++)
+            {
+                var edge = edges[i];
+                var candidates = FindBulkEdgeDedupeCandidates(edge, allEdges);
+                if (candidates.Count == 0)
+                {
+                    continue;
+                }
+
+                var normalizedFact = EdgeResolutionService.NormalizeFact(edge.Fact);
+                var exactDuplicate = EdgeResolutionService.FindDuplicateFact(candidates, normalizedFact);
+                if (exactDuplicate is not null)
+                {
+                    duplicatePairs.Add(new UuidMapPair(edge.Uuid, exactDuplicate.Uuid));
+                    continue;
+                }
+
+                var (resolvedEdge, _) = await _edgeResolutionService.ResolveEdgeWithLlmAsync(
+                    edge,
+                    candidates,
+                    candidates,
+                    extraction.Episode,
+                    now,
+                    cancellationToken).ConfigureAwait(false);
+                if (!string.Equals(resolvedEdge.Uuid, edge.Uuid, StringComparison.Ordinal))
+                {
+                    duplicatePairs.Add(new UuidMapPair(edge.Uuid, resolvedEdge.Uuid));
+                }
+            }
+        }
+
+        var compressedMap = CompressUuidMap(duplicatePairs);
+        var edgeByUuid = new Dictionary<string, EntityEdge>(StringComparer.Ordinal);
+        foreach (var edge in allEdges)
+        {
+            edgeByUuid.TryAdd(edge.Uuid, edge);
+        }
+
+        foreach (var edge in allEdges)
+        {
+            var canonicalUuid = ResolveUuid(edge.Uuid, compressedMap);
+            if (!string.Equals(canonicalUuid, edge.Uuid, StringComparison.Ordinal)
+                && edgeByUuid.TryGetValue(canonicalUuid, out var canonicalEdge))
+            {
+                foreach (var episodeUuid in edge.Episodes)
+                {
+                    EdgeMergeHelpers.AddEpisodeIfMissing(canonicalEdge, episodeUuid);
+                }
+            }
+        }
+
+        var edgesByEpisode = new Dictionary<string, List<EntityEdge>>(StringComparer.Ordinal);
+        foreach (var extraction in extractedEpisodes)
+        {
+            var episodeUuid = extraction.Episode.Uuid;
+            var sourceEdges = extractedEdgesByEpisode.TryGetValue(episodeUuid, out var edges)
+                ? edges
+                : new List<EntityEdge>();
+            var mappedEdges = new List<EntityEdge>(sourceEdges.Count);
+            foreach (var edge in sourceEdges)
+            {
+                var canonicalUuid = ResolveUuid(edge.Uuid, compressedMap);
+                mappedEdges.Add(edgeByUuid.TryGetValue(canonicalUuid, out var canonicalEdge)
+                    ? canonicalEdge
+                    : edge);
+            }
+
+            edgesByEpisode[episodeUuid] = mappedEdges;
+        }
+
+        return edgesByEpisode;
+    }
+
+    private async Task<FinalBulkNodeResolution> ResolveBulkNodesFinalAsync(
+        IReadOnlyDictionary<string, List<EntityNode>> nodesByEpisode,
+        IReadOnlyList<BulkEpisodeExtraction> extractedEpisodes,
+        string groupId,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes,
+        CancellationToken cancellationToken)
+    {
+        var nodesByUuid = new Dictionary<string, EntityNode>(StringComparer.Ordinal);
+        foreach (var nodes in nodesByEpisode.Values)
+        {
+            foreach (var node in nodes)
+            {
+                nodesByUuid.TryAdd(node.Uuid, node);
+            }
+        }
+
+        var uniqueNodesByEpisode = new Dictionary<string, List<EntityNode>>(StringComparer.Ordinal);
+        var seenNodeUuids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var extraction in extractedEpisodes)
+        {
+            var episodeUuid = extraction.Episode.Uuid;
+            var uniqueNodes = new List<EntityNode>();
+            if (nodesByEpisode.TryGetValue(episodeUuid, out var nodes))
+            {
+                foreach (var node in nodes)
+                {
+                    if (seenNodeUuids.Add(node.Uuid))
+                    {
+                        uniqueNodes.Add(node);
+                    }
+                }
+            }
+
+            uniqueNodesByEpisode[episodeUuid] = uniqueNodes;
+        }
+
+        var resolutionResults = await SelectThrottledAsync(
+            extractedEpisodes.ToList(),
+            async (extraction, token) =>
+            {
+                var nodes = uniqueNodesByEpisode[extraction.Episode.Uuid];
+                var resolution = await _nodeResolutionService.ResolveExtractedNodesAsync(
+                    nodes,
+                    groupId,
+                    extraction.Episode,
+                    extraction.PreviousEpisodes,
+                    entityTypes,
+                    existingNodesOverride: null,
+                    token).ConfigureAwait(false);
+                return new BulkNodeFirstPass(extraction, resolution);
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        var uuidPairs = new List<UuidMapPair>();
+        var finalNodesByUuid = new Dictionary<string, EntityNode>(nodesByUuid, StringComparer.Ordinal);
+        foreach (var result in resolutionResults)
+        {
+            foreach (var pair in result.Resolution.UuidMap)
+            {
+                uuidPairs.Add(new UuidMapPair(pair.Key, pair.Value));
+            }
+
+            foreach (var node in result.Resolution.Nodes)
+            {
+                finalNodesByUuid[node.Uuid] = node;
+            }
+        }
+
+        var uuidMap = BuildDirectedUuidMap(uuidPairs);
+        var updatedNodesByEpisode = new Dictionary<string, List<EntityNode>>(StringComparer.Ordinal);
+        foreach (var pair in uniqueNodesByEpisode)
+        {
+            var nodes = new List<EntityNode>(pair.Value.Count);
+            foreach (var node in pair.Value)
+            {
+                var resolvedUuid = ResolveUuid(node.Uuid, uuidMap);
+                nodes.Add(finalNodesByUuid.TryGetValue(resolvedUuid, out var resolvedNode)
+                    ? resolvedNode
+                    : node);
+            }
+
+            updatedNodesByEpisode[pair.Key] = nodes;
+        }
+
+        return new FinalBulkNodeResolution(
+            updatedNodesByEpisode,
+            CopyDictionaryValues(finalNodesByUuid),
+            uuidMap);
     }
 
     /// <summary>
@@ -585,6 +1011,21 @@ public sealed partial class Graphiti
         List<ExtractedEdge> Edges,
         Dictionary<string, IReadOnlyList<int>> Attribution);
 
+    private sealed record BulkNodeFirstPass(
+        BulkEpisodeExtraction Extraction,
+        EntityNodeResolution Resolution);
+
+    private sealed record BulkNodeDedupeResult(
+        Dictionary<string, List<EntityNode>> NodesByEpisode,
+        Dictionary<string, Dictionary<string, EntityNode>> NodesByExtractedNameByEpisode,
+        Dictionary<string, Dictionary<string, IReadOnlyList<int>>> AttributionByEpisode,
+        Dictionary<string, string> UuidMap);
+
+    private sealed record FinalBulkNodeResolution(
+        Dictionary<string, List<EntityNode>> NodesByEpisode,
+        List<EntityNode> AllNodes,
+        Dictionary<string, string> UuidMap);
+
     private static List<T> CopyList<T>(IReadOnlyList<T> source)
     {
         var copy = new List<T>(source.Count);
@@ -596,15 +1037,43 @@ public sealed partial class Graphiti
         return copy;
     }
 
-    private static HashSet<string> BuildEntityNodeUuidSet(List<EntityNode> nodes)
+    private static List<EntityNode> CloneEntityNodes(IReadOnlyList<EntityNode> nodes)
     {
-        var uuids = new HashSet<string>(nodes.Count, StringComparer.Ordinal);
+        var clones = new List<EntityNode>(nodes.Count);
         for (var i = 0; i < nodes.Count; i++)
         {
-            uuids.Add(nodes[i].Uuid);
+            clones.Add(CloneEntityNode(nodes[i]));
         }
 
-        return uuids;
+        return clones;
+    }
+
+    private static EntityNode CloneEntityNode(EntityNode node) =>
+        new()
+        {
+            Uuid = node.Uuid,
+            Name = node.Name,
+            GroupId = node.GroupId,
+            Labels = new List<string>(node.Labels),
+            CreatedAt = node.CreatedAt,
+            NameEmbedding = node.NameEmbedding is null ? null : new List<float>(node.NameEmbedding),
+            Summary = node.Summary,
+            Attributes = new Dictionary<string, object?>(node.Attributes, StringComparer.Ordinal)
+        };
+
+    private static EntityNode? FindCanonicalNodeByNormalizedName(
+        IEnumerable<EntityNode> nodes,
+        string normalizedName)
+    {
+        foreach (var node in nodes)
+        {
+            if (GraphitiHelpers.NormalizeEntityKey(node.Name) == normalizedName)
+            {
+                return node;
+            }
+        }
+
+        return null;
     }
 
     private static List<string> BuildEntityEdgeUuidList(List<EntityEdge> edges)
@@ -616,6 +1085,57 @@ public sealed partial class Graphiti
         }
 
         return uuids;
+    }
+
+    private static List<string> BuildEntityEdgeUuidList(
+        List<EntityEdge> edges,
+        IReadOnlyDictionary<string, string> uuidMap)
+    {
+        var uuids = new List<string>(edges.Count);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < edges.Count; i++)
+        {
+            var uuid = ResolveUuid(edges[i].Uuid, uuidMap);
+            if (seen.Add(uuid))
+            {
+                uuids.Add(uuid);
+            }
+        }
+
+        return uuids;
+    }
+
+    private static void AddResolvedEntityEdgeUuids(
+        List<string> uuids,
+        List<EntityEdge> edges,
+        List<EntityEdge> currentEpisodeEdges,
+        IReadOnlyDictionary<string, string> uuidMap)
+    {
+        var seen = new HashSet<string>(uuids, StringComparer.Ordinal);
+        var invalidAtValuesForCurrentEpisode = new HashSet<DateTime>();
+        for (var i = 0; i < currentEpisodeEdges.Count; i++)
+        {
+            if (currentEpisodeEdges[i].ValidAt is { } validAt)
+            {
+                invalidAtValuesForCurrentEpisode.Add(GraphitiHelpers.EnsureUtc(validAt));
+            }
+        }
+
+        for (var i = 0; i < edges.Count; i++)
+        {
+            if (edges[i].ExpiredAt is not null
+                && edges[i].InvalidAt is { } invalidAt
+                && !invalidAtValuesForCurrentEpisode.Contains(GraphitiHelpers.EnsureUtc(invalidAt)))
+            {
+                continue;
+            }
+
+            var uuid = ResolveUuid(edges[i].Uuid, uuidMap);
+            if (seen.Add(uuid))
+            {
+                uuids.Add(uuid);
+            }
+        }
     }
 
     private static List<TValue> CopyDictionaryValues<TKey, TValue>(Dictionary<TKey, TValue> source)
@@ -654,4 +1174,149 @@ public sealed partial class Graphiti
     }
 
     private readonly record struct IndexedEpisode(EpisodicNode Episode, int Index);
+
+    private static List<EntityEdge> FindBulkEdgeDedupeCandidates(
+        EntityEdge edge,
+        List<EntityEdge> allEdges)
+    {
+        var candidates = new List<EntityEdge>();
+        for (var i = 0; i < allEdges.Count; i++)
+        {
+            var candidate = allEdges[i];
+            if (string.Equals(candidate.Uuid, edge.Uuid, StringComparison.Ordinal)
+                || !string.Equals(candidate.SourceNodeUuid, edge.SourceNodeUuid, StringComparison.Ordinal)
+                || !string.Equals(candidate.TargetNodeUuid, edge.TargetNodeUuid, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (FactsHaveWordOverlap(edge.Fact, candidate.Fact)
+                || SearchUtilities.CalculateCosineSimilarity(edge.FactEmbedding, candidate.FactEmbedding) >= 0.6f)
+            {
+                candidates.Add(candidate);
+            }
+        }
+
+        return candidates;
+    }
+
+    private static bool FactsHaveWordOverlap(string left, string right)
+    {
+        var leftWords = left.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (leftWords.Length == 0)
+        {
+            return false;
+        }
+
+        var words = new HashSet<string>(leftWords, StringComparer.OrdinalIgnoreCase);
+        foreach (var word in right.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (words.Contains(word))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static Dictionary<string, string> BuildDirectedUuidMap(IEnumerable<UuidMapPair> pairs)
+    {
+        var parent = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        string Find(string uuid)
+        {
+            if (!parent.TryGetValue(uuid, out _))
+            {
+                parent[uuid] = uuid;
+            }
+
+            var root = uuid;
+            while (!string.Equals(parent[root], root, StringComparison.Ordinal))
+            {
+                root = parent[root];
+            }
+
+            while (!string.Equals(parent[uuid], root, StringComparison.Ordinal))
+            {
+                var next = parent[uuid];
+                parent[uuid] = root;
+                uuid = next;
+            }
+
+            return root;
+        }
+
+        foreach (var pair in pairs)
+        {
+            parent.TryAdd(pair.SourceUuid, pair.SourceUuid);
+            parent.TryAdd(pair.TargetUuid, pair.TargetUuid);
+            parent[Find(pair.SourceUuid)] = Find(pair.TargetUuid);
+        }
+
+        var keys = parent.Keys.ToList();
+        var uuidMap = new Dictionary<string, string>(keys.Count, StringComparer.Ordinal);
+        foreach (var key in keys)
+        {
+            uuidMap[key] = Find(key);
+        }
+
+        return uuidMap;
+    }
+
+    private static Dictionary<string, string> CompressUuidMap(IEnumerable<UuidMapPair> pairs)
+    {
+        var parent = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        string Find(string uuid)
+        {
+            if (!parent.TryGetValue(uuid, out _))
+            {
+                parent[uuid] = uuid;
+            }
+
+            if (!string.Equals(parent[uuid], uuid, StringComparison.Ordinal))
+            {
+                parent[uuid] = Find(parent[uuid]);
+            }
+
+            return parent[uuid];
+        }
+
+        void Union(string left, string right)
+        {
+            var leftRoot = Find(left);
+            var rightRoot = Find(right);
+            if (string.Equals(leftRoot, rightRoot, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (string.CompareOrdinal(leftRoot, rightRoot) < 0)
+            {
+                parent[rightRoot] = leftRoot;
+            }
+            else
+            {
+                parent[leftRoot] = rightRoot;
+            }
+        }
+
+        foreach (var pair in pairs)
+        {
+            Union(pair.SourceUuid, pair.TargetUuid);
+        }
+
+        var keys = parent.Keys.ToList();
+        var uuidMap = new Dictionary<string, string>(keys.Count, StringComparer.Ordinal);
+        foreach (var key in keys)
+        {
+            uuidMap[key] = Find(key);
+        }
+
+        return uuidMap;
+    }
+
+    private static string ResolveUuid(string uuid, IReadOnlyDictionary<string, string> uuidMap) =>
+        uuidMap.TryGetValue(uuid, out var resolvedUuid) ? resolvedUuid : uuid;
 }

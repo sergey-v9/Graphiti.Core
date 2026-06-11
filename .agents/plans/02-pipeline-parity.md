@@ -67,11 +67,18 @@ and check off here.**
         node attribution from facts, and self-fact preservation. It is intentionally not wired into
         public ingestion yet because the current Python baseline keeps combined extraction behind
         `use_combined_extraction=False`, and a C# default/option decision is still needed.
-- [ ] 6. Bulk ingestion true-batch semantics. Python `add_episode_bulk` dedupes/resolves across the
+- [x] 6. Bulk ingestion true-batch semantics. Python `add_episode_bulk` dedupes/resolves across the
       whole batch (`bulk_utils.py`, `_extract_and_dedupe_nodes_bulk`, `dedupe_edges_bulk`); C#
       loops per-episode with an accumulated candidate set, which changes dedup outcomes and loses
       cross-episode merging. Align the flow; preserve saga watermark behavior
       (graphiti.py:1417 min-valid-at) which C# should already have — verify while there.
+      - Done 2026-06-11: C# bulk ingestion now follows staged true-batch maintenance: all episodes
+        extract first, nodes resolve against live graph only, cross-episode node dedupe emits a
+        directed UUID map, episodic and entity edge pointers are remapped, in-memory batch edge
+        dedupe runs before final graph resolution, final node resolution emits a second pointer map,
+        and final edge resolution preserves in-memory invalidation snapshots plus per-episode
+        provenance. Focused tests cover directed node alias maps, same-episode batch edge dedupe,
+        cross-episode duplicate facts, and reinvalidation snapshots.
 - [ ] 7. LLM validation-failure re-prompting. Python's retry loop appends the validation error as
       a user message and retries (`llm_client/client.py` / `openai_base_client.py:251-304`); C#
       Polly pipeline retries transport errors only, so a malformed structured response is

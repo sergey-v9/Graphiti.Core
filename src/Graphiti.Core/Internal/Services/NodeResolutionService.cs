@@ -37,7 +37,9 @@ internal sealed class NodeResolutionService(
             {
                 var emptyResolution = new EntityNodeResolution(
                     new List<EntityNode>(),
-                    new Dictionary<string, EntityNode>(StringComparer.OrdinalIgnoreCase));
+                    new Dictionary<string, EntityNode>(StringComparer.OrdinalIgnoreCase),
+                    new Dictionary<string, string>(StringComparer.Ordinal),
+                    Array.Empty<UuidMapPair>());
                 activity?.SetTag("graphiti.existing.nodes", 0);
                 activity?.SetTag("graphiti.result.nodes", 0);
                 GraphitiTelemetry.SetOk(activity);
@@ -114,6 +116,10 @@ internal sealed class NodeResolutionService(
         var nodesByExtractedName = new Dictionary<string, EntityNode>(
             deterministicResolution.NodesByExtractedName,
             StringComparer.OrdinalIgnoreCase);
+        var uuidMap = new Dictionary<string, string>(
+            deterministicResolution.UuidMap,
+            StringComparer.Ordinal);
+        var duplicatePairs = new List<UuidMapPair>(deterministicResolution.DuplicatePairs);
 
         var processedIds = new HashSet<int>();
         foreach (var resolution in ReadNodeResolutions(response))
@@ -130,21 +136,30 @@ internal sealed class NodeResolutionService(
                 || resolution.DuplicateCandidateId >= candidates.Count)
             {
                 nodesByExtractedName[extractedNode.Name] = extractedNode;
+                uuidMap[extractedNode.Uuid] = extractedNode.Uuid;
                 continue;
             }
 
             var resolvedNode = MergeExtractedNode(candidates[resolution.DuplicateCandidateId], extractedNode);
             nodesByExtractedName[extractedNode.Name] = resolvedNode;
+            uuidMap[extractedNode.Uuid] = resolvedNode.Uuid;
+            if (!string.Equals(extractedNode.Uuid, resolvedNode.Uuid, StringComparison.Ordinal))
+            {
+                duplicatePairs.Add(new UuidMapPair(extractedNode.Uuid, resolvedNode.Uuid));
+            }
         }
 
         foreach (var extractedNode in unresolvedNodes)
         {
             nodesByExtractedName.TryAdd(extractedNode.Name, extractedNode);
+            uuidMap.TryAdd(extractedNode.Uuid, extractedNode.Uuid);
         }
 
         return new EntityNodeResolution(
             BuildResolvedNodeList(extractedNodes, nodesByExtractedName),
-            nodesByExtractedName);
+            nodesByExtractedName,
+            uuidMap,
+            duplicatePairs);
     }
 
     private static List<EntityNode> FindLlmNodeDedupTargets(
@@ -383,7 +398,7 @@ internal sealed class NodeResolutionService(
         return nodes;
     }
 
-    private static EntityNode MergeExtractedNode(EntityNode existing, EntityNode extracted)
+    internal static EntityNode MergeExtractedNode(EntityNode existing, EntityNode extracted)
     {
         existing.Labels = MergeLabels(existing.Labels, extracted.Labels);
 

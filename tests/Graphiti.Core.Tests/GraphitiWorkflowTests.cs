@@ -2769,6 +2769,52 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisodeBulk_PreservesDirectedNodeUuidMapWhenCanonicalUuidSortsLater()
+    {
+        var driver = new InMemoryGraphDriver();
+        var existing = new EntityNode { Uuid = "zzzz-openai", Name = "OpenAI", GroupId = "group" };
+        await existing.SaveAsync(driver);
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: new StaticLlmClient(new JsonObject
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Open AI", ["entity_type"] = "Organization" },
+                    new JsonObject { ["name"] = "Bob", ["entity_type"] = "Person" }
+                },
+                ["edges"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["source"] = "Open AI",
+                        ["target"] = "Bob",
+                        ["relation_type"] = "HIRED",
+                        ["fact"] = "Open AI hired Bob."
+                    }
+                }
+            }));
+
+        var result = await graphiti.AddEpisodeBulkAsync(
+            new[]
+            {
+                new RawEpisode
+                {
+                    Name = "first",
+                    Content = "Open AI hired Bob.",
+                    SourceDescription = "message",
+                    ReferenceTime = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)
+                }
+            },
+            groupId: "group");
+
+        var edge = Assert.Single(result.Edges);
+        Assert.Equal(existing.Uuid, edge.SourceNodeUuid);
+        Assert.Contains(result.EpisodicEdges, mention => mention.TargetNodeUuid == existing.Uuid);
+        Assert.DoesNotContain(result.Nodes, node => node.Name == "Open AI" && node.Uuid != existing.Uuid);
+    }
+
+    [Fact]
     public async Task AddEpisodeBulk_CollapsesDuplicateFactsToSingleReturnedEdgeWithBothEpisodes()
     {
         var driver = new InMemoryGraphDriver();
@@ -2822,6 +2868,68 @@ public class GraphitiWorkflowTests
         var storedEdge = Assert.Single(storedEdges);
         Assert.Equal(edge.Uuid, storedEdge.Uuid);
         Assert.Equal(2, storedEdge.Episodes.Count);
+    }
+
+    [Fact]
+    public async Task AddEpisodeBulk_DedupesSameEpisodeBatchEdgesBeforeFinalResolution()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: new StaticLlmClient(new Dictionary<string, JsonObject>
+            {
+                ["extract_nodes.extract_message"] = new()
+                {
+                    ["extracted_entities"] = new JsonArray
+                    {
+                        new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                        new JsonObject { ["name"] = "Bob", ["entity_type"] = "Person" }
+                    }
+                },
+                ["extract_edges.edge"] = new()
+                {
+                    ["edges"] = new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["source"] = "Alice",
+                            ["target"] = "Bob",
+                            ["relation_type"] = "LIKES",
+                            ["fact"] = "Alice likes Bob."
+                        },
+                        new JsonObject
+                        {
+                            ["source"] = "Alice",
+                            ["target"] = "Bob",
+                            ["relation_type"] = "ENJOYS",
+                            ["fact"] = "Alice likes Bob a lot."
+                        }
+                    }
+                },
+                ["dedupe_edges.resolve_edge"] = new()
+                {
+                    ["duplicate_facts"] = new JsonArray { 0 },
+                    ["contradicted_facts"] = new JsonArray()
+                }
+            }));
+
+        var result = await graphiti.AddEpisodeBulkAsync(
+            new[]
+            {
+                new RawEpisode
+                {
+                    Name = "first",
+                    Content = "Alice likes Bob.",
+                    SourceDescription = "message",
+                    ReferenceTime = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)
+                }
+            },
+            groupId: "group");
+
+        var edge = Assert.Single(result.Edges);
+        var episode = Assert.Single(result.Episodes);
+        Assert.Equal(new[] { edge.Uuid }, episode.EntityEdges);
+        Assert.Single(await EntityEdge.GetByGroupIdsAsync(driver, new[] { "group" }));
     }
 
     [Fact]

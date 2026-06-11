@@ -13,7 +13,11 @@ namespace Graphiti.Core.Maintenance;
 /// </summary>
 internal sealed record EntityNodeResolution(
     List<EntityNode> Nodes,
-    IReadOnlyDictionary<string, EntityNode> NodesByExtractedName);
+    IReadOnlyDictionary<string, EntityNode> NodesByExtractedName,
+    IReadOnlyDictionary<string, string> UuidMap,
+    IReadOnlyList<UuidMapPair> DuplicatePairs);
+
+internal readonly record struct UuidMapPair(string SourceUuid, string TargetUuid);
 
 /// <summary>
 /// Deduplicates extracted entity nodes using name normalization, entropy/length heuristics, and fuzzy
@@ -43,6 +47,8 @@ internal static partial class EntityNodeDeduplicator
         var resolvedByExtractedName = new Dictionary<string, EntityNode>(StringComparer.OrdinalIgnoreCase);
         var resolvedByCanonicalUuid = new Dictionary<string, EntityNode>(StringComparer.Ordinal);
         var resolvedByUuid = new Dictionary<string, EntityNode>(StringComparer.Ordinal);
+        var uuidMap = new Dictionary<string, string>(StringComparer.Ordinal);
+        var duplicatePairs = new List<UuidMapPair>();
 
         foreach (var canonical in collapsed.CanonicalProfiles)
         {
@@ -54,10 +60,20 @@ internal static partial class EntityNodeDeduplicator
         foreach (var extracted in extractedNodes)
         {
             var canonical = collapsed.CanonicalByOriginalUuid[extracted.Uuid];
-            resolvedByExtractedName[extracted.Name] = resolvedByCanonicalUuid[canonical.Node.Uuid];
+            var resolved = resolvedByCanonicalUuid[canonical.Node.Uuid];
+            resolvedByExtractedName[extracted.Name] = resolved;
+            uuidMap[extracted.Uuid] = resolved.Uuid;
+            if (!string.Equals(extracted.Uuid, resolved.Uuid, StringComparison.Ordinal))
+            {
+                duplicatePairs.Add(new UuidMapPair(extracted.Uuid, resolved.Uuid));
+            }
         }
 
-        return new EntityNodeResolution(ToNodeList(resolvedByUuid), resolvedByExtractedName);
+        return new EntityNodeResolution(
+            ToNodeList(resolvedByUuid),
+            resolvedByExtractedName,
+            uuidMap,
+            duplicatePairs);
     }
 
     private static CollapsedExtractedNodes CollapseExtractedNodes(IReadOnlyList<EntityNode> extractedNodes)
