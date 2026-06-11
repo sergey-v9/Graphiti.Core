@@ -17,18 +17,20 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 - `GraphProvider.Kuzu` is a supported core options/DI path and resolves to the LadybugDB-backed
   driver.
 - Runtime proof covers the main ingest/search/removal/triplet/bulk/saga/community workflows,
-  direct driver bulk-save embedding/relationship persistence, saga-scoped episode retrieval, saga
-  content filtering/order/limit behavior, saga predecessor lookup, paged node/edge group reads,
-  directed endpoint-pair edge reads, incident entity-edge reads, group-id enumeration, file-backed
-  `DatabasePath` persistence, core `GraphProvider.Kuzu` `Database` persistence, and Python Kuzu
-  `':memory:'` sentinel compatibility. Treat tests as the detailed proof source.
+  direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by
+  UUID, saga-scoped episode retrieval, saga content filtering/order/limit behavior, saga predecessor
+  lookup, paged node/edge group reads, directed endpoint-pair edge reads, incident entity-edge reads,
+  group-id enumeration, file-backed `DatabasePath` persistence, core `GraphProvider.Kuzu`
+  `Database` persistence, and Python Kuzu `':memory:'` sentinel compatibility. Treat tests as the
+  detailed proof source.
 - `LadybugPackageRuntimeTests` exercise the actual LadybugDB package/native path in normal
   verification, including schema creation, list/null normalization, FTS loading/search, vector
   search, filters, direct driver bulk-save embedding/relationship persistence, saga-scoped episode
-  retrieval, saga content filtering/order/limit behavior, paged node/edge group reads, directed
-  endpoint-pair edge reads, incident edge reads, group-id enumeration, BFS/rankers, and delete/clear
-  flows. Do not add a separate native-gated smoke suite unless it covers a new runtime requirement or
-  CI/platform constraint the current package runtime tests do not cover.
+  retrieval, saga content filtering/order/limit behavior, namespace/model embedding reloads by UUID,
+  paged node/edge group reads, directed endpoint-pair edge reads, incident edge reads, group-id
+  enumeration, BFS/rankers, and delete/clear flows. Do not add a separate native-gated smoke suite
+  unless it covers a new runtime requirement or CI/platform constraint the current package runtime
+  tests do not cover.
 - The LadybugDB package has a nearby source checkout at `W:\code\ladybug`; this is background
   provenance for the NuGet/API surface. Graphiti work operates against package-facing behavior and
   Graphiti tests. When package or binding behavior looks suspect, mark the symptom separately from

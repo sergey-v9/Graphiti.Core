@@ -242,6 +242,22 @@ internal static class NamespaceDriverHelpers
         }
 
         var nodeUuids = BuildNodeUuidList(nodeList);
+        if (driver is IEmbeddingLoadGraphDriver embeddingDriver)
+        {
+            var embeddings = await embeddingDriver
+                .LoadEntityNodeEmbeddingsByUuidAsync(nodeUuids, cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var node in nodeList)
+            {
+                if (embeddings.TryGetValue(node.Uuid, out var embedding))
+                {
+                    node.NameEmbedding = CopyFloatList(embedding);
+                }
+            }
+
+            return;
+        }
+
         var storedNodes = await driver.GetNodesByUuidsAsync<EntityNode>(
             nodeUuids,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -269,6 +285,22 @@ internal static class NamespaceDriverHelpers
         }
 
         var edgeUuids = BuildEdgeUuidList(edgeList);
+        if (driver is IEmbeddingLoadGraphDriver embeddingDriver)
+        {
+            var embeddings = await embeddingDriver
+                .LoadEntityEdgeEmbeddingsByUuidAsync(edgeUuids, cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var edge in edgeList)
+            {
+                if (embeddings.TryGetValue(edge.Uuid, out var embedding))
+                {
+                    edge.FactEmbedding = CopyFloatList(embedding);
+                }
+            }
+
+            return;
+        }
+
         var storedEdges = await driver.GetEdgesByUuidsAsync<EntityEdge>(
             edgeUuids,
             cancellationToken).ConfigureAwait(false);

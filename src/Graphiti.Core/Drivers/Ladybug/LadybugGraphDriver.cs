@@ -3,7 +3,7 @@ namespace Graphiti.Core.Drivers.Ladybug;
 /// <summary>
 /// LadybugDB/Kuzu driver core over an abstract statement executor.
 /// </summary>
-internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver
+internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, IEmbeddingLoadGraphDriver
 {
     private readonly SharedState _shared;
     private readonly ILadybugQueryExecutor _executor;
@@ -463,6 +463,44 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver
         return MapEdgeRecords<T>(records);
     }
 
+    async Task<IReadOnlyDictionary<string, List<float>?>> IEmbeddingLoadGraphDriver
+        .LoadEntityNodeEmbeddingsByUuidAsync(
+            IReadOnlyList<string> nodeUuids,
+            CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodeUuids);
+        if (nodeUuids.Count == 0)
+        {
+            return new Dictionary<string, List<float>?>(0, StringComparer.Ordinal);
+        }
+
+        var records = await _executor.QueryAsync(
+            LadybugStatementBuilder.BuildNodesLoadEmbeddings<EntityNode>(nodeUuids),
+            cancellationToken).ConfigureAwait(false);
+        return BuildEmbeddingLookup(
+            records,
+            static record => LadybugRecordMapper.MapEntityNode(record).NameEmbedding);
+    }
+
+    async Task<IReadOnlyDictionary<string, List<float>?>> IEmbeddingLoadGraphDriver
+        .LoadEntityEdgeEmbeddingsByUuidAsync(
+            IReadOnlyList<string> edgeUuids,
+            CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(edgeUuids);
+        if (edgeUuids.Count == 0)
+        {
+            return new Dictionary<string, List<float>?>(0, StringComparer.Ordinal);
+        }
+
+        var records = await _executor.QueryAsync(
+            LadybugStatementBuilder.BuildEntityEdgesLoadEmbeddings(edgeUuids),
+            cancellationToken).ConfigureAwait(false);
+        return BuildEmbeddingLookup(
+            records,
+            static record => LadybugRecordMapper.MapEntityEdge(record).FactEmbedding);
+    }
+
     public override async Task<IReadOnlyList<EntityEdge>> GetEntityEdgesBetweenNodesAsync(
         string sourceNodeUuid,
         string targetNodeUuid,
@@ -790,6 +828,23 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
 
         return results;
+    }
+
+    private static Dictionary<string, List<float>?> BuildEmbeddingLookup(
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> records,
+        Func<IReadOnlyDictionary<string, object?>, List<float>?> getEmbedding)
+    {
+        var embeddings = new Dictionary<string, List<float>?>(records.Count, StringComparer.Ordinal);
+        for (var i = 0; i < records.Count; i++)
+        {
+            var uuid = GetString(records[i], "uuid");
+            if (uuid is not null)
+            {
+                embeddings[uuid] = getEmbedding(records[i]);
+            }
+        }
+
+        return embeddings;
     }
 
     private static void AddSagaEpisodeContent(

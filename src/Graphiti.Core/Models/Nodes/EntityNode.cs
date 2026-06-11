@@ -36,6 +36,18 @@ public sealed class EntityNode : Node
     /// <summary>Loads the persisted <see cref="NameEmbedding"/> for this entity from the graph.</summary>
     public async Task LoadNameEmbeddingAsync(IGraphDriver driver, CancellationToken cancellationToken = default)
     {
+        if (driver is IEmbeddingLoadGraphDriver embeddingDriver)
+        {
+            var embeddings = await embeddingDriver
+                .LoadEntityNodeEmbeddingsByUuidAsync(new[] { Uuid }, cancellationToken)
+                .ConfigureAwait(false);
+            if (embeddings.TryGetValue(Uuid, out var embedding))
+            {
+                NameEmbedding = EmbeddingVectorValidation.CopyNullableVector(embedding);
+                return;
+            }
+        }
+
         var stored = await GetByUuidAsync(driver, Uuid, cancellationToken).ConfigureAwait(false);
         NameEmbedding = EmbeddingVectorValidation.CopyNullableVector(stored.NameEmbedding);
     }

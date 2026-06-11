@@ -122,14 +122,14 @@ added.
 
 Latest checkpoint, 2026-06-11:
 
-Succeeded after proving LadybugDB direct bulk-save runtime behavior:
+Succeeded after fixing LadybugDB namespace/model embedding reloads by UUID:
 
 ```powershell
 .\eng\Verify-GraphitiCore.ps1
 ```
 
 Restore, format verification, solution build including `Graphiti.Sample.OpenAI`, full test suite
-(`941` passed, `2` skipped, `943` total), and `dotnet pack` for
+(`942` passed, `2` skipped, `944` total), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` was unset; the two skipped tests were
 `OpenAIProviderIntegrationTests.StructuredResponseSchemas_WithOpenAIProvider_AreAccepted` and
 `OpenAIProviderIntegrationTests.AddEpisodeAsync_WithOpenAIProvider_IngestsResolvedTemporalGraph`.
@@ -158,11 +158,11 @@ with `16` Ladybug runtime tests passed.
 dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~LadybugPackageRuntimeTests" --verbosity minimal
 ```
 
-with `16` Ladybug package-runtime tests passed, including actual package/native proof for direct
-driver bulk-save embedding/relationship persistence, saga-scoped retrieval, saga content
-filtering/order/limit behavior, paged node/edge group reads, directed endpoint-pair edge reads,
-incident entity-edge reads, and group-id enumeration. Focused edge-attribute and telemetry tests also
-passed earlier:
+with `17` Ladybug package-runtime tests passed, including actual package/native proof for direct
+driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by UUID,
+saga-scoped retrieval, saga content filtering/order/limit behavior, paged node/edge group reads,
+directed endpoint-pair edge reads, incident entity-edge reads, and group-id enumeration. Focused
+edge-attribute and telemetry tests also passed earlier:
 
 ```powershell
 dotnet test Graphiti.Core.CSharp.slnx --no-build --filter "FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_HydratesDeclaredEdgeAttributes|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_NonFastDuplicateEdgeAttributeHydrationDropsOverlongStringsAndReplacesOmittedFields|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_ExactDuplicatePreservesExistingEdgeAttributesAndSkipsEdgeAttributePrompt|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_ReusesEdgeAttributeSchemaForSameTypeBatch|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_EdgeAttributeExtractionRunsDuringResolution|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_SkipsEdgeAttributePromptWhenTypeMapDoesNotMatchEndpoints" --verbosity minimal

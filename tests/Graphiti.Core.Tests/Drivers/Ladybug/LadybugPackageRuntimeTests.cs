@@ -147,6 +147,95 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_NamespaceEmbeddingLoadsRestorePersistedVectorsByUuid()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var graphiti = new Graphiti(graphDriver: driver, embedder: new HashEmbedder(4));
+        var createdAt = new DateTime(2026, 2, 2, 4, 5, 6, DateTimeKind.Utc);
+        var alice = new EntityNode
+        {
+            Uuid = "embedding-load-alice",
+            Name = "Embedding Alice",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            Summary = "source for namespace embedding load"
+        };
+        var bob = new EntityNode
+        {
+            Uuid = "embedding-load-bob",
+            Name = "Embedding Bob",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            Summary = "target for namespace embedding load"
+        };
+        var knows = new EntityEdge
+        {
+            Uuid = "embedding-load-knows",
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            GroupId = "tenant",
+            Name = "KNOWS",
+            Fact = "Embedding Alice knows Embedding Bob.",
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = createdAt
+        };
+        var helps = new EntityEdge
+        {
+            Uuid = "embedding-load-helps",
+            SourceNodeUuid = bob.Uuid,
+            TargetNodeUuid = alice.Uuid,
+            GroupId = "tenant",
+            Name = "HELPS",
+            Fact = "Embedding Bob helps Embedding Alice.",
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = createdAt
+        };
+
+        await graphiti.BuildIndicesAndConstraintsAsync();
+        await graphiti.Nodes.Entity.SaveBulkAsync([alice, bob]);
+        await graphiti.Edges.Entity.SaveBulkAsync([knows, helps]);
+        var aliceShell = new EntityNode { Uuid = alice.Uuid };
+        var bobShell = new EntityNode { Uuid = bob.Uuid };
+        var knowsShell = new EntityEdge { Uuid = knows.Uuid };
+        var helpsShell = new EntityEdge { Uuid = helps.Uuid };
+
+        await graphiti.Nodes.Entity.LoadEmbeddingsAsync(aliceShell);
+        await graphiti.Nodes.Entity.LoadEmbeddingsBulkAsync([bobShell]);
+        await graphiti.Edges.Entity.LoadEmbeddingsAsync(knowsShell);
+        await graphiti.Edges.Entity.LoadEmbeddingsBulkAsync([helpsShell]);
+
+        Assert.Equal(alice.NameEmbedding, aliceShell.NameEmbedding);
+        Assert.Equal(bob.NameEmbedding, bobShell.NameEmbedding);
+        Assert.Equal(knows.FactEmbedding, knowsShell.FactEmbedding);
+        Assert.Equal(helps.FactEmbedding, helpsShell.FactEmbedding);
+        Assert.Equal(4, aliceShell.NameEmbedding?.Count);
+        Assert.Equal(4, bobShell.NameEmbedding?.Count);
+        Assert.Equal(4, knowsShell.FactEmbedding?.Count);
+        Assert.Equal(4, helpsShell.FactEmbedding?.Count);
+
+        aliceShell.NameEmbedding![0] = 99f;
+        bobShell.NameEmbedding![0] = 88f;
+        knowsShell.FactEmbedding![0] = 77f;
+        helpsShell.FactEmbedding![0] = 66f;
+        var storedNodes = await driver.GetNodesByGroupIdsAsync<EntityNode>(
+            ["tenant"],
+            withEmbeddings: true);
+        var storedEdges = await driver.GetEdgesByGroupIdsAsync<EntityEdge>(
+            ["tenant"],
+            withEmbeddings: true);
+
+        Assert.Equal(alice.NameEmbedding, Assert.Single(storedNodes, node => node.Uuid == alice.Uuid).NameEmbedding);
+        Assert.Equal(bob.NameEmbedding, Assert.Single(storedNodes, node => node.Uuid == bob.Uuid).NameEmbedding);
+        Assert.Equal(knows.FactEmbedding, Assert.Single(storedEdges, edge => edge.Uuid == knows.Uuid).FactEmbedding);
+        Assert.Equal(helps.FactEmbedding, Assert.Single(storedEdges, edge => edge.Uuid == helps.Uuid).FactEmbedding);
+    }
+
+    [Fact]
     public async Task PackageRuntime_NormalizedStatementsRoundTripEntityEdgeListsAndNulls()
     {
         await using var executor = new PackageLadybugExecutor();
