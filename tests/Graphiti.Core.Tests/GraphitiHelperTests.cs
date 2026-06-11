@@ -15,6 +15,8 @@ public class GraphitiHelperTests
             typeof(Graphiti.SagaSummaryResponse),
             typeof(Graphiti.CommunitySummaryResponse),
             typeof(Graphiti.CommunityNameResponse),
+            typeof(Graphiti.SummarizedEntitiesResponse),
+            typeof(Graphiti.SummarizedEntityResponse),
             typeof(Graphiti.NodeResolutionsResponse),
             typeof(Graphiti.NodeDuplicateResponse),
             typeof(Graphiti.EdgeResolutionResponse),

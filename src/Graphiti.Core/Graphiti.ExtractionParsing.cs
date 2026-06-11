@@ -269,6 +269,15 @@ public sealed partial class Graphiti
         public string? Description { get; set; }
     }
 
+    internal sealed class SummarizedEntitiesResponse
+    {
+        public List<SummarizedEntityResponse> Summaries { get; set; } = new();
+    }
+
+    internal sealed record SummarizedEntityResponse(
+        string Name,
+        string Summary);
+
     internal sealed class NodeResolutionsResponse
     {
         public List<NodeDuplicateResponse> EntityResolutions { get; set; } = new();

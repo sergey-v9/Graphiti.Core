@@ -425,6 +425,121 @@ public class ExtractNodesPromptsTests
     }
 
     [Fact]
+    public void BuildExtractSummariesBatch_RendersPythonParityPrompt()
+    {
+        var previous = new[]
+        {
+            CreateEpisode("Alice joined Acme.", EpisodeType.Message)
+        };
+        var nodes = new[]
+        {
+            new EntityNode
+            {
+                Name = "Alice",
+                GroupId = "group",
+                Summary = "Alice works at Acme.",
+                Labels = new List<string> { "Entity", "Person" },
+                Attributes = new Dictionary<string, object?> { ["role"] = "Lead" }
+            }
+        };
+        var context = ExtractNodesPrompts.BuildExtractSummariesContext(
+            nodes,
+            "Alice now leads Acme search.",
+            previous,
+            entityTypeDescriptions: null);
+
+        var messages = ExtractNodesPrompts.BuildExtractSummariesBatch(context);
+
+        Assert.Equal(2, messages.Length);
+        Assert.Equal("system", messages[0].Role);
+        Assert.Equal(
+            "You are a helpful assistant that generates concise entity summaries from provided context.",
+            messages[0].Content);
+        Assert.Equal("user", messages[1].Role);
+        Assert.Contains(
+            "Given the MESSAGES and a list of ENTITIES, generate an updated summary for each entity that needs one.",
+            messages[1].Content,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Each summary must be under 1000 characters.",
+            messages[1].Content,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Guidelines:\n        1. Output only factual content.",
+            messages[1].Content,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<MESSAGES>\n[{\"content\":\"Alice joined Acme.\",\"timestamp\":\"2026-01-02T03:04:05.0000000Z\"}]\n\"Alice now leads Acme search.\"\n</MESSAGES>",
+            messages[1].Content,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<ENTITIES>\n[{\"name\":\"Alice\",\"summary\":\"Alice works at Acme.\",\"entity_types\":[\"Entity\",\"Person\"],\"attributes\":{\"role\":\"Lead\"}}]\n</ENTITIES>",
+            messages[1].Content,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Only return summaries for entities that have meaningful information to summarize.",
+            messages[1].Content,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildExtractEntitySummariesFromEpisodes_RendersPythonParityPrompt()
+    {
+        var nodes = new[]
+        {
+            new EntityNode
+            {
+                Name = "Jordan Lee",
+                GroupId = "group",
+                Summary = "Jordan Lee works at Belmont Arts Center.",
+                Labels = new List<string> { "Entity", "Person" }
+            }
+        };
+        var context = ExtractNodesPrompts.BuildExtractSummariesContext(
+            nodes,
+            "Jordan now supervises two studio assistants.",
+            previousEpisodes: Array.Empty<EpisodicNode>(),
+            entityTypeDescriptions: new Dictionary<string, string>
+            {
+                ["Person"] = "A human person."
+            });
+
+        var messages = ExtractNodesPrompts.BuildExtractEntitySummariesFromEpisodes(context);
+
+        Assert.Equal(2, messages.Length);
+        Assert.Equal("system", messages[0].Role);
+        Assert.StartsWith(
+            "You maintain detailed, information-dense entity memories from episode text.",
+            messages[0].Content,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "NEVER mention episodes, messages, prompts, summaries, memory, graphs, nodes, labels, node types, ontology, schema, or categorization.",
+            messages[0].Content,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "GOOD: \"Jordan Lee works at Belmont Arts Center.",
+            messages[0].Content,
+            StringComparison.Ordinal);
+        Assert.Equal("user", messages[1].Role);
+        Assert.Contains(
+            "NEVER include meta-language about the summarization process. Use ONLY facts from the provided EPISODES.",
+            messages[1].Content,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<EPISODES>\n[]\n\"Jordan now supervises two studio assistants.\"\n</EPISODES>",
+            messages[1].Content,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<ENTITY_TYPE_DESCRIPTIONS>\n{\"Person\":\"A human person.\"}\n</ENTITY_TYPE_DESCRIPTIONS>",
+            messages[1].Content,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<ENTITIES>\n[{\"name\":\"Jordan Lee\",\"summary\":\"Jordan Lee works at Belmont Arts Center.\",\"entity_types\":[\"Entity\",\"Person\"],\"attributes\":{}}]\n</ENTITIES>",
+            messages[1].Content,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BuildContext_RendersEntityTypesPreviousEpisodesAndCustomInstructions()
     {
         var episode = CreateEpisode("Alice: hello", EpisodeType.Message);

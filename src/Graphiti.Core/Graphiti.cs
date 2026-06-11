@@ -23,6 +23,7 @@ public sealed partial class Graphiti : IAsyncDisposable
     private readonly AttributeExtractionService _attributeExtractionService;
     private readonly CommunityService _communityService;
     private readonly EdgeResolutionService _edgeResolutionService;
+    private readonly EntitySummaryService _entitySummaryService;
     private readonly EpisodeGraphExtractor _episodeGraphExtractor;
     private readonly NodeResolutionService _nodeResolutionService;
     private readonly SagaService _sagaService;
@@ -88,6 +89,7 @@ public sealed partial class Graphiti : IAsyncDisposable
         _timeProvider = timeProvider ?? TimeProvider.System;
         _logger = logger ?? NullLogger<Graphiti>.Instance;
         _attributeExtractionService = new AttributeExtractionService(LlmClient, GetMaxDegreeOfParallelism);
+        _entitySummaryService = new EntitySummaryService(LlmClient, _logger, GetMaxDegreeOfParallelism);
         _episodeGraphExtractor = new EpisodeGraphExtractor(LlmClient, UtcNow);
         _nodeResolutionService = new NodeResolutionService(() => Driver, LlmClient, Embedder, _logger);
         _communityService = new CommunityService(

@@ -114,6 +114,12 @@ public sealed partial class Graphiti
                 entityTypes,
                 EdgeMergeHelpers.FilterEdgesByUuid(entityEdges, newEdgeUuids),
                 cancellationToken).ConfigureAwait(false);
+            await _entitySummaryService.ExtractEntitySummariesAsync(
+                nodes,
+                episode,
+                previousEpisodes,
+                EdgeMergeHelpers.FilterEdgesByUuid(entityEdges, newEdgeUuids),
+                cancellationToken).ConfigureAwait(false);
             var episodicEdges = CopyList(
                 MaintenanceUtilities.BuildEpisodicEdges(nodes, episode.Uuid, now, attribution));
 
@@ -297,6 +303,12 @@ public sealed partial class Graphiti
                     episode,
                     previousEpisodes,
                     entityTypes,
+                    EdgeMergeHelpers.FilterEdgesByUuid(entityEdges, newEdgeUuids),
+                    cancellationToken).ConfigureAwait(false);
+                await _entitySummaryService.ExtractEntitySummariesAsync(
+                    resolvedNodes,
+                    episode,
+                    previousEpisodes,
                     EdgeMergeHelpers.FilterEdgesByUuid(entityEdges, newEdgeUuids),
                     cancellationToken).ConfigureAwait(false);
                 episode.EntityEdges = BuildEntityEdgeUuidList(entityEdges);

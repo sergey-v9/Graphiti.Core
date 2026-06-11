@@ -10,13 +10,17 @@ statuses: `parity.md` ingestion table.
 item 3 is the highest correctness impact. One item per slice; verify, commit, update `parity.md`
 and check off here.**
 
-- [ ] 1. Entity summary generation. Python generates/updates entity summaries during ingestion
+- [x] 1. Entity summary generation. Python generates/updates entity summaries during ingestion
       (`node_operations.py:833-1000`: `_extract_entity_summaries_batch`, fact-appending for short
       summaries, `MAX_NODES`=30 batching, summary filter hook) using prompts
       `extract_nodes.extract_summaries_batch` / `extract_entity_summaries_from_episodes`. C# never
       writes `EntityNode.Summary` during ingestion, which starves search/rerankers and communities
       of signal. Port the batch flow + both prompts (extends plan 01 pattern). Watch
       `MAX_SUMMARY_CHARS` truncation parity (`utils/text_utils.py`).
+      - Done 2026-06-11: `EntitySummaryService` appends short new edge facts, routes long/isolated
+        summaries through 30-node LLM flights, sentence-truncates LLM summaries, supports the
+        internal summary-filter / episode-prompt hooks, and is wired into single and bulk ingestion
+        before graph save.
 - [ ] 2. Remove invented LLM-failure fallbacks (parity + trust issue; rows in `parity.md`
       "Invented C# behaviors"):
       a. Delete `HeuristicEntityNames` fallback (EpisodeGraphExtractor.cs:104) — zero extracted

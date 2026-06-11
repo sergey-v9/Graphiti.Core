@@ -28,7 +28,8 @@ prompt-quality gaps because it uses fake LLM clients.
 Live Python pipeline call sites (everything else in `prompts/` is currently unused by the Python
 pipeline — do not port without a reason). Rows marked `MISSING` below have no C# call site yet
 because the corresponding pipeline feature is absent; they are owned by plan 02 and should be
-ported with that feature instead of as dead prompt code:
+ported with that feature instead of as dead prompt code. Entity summary prompts were closed with
+Plan 02 item 1; the remaining missing prompt rows are combined-extraction owned:
 
 | Prompt | Python source | C# call site | Status | Notes |
 |---|---|---|---|---|
@@ -43,8 +44,8 @@ ported with that feature instead of as dead prompt code:
 | `dedupe_nodes.nodes` | prompts/dedupe_nodes.py:117 | NodeResolutionService → Prompts/DedupeNodesPrompts | OK | Ported 2026-06-11; golden-text tests pin content, including worked EXAMPLE block |
 | `dedupe_edges.resolve_edge` | prompts/dedupe_edges.py:43 | EdgeResolutionService → Prompts/DedupeEdgesPrompts | OK | Ported 2026-06-11; golden-text tests pin duplicate/contradiction constraints |
 | `extract_nodes_and_edges.extract_message` | prompts/extract_nodes_and_edges.py | — | MISSING | Combined single-call extraction; see pipeline row below |
-| `extract_nodes.extract_summaries_batch` | prompts/extract_nodes.py:509 | — | MISSING | C# never generates entity summaries during ingestion |
-| `extract_nodes.extract_entity_summaries_from_episodes` | prompts/extract_nodes.py:613 | — | MISSING | Same area |
+| `extract_nodes.extract_summaries_batch` | prompts/extract_nodes.py:509 | EntitySummaryService → Prompts/ExtractNodesPrompts | OK | Ported 2026-06-11; normal ingestion LLM-summary path, golden tests pin key sections |
+| `extract_nodes.extract_entity_summaries_from_episodes` | prompts/extract_nodes.py:613 | EntitySummaryService → Prompts/ExtractNodesPrompts | OK | Ported 2026-06-11; internal `skip_fact_appending`/episode-summary path supported |
 | `summarize_nodes.summarize_pair` | prompts/summarize_nodes.py:54 | CommunityService → Prompts/SummarizeNodesPrompts | OK | Ported 2026-06-11; sends the two source summaries as JSON like Python, deterministic text remains only no-LLM fallback |
 | `summarize_nodes.summary_description` | prompts/summarize_nodes.py:119 | CommunityService → Prompts/SummarizeNodesPrompts | OK | Ported 2026-06-11; golden-text tests pin one-sentence description prompt |
 | `summarize_sagas.summarize_saga` | prompts/summarize_sagas.py | SagaService → Prompts/SummarizeSagasPrompts | OK | Ported to prompt builder 2026-06-11; golden-text tests pin content, including worked examples |
@@ -61,18 +62,18 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Episode bookkeeping, previous-episode window | graphiti.py | Graphiti.Ingestion.cs | OK | |
 | Node extraction (LLM) | node_operations.extract_nodes | EpisodeGraphExtractor | OK | Prompts ported 2026-06-11 |
 | Multi-episode node attribution | node_operations.py:103-112, 283-306 | — | PARTIAL | C# always attributes nodes to episode [0]; bulk loses per-episode granularity |
-| Node resolution: deterministic + embedding + LLM dedup | node_operations.resolve_extracted_nodes | NodeResolutionService | PARTIAL | Stage structure OK; LLM prompt is a stub (see prompts table) |
-| Entity attribute extraction | node_operations.extract_attributes_from_nodes | AttributeExtractionService | PARTIAL | Overlay merge OK; prompt stub; hallucination guards missing |
-| Entity summary generation (batch, fact-appending) | node_operations.py:833-1000 | — | MISSING | C# entities never get summaries during ingestion; summaries drive search quality |
+| Node resolution: deterministic + embedding + LLM dedup | node_operations.resolve_extracted_nodes | NodeResolutionService | OK | Prompt ported 2026-06-11; deterministic, embedding, and LLM dedupe stages covered |
+| Entity attribute extraction | node_operations.extract_attributes_from_nodes | AttributeExtractionService | OK | Overlay merge and anti-hallucination prompt ported 2026-06-11 |
+| Entity summary generation (batch, fact-appending) | node_operations.py:833-1000 | EntitySummaryService | OK | Ported 2026-06-11; appends short new edge facts, batches 30-node LLM flights, supports internal filter/episode-prompt hooks, truncates LLM summaries |
 | Edge extraction (LLM) | edge_operations.extract_edges | EpisodeGraphExtractor | OK | Prompts ported 2026-06-11 |
-| Edge resolution: dedup fast-path, timestamps, contradictions | edge_operations.resolve_extracted_edge | EdgeResolutionService | PARTIAL | Flow OK; prompts are stubs |
+| Edge resolution: dedup fast-path, timestamps, contradictions | edge_operations.resolve_extracted_edge | EdgeResolutionService | OK | Prompt text ported 2026-06-11; broad candidate search remains tracked separately below |
 | Broad invalidation-candidate search | edge_operations.py:407-418 | EdgeResolutionService | PARTIAL | C# only searches edges between/around the node pair; Python searches wider for contradicted edges |
 | Combined node+edge extraction path | utils/maintenance/combined_extraction.py | — | MISSING | Newer Python default-quality path; single LLM call, fewer orphan nodes, batch timestamps |
 | Edge attribute extraction during add_episode | not done in Python single-episode flow | Graphiti.Ingestion.cs:103 | DIVERGENT | C# added a per-edge attribute pass; decide keep-or-align in plan 02 |
 | Episodic edge building | edge_operations.build_episodic_edges | MaintenanceUtilities | OK | |
 | Bulk ingestion (true batch dedup/resolve) | bulk_utils, graphiti.py:1230+ | Graphiti.Ingestion.cs:195+ | PARTIAL | C# loops per-episode with accumulated candidates instead of Python's batch dedup/resolve |
 | Saga association + episode-time watermarks | graphiti.py | SagaService | OK | Watermarks present |
-| Community update on ingest | graphiti.py | CommunityService | OK | Flow parity; summary prompts are stubs |
+| Community update on ingest | graphiti.py | CommunityService | OK | Flow parity; community summary/name prompts ported 2026-06-11 |
 
 ## Invented C# behaviors (not in Python — masks LLM failures; remove or gate, see plan 02)
 

@@ -37,10 +37,10 @@ extraction) and are owned by Phase 2.
 ## Phase 2 — Pipeline semantic parity (ACTIVE)
 
 Close the behavioral gaps in ingestion that survive even with good prompts. Work order:
-`.agents/plans/02-pipeline-parity.md`. Headline items: entity summary generation (batch +
-fact-appending), removal/gating of invented LLM-failure fallbacks, broad invalidation-candidate
-search, multi-episode attribution, combined extraction path, bulk true-batch semantics,
-validation-failure re-prompting in the LLM client.
+`.agents/plans/02-pipeline-parity.md`. Entity summary generation (batch + fact-appending) landed
+2026-06-11. Remaining headline items: removal/gating of invented LLM-failure fallbacks, broad
+invalidation-candidate search, multi-episode attribution, combined extraction path, bulk true-batch
+semantics, validation-failure re-prompting in the LLM client.
 
 Done when: the ingestion-pipeline table in `parity.md` has no `MISSING` rows and every `PARTIAL`
 is either closed or converted to a documented `DIVERGENT` decision.

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Graphiti.Core.Text;
 
 namespace Graphiti.Core.Prompts;
 
@@ -31,6 +32,79 @@ internal static class ExtractNodesPrompts
         string PreviousEpisodesJson,
         string EpisodeContentJson,
         string NodeJson);
+
+    internal readonly record struct EntitySummariesExtractionContext(
+        string PreviousEpisodesJson,
+        string EpisodeContentJson,
+        string EntitiesJson,
+        string EntityTypeDescriptionsSection);
+
+    private static readonly string SummaryInstructions = $$"""
+        Guidelines:
+                1. Output only factual content. Never explain what you're doing, why, or mention limitations or constraints.
+                2. Only use the provided messages, entity, and entity context to set attribute values.
+                3. Keep the summary information-dense and entity-specific. STATE FACTS DIRECTLY IN UNDER {{TextUtilities.MaxSummaryChars}} CHARACTERS.
+                4. Preserve all materially relevant names, roles, places, dates, counts, and temporal qualifiers that are explicitly supported.
+                5. Prefer compact factual sentences over vague thematic phrasing or meta-language.
+                6. When the durable fact is the content of what was said, state the content directly instead of narrating that it was said.
+                7. Use communication verbs only when the act of speaking, asking, sharing, presenting, announcing, or telling is itself the important fact.
+                8. Never use filler verbs like "mentioned", "described", "stated", "reported", "noted", "discussed", "referenced", or "indicated" unless the communication act itself is the fact.
+                9. Include temporal anchors when the messages provide them and they help ground the fact.
+                10. Begin with the entity name or a direct fact, not with "A", "An", "The", or "This is" unless that wording is part of the entity name.
+
+                Example summary:
+                BAD: "The context shows John ordered pizza. Due to length constraints, other details are omitted from this summary."
+                GOOD: "John ordered pepperoni pizza from Mario's at 7:30 PM and had it delivered to the office."
+        """;
+
+    private const string EntityEpisodeSummarySystemPrompt = """
+        You maintain detailed, information-dense entity memories from episode text.
+
+        Use ONLY facts explicitly stated in EPISODES and durable facts already present in EXISTING_SUMMARY.
+        NEVER infer beyond what is directly supported.
+
+        Primary goal:
+        Write a dense factual summary of the entity that preserves as many supported details as possible while staying coherent and durable.
+
+        When the input includes entity_type_descriptions, use them to decide which facts are most relevant to the entity type. NEVER mention the entity type, type description, or classification in the summary text itself.
+
+        What to capture:
+        - Stable facts about the entity
+        - All materially relevant named people, organizations, places, events, documents, objects, and other entities linked to it
+        - Explicit actions, roles, responsibilities, relationships, and outcomes
+        - Counts, sequences, and repeated patterns when the evidence supports them
+        - Temporal details at the highest fidelity available: dates, months, years, ordering, and changes over time
+        - Current state over superseded state when newer episodes clearly update older information
+
+        Rules:
+        - Be exhaustive within the evidence. Prefer retaining a supported concrete detail over omitting it for brevity.
+        - NEVER infer preferences, habits, recurrence, frequency, causality, intent, importance, or category from a name, a single mention, or weak evidence.
+        - Only describe something as recurring, preferred, typical, habitual, or ongoing when multiple episodes explicitly support that claim or one episode states it directly.
+        - Include all materially relevant named participants that appear in the evidence.
+        - Include temporal qualifiers whenever they are available.
+        - Mention counts when they are directly supported and meaningful. Prefer direct factual phrasing over meta phrasing.
+        - When the durable fact is the content of what was said, state the content directly instead of describing that it was said.
+        - Use communication verbs only when the act of speaking, asking, sharing, presenting, announcing, or telling is itself the important fact.
+        - NEVER manufacture pattern language from a single occurrence. A single mention can support a fact, but not a trend, habit, or preference unless the text states that directly.
+        - If the evidence is insufficient or ambiguous, omit the claim.
+        - NEVER mention the source material or summarization process.
+        - NEVER mention episodes, messages, prompts, summaries, memory, graphs, nodes, labels, node types, ontology, schema, or categorization.
+        - NEVER output phrases like "the summary", "the entity", "categorized as", "tagged as", "suggests", "implies", "appears to", or "recorded interaction".
+        - NEVER use "the entity" as a pronoun. Use the entity's actual name or a natural pronoun (he, she, it, they).
+        - NEVER use meta-language verbs like "mentioned", "described", "stated", "noted", "discussed", "referenced", "indicated", or "reported". State the fact directly instead of describing how it was communicated.
+        - NEVER begin the summary with "A ", "An ", or "This is". If the entity's name starts with "The" (e.g. "The Washington Post"), that is acceptable; otherwise NEVER lead with "The ". Lead with the entity's name or a concrete fact.
+        - When newer episode text conflicts with older summary content, prefer the newer explicit fact.
+        - If the new episodes add no durable fact, return the existing summary unchanged.
+        - The summary should read like a compact brief, not a tagline.
+        - Write 2-6 dense sentences in third person.
+        - Return only the summary text.
+
+        <EXAMPLES>
+        Input: {"name": "Jordan Lee", "existing_summary": "Jordan Lee works at Belmont Arts Center.", "episodes": [{"content": "Mina: Jordan Lee presented a ceramics workshop at Belmont Arts Center on March 3, 2025. The workshop had 24 attendees and focused on wheel-thrown bowls.\nOwen: After the session, Jordan announced a second April workshop for returning students."}, {"content": "Mina: Jordan shared that the new kiln room opened last month and that Jordan now supervises two studio assistants.\nOwen: Jordan still teaches beginner ceramics on Wednesday evenings."}]}
+        GOOD: "Jordan Lee works at Belmont Arts Center. Jordan presented a ceramics workshop there on March 3, 2025 for 24 attendees focused on wheel-thrown bowls, and later announced a second April workshop for returning students. Jordan supervises two studio assistants, teaches beginner ceramics on Wednesday evenings, and works out of the new kiln room that opened the previous month."
+        BAD: "Jordan Lee seems interested in ceramics. Jordan mentioned teaching and was described as busy at the arts center."
+        </EXAMPLES>
+        """;
 
     internal static NodeExtractionContext BuildContext(
         EpisodicNode episode,
@@ -424,6 +498,79 @@ internal static class ExtractNodesPrompts
         };
     }
 
+    internal static EntitySummariesExtractionContext BuildExtractSummariesContext(
+        IReadOnlyList<EntityNode> nodes,
+        string episodeContent,
+        IReadOnlyList<EpisodicNode>? previousEpisodes,
+        IReadOnlyDictionary<string, string>? entityTypeDescriptions)
+    {
+        return new EntitySummariesExtractionContext(
+            PromptJson.Serialize(BuildPreviousEpisodesContext(previousEpisodes ?? Array.Empty<EpisodicNode>())),
+            PromptJson.Serialize(JsonValue.Create(episodeContent ?? string.Empty)),
+            PromptJson.Serialize(BuildEntitiesSummaryContext(nodes)),
+            BuildEntityTypeDescriptionsSection(entityTypeDescriptions));
+    }
+
+    internal static Message[] BuildExtractSummariesBatch(in EntitySummariesExtractionContext context)
+    {
+        var userPrompt = $$"""
+
+            Given the MESSAGES and a list of ENTITIES, generate an updated summary for each entity that needs one.
+            Each summary must be under {{TextUtilities.MaxSummaryChars}} characters.
+
+            {{SummaryInstructions}}
+
+            <MESSAGES>
+            {{context.PreviousEpisodesJson}}
+            {{context.EpisodeContentJson}}
+            </MESSAGES>
+            {{context.EntityTypeDescriptionsSection}}
+            <ENTITIES>
+            {{context.EntitiesJson}}
+            </ENTITIES>
+
+            For each entity, combine relevant information from the MESSAGES with any existing summary content.
+            Only return summaries for entities that have meaningful information to summarize.
+            If an entity has no relevant information in the messages and no existing summary, you may skip it.
+            """;
+
+        return new[]
+        {
+            new Message(
+                "system",
+                "You are a helpful assistant that generates concise entity summaries from provided context."),
+            new Message("user", userPrompt)
+        };
+    }
+
+    internal static Message[] BuildExtractEntitySummariesFromEpisodes(in EntitySummariesExtractionContext context)
+    {
+        var userPrompt = $$"""
+            NEVER include meta-language about the summarization process. Use ONLY facts from the provided EPISODES.
+            Each summary must be under {{TextUtilities.MaxSummaryChars}} characters. Write 2-6 dense sentences in third person. Preserve all material names, roles, dates, counts, and changes over time that are explicitly supported.
+
+            For each entity below, generate an updated summary using ONLY the provided EPISODES and any existing summary already on the entity.
+
+            <EPISODES>
+            {{context.PreviousEpisodesJson}}
+            {{context.EpisodeContentJson}}
+            </EPISODES>
+            {{context.EntityTypeDescriptionsSection}}
+            <ENTITIES>
+            {{context.EntitiesJson}}
+            </ENTITIES>
+
+            Only return summaries for entities that have meaningful information to summarize.
+            If an entity has no relevant information in the episodes and no existing summary, you may skip it.
+            """;
+
+        return new[]
+        {
+            new Message("system", EntityEpisodeSummarySystemPrompt),
+            new Message("user", userPrompt)
+        };
+    }
+
     internal static JsonArray BuildEntityTypesContext(
         IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
     {
@@ -479,5 +626,54 @@ internal static class ExtractNodesPrompts
             ["entity_types"] = ExtractionContextBuilder.BuildStringArray(node.Labels),
             ["attributes"] = JsonSerializer.SerializeToNode(node.Attributes, GraphitiJsonSerializer.Options)
         };
+    }
+
+    private static JsonArray BuildEntitiesSummaryContext(IReadOnlyList<EntityNode> nodes)
+    {
+        var context = new JsonArray();
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            var node = nodes[i];
+            context.Add(new JsonObject
+            {
+                ["name"] = node.Name,
+                ["summary"] = node.Summary,
+                ["entity_types"] = ExtractionContextBuilder.BuildStringArray(node.Labels),
+                ["attributes"] = JsonSerializer.SerializeToNode(node.Attributes, GraphitiJsonSerializer.Options)
+            });
+        }
+
+        return context;
+    }
+
+    private static string BuildEntityTypeDescriptionsSection(
+        IReadOnlyDictionary<string, string>? entityTypeDescriptions)
+    {
+        if (entityTypeDescriptions is null || entityTypeDescriptions.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var descriptions = new JsonObject();
+        foreach (var pair in entityTypeDescriptions)
+        {
+            if (!string.IsNullOrWhiteSpace(pair.Value))
+            {
+                descriptions[pair.Key] = pair.Value;
+            }
+        }
+
+        if (descriptions.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        return $$"""
+
+            <ENTITY_TYPE_DESCRIPTIONS>
+            {{PromptJson.Serialize(descriptions)}}
+            </ENTITY_TYPE_DESCRIPTIONS>
+            When an entity's type appears in ENTITY_TYPE_DESCRIPTIONS, use the description to decide which facts are most relevant to that entity type. NEVER mention the entity type, type description, or classification in the summary text itself.
+            """;
     }
 }

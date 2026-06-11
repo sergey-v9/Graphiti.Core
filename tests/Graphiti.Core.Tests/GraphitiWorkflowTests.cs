@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Text.Json.Nodes;
 using Graphiti.Core;
+using Graphiti.Core.Internal.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Graphiti.Core.Tests;
@@ -58,6 +59,139 @@ public class GraphitiWorkflowTests
         Assert.Contains(graphResults.Nodes, node => node.Name == "Alice");
         Assert.Contains(graphResults.Nodes, node => node.Name == "Bob");
         Assert.Equal(result.Episode.Uuid, Assert.Single(graphResults.Episodes).Uuid);
+    }
+
+    [Fact]
+    public async Task AddEpisode_AppendsNewEdgeFactsToEntitySummariesWithoutLlm()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["extract_nodes.extract_message"] = new()
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                    new JsonObject { ["name"] = "Bob", ["entity_type"] = "Person" }
+                },
+                ["edges"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["source"] = "Alice",
+                        ["target"] = "Bob",
+                        ["relation_type"] = "KNOWS",
+                        ["fact"] = "Alice knows Bob.",
+                        ["valid_at"] = "2026-01-01T00:00:00Z"
+                    }
+                }
+            }
+        });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Alice knows Bob.",
+            "message",
+            new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+            groupId: "group");
+
+        Assert.Equal("Alice knows Bob.", Assert.Single(result.Nodes, node => node.Name == "Alice").Summary);
+        Assert.Equal("Alice knows Bob.", Assert.Single(result.Nodes, node => node.Name == "Bob").Summary);
+        Assert.DoesNotContain(llm.Calls, call => call.PromptName == "extract_nodes.extract_summaries_batch");
+        var storedNodes = await driver.GetNodesByGroupIdsAsync<EntityNode>(new[] { "group" });
+        Assert.Equal("Alice knows Bob.", Assert.Single(storedNodes, node => node.Name == "Alice").Summary);
+        Assert.Equal("Alice knows Bob.", Assert.Single(storedNodes, node => node.Name == "Bob").Summary);
+    }
+
+    [Fact]
+    public async Task AddEpisode_SummarizesNodesWithNoShortEdgeFactsUsingLlm()
+    {
+        var driver = new InMemoryGraphDriver();
+        var longSummary = "Alice leads search. " + new string('x', TextUtilities.MaxSummaryChars + 50);
+        var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["extract_nodes.extract_message"] = new()
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" }
+                }
+            },
+            ["extract_edges.edge"] = new()
+            {
+                ["edges"] = new JsonArray()
+            },
+            ["extract_nodes.extract_summaries_batch"] = new()
+            {
+                ["summaries"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["name"] = "alice",
+                        ["summary"] = longSummary
+                    }
+                }
+            }
+        });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Alice now leads Acme search.",
+            "message",
+            new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+            groupId: "group");
+
+        var node = Assert.Single(result.Nodes);
+        Assert.Equal("Alice leads search.", node.Summary);
+        var summaryCall = Assert.Single(llm.Calls, call => call.PromptName == "extract_nodes.extract_summaries_batch");
+        Assert.Equal("SummarizedEntitiesResponse", summaryCall.ResponseModel?.Name);
+        Assert.False(summaryCall.AttributeExtraction);
+        Assert.Contains("\"name\":\"Alice\"", summaryCall.Messages[^1].Content, StringComparison.Ordinal);
+        var storedNode = await driver.GetNodeByUuidAsync<EntityNode>(node.Uuid);
+        Assert.Equal("Alice leads search.", storedNode.Summary);
+    }
+
+    [Fact]
+    public async Task EntitySummaryService_BatchesLlmCallsInFlightsOfThirty()
+    {
+        var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["extract_nodes.extract_summaries_batch"] = new()
+            {
+                ["summaries"] = new JsonArray()
+            }
+        });
+        var service = new EntitySummaryService(
+            llm,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+            () => Environment.ProcessorCount);
+        var nodes = Enumerable.Range(0, 31)
+            .Select(index => new EntityNode
+            {
+                Name = "Entity " + index,
+                GroupId = "group"
+            })
+            .ToList();
+        var episode = new EpisodicNode
+        {
+            Name = "conversation",
+            Content = "summary source",
+            Source = EpisodeType.Message,
+            SourceDescription = "message",
+            GroupId = "group",
+            ValidAt = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)
+        };
+
+        await service.ExtractEntitySummariesAsync(
+            nodes,
+            episode,
+            Array.Empty<EpisodicNode>(),
+            Array.Empty<EntityEdge>(),
+            CancellationToken.None);
+
+        Assert.Equal(2, llm.Calls.Count(call => call.PromptName == "extract_nodes.extract_summaries_batch"));
     }
 
     [Fact]
