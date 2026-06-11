@@ -127,6 +127,15 @@ dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~CrossEncoder"
 
 with `20` passed.
 
+Live OpenAI validation helper:
+
+```powershell
+.\eng\Run-OpenAIProviderValidation.ps1
+```
+
+It requires `OPENAI_API_KEY`, runs restore/build, the focused OpenAI integration tests, and the
+OpenAI sample. No-key behavior exits `2`; no live provider run has passed yet.
+
 Sample no-key path was also verified:
 
 ```powershell

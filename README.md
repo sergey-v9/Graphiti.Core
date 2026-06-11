@@ -73,3 +73,11 @@ OpenAI provider integration tests are included in `tests/Graphiti.Core.Tests` an
 $env:OPENAI_API_KEY = "..."
 dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~OpenAIProviderIntegrationTests"
 ```
+
+To run the repeatable live-provider validation loop (restore, build, OpenAI integration tests, then
+the OpenAI sample):
+
+```powershell
+$env:OPENAI_API_KEY = "..."
+.\eng\Run-OpenAIProviderValidation.ps1
+```

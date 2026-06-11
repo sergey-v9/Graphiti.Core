@@ -56,6 +56,9 @@ host project own provider packages); no CI wiring yet; no perf measurement.
         reranker into `Graphiti`; DI/default construction intentionally still uses
         `IdentityCrossEncoderClient` as the provider-free default and records that decision in
         `decisions.md`.
+      - Repeatability support 2026-06-11: added `eng/Run-OpenAIProviderValidation.ps1`, which
+        requires `OPENAI_API_KEY`, restores/builds, runs the focused OpenAI integration tests, and
+        runs the OpenAI sample. No-key behavior is verified; no live provider run was performed.
 - [ ] 4. (Optional, with user buy-in) Port the eval harness: Python `prompts/eval.py` +
       `tests/evals/` give scored end-to-end extraction comparisons. This is the durable answer to
       "is the C# port as good as Python" — propose before building.

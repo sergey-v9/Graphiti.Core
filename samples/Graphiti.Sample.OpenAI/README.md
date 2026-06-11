@@ -22,3 +22,10 @@ The sample uses `InMemoryGraphDriver`, ingests a short temporal conversation abo
 rollout date changes, then prints extracted entities, facts, summaries, and hybrid search results.
 Search uses `MicrosoftExtensionsAICrossEncoderClient` so the default cross-encoder search path is
 exercised with the real chat provider.
+
+To run this sample together with the OpenAI integration tests, use the repository validation helper:
+
+```powershell
+$env:OPENAI_API_KEY = "..."
+.\eng\Run-OpenAIProviderValidation.ps1
+```
