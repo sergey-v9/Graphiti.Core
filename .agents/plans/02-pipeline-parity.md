@@ -36,11 +36,15 @@ and check off here.**
         graph. Community deterministic text fallback is limited to `NoOpLlmClient` or
         `NotImplementedException`; empty/malformed real-client community summary/name responses now
         fail instead of silently inventing output.
-- [ ] 3. Broad edge-invalidation candidate search. Python searches beyond the immediate node pair
+- [x] 3. Broad edge-invalidation candidate search. Python searches beyond the immediate node pair
       for contradicted edges (`edge_operations.py:407-418` + resolve flow); C# only considers
       between-node and adjacent edges, so cross-graph contradictions are never expired. Port the
       candidate-gathering semantics (driver search reuse, limits) and add an InMemory-driver
       parity test that contradicts an edge attached to a *different* node pair.
+      - Verified 2026-06-11: current `GetEdgeInvalidationCandidatesAsync` already performs the
+        broad unfiltered edge hybrid search and excludes related duplicate candidates. Added a
+        regression test proving a new fact can invalidate an older edge attached to a different
+        target node.
 - [ ] 4. Multi-episode attribution. Python tracks per-node/per-edge `episode_indices`
       (`node_operations.py:103-112,283-306`, `edge_operations.py` episode_attribution) and the
       prompts ask for them; C# hardcodes attribution to episode [0]. Port the attribution plumbing

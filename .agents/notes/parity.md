@@ -67,7 +67,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Entity summary generation (batch, fact-appending) | node_operations.py:833-1000 | EntitySummaryService | OK | Ported 2026-06-11; appends short new edge facts, batches 30-node LLM flights, supports internal filter/episode-prompt hooks, truncates LLM summaries |
 | Edge extraction (LLM) | edge_operations.extract_edges | EpisodeGraphExtractor | OK | Prompts ported 2026-06-11 |
 | Edge resolution: dedup fast-path, timestamps, contradictions | edge_operations.resolve_extracted_edge | EdgeResolutionService | OK | Prompt text ported 2026-06-11; broad candidate search remains tracked separately below |
-| Broad invalidation-candidate search | edge_operations.py:407-418 | EdgeResolutionService | PARTIAL | C# only searches edges between/around the node pair; Python searches wider for contradicted edges |
+| Broad invalidation-candidate search | edge_operations.py:407-418 | EdgeResolutionService | OK | Verified 2026-06-11; unfiltered edge hybrid search supplies invalidation candidates beyond the node pair, with regression coverage for invalidating an edge on a different target node |
 | Combined node+edge extraction path | utils/maintenance/combined_extraction.py | — | MISSING | Newer Python default-quality path; single LLM call, fewer orphan nodes, batch timestamps |
 | Edge attribute extraction during add_episode | not done in Python single-episode flow | Graphiti.Ingestion.cs:103 | DIVERGENT | C# added a per-edge attribute pass; decide keep-or-align in plan 02 |
 | Episodic edge building | edge_operations.build_episodic_edges | MaintenanceUtilities | OK | |

@@ -3135,6 +3135,70 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisode_LlmContradictionInvalidatesBroadCandidateOnDifferentNodePair()
+    {
+        var driver = new InMemoryGraphDriver();
+        var fixedNow = new DateTimeOffset(2026, 3, 2, 4, 5, 6, TimeSpan.Zero);
+        var alice = new EntityNode { Name = "Alice", GroupId = "group" };
+        var beta = new EntityNode { Name = "Beta", GroupId = "group" };
+        await alice.SaveAsync(driver);
+        await beta.SaveAsync(driver);
+        var oldEdge = new EntityEdge
+        {
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = beta.Uuid,
+            GroupId = "group",
+            Name = "WORKS_AT",
+            Fact = "Alice works at Beta.",
+            ValidAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+        await oldEdge.SaveAsync(driver);
+
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            timeProvider: new FixedTimeProvider(fixedNow),
+            llmClient: new StaticLlmClient(new Dictionary<string, JsonObject>
+            {
+                ["extract_nodes.extract_message"] = new()
+                {
+                    ["extracted_entities"] = new JsonArray
+                    {
+                        new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                        new JsonObject { ["name"] = "Acme", ["entity_type"] = "Organization" }
+                    },
+                    ["edges"] = new JsonArray
+                    {
+                        new JsonObject
+                        {
+                            ["source"] = "Alice",
+                            ["target"] = "Acme",
+                            ["relation_type"] = "WORKS_AT",
+                            ["fact"] = "Alice works at Acme.",
+                            ["valid_at"] = "2026-02-01T00:00:00Z"
+                        }
+                    }
+                },
+                ["dedupe_edges.resolve_edge"] = new()
+                {
+                    ["duplicate_facts"] = new JsonArray(),
+                    ["contradicted_facts"] = new JsonArray { 0 }
+                }
+            }));
+
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Alice works at Acme.",
+            "message",
+            new DateTime(2026, 2, 1, 12, 0, 0, DateTimeKind.Utc),
+            groupId: "group");
+
+        var invalidated = Assert.Single(result.Edges, edge => edge.Uuid == oldEdge.Uuid);
+        Assert.Equal(new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), invalidated.InvalidAt);
+        Assert.Equal(fixedNow.UtcDateTime, invalidated.ExpiredAt);
+        Assert.Contains(result.Edges, edge => edge.Uuid != oldEdge.Uuid && edge.Fact == "Alice works at Acme.");
+    }
+
+    [Fact]
     public async Task AddEpisode_LlmContradictionExpiresNewEdgeWhenLaterFactExists()
     {
         var driver = new InMemoryGraphDriver();
