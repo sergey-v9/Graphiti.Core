@@ -17,8 +17,8 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 - `GraphProvider.Kuzu` is a supported core options/DI path and resolves to the LadybugDB-backed
   driver.
 - Runtime proof covers the main ingest/search/removal/triplet/bulk/saga/community workflows,
-  file-backed `DatabasePath` persistence, and Python Kuzu `':memory:'` sentinel compatibility.
-  Treat tests as the detailed proof source.
+  file-backed `DatabasePath` persistence, core `GraphProvider.Kuzu` `Database` persistence, and
+  Python Kuzu `':memory:'` sentinel compatibility. Treat tests as the detailed proof source.
 - `LadybugPackageRuntimeTests` exercise the actual LadybugDB package/native path in normal
   verification, including schema creation, list/null normalization, FTS loading/search, vector
   search, filters, BFS/rankers, and delete/clear flows. Do not add a separate native-gated smoke

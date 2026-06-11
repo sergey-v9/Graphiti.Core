@@ -122,14 +122,14 @@ added.
 
 Latest checkpoint, 2026-06-11:
 
-Succeeded after moving active LadybugDB label-filter construction into the Ladybug driver:
+Succeeded after adding core `GraphProvider.Kuzu` database-path persistence coverage:
 
 ```powershell
 .\eng\Verify-GraphitiCore.ps1
 ```
 
 Restore, format verification, solution build including `Graphiti.Sample.OpenAI`, full test suite
-(`933` passed, `2` skipped, `935` total), and `dotnet pack` for
+(`934` passed, `2` skipped, `936` total), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` was unset; the two skipped tests were
 `OpenAIProviderIntegrationTests.StructuredResponseSchemas_WithOpenAIProvider_AreAccepted` and
 `OpenAIProviderIntegrationTests.AddEpisodeAsync_WithOpenAIProvider_IngestsResolvedTemporalGraph`.
@@ -152,7 +152,7 @@ with `10` Ladybug search executor tests passed.
 dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~LadybugRuntimeDriverTests" --verbosity minimal
 ```
 
-with `15` Ladybug runtime tests passed. Focused edge-attribute and telemetry tests also passed
+with `16` Ladybug runtime tests passed. Focused edge-attribute and telemetry tests also passed
 earlier:
 
 ```powershell

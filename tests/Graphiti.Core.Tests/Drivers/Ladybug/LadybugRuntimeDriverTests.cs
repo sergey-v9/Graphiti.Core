@@ -594,6 +594,72 @@ public class LadybugRuntimeDriverTests
     }
 
     [Fact]
+    public async Task GraphProviderKuzuUsesConfiguredDatabasePathAcrossScopes()
+    {
+        var databasePath = Path.Combine(
+            Path.GetTempPath(),
+            "graphiti-kuzu-ladybugdb-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var services = new ServiceCollection();
+            services.AddGraphitiCore(options =>
+            {
+                options.Provider = GraphProvider.Kuzu;
+                options.Database = databasePath;
+            });
+
+            await using (var serviceProvider = services.BuildServiceProvider())
+            {
+                await using (var firstScope = serviceProvider.CreateAsyncScope())
+                {
+                    var firstDriver = firstScope.ServiceProvider.GetRequiredService<IGraphDriver>();
+                    await firstDriver.BuildIndicesAndConstraintsAsync();
+                    await firstDriver.SaveNodeAsync(new EntityNode
+                    {
+                        Uuid = "core-kuzu-persistent-ladybug-node",
+                        Name = "Core Persistent Alice",
+                        GroupId = "tenant",
+                        Labels = ["Person"],
+                        NameEmbedding = [1, 0, 0, 0, 0, 0, 0, 0],
+                        CreatedAt = new DateTime(2026, 9, 20, 10, 11, 12, DateTimeKind.Utc),
+                        Summary = "Persisted through core GraphProvider.Kuzu database path"
+                    });
+                    await firstDriver.CloseAsync();
+                }
+
+                await using (var secondScope = serviceProvider.CreateAsyncScope())
+                {
+                    var secondDriver = secondScope.ServiceProvider.GetRequiredService<IGraphDriver>();
+                    var fetched = await secondDriver.GetNodeByUuidAsync<EntityNode>(
+                        "core-kuzu-persistent-ladybug-node");
+                    await secondDriver.CloseAsync();
+
+                    Assert.Equal(GraphProvider.Kuzu, secondDriver.Provider);
+                    Assert.Equal("Core Persistent Alice", fetched.Name);
+                    Assert.Equal("tenant", fetched.GroupId);
+                    Assert.Equal("Persisted through core GraphProvider.Kuzu database path", fetched.Summary);
+                    Assert.Equal(new[] { "Person", "Entity" }, fetched.Labels);
+                }
+            }
+
+            Assert.True(
+                Directory.Exists(databasePath) || File.Exists(databasePath),
+                "The configured core GraphProvider.Kuzu database path should create persistent package storage.");
+        }
+        finally
+        {
+            if (Directory.Exists(databasePath))
+            {
+                Directory.Delete(databasePath, recursive: true);
+            }
+            else if (File.Exists(databasePath))
+            {
+                File.Delete(databasePath);
+            }
+        }
+    }
+
+    [Fact]
     public void ServiceCollectionExtensionRejectsBlankDatabasePath()
     {
         var services = new ServiceCollection();
