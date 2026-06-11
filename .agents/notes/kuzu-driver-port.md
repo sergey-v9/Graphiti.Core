@@ -19,8 +19,11 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
   file-backed `DatabasePath` persistence. Treat tests as the detailed proof source.
 - The LadybugDB package has a nearby source checkout at `W:\code\ladybug`; this is background
   provenance for the NuGet/API surface. Graphiti work operates against package-facing behavior and
-  Graphiti tests. When package or binding behavior looks suspect, capture the observed symptom here as
-  a LadybugDB follow-up and keep the Graphiti change focused on its package-facing contract.
+  Graphiti tests. When package or binding behavior looks suspect, mark the symptom separately from
+  Graphiti port gaps. The user has authorized local repair work in that checkout when it unblocks the
+  C# driver: patch and commit LadybugDB changes only in `W:\code\ladybug`, do not push remotely,
+  draft a nearby markdown request for `ladybug-dotnet`, build a local NuGet package, and connect
+  Graphiti to that local package for validation.
 
 ## Provider Policy
 

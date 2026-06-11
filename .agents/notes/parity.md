@@ -22,8 +22,8 @@ baseline, add rows or reopen statuses for anything affected, then move the ancho
 This is the highest-risk area. The prompt prose in `graphiti_core/prompts/` is core Graphiti IP:
 extraction quality with a real LLM depends on it. "The structured-output schema and JSON data
 context exist" does NOT make a prompt ported — the instruction text must be ported near-verbatim
-(see `decisions.md` "Prompt parity contract"). The 887 unit tests cannot detect prompt-quality
-gaps because they use deterministic fake LLM clients.
+(see `decisions.md` "Prompt parity contract"). The deterministic unit suite cannot detect
+prompt-quality gaps because it uses fake LLM clients.
 
 Live Python pipeline call sites (everything else in `prompts/` is currently unused by the Python
 pipeline — do not port without a reason):
@@ -38,7 +38,7 @@ pipeline — do not port without a reason):
 | `extract_edges.extract_attributes` | prompts/extract_edges.py:181 | AttributeExtractionService.cs:45 | STUB | Same pattern; Python HARD RULES missing |
 | `extract_edges.extract_timestamps` | prompts/extract_edges.py:242 | EdgeResolutionService → Prompts/ExtractEdgesPrompts | OK | Ported 2026-06-11; golden-text tests pin content |
 | `extract_edges.extract_timestamps_batch` | prompts/extract_edges.py:274 | — | MISSING | Used by Python combined extraction |
-| `dedupe_nodes.nodes` | prompts/dedupe_nodes.py:117 | NodeResolutionService.cs:102 | STUB | Data context ported; instruction prose + worked EXAMPLE block missing |
+| `dedupe_nodes.nodes` | prompts/dedupe_nodes.py:117 | NodeResolutionService → Prompts/DedupeNodesPrompts | OK | Ported 2026-06-11; golden-text tests pin content, including worked EXAMPLE block |
 | `dedupe_edges.resolve_edge` | prompts/dedupe_edges.py:43 | EdgeResolutionService.cs:246 | STUB | Data context ported; duplicate/contradiction instruction prose missing |
 | `extract_nodes_and_edges.extract_message` | prompts/extract_nodes_and_edges.py | — | MISSING | Combined single-call extraction; see pipeline row below |
 | `extract_nodes.extract_summaries_batch` | prompts/extract_nodes.py:509 | — | MISSING | C# never generates entity summaries during ingestion |

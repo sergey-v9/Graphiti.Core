@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 
@@ -100,7 +99,12 @@ internal sealed class NodeResolutionService(
         }
 
         var response = await llmClient.GenerateResponseAsync(
-            BuildNodeDeduplicationMessages(unresolvedNodes, candidates, episode, previousEpisodes, entityTypes),
+            DedupeNodesPrompts.BuildNodes(DedupeNodesPrompts.BuildContext(
+                unresolvedNodes,
+                candidates,
+                episode,
+                previousEpisodes,
+                entityTypes)),
             responseModel: typeof(Graphiti.NodeResolutionsResponse),
             modelSize: ModelSize.Small,
             groupId: groupId,
@@ -294,141 +298,6 @@ internal sealed class NodeResolutionService(
         }
 
         return result;
-    }
-
-    private static Message[] BuildNodeDeduplicationMessages(
-        IReadOnlyList<EntityNode> unresolvedNodes,
-        IReadOnlyList<EntityNode> candidates,
-        EpisodicNode? episode,
-        IReadOnlyList<EpisodicNode>? previousEpisodes,
-        IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
-    {
-        return
-        [
-            new Message(
-                "system",
-                "You are an entity deduplication assistant. NEVER fabricate entity names or mark distinct entities as duplicates."),
-            new Message(
-                "user",
-                BuildNodeDeduplicationContext(
-                    unresolvedNodes,
-                    candidates,
-                    episode,
-                    previousEpisodes,
-                    entityTypes))
-        ];
-    }
-
-    private static string BuildNodeDeduplicationContext(
-        IReadOnlyList<EntityNode> unresolvedNodes,
-        IReadOnlyList<EntityNode> candidates,
-        EpisodicNode? episode,
-        IReadOnlyList<EpisodicNode>? previousEpisodes,
-        IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
-    {
-        var previousMessages = new JsonArray();
-        foreach (var previousEpisode in previousEpisodes ?? Array.Empty<EpisodicNode>())
-        {
-            previousMessages.Add(new JsonObject
-            {
-                ["content"] = previousEpisode.Content,
-                ["timestamp"] = GraphitiHelpers.EnsureUtc(previousEpisode.ValidAt).ToString("O")
-            });
-        }
-
-        var extractedNodes = new JsonArray();
-        for (var i = 0; i < unresolvedNodes.Count; i++)
-        {
-            var node = unresolvedNodes[i];
-            extractedNodes.Add(new JsonObject
-            {
-                ["id"] = i,
-                ["name"] = node.Name,
-                ["entity_type"] = ExtractionContextBuilder.BuildStringArray(node.Labels),
-                ["entity_type_description"] = EntityTypeDescription(node, entityTypes)
-            });
-        }
-
-        var existingNodes = new JsonArray();
-        for (var i = 0; i < candidates.Count; i++)
-        {
-            existingNodes.Add(BuildNodeDedupCandidateContext(candidates[i], i));
-        }
-
-        return $"""
-<PREVIOUS MESSAGES>
-{previousMessages.ToJsonString(GraphitiJsonSerializer.Options)}
-</PREVIOUS MESSAGES>
-
-<CURRENT MESSAGE>
-{episode?.Content ?? string.Empty}
-</CURRENT MESSAGE>
-
-<ENTITIES>
-{extractedNodes.ToJsonString(GraphitiJsonSerializer.Options)}
-</ENTITIES>
-
-<EXISTING ENTITIES>
-{existingNodes.ToJsonString(GraphitiJsonSerializer.Options)}
-</EXISTING ENTITIES>
-
-Each of the above ENTITIES was extracted from the CURRENT MESSAGE.
-For each entity, determine if it is a duplicate of any EXISTING ENTITY.
-Entities should only be considered duplicates if they refer to the same real-world object or concept.
-
-NEVER mark entities as duplicates if:
-- They are related but distinct.
-- They have similar names or purposes but refer to separate instances or concepts.
-
-Task:
-ENTITIES contains {unresolvedNodes.Count} entities with IDs 0 through {unresolvedNodes.Count - 1}.
-Your response MUST include EXACTLY {unresolvedNodes.Count} resolutions with IDs 0 through {unresolvedNodes.Count - 1}. Do not skip or add IDs.
-
-For every entity, provide:
-- id: integer id from ENTITIES
-- name: the best full name for the entity
-- duplicate_candidate_id: the candidate_id of the EXISTING ENTITY that is the best duplicate match, or -1 if there is no duplicate
-""";
-    }
-
-    private static JsonObject BuildNodeDedupCandidateContext(EntityNode candidate, int candidateId)
-    {
-        var context = JsonSerializer.SerializeToNode(candidate.Attributes, GraphitiJsonSerializer.Options) as JsonObject
-                      ?? new JsonObject();
-        context["candidate_id"] = candidateId;
-        context["name"] = candidate.Name;
-        context["entity_types"] = ExtractionContextBuilder.BuildStringArray(candidate.Labels);
-        context["summary"] = string.IsNullOrEmpty(candidate.Summary)
-            ? string.Empty
-            : candidate.Summary.Length > 120
-                ? candidate.Summary[..120]
-                : candidate.Summary;
-        return context;
-    }
-
-    private static string EntityTypeDescription(
-        EntityNode node,
-        IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
-    {
-        if (entityTypes is null)
-        {
-            return "Default Entity Type";
-        }
-
-        for (var i = 0; i < node.Labels.Count; i++)
-        {
-            var label = node.Labels[i];
-            if (string.Equals(label, "Entity", StringComparison.Ordinal)
-                || !entityTypes.TryGetValue(label, out var definition)
-                || string.IsNullOrWhiteSpace(definition.Description))
-            {
-                continue;
-            }
-
-            return definition.Description;
-        }
-
-        return "Default Entity Type";
     }
 
     private static IReadOnlyList<Graphiti.NodeDuplicateResponse> ReadNodeResolutions(JsonObject response)
