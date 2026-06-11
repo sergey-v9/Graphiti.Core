@@ -153,14 +153,15 @@ internal static class ExtractionContextBuilder
         for (var i = 0; i < sortedEdgeTypes.Count; i++)
         {
             var pair = sortedEdgeTypes[i];
+            var signatures = BuildEdgeTypeSignatures(pair.Key, edgeTypeMap);
             result.Add(new JsonObject
             {
                 ["fact_type_name"] = pair.Value.Name,
                 ["fact_type_description"] = pair.Value.Description,
-                ["fact_type_signatures"] = BuildEdgeTypeSignatures(pair.Key, edgeTypeMap),
+                ["fact_type_signatures"] = BuildEdgeTypeSignatureContext(signatures),
                 ["name"] = pair.Value.Name,
                 ["description"] = pair.Value.Description,
-                ["signatures"] = BuildEdgeTypeSignatures(pair.Key, edgeTypeMap),
+                ["signatures"] = BuildEdgeTypeSignatureContext(signatures),
                 ["attributes"] = BuildAttributeSchema(pair.Value)
             });
         }
@@ -168,19 +169,16 @@ internal static class ExtractionContextBuilder
         return result;
     }
 
-    private static JsonArray BuildEdgeTypeSignatures(
+    private static List<EdgeTypeSignature> BuildEdgeTypeSignatures(
         string edgeTypeName,
         IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap)
     {
-        var signatures = new JsonArray();
         if (edgeTypeMap is null || edgeTypeMap.Count == 0)
         {
-            signatures.Add(new JsonObject
+            return new List<EdgeTypeSignature>
             {
-                ["source"] = "Entity",
-                ["target"] = "Entity"
-            });
-            return signatures;
+                new("Entity", "Entity")
+            };
         }
 
         var matchingSignatures =
@@ -203,17 +201,30 @@ internal static class ExtractionContextBuilder
                 : StringComparer.OrdinalIgnoreCase.Compare(left.Key.TargetType, right.Key.TargetType);
         });
 
+        var signatures = new List<EdgeTypeSignature>(matchingSignatures.Count);
         for (var i = 0; i < matchingSignatures.Count; i++)
         {
             var pair = matchingSignatures[i];
-            signatures.Add(new JsonObject
-            {
-                ["source"] = pair.Key.SourceType,
-                ["target"] = pair.Key.TargetType
-            });
+            signatures.Add(new EdgeTypeSignature(pair.Key.SourceType, pair.Key.TargetType));
         }
 
         return signatures;
+    }
+
+    private static JsonArray BuildEdgeTypeSignatureContext(IReadOnlyList<EdgeTypeSignature> signatures)
+    {
+        var result = new JsonArray();
+        for (var i = 0; i < signatures.Count; i++)
+        {
+            var signature = signatures[i];
+            result.Add(new JsonObject
+            {
+                ["source"] = signature.Source,
+                ["target"] = signature.Target
+            });
+        }
+
+        return result;
     }
 
     private static bool ContainsEdgeTypeName(IReadOnlyList<string> edgeTypeNames, string edgeTypeName)
@@ -315,4 +326,6 @@ internal static class ExtractionContextBuilder
             StringComparer.OrdinalIgnoreCase.Compare(left.Key, right.Key));
         return sorted;
     }
+
+    private readonly record struct EdgeTypeSignature(string Source, string Target);
 }

@@ -65,8 +65,6 @@ before committing.
 
 1. Revisit `AttributeMerger` only if more allocation work is wanted; preserve case-insensitive
    response matching, overlong-drop semantics, prior-value retention, and replace-mode stale removal.
-2. Audit `ExtractionContextBuilder` duplicate edge-type signature construction if prompt/cache byte
-   shape can be proven unchanged by focused tests.
 
 ## LadybugDB / Kuzu
 
@@ -86,9 +84,9 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest checkpoint, 2026-06-11:
-`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Text.ContentChunkingTests"`
-succeeded. It ran locked restore, focused text chunking coverage (`47` passed), format verification,
-no-incremental build, the full test suite (`878` passed), and `dotnet pack` for
+`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Internal.ExtractionContextBuilderTests|FullyQualifiedName~Graphiti.Core.Tests.GraphitiWorkflowTests.AddEpisode_PassesTypeMetadataAndCustomInstructionsToExtractionPrompt"`
+succeeded. It ran locked restore, focused extraction-context coverage (`2` passed), format
+verification, no-incremental build, the full test suite (`879` passed), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`.
 
 Primary full verification command from the C# repo root:
