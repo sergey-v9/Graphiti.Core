@@ -196,6 +196,85 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_GraphDriverReturnsEntityEdgesBetweenDirectedEndpoints()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var referenceTime = new DateTime(2026, 2, 5, 6, 7, 8, DateTimeKind.Utc);
+        var alice = new EntityNode
+        {
+            Uuid = "entity-between-alice",
+            Name = "Alice",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            Summary = "directed source"
+        };
+        var bob = new EntityNode
+        {
+            Uuid = "entity-between-bob",
+            Name = "Bob",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            Summary = "directed target"
+        };
+        var carol = new EntityNode
+        {
+            Uuid = "entity-between-carol",
+            Name = "Carol",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            Summary = "unrelated source"
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(alice);
+        await driver.SaveNodeAsync(bob);
+        await driver.SaveNodeAsync(carol);
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-between-forward",
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            GroupId = "tenant",
+            Name = "MENTORS",
+            Fact = "Alice mentors Bob",
+            CreatedAt = referenceTime,
+            ValidAt = referenceTime,
+            ReferenceTime = referenceTime
+        });
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-between-reverse",
+            SourceNodeUuid = bob.Uuid,
+            TargetNodeUuid = alice.Uuid,
+            GroupId = "tenant",
+            Name = "REVIEWS",
+            Fact = "Bob reviews Alice",
+            CreatedAt = referenceTime,
+            ValidAt = referenceTime,
+            ReferenceTime = referenceTime
+        });
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-between-unrelated",
+            SourceNodeUuid = carol.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            GroupId = "tenant",
+            Name = "KNOWS",
+            Fact = "Carol knows Bob",
+            CreatedAt = referenceTime,
+            ValidAt = referenceTime,
+            ReferenceTime = referenceTime
+        });
+
+        var forward = await driver.GetEntityEdgesBetweenNodesAsync(alice.Uuid, bob.Uuid);
+        var reverse = await driver.GetEntityEdgesBetweenNodesAsync(bob.Uuid, alice.Uuid);
+
+        Assert.Equal("edge-between-forward", Assert.Single(forward).Uuid);
+        Assert.Equal("edge-between-reverse", Assert.Single(reverse).Uuid);
+    }
+
+    [Fact]
     public async Task PackageRuntime_NormalizedStatementsRoundTripEpisodeMentionsAndGroupFilters()
     {
         await using var executor = new PackageLadybugExecutor();
