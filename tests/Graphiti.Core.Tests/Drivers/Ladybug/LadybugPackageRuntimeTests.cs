@@ -236,7 +236,7 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
-    public async Task PackageRuntime_NormalizedStatementsRoundTripEntityEdgeListsAndNulls()
+    public async Task PackageRuntime_DirectStatementsRoundTripEntityEdgeListsAndNulls()
     {
         await using var executor = new PackageLadybugExecutor();
         var driver = new LadybugGraphDriver(executor);
@@ -461,7 +461,7 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
-    public async Task PackageRuntime_NormalizedStatementsRoundTripEpisodeMentionsAndGroupFilters()
+    public async Task PackageRuntime_DirectStatementsRoundTripEpisodeMentionsAndGroupFilters()
     {
         await using var executor = new PackageLadybugExecutor();
         var driver = new LadybugGraphDriver(executor);
@@ -983,6 +983,224 @@ public class LadybugPackageRuntimeTests
                 ValidAt = createdAt,
                 ReferenceTime = createdAt
             };
+    }
+
+    [Fact]
+    public async Task PackageRuntime_PublicNamespacesRoundTripCommunitySagaReadsAndTypedDeletes()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var graphiti = new Graphiti(graphDriver: driver, embedder: new HashEmbedder(8));
+        var createdAt = new DateTime(2026, 6, 1, 10, 0, 0, DateTimeKind.Utc);
+        var referenceTime = createdAt.AddHours(1);
+        var alice = new EntityNode
+        {
+            Uuid = "entity-alice",
+            Name = "Alice",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt
+        };
+        var bob = new EntityNode
+        {
+            Uuid = "entity-bob",
+            Name = "Bob",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            CreatedAt = createdAt
+        };
+        var otherEntity = new EntityNode
+        {
+            Uuid = "entity-other",
+            Name = "Mallory",
+            GroupId = "other",
+            Labels = ["Person"],
+            CreatedAt = createdAt
+        };
+        var tenantCommunity = new CommunityNode
+        {
+            Uuid = "community-tenant",
+            Name = "Tenant community",
+            GroupId = "tenant",
+            Summary = "tenant summary",
+            CreatedAt = createdAt
+        };
+        var otherCommunity = new CommunityNode
+        {
+            Uuid = "community-other",
+            Name = "Other community",
+            GroupId = "other",
+            Summary = "other summary",
+            CreatedAt = createdAt
+        };
+        var olderEpisode = new EpisodicNode
+        {
+            Uuid = "episode-older",
+            Name = "older",
+            GroupId = "tenant",
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Alice opened the case.",
+            CreatedAt = createdAt,
+            ValidAt = createdAt.AddMinutes(1)
+        };
+        var newerEpisode = new EpisodicNode
+        {
+            Uuid = "episode-newer",
+            Name = "newer",
+            GroupId = "tenant",
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Bob closed the case.",
+            CreatedAt = createdAt.AddMinutes(1),
+            ValidAt = createdAt.AddMinutes(2)
+        };
+        var otherEpisode = new EpisodicNode
+        {
+            Uuid = "episode-other",
+            Name = "other",
+            GroupId = "other",
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Mallory watched.",
+            CreatedAt = createdAt,
+            ValidAt = createdAt.AddMinutes(3)
+        };
+        var tenantSaga = new GraphitiSagaNode
+        {
+            Uuid = "saga-tenant",
+            Name = "tenant saga",
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            Summary = "tenant saga summary",
+            FirstEpisodeUuid = olderEpisode.Uuid,
+            LastEpisodeUuid = newerEpisode.Uuid,
+            LastSummarizedAt = referenceTime,
+            LastSummarizedEpisodeValidAt = newerEpisode.ValidAt
+        };
+        var otherSaga = new GraphitiSagaNode
+        {
+            Uuid = "saga-other",
+            Name = "other saga",
+            GroupId = "other",
+            CreatedAt = createdAt,
+            Summary = "other saga summary",
+            FirstEpisodeUuid = otherEpisode.Uuid,
+            LastEpisodeUuid = otherEpisode.Uuid
+        };
+        var knows = new EntityEdge
+        {
+            Uuid = "entity-edge-knows",
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            GroupId = "tenant",
+            Name = "KNOWS",
+            Fact = "Alice knows Bob",
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = referenceTime
+        };
+        var communityEdge = new CommunityEdge
+        {
+            Uuid = "community-edge-tenant",
+            SourceNodeUuid = tenantCommunity.Uuid,
+            TargetNodeUuid = alice.Uuid,
+            GroupId = "tenant",
+            CreatedAt = createdAt
+        };
+        var otherCommunityEdge = new CommunityEdge
+        {
+            Uuid = "community-edge-other",
+            SourceNodeUuid = otherCommunity.Uuid,
+            TargetNodeUuid = otherEntity.Uuid,
+            GroupId = "other",
+            CreatedAt = createdAt
+        };
+        var hasEpisode = new HasEpisodeEdge
+        {
+            Uuid = "has-episode-tenant",
+            SourceNodeUuid = tenantSaga.Uuid,
+            TargetNodeUuid = olderEpisode.Uuid,
+            GroupId = "tenant",
+            CreatedAt = createdAt
+        };
+        var otherHasEpisode = new HasEpisodeEdge
+        {
+            Uuid = "has-episode-other",
+            SourceNodeUuid = otherSaga.Uuid,
+            TargetNodeUuid = otherEpisode.Uuid,
+            GroupId = "other",
+            CreatedAt = createdAt
+        };
+        var nextEpisode = new NextEpisodeEdge
+        {
+            Uuid = "next-episode-tenant",
+            SourceNodeUuid = olderEpisode.Uuid,
+            TargetNodeUuid = newerEpisode.Uuid,
+            GroupId = "tenant",
+            CreatedAt = createdAt
+        };
+        var otherNextEpisode = new NextEpisodeEdge
+        {
+            Uuid = "next-episode-other",
+            SourceNodeUuid = otherEpisode.Uuid,
+            TargetNodeUuid = otherEpisode.Uuid,
+            GroupId = "other",
+            CreatedAt = createdAt
+        };
+
+        await graphiti.BuildIndicesAndConstraintsAsync();
+        await graphiti.Nodes.Entity.SaveBulkAsync([alice, bob, otherEntity]);
+        await graphiti.Nodes.Community.SaveBulkAsync([tenantCommunity, otherCommunity]);
+        await graphiti.Nodes.Episodic.SaveBulkAsync([olderEpisode, newerEpisode, otherEpisode]);
+        await graphiti.Nodes.Saga.SaveBulkAsync([tenantSaga, otherSaga]);
+        await graphiti.Edges.Entity.SaveBulkAsync([knows]);
+        await graphiti.Edges.Community.SaveBulkAsync([communityEdge, otherCommunityEdge]);
+        await graphiti.Edges.HasEpisode.SaveBulkAsync([hasEpisode, otherHasEpisode]);
+        await graphiti.Edges.NextEpisode.SaveBulkAsync([nextEpisode, otherNextEpisode]);
+
+        var entities = await graphiti.Nodes.Entity.GetByUuidsAsync([alice.Uuid, bob.Uuid]);
+        var entityEdge = Assert.Single(await graphiti.Edges.Entity.GetByUuidsAsync([knows.Uuid]));
+        var tenantCommunityEdge = Assert.Single(await graphiti.Edges.Community.GetByGroupIdsAsync(["tenant"]));
+        var tenantHasEpisode = Assert.Single(await graphiti.Edges.HasEpisode.GetByGroupIdsAsync(["tenant"]));
+        var tenantNextEpisode = Assert.Single(await graphiti.Edges.NextEpisode.GetByGroupIdsAsync(["tenant"]));
+
+        Assert.Equal(new[] { alice.Uuid, bob.Uuid }, entities.Select(node => node.Uuid).Order(StringComparer.Ordinal));
+        Assert.All(entities, node => Assert.Null(node.NameEmbedding));
+        Assert.Equal(knows.Fact, entityEdge.Fact);
+        Assert.Equal(alice.Uuid, entityEdge.SourceNodeUuid);
+        Assert.Equal(bob.Uuid, entityEdge.TargetNodeUuid);
+        Assert.Null(entityEdge.FactEmbedding);
+        Assert.Equal(tenantCommunity.Uuid, Assert.Single(await graphiti.Nodes.Community.GetByGroupIdsAsync(["tenant"])).Uuid);
+        Assert.Equal(tenantSaga.Uuid, Assert.Single(await graphiti.Nodes.Saga.GetByGroupIdsAsync(["tenant"])).Uuid);
+        Assert.Equal((communityEdge.SourceNodeUuid, communityEdge.TargetNodeUuid),
+            (tenantCommunityEdge.SourceNodeUuid, tenantCommunityEdge.TargetNodeUuid));
+        Assert.Equal((hasEpisode.SourceNodeUuid, hasEpisode.TargetNodeUuid),
+            (tenantHasEpisode.SourceNodeUuid, tenantHasEpisode.TargetNodeUuid));
+        Assert.Equal((nextEpisode.SourceNodeUuid, nextEpisode.TargetNodeUuid),
+            (tenantNextEpisode.SourceNodeUuid, tenantNextEpisode.TargetNodeUuid));
+
+        await graphiti.Edges.Community.DeleteByUuidsAsync([
+            communityEdge.Uuid,
+            hasEpisode.Uuid,
+            nextEpisode.Uuid
+        ]);
+
+        await Assert.ThrowsAsync<EdgeNotFoundException>(() => graphiti.Edges.Community.GetByUuidAsync(communityEdge.Uuid));
+        Assert.Equal(hasEpisode.Uuid, (await graphiti.Edges.HasEpisode.GetByUuidAsync(hasEpisode.Uuid)).Uuid);
+        Assert.Equal(nextEpisode.Uuid, (await graphiti.Edges.NextEpisode.GetByUuidAsync(nextEpisode.Uuid)).Uuid);
+        Assert.Equal(otherCommunityEdge.Uuid, (await graphiti.Edges.Community.GetByUuidAsync(otherCommunityEdge.Uuid)).Uuid);
+
+        await graphiti.Nodes.Saga.DeleteByUuidsAsync([
+            tenantSaga.Uuid,
+            tenantCommunity.Uuid,
+            olderEpisode.Uuid
+        ]);
+
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => graphiti.Nodes.Saga.GetByUuidAsync(tenantSaga.Uuid));
+        Assert.Equal(tenantCommunity.Uuid, (await graphiti.Nodes.Community.GetByUuidAsync(tenantCommunity.Uuid)).Uuid);
+        Assert.Equal(olderEpisode.Uuid, (await graphiti.Nodes.Episodic.GetByUuidAsync(olderEpisode.Uuid)).Uuid);
+        Assert.Equal(otherSaga.Uuid, (await graphiti.Nodes.Saga.GetByUuidAsync(otherSaga.Uuid)).Uuid);
     }
 
     [Fact]
@@ -1618,26 +1836,35 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
-    public void PackageRuntime_DoesNotBindGraphitiListArrayOrNullParametersDirectlyYet()
+    public void PackageRuntime_BindsGraphitiListArrayEmptyListAndNullParametersDirectly()
     {
         using var database = new Database("");
         using var connection = new Connection(database);
 
-        Assert.Throws<NotSupportedException>(() => ExecuteParameterQuery(
-            connection,
-            new List<string> { "tenant" }));
-        Assert.Throws<NotSupportedException>(() => ExecuteParameterQuery(
-            connection,
-            new[] { "tenant" }));
-        Assert.Throws<NotSupportedException>(() => ExecuteParameterQuery(
-            connection,
-            new[] { 0.1f, 0.2f }));
-        Assert.Throws<NotSupportedException>(() => ExecuteParameterQuery(
-            connection,
-            new object[] { "tenant" }));
-        Assert.Throws<ArgumentNullException>(() => ExecuteParameterQuery(
-            connection,
-            null!));
+        using var result = connection.Execute(
+            """
+            RETURN $strings AS strings,
+                   $array AS array,
+                   $floats AS floats,
+                   $empty AS empty,
+                   $missing AS missing
+            """,
+            new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["strings"] = new List<string> { "tenant", "archive" },
+                ["array"] = new[] { "entity-1", "entity-2" },
+                ["floats"] = new[] { 0.1f, 0.2f },
+                ["empty"] = Array.Empty<string>(),
+                ["missing"] = null
+            });
+
+        var row = Assert.Single(result.Rows());
+
+        Assert.Equal(new object?[] { "tenant", "archive" }, Assert.IsType<object?[]>(row[0]));
+        Assert.Equal(new object?[] { "entity-1", "entity-2" }, Assert.IsType<object?[]>(row[1]));
+        Assert.Equal(new object?[] { 0.1f, 0.2f }, Assert.IsType<object?[]>(row[2]));
+        Assert.Empty(Assert.IsType<object?[]>(row[3]));
+        Assert.Null(row[4]);
     }
 
     [Fact]
@@ -1669,16 +1896,6 @@ public class LadybugPackageRuntimeTests
         var row = Assert.Single(result.Rows());
         Assert.Equal("n1", Assert.IsType<string>(row[0]));
         Assert.True(Assert.IsType<double>(row[1]) > 0);
-    }
-
-    private static void ExecuteParameterQuery(Connection connection, object value)
-    {
-        using var result = connection.Execute(
-            "RETURN $value AS value",
-            new Dictionary<string, object?>(StringComparer.Ordinal)
-            {
-                ["value"] = value
-            });
     }
 
     private static string FindCSharpRoot()
@@ -1756,10 +1973,9 @@ public class LadybugPackageRuntimeTests
 
         private QueryResult ExecuteStatement(LadybugStatement statement)
         {
-            var normalized = LadybugStatementNormalizer.NormalizeForPackageExecution(statement);
-            return normalized.Parameters.Count == 0
-                ? _connection.Query(normalized.Query)
-                : _connection.Execute(normalized.Query, normalized.Parameters);
+            return statement.Parameters.Count == 0
+                ? _connection.Query(statement.Query)
+                : _connection.Execute(statement.Query, statement.Parameters);
         }
     }
 }

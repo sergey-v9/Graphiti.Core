@@ -169,7 +169,7 @@ priority is not the C# product direction.
 The C# port is moving toward a LadybugDB-centered provider model:
 
 - `Graphiti.Core` owns the LadybugDB package and native references.
-- Internal core helpers under `Drivers/Ladybug/` own shared statement, schema, mapping, normalizer,
+- Internal core helpers under `Drivers/Ladybug/` own shared statement, schema, mapping,
   active full-text query construction, active label-filter fragments, concrete package execution, and
   executor-backed behavior.
 - `Configuration/LadybugDbOptions.cs` and `AddLadybugDbGraphDriver` provide host-facing
@@ -187,7 +187,8 @@ The C# port is moving toward a LadybugDB-centered provider model:
   remaining work.
 - Tests provide runtime proof for main ingest/search/removal/triplet/bulk/saga/community workflows,
   package/native execution, direct driver bulk-save embedding/relationship persistence,
-  namespace/model embedding reloads by UUID, saga-scoped retrieval and content reads, paged group
+  namespace/model embedding reloads by UUID, direct package list/null binding, public namespace
+  community/saga reads and typed deletes, saga-scoped retrieval and content reads, paged group
   reads, directed endpoint-pair and incident entity-edge reads, core DI registration,
   `GraphProvider.Kuzu` resolution, file-backed `DatabasePath` persistence, core
   `GraphProvider.Kuzu` `Database` persistence, `':memory:'` sentinel compatibility, and active

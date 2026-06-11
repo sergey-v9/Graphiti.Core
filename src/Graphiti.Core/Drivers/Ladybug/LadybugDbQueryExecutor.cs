@@ -60,9 +60,8 @@ internal sealed class LadybugDbQueryExecutor : ILadybugQueryExecutor
 
     private QueryResult ExecuteStatement(LadybugStatement statement)
     {
-        var normalized = LadybugStatementNormalizer.NormalizeForPackageExecution(statement);
-        return normalized.Parameters.Count == 0
-            ? _connection.Query(normalized.Query)
-            : _connection.Execute(normalized.Query, normalized.Parameters);
+        return statement.Parameters.Count == 0
+            ? _connection.Query(statement.Query)
+            : _connection.Execute(statement.Query, statement.Parameters);
     }
 }

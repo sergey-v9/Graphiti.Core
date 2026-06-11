@@ -6,7 +6,7 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 ## Current Status
 
 - `Graphiti.Core` owns the LadybugDB package and native references.
-- `Drivers/Ladybug/` owns schema, statement construction, record mapping, statement normalization,
+- `Drivers/Ladybug/` owns schema, statement construction, record mapping,
   full-text query construction, Ladybug label-filter fragments, the concrete package executor, and
   executor-backed graph/search behavior.
 - `LadybugGraphDriver` is internal, implements the graph-driver surface, and delegates search through
@@ -20,15 +20,17 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
   direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by
   UUID, saga-scoped episode retrieval, saga content filtering/order/limit behavior, saga predecessor
   lookup, paged node/edge group reads, directed endpoint-pair edge reads, incident entity-edge reads,
-  group-id enumeration, file-backed `DatabasePath` persistence, core `GraphProvider.Kuzu`
+  group-id enumeration, public namespace community/saga reads and typed deletes, file-backed
+  `DatabasePath` persistence, core `GraphProvider.Kuzu`
   `Database` persistence, and Python Kuzu `':memory:'` sentinel compatibility. Treat tests as the
   detailed proof source.
 - `LadybugPackageRuntimeTests` exercise the actual LadybugDB package/native path in normal
-  verification, including schema creation, list/null normalization, FTS loading/search, vector
+  verification, including schema creation, direct list/array/empty-list/null parameter binding, FTS loading/search, vector
   search, filters, direct driver bulk-save embedding/relationship persistence, saga-scoped episode
   retrieval, saga content filtering/order/limit behavior, namespace/model embedding reloads by UUID,
   paged node/edge group reads, directed endpoint-pair edge reads, incident edge reads, group-id
-  enumeration, BFS/rankers, and delete/clear flows. Do not add a separate native-gated smoke suite
+  enumeration, public namespace community/saga group reads and typed-delete isolation, BFS/rankers,
+  and delete/clear flows. Do not add a separate native-gated smoke suite
   unless it covers a new runtime requirement or CI/platform constraint the current package runtime
   tests do not cover.
 - The LadybugDB package has a nearby source checkout at `W:\code\ladybug`; this is background
@@ -56,7 +58,9 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 
 ## Confirmed Package/API Facts
 
-- Package id: `LadybugDB`; version comes from central package management.
+- Package id: `LadybugDB`; version comes from central package management. Graphiti currently uses
+  the local repaired package family `0.17.0-alpha.2-graphiti.1` from
+  `../../ladybug/tools/csharp_api/artifacts` via `NuGet.config`.
 - Native assets are packaged separately, for example `LadybugDB.Native` and RID-specific native
   packages.
 - Exposed API includes `Database`, `Connection`, `Query`, `Prepare`, `Execute`,
@@ -71,13 +75,16 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 - LadybugDB can reject post-projection ordering by node variables such as `ORDER BY n.uuid`; use
   projected aliases such as `uuid`, `valid_at`, and `created_at` after `RETURN`.
 
-## Package Quirks And Workarounds
+## Package Bug Recovery
 
-- Current package binding does not accept the list/array and null parameter shapes Graphiti uses in
-  Kuzu-style statements. `List<string>`, arrays, and `object[]` throw `NotSupportedException`; null
-  parameters throw `ArgumentNullException`.
-- `LadybugStatementNormalizer` is the current execution strategy for those binder gaps. It rewrites
-  list/array/null values into Kuzu literals while leaving scalar values bound for prepared execution.
+- A LadybugDB .NET binding gap blocked Graphiti's Kuzu-style statements: package
+  `PreparedStatement.Bind(object?)` rejected `List<string>`, arrays, empty lists, and null values.
+  The local `W:\code\ladybug\tools\csharp_api` checkout now has a C# binding repair that wraps
+  native `lbug_value` creation and `lbug_prepared_statement_bind_value`. Graphiti consumes the local
+  `0.17.0-alpha.2-graphiti.1` package family and executes statements with bound parameters directly.
+- `LadybugStatementNormalizer` was removed from Graphiti after the local package repair. If the
+  local package source is missing, restore will fail instead of silently falling back to literal
+  rewriting.
 - The current Python Kuzu code has provider-specific inconsistencies around Saga schema/query fields,
   entity-edge `reference_time`, and source-only `EntityEdge.get_by_node_uuid` reads. The C#
   foundation intentionally uses the full `SagaNode` shape, saves/returns entity-edge
@@ -87,7 +94,7 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 ## Existing Touchpoints
 
 - `Drivers/GraphProvider.cs`: keeps `GraphProvider.Kuzu` as compatibility vocabulary.
-- `Drivers/Ladybug/`: schema, statement, normalizer, record mapper, driver, concrete executor, search
+- `Drivers/Ladybug/`: schema, statement, record mapper, driver, concrete executor, search
   full-text query helper, search-filter adapter, statements, search executor, and driver factory.
 - `Configuration/LadybugDbOptions.cs`: host-facing LadybugDB driver options.
 - `Configuration/LadybugDbServiceCollectionExtensions.cs`: LadybugDB DI helper.

@@ -107,8 +107,12 @@ Active Ladybug full-text search builds Python Kuzu-style raw whitespace queries 
 branch only for compatibility callers outside the driver.
 Active Ladybug node-label search filters are built by `Drivers/Ladybug/LadybugSearchFilter` so the
 driver no longer asks shared search filtering for `GraphProvider.Kuzu` fragments.
+Graphiti now consumes a local repaired LadybugDB package family
+`0.17.0-alpha.2-graphiti.1` from `W:\code\ladybug\tools\csharp_api\artifacts` via
+`NuGet.config`; that binding supports Graphiti's list/array/empty-list/null parameters directly, so
+the former `LadybugStatementNormalizer` workaround has been removed.
 
-For provider status, package facts, package quirks, runtime proof, and remaining work, read
+For provider status, package facts, package bug recovery, runtime proof, and remaining work, read
 `kuzu-driver-port.md`. If implementation uncovers a likely LadybugDB package/binding issue, mark it
 separately from Graphiti port gaps. The current user-approved recovery path is local-only: patch and
 commit the fix in `W:\code\ladybug`, do not push remotely, draft a nearby markdown request for
@@ -121,6 +125,27 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest checkpoint, 2026-06-11:
+
+Succeeded after repairing LadybugDB .NET list/null binding locally, wiring Graphiti to the local
+`0.17.0-alpha.2-graphiti.1` package family, removing Graphiti's Ladybug statement normalizer, and
+adding package-backed public namespace community/saga read/delete coverage:
+
+```powershell
+.\eng\Verify-GraphitiCore.ps1
+dotnet test Graphiti.Core.CSharp.slnx --no-restore --no-build --filter "LadybugPackageRuntimeTests" --verbosity minimal
+dotnet test Graphiti.Core.CSharp.slnx --no-restore --no-build --filter "LadybugFoundationTests" --verbosity minimal
+```
+
+Full verification passed: restore, format, warning-clean build including `Graphiti.Sample.OpenAI`,
+full test suite (`941` passed, `2` skipped, `943` total), and `dotnet pack` for
+`Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` was unset; the two skipped tests were
+`OpenAIProviderIntegrationTests.StructuredResponseSchemas_WithOpenAIProvider_AreAccepted` and
+`OpenAIProviderIntegrationTests.AddEpisodeAsync_WithOpenAIProvider_IngestsResolvedTemporalGraph`.
+Focused `LadybugPackageRuntimeTests` also passed with `18` tests, including direct package binding
+of Graphiti list/array/empty-list/null parameter shapes and public namespace community/saga group
+reads plus typed-delete isolation. `LadybugFoundationTests` passed with `16` tests.
+
+Previous full-suite checkpoint, 2026-06-11:
 
 Succeeded after fixing LadybugDB namespace/model embedding reloads by UUID:
 

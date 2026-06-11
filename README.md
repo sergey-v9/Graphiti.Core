@@ -59,6 +59,14 @@ is now `Graphiti.Llm.GenerateResponse` (was `Graphiti.LLM.GenerateResponse`).
 
 ## Verify
 
+This branch currently restores `LadybugDB` / `LadybugDB.Native` from the local feed configured in
+`NuGet.config` at `../../ladybug/tools/csharp_api/artifacts`. If those artifacts are missing, rebuild
+them from the sibling Ladybug checkout with:
+
+```powershell
+.\build.ps1 --target Pack --package-version 0.17.0-alpha.2-graphiti.1
+```
+
 ```powershell
 .\eng\Verify-GraphitiCore.ps1
 ```
