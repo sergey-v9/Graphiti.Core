@@ -372,15 +372,7 @@ internal sealed class EdgeResolutionService(
         try
         {
             var response = await llmClient.GenerateTypedResponseAsync<Graphiti.EdgeTimestampResponse>(
-                new[]
-                {
-                    new Message("system", "Extract temporal validity timestamps for the fact."),
-                    new Message("user", new JsonObject
-                    {
-                        ["fact"] = edge.Fact,
-                        ["reference_time"] = GraphitiHelpers.EnsureUtc(episode.ValidAt).ToString("O")
-                    }.ToJsonString(GraphitiJsonSerializer.Options))
-                },
+                ExtractEdgesPrompts.BuildExtractTimestamps(edge.Fact, episode.ValidAt),
                 modelSize: ModelSize.Small,
                 promptName: "extract_edges.extract_timestamps",
                 cancellationToken: cancellationToken).ConfigureAwait(false);

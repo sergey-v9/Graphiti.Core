@@ -35,9 +35,8 @@ unused list).
 - [x] 1. `extract_nodes.extract_message` / `extract_text` / `extract_json` → ExtractNodesPrompts
       (landed 2026-06-11).
 - [x] 2. `extract_edges.edge` → ExtractEdgesPrompts (landed 2026-06-11).
-- [ ] 3. `extract_edges.extract_timestamps` → ExtractEdgesPrompts.BuildExtractTimestamps; wire
-      EdgeResolutionService.cs:374. Python: prompts/extract_edges.py:242-271. Small, do it first
-      to warm up.
+- [x] 3. `extract_edges.extract_timestamps` → ExtractEdgesPrompts.BuildExtractTimestamps; wire
+      EdgeResolutionService.cs:374. Python: prompts/extract_edges.py:242-271. Landed 2026-06-11.
 - [ ] 4. `dedupe_nodes.nodes` → new DedupeNodesPrompts; wire NodeResolutionService.cs:102. Python:
       prompts/dedupe_nodes.py:117-179. Include the worked EXAMPLE block (NYC/Java/Marco cases) —
       it carries most of the prompt's precision.

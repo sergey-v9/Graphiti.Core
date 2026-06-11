@@ -181,4 +181,42 @@ public class ExtractEdgesPromptsTests
             """[{"fact_type_name":"WORKS_AT","fact_type_signatures":[["Entity","Entity"]],"fact_type_description":"Employment relationship"}]""",
             context.EdgeTypesJson);
     }
+
+    [Fact]
+    public void BuildExtractTimestamps_RendersPythonParityPrompt()
+    {
+        var messages = ExtractEdgesPrompts.BuildExtractTimestamps(
+            "Alice worked at Acme until February.",
+            new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc));
+
+        Assert.Equal(2, messages.Length);
+        Assert.Equal("system", messages[0].Role);
+        Assert.Equal(
+            "You extract temporal bounds from facts. NEVER hallucinate dates.",
+            messages[0].Content);
+        Assert.Equal("user", messages[1].Role);
+
+        var expected = """
+            Given a FACT and its REFERENCE TIME, determine when the fact became true
+            (valid_at) and when it stopped being true (invalid_at).
+
+            Rules:
+            - Resolve relative expressions ("last week", "2 years ago", "yesterday") using REFERENCE TIME.
+            - If the fact is ongoing (present tense), set valid_at to REFERENCE TIME.
+            - If a change or end is expressed, set invalid_at to the relevant time.
+            - Leave both null if no time is stated or resolvable.
+            - If only a date is mentioned (no time), assume 00:00:00.
+            - Use ISO 8601 with Z suffix (e.g., 2025-04-30T00:00:00Z).
+            - Do NOT hallucinate or infer dates from unrelated events.
+
+            <FACT>
+            Alice worked at Acme until February.
+            </FACT>
+
+            <REFERENCE TIME>
+            2026-01-02T03:04:05.0000000Z
+            </REFERENCE TIME>
+            """;
+        Assert.Equal(expected, messages[1].Content);
+    }
 }

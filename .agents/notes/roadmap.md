@@ -7,7 +7,7 @@ in `parity.md`. Keep completed history out of this file (`evolution.md` owns mil
 
 ## Where the port actually is (2026-06-11 reassessment)
 
-The infrastructure is real and green: builds clean, 879 deterministic tests pass, packaging works,
+The infrastructure is real and green: builds clean, 887 deterministic tests pass, packaging works,
 drivers (InMemory, LadybugDB, Neo4j-legacy) have runtime proof, search/ranking/community algorithms
 have genuine parity coverage. What is NOT done is the LLM-facing semantic layer: most prompt
 instruction text was never ported (one-line system messages + raw JSON context stand in for

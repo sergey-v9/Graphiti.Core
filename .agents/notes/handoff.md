@@ -45,14 +45,14 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
 
 - **Solid and verified:** project/infrastructure shape (net10.0, analyzers, packaging), drivers
   (InMemory reference, LadybugDB runtime proof, Neo4j legacy), search ranking/fusion/reranking,
-  community label propagation, text utilities, serialization/cache identity, DI/options. 879
+  community label propagation, text utilities, serialization/cache identity, DI/options. 887
   deterministic tests green.
 - **Hollow until plans 01–02 land:** the LLM-facing semantic layer. Most prompt instruction text
   was never ported — services sent one-line system messages plus raw JSON context, which produces
-  a structurally valid but semantically poor graph with a real LLM. Node/edge extraction prompts
-  were ported 2026-06-11 (`Prompts/`); the remaining prompt rows in `parity.md` are still STUB or
-  MISSING. Entity summaries are never generated during ingestion. Several invented fallbacks mask
-  LLM failures and must be removed (plan 02).
+  a structurally valid but semantically poor graph with a real LLM. Node/edge extraction prompts and
+  edge timestamp extraction prompts were ported 2026-06-11 (`Prompts/`); the remaining prompt rows in
+  `parity.md` are still STUB or MISSING. Entity summaries are never generated during ingestion.
+  Several invented fallbacks mask LLM failures and must be removed (plan 02).
 - **Never exercised:** any real LLM/embedding provider, end to end. The deterministic suite cannot
   see prompt or schema-acceptance problems (plan 03).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority").
@@ -81,11 +81,11 @@ contract.
 Rerun verification before claiming the tree is green; historical test counts drift as coverage is
 added.
 
-Latest checkpoint, 2026-06-11: `.\eng\Verify-GraphitiCore.ps1` succeeded after the node/edge
-extraction prompt port: locked restore, format verification, no-incremental build, full test suite
-(`886` passed, including the new golden prompt tests under `Graphiti.Core.Tests.Prompts`), and
-`dotnet pack` for `Graphiti.Core.2.0.0-alpha.1.nupkg`. No real-provider run has ever been executed
-(plan 03).
+Latest checkpoint, 2026-06-11:
+`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Prompts"`
+succeeded after the edge timestamp prompt port: locked restore, focused prompt golden tests (`9`
+passed), format verification, no-incremental build, full test suite (`887` passed), and `dotnet pack`
+for `Graphiti.Core.2.0.0-alpha.1.nupkg`. No real-provider run has ever been executed (plan 03).
 
 Primary full verification command from the C# repo root:
 

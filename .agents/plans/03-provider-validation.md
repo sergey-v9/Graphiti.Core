@@ -3,7 +3,7 @@
 **Objective:** prove the C# library against a real LLM + embedder for the first time, find the
 integration bugs the deterministic suite cannot see, and make that proof repeatable.
 
-**Why:** all 879 tests run against fake clients (`StaticJsonLlmClient`, `HashEmbedder`,
+**Why:** all 887 tests run against fake clients (`StaticJsonLlmClient`, `HashEmbedder`,
 `IdentityCrossEncoderClient`). Structured-output handling, schema acceptance by real providers,
 prompt efficacy, retry behavior, and embedding dimensionality have never been exercised. Until
 this plan runs green, no parity claim about extraction quality is real.

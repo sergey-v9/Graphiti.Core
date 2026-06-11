@@ -22,7 +22,7 @@ baseline, add rows or reopen statuses for anything affected, then move the ancho
 This is the highest-risk area. The prompt prose in `graphiti_core/prompts/` is core Graphiti IP:
 extraction quality with a real LLM depends on it. "The structured-output schema and JSON data
 context exist" does NOT make a prompt ported — the instruction text must be ported near-verbatim
-(see `decisions.md` "Prompt parity contract"). The 879 unit tests cannot detect prompt-quality
+(see `decisions.md` "Prompt parity contract"). The 887 unit tests cannot detect prompt-quality
 gaps because they use deterministic fake LLM clients.
 
 Live Python pipeline call sites (everything else in `prompts/` is currently unused by the Python
@@ -36,7 +36,7 @@ pipeline — do not port without a reason):
 | `extract_edges.edge` | prompts/extract_edges.py | EpisodeGraphExtractor → Prompts/ExtractEdgesPrompts | OK | Ported 2026-06-11; golden-text tests pin content |
 | `extract_nodes.extract_attributes` | prompts/extract_nodes.py:383 | AttributeExtractionService.cs:122 | STUB | One-line system msg + raw JSON context; Python HARD RULES anti-hallucination prose missing |
 | `extract_edges.extract_attributes` | prompts/extract_edges.py:181 | AttributeExtractionService.cs:45 | STUB | Same pattern; Python HARD RULES missing |
-| `extract_edges.extract_timestamps` | prompts/extract_edges.py:242 | EdgeResolutionService.cs:374 | STUB | One-liner vs Python datetime-extraction rules |
+| `extract_edges.extract_timestamps` | prompts/extract_edges.py:242 | EdgeResolutionService → Prompts/ExtractEdgesPrompts | OK | Ported 2026-06-11; golden-text tests pin content |
 | `extract_edges.extract_timestamps_batch` | prompts/extract_edges.py:274 | — | MISSING | Used by Python combined extraction |
 | `dedupe_nodes.nodes` | prompts/dedupe_nodes.py:117 | NodeResolutionService.cs:102 | STUB | Data context ported; instruction prose + worked EXAMPLE block missing |
 | `dedupe_edges.resolve_edge` | prompts/dedupe_edges.py:43 | EdgeResolutionService.cs:246 | STUB | Data context ported; duplicate/contradiction instruction prose missing |
