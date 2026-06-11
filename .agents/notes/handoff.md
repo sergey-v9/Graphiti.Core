@@ -81,7 +81,9 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
   `OpenAIProviderIntegrationTests` provides env-gated provider tests. The sample is
   compile/no-key-path verified, uses `MicrosoftExtensionsAICrossEncoderClient` for real reranking,
   and the tests skip cleanly without `OPENAI_API_KEY`, but no provider call has been executed. The
-  deterministic suite cannot see prompt or schema-acceptance problems (plan 03).
+  deterministic suite cannot see prompt or schema-acceptance problems (plan 03). The optional eval
+  harness proposal is drafted in `.agents/notes/eval-harness-proposal.md`; implementation needs
+  explicit user approval.
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phase 2
   is complete; Phase 3 real-provider validation is the next active plan item, but it is blocked on a
   real `OPENAI_API_KEY` for the live run. Performance/allocation rework is on moratorium

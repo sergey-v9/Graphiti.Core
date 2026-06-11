@@ -96,4 +96,4 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Retry-on-validation-failure with error feedback message | llm_client/client.py retry loop | OK | Ported 2026-06-11 in base `LlmClient`: `JsonException` parse/schema failures get two Python-style validation-feedback re-prompts, cache keys remain based on the original prepared messages, and only validated final responses are cached |
 | GLiNER2 local extraction client | N/A | Specialized optional Python feature; out of scope unless requested |
 | Real-provider end-to-end validation | PARTIAL | `samples/Graphiti.Sample.OpenAI` and `OpenAIProviderIntegrationTests` added 2026-06-11; sample compiles and integration tests skip cleanly without `OPENAI_API_KEY`, but no live provider run has passed yet. See plan 03 |
-| eval harness (eval prompts, add-episode eval) | MISSING | Optional; see plan 03 |
+| eval harness (eval prompts, add-episode eval) | MISSING | Optional; Plan 03 proposal drafted in `.agents/notes/eval-harness-proposal.md`, awaiting user approval before implementation |

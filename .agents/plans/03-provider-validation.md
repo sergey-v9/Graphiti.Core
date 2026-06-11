@@ -62,6 +62,11 @@ host project own provider packages); no CI wiring yet; no perf measurement.
 - [ ] 4. (Optional, with user buy-in) Port the eval harness: Python `prompts/eval.py` +
       `tests/evals/` give scored end-to-end extraction comparisons. This is the durable answer to
       "is the C# port as good as Python" — propose before building.
+      - Proposal drafted 2026-06-11 in `.agents/notes/eval-harness-proposal.md`. Await explicit
+        user approval before building. Proposed scope is a separate sample/tool executable that
+        ports the eval prompts near-verbatim, loads a tiny fixture or local LongMemEval path, emits
+        baseline/candidate JSON, and reports LLM-judge scores without becoming part of normal
+        deterministic verification.
 - [ ] 5. Record everything found (provider quirks, schema failures, prompt issues) as new rows or
       notes in `parity.md` and file follow-up items; close the loop by updating `roadmap.md`
       Phase 3.

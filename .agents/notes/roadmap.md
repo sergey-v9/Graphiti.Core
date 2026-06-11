@@ -51,7 +51,8 @@ Prove the library end-to-end with a real LLM + embedder. Work order:
 tests, and an opt-in M.E.AI cross-encoder now exist, but the port still has not been run
 successfully against a real LLM/embedding/reranking provider. A port of an LLM-driven library that
 has never talked to an LLM is unverified by definition; this phase is the acceptance test for
-Phases 1–2.
+Phases 1–2. The optional eval harness has a proposal in
+`.agents/notes/eval-harness-proposal.md`, but implementation requires explicit user approval.
 
 Done when: an env-gated integration test (or sample app run) ingests episodes through a real
 provider, produces a graph whose entities/edges/summaries are sane on manual inspection, and hybrid
