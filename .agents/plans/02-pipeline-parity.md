@@ -61,6 +61,12 @@ and check off here.**
       batch timestamps via `extract_edges.extract_timestamps_batch`). Decide with the user whether
       C# adopts it as the default (as upstream is heading) or as an option; then port. Depends on
       items in plan 01 being done (prompts pattern) and benefits from item 4 (attribution).
+      - Partial 2026-06-11: internal combined extraction is ported and covered behind
+        `EpisodeGraphExtractor.ExtractCombinedEpisodeGraphAsync`, including the
+        `extract_nodes_and_edges.extract_message` prompt, batch timestamp prompt, orphan dropping,
+        node attribution from facts, and self-fact preservation. It is intentionally not wired into
+        public ingestion yet because the current Python baseline keeps combined extraction behind
+        `use_combined_extraction=False`, and a C# default/option decision is still needed.
 - [ ] 6. Bulk ingestion true-batch semantics. Python `add_episode_bulk` dedupes/resolves across the
       whole batch (`bulk_utils.py`, `_extract_and_dedupe_nodes_bulk`, `dedupe_edges_bulk`); C#
       loops per-episode with an accumulated candidate set, which changes dedup outcomes and loses

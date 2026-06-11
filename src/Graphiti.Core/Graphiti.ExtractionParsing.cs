@@ -210,7 +210,9 @@ public sealed partial class Graphiti
             string fact,
             DateTime? validAt,
             DateTime? invalidAt,
-            IReadOnlyList<int>? episodeIndices = null)
+            IReadOnlyList<int>? episodeIndices = null,
+            DateTime? referenceTime = null,
+            bool allowSelfEdge = false)
         {
             SourceName = sourceName;
             TargetName = targetName;
@@ -219,6 +221,8 @@ public sealed partial class Graphiti
             ValidAt = validAt;
             InvalidAt = invalidAt;
             EpisodeIndices = episodeIndices ?? EpisodeAttribution.FirstEpisodeIndex;
+            ReferenceTime = referenceTime;
+            AllowSelfEdge = allowSelfEdge;
         }
 
         public string SourceName { get; init; }
@@ -234,6 +238,10 @@ public sealed partial class Graphiti
         public DateTime? InvalidAt { get; init; }
 
         public IReadOnlyList<int> EpisodeIndices { get; init; }
+
+        public DateTime? ReferenceTime { get; init; }
+
+        public bool AllowSelfEdge { get; init; }
     }
 
     internal sealed class EpisodeNodeExtractionResponse
@@ -334,5 +342,37 @@ public sealed partial class Graphiti
         public string? ValidAt { get; set; }
 
         public string? InvalidAt { get; set; }
+    }
+
+    internal sealed class BatchEdgeTimestampsResponse
+    {
+        public List<EdgeTimestampResponse> Timestamps { get; set; } = new();
+    }
+
+    internal sealed class CombinedExtractionResponse
+    {
+        public List<CombinedExtractedEntityResponse> ExtractedEntities { get; set; } = new();
+
+        public List<CombinedExtractedEdgeResponse> Edges { get; set; } = new();
+    }
+
+    internal sealed class CombinedExtractedEntityResponse
+    {
+        public string? Name { get; set; }
+
+        public int? EntityTypeId { get; set; }
+    }
+
+    internal sealed class CombinedExtractedEdgeResponse
+    {
+        public string? SourceEntityName { get; set; }
+
+        public string? TargetEntityName { get; set; }
+
+        public string? RelationType { get; set; }
+
+        public string? Fact { get; set; }
+
+        public List<int>? EpisodeIndices { get; set; }
     }
 }

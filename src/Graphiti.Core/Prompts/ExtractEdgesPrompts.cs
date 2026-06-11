@@ -167,6 +167,48 @@ internal static class ExtractEdgesPrompts
         };
     }
 
+    internal static Message[] BuildExtractTimestampsBatch(IReadOnlyList<Graphiti.ExtractedEdge> edges)
+    {
+        var facts = new JsonArray();
+        for (var i = 0; i < edges.Count; i++)
+        {
+            var edge = edges[i];
+            facts.Add(new JsonObject
+            {
+                ["fact"] = edge.Fact,
+                ["reference_time"] = FormatReferenceTime(edge.ReferenceTime)
+            });
+        }
+
+        var userPrompt = $$"""
+            Given a list of FACTS with their REFERENCE TIMES, determine when each fact
+            became true (valid_at) and when it stopped being true (invalid_at).
+
+            Rules:
+            - Resolve relative expressions ("last week", "2 years ago", "yesterday") using each fact's REFERENCE TIME.
+            - If the fact is ongoing (present tense), set valid_at to its REFERENCE TIME.
+            - If a change or end is expressed, set invalid_at to the relevant time.
+            - Leave both null if no time is stated or resolvable.
+            - If only a date is mentioned (no time), assume 00:00:00.
+            - Use ISO 8601 with Z suffix (e.g., 2025-04-30T00:00:00Z).
+            - Do NOT hallucinate or infer dates from unrelated events.
+
+            Return one timestamps entry per fact, in the same order.
+
+            <FACTS>
+            {{PromptJson.Serialize(facts)}}
+            </FACTS>
+            """;
+
+        return new[]
+        {
+            new Message(
+                "system",
+                "You extract temporal bounds from facts. NEVER hallucinate dates."),
+            new Message("user", userPrompt)
+        };
+    }
+
     internal static Message[] BuildExtractAttributes(
         string fact,
         DateTime referenceTime,
@@ -332,4 +374,7 @@ internal static class ExtractEdgesPrompts
 
         return false;
     }
+
+    private static string FormatReferenceTime(DateTime? referenceTime) =>
+        referenceTime is null ? "unknown" : GraphitiHelpers.EnsureUtc(referenceTime.Value).ToString("O");
 }

@@ -221,6 +221,59 @@ public class ExtractEdgesPromptsTests
     }
 
     [Fact]
+    public void BuildExtractTimestampsBatch_RendersPythonParityPrompt()
+    {
+        var edges = new[]
+        {
+            new Graphiti.ExtractedEdge(
+                "Alice",
+                "Acme",
+                "WORKS_AT",
+                "Alice started at Acme last week.",
+                validAt: null,
+                invalidAt: null,
+                referenceTime: new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc)),
+            new Graphiti.ExtractedEdge(
+                "Bob",
+                "Paris",
+                "VISITED",
+                "Bob visited Paris.",
+                validAt: null,
+                invalidAt: null)
+        };
+
+        var messages = ExtractEdgesPrompts.BuildExtractTimestampsBatch(edges);
+
+        Assert.Equal(2, messages.Length);
+        Assert.Equal("system", messages[0].Role);
+        Assert.Equal(
+            "You extract temporal bounds from facts. NEVER hallucinate dates.",
+            messages[0].Content);
+        Assert.Equal("user", messages[1].Role);
+
+        var expected = """
+            Given a list of FACTS with their REFERENCE TIMES, determine when each fact
+            became true (valid_at) and when it stopped being true (invalid_at).
+
+            Rules:
+            - Resolve relative expressions ("last week", "2 years ago", "yesterday") using each fact's REFERENCE TIME.
+            - If the fact is ongoing (present tense), set valid_at to its REFERENCE TIME.
+            - If a change or end is expressed, set invalid_at to the relevant time.
+            - Leave both null if no time is stated or resolvable.
+            - If only a date is mentioned (no time), assume 00:00:00.
+            - Use ISO 8601 with Z suffix (e.g., 2025-04-30T00:00:00Z).
+            - Do NOT hallucinate or infer dates from unrelated events.
+
+            Return one timestamps entry per fact, in the same order.
+
+            <FACTS>
+            [{"fact":"Alice started at Acme last week.","reference_time":"2026-01-02T03:04:05.0000000Z"},{"fact":"Bob visited Paris.","reference_time":"unknown"}]
+            </FACTS>
+            """;
+        Assert.Equal(expected, messages[1].Content);
+    }
+
+    [Fact]
     public void BuildExtractAttributes_RendersPythonParityPrompt()
     {
         var messages = ExtractEdgesPrompts.BuildExtractAttributes(

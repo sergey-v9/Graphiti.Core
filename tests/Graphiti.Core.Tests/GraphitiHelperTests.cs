@@ -15,12 +15,16 @@ public class GraphitiHelperTests
             typeof(Graphiti.SagaSummaryResponse),
             typeof(Graphiti.CommunitySummaryResponse),
             typeof(Graphiti.CommunityNameResponse),
+            typeof(Graphiti.CombinedExtractionResponse),
+            typeof(Graphiti.CombinedExtractedEntityResponse),
+            typeof(Graphiti.CombinedExtractedEdgeResponse),
             typeof(Graphiti.SummarizedEntitiesResponse),
             typeof(Graphiti.SummarizedEntityResponse),
             typeof(Graphiti.NodeResolutionsResponse),
             typeof(Graphiti.NodeDuplicateResponse),
             typeof(Graphiti.EdgeResolutionResponse),
-            typeof(Graphiti.EdgeTimestampResponse)
+            typeof(Graphiti.EdgeTimestampResponse),
+            typeof(Graphiti.BatchEdgeTimestampsResponse)
         };
 
     [Fact]

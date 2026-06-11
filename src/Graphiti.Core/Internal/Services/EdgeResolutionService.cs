@@ -55,7 +55,7 @@ internal sealed class EdgeResolutionService(
             {
                 if (!nodesByExtractedName.TryGetValue(extracted.SourceName, out var sourceNode)
                     || !nodesByExtractedName.TryGetValue(extracted.TargetName, out var targetNode)
-                    || sourceNode.Uuid == targetNode.Uuid
+                    || (!extracted.AllowSelfEdge && sourceNode.Uuid == targetNode.Uuid)
                     || string.IsNullOrWhiteSpace(extracted.Fact))
                 {
                     skippedEdges++;
@@ -83,10 +83,11 @@ internal sealed class EdgeResolutionService(
                     Episodes = EpisodeAttribution.MapIndicesToEpisodeUuids(extracted.EpisodeIndices, episodes),
                     ValidAt = extracted.ValidAt,
                     InvalidAt = extracted.InvalidAt,
-                    ReferenceTime = EpisodeAttribution.ReferenceTimeForFirstValidIndex(
-                        extracted.EpisodeIndices,
-                        episodes,
-                        episode.ValidAt)
+                    ReferenceTime = extracted.ReferenceTime
+                                    ?? EpisodeAttribution.ReferenceTimeForFirstValidIndex(
+                                        extracted.EpisodeIndices,
+                                        episodes,
+                                        episode.ValidAt)
                 };
 
                 if (candidate.InvalidAt is not null)

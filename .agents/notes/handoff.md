@@ -60,9 +60,14 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
   no-op/NotImplemented paths. Broad edge-invalidation candidate search is now regression-tested for
   cross-node-pair contradictions. Multi-episode attribution was ported 2026-06-11: structured node
   and edge `episode_indices` now flow into episodic edge creation and fact episode/reference-time
-  metadata. Bulk ingestion still loops per episode and lacks Python's true batch dedupe/resolve
-  semantics; that remains Plan 02 item 6. There are no inline live C# prompt call sites left; remaining
-  `MISSING` prompt rows in `parity.md` belong to absent combined-extraction features.
+  metadata. Combined extraction internals were ported 2026-06-11: the
+  `extract_nodes_and_edges.extract_message` prompt, `extract_edges.extract_timestamps_batch`,
+  orphan dropping, node attribution from facts, and self-fact preservation are covered behind
+  `EpisodeGraphExtractor.ExtractCombinedEpisodeGraphAsync`, but public ingestion does not call it
+  yet because the current Python baseline leaves combined extraction behind
+  `use_combined_extraction=False`; a user decision is needed for default vs option wiring. Bulk
+  ingestion still loops per episode and lacks Python's true batch dedupe/resolve semantics; that
+  remains Plan 02 item 6.
 - **Never exercised:** any real LLM/embedding provider, end to end. The deterministic suite cannot
   see prompt or schema-acceptance problems (plan 03).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority").
@@ -95,14 +100,14 @@ added.
 
 Latest checkpoint, 2026-06-11:
 
-Succeeded after multi-episode attribution plumbing:
+Succeeded after combined extraction internals:
 
 ```powershell
-.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~GraphitiExtractionParsingTests|FullyQualifiedName~GraphitiWorkflowTests|FullyQualifiedName~MaintenanceUtilitiesTests"
+.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~EpisodeGraphExtractorTests|FullyQualifiedName~ExtractNodesAndEdgesPromptsTests|FullyQualifiedName~ExtractEdgesPromptsTests.BuildExtractTimestampsBatch|FullyQualifiedName~GraphitiHelperTests"
 ```
 
-Locked restore, focused parser/workflow/maintenance tests (`102` passed), format verification,
-no-incremental build, full test suite (`908` passed), and `dotnet pack` for
+Locked restore, focused combined-extractor/prompt/serializer tests (`53` passed), format verification,
+no-incremental build, full test suite (`915` passed), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. No real-provider run has ever been executed (plan 03).
 
 Primary full verification command from the C# repo root:
