@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 
 namespace Graphiti.Core.Internal.Services;
@@ -244,11 +243,10 @@ internal sealed class EdgeResolutionService(
         }
 
         var response = await llmClient.GenerateResponseAsync(
-            new[]
-            {
-                new Message("system", "Resolve duplicate and contradictory facts."),
-                new Message("user", BuildEdgeResolutionContext(extractedEdge, relatedEdges, existingEdges))
-            },
+            DedupeEdgesPrompts.BuildResolveEdge(DedupeEdgesPrompts.BuildContext(
+                extractedEdge,
+                relatedEdges,
+                existingEdges)),
             responseModel: typeof(Graphiti.EdgeResolutionResponse),
             modelSize: ModelSize.Small,
             promptName: "dedupe_edges.resolve_edge",
@@ -388,40 +386,6 @@ internal sealed class EdgeResolutionService(
         {
             GraphitiLog.TimestampExtractionFailed(logger, exception, edge.Uuid);
         }
-    }
-
-    private static string BuildEdgeResolutionContext(
-        EntityEdge extractedEdge,
-        IReadOnlyList<EntityEdge> relatedEdges,
-        IReadOnlyList<EntityEdge> existingEdges)
-    {
-        var offset = relatedEdges.Count;
-        var existingFacts = new JsonArray();
-        for (var i = 0; i < relatedEdges.Count; i++)
-        {
-            existingFacts.Add(new JsonObject
-            {
-                ["idx"] = i,
-                ["fact"] = relatedEdges[i].Fact
-            });
-        }
-
-        var invalidationCandidates = new JsonArray();
-        for (var i = 0; i < existingEdges.Count; i++)
-        {
-            invalidationCandidates.Add(new JsonObject
-            {
-                ["idx"] = offset + i,
-                ["fact"] = existingEdges[i].Fact
-            });
-        }
-
-        return new JsonObject
-        {
-            ["existing_edges"] = existingFacts,
-            ["new_edge"] = extractedEdge.Fact,
-            ["edge_invalidation_candidates"] = invalidationCandidates
-        }.ToJsonString(GraphitiJsonSerializer.Options);
     }
 
     private static DateTime? ParseOptionalDate(string? value)

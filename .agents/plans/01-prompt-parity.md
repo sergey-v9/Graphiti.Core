@@ -40,8 +40,8 @@ unused list).
 - [x] 4. `dedupe_nodes.nodes` → new DedupeNodesPrompts; wire NodeResolutionService.cs:102. Python:
       prompts/dedupe_nodes.py:117-179. Include the worked EXAMPLE block (NYC/Java/Marco cases) —
       it carries most of the prompt's precision. Landed 2026-06-11.
-- [ ] 5. `dedupe_edges.resolve_edge` → new DedupeEdgesPrompts; wire EdgeResolutionService.cs:246.
-      Python: prompts/dedupe_edges.py:43-100.
+- [x] 5. `dedupe_edges.resolve_edge` → new DedupeEdgesPrompts; wire EdgeResolutionService.cs:246.
+      Python: prompts/dedupe_edges.py:43-100. Landed 2026-06-11.
 - [ ] 6. `extract_nodes.extract_attributes` → ExtractNodesPrompts.BuildExtractAttributes; wire
       AttributeExtractionService.cs:122. Python: prompts/extract_nodes.py:383-464. The HARD RULES
       anti-hallucination block is the point of this prompt (upstream commit 7514b44); port it

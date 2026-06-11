@@ -2895,9 +2895,18 @@ public class GraphitiWorkflowTests
 
         var resolveCall = Assert.Single(llm.Calls, call => call.PromptName == "dedupe_edges.resolve_edge");
         Assert.Equal("EdgeResolutionResponse", resolveCall.ResponseModel?.Name);
-        var context = JsonNode.Parse(resolveCall.Messages[^1].Content)!.AsObject();
-        Assert.Empty(context["existing_edges"]!.AsArray());
-        var candidates = context["edge_invalidation_candidates"]!.AsArray();
+        var userPrompt = resolveCall.Messages[^1].Content;
+        Assert.Contains("<EXISTING FACTS>\n[]\n</EXISTING FACTS>", userPrompt, StringComparison.Ordinal);
+        const string candidatesStartMarker = "<FACT INVALIDATION CANDIDATES>\n";
+        var candidatesStart = userPrompt.IndexOf(candidatesStartMarker, StringComparison.Ordinal);
+        Assert.True(candidatesStart >= 0);
+        candidatesStart += candidatesStartMarker.Length;
+        var candidatesEnd = userPrompt.IndexOf(
+            "\n</FACT INVALIDATION CANDIDATES>",
+            candidatesStart,
+            StringComparison.Ordinal);
+        Assert.True(candidatesEnd >= 0);
+        var candidates = JsonNode.Parse(userPrompt[candidatesStart..candidatesEnd])!.AsArray();
         Assert.Equal(SearchUtilities.RelevantSchemaLimit, candidates.Count);
         Assert.True(candidates.Count < 25);
     }

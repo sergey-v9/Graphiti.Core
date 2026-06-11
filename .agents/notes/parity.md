@@ -39,7 +39,7 @@ pipeline — do not port without a reason):
 | `extract_edges.extract_timestamps` | prompts/extract_edges.py:242 | EdgeResolutionService → Prompts/ExtractEdgesPrompts | OK | Ported 2026-06-11; golden-text tests pin content |
 | `extract_edges.extract_timestamps_batch` | prompts/extract_edges.py:274 | — | MISSING | Used by Python combined extraction |
 | `dedupe_nodes.nodes` | prompts/dedupe_nodes.py:117 | NodeResolutionService → Prompts/DedupeNodesPrompts | OK | Ported 2026-06-11; golden-text tests pin content, including worked EXAMPLE block |
-| `dedupe_edges.resolve_edge` | prompts/dedupe_edges.py:43 | EdgeResolutionService.cs:246 | STUB | Data context ported; duplicate/contradiction instruction prose missing |
+| `dedupe_edges.resolve_edge` | prompts/dedupe_edges.py:43 | EdgeResolutionService → Prompts/DedupeEdgesPrompts | OK | Ported 2026-06-11; golden-text tests pin duplicate/contradiction constraints |
 | `extract_nodes_and_edges.extract_message` | prompts/extract_nodes_and_edges.py | — | MISSING | Combined single-call extraction; see pipeline row below |
 | `extract_nodes.extract_summaries_batch` | prompts/extract_nodes.py:509 | — | MISSING | C# never generates entity summaries during ingestion |
 | `extract_nodes.extract_entity_summaries_from_episodes` | prompts/extract_nodes.py:613 | — | MISSING | Same area |
