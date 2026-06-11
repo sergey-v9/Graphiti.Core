@@ -168,6 +168,10 @@ semantics, wire compatibility, or performance/allocation discipline.
   exposes `use_combined_extraction` only as an internal bulk helper flag defaulting to `False`, not
   on `Graphiti.__init__`, `add_episode`, or `add_episode_bulk`; adding a C# public option or changing
   the default is a future product/API decision.
+- Structured edge attributes are edge-resolution behavior, not a separate ingestion-stage pass.
+  Preserve Python's distinction: exact duplicate edge reuse returns before the edge-attribute prompt
+  and keeps existing attributes, while non-fast-path resolution may replace or clear attributes
+  according to the matched custom edge type.
 
 ## Provider Status
 

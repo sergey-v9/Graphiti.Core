@@ -2316,7 +2316,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddEpisode_AttributeHydrationDropsOverlongEdgeStringsAndReplacesOmittedFields()
+    public async Task AddEpisode_NonFastDuplicateEdgeAttributeHydrationDropsOverlongStringsAndReplacesOmittedFields()
     {
         var driver = new InMemoryGraphDriver();
         var alice = new EntityNode { Name = "Alice", GroupId = "group" };
@@ -2355,13 +2355,95 @@ public class GraphitiWorkflowTests
                         ["source"] = "Alice",
                         ["target"] = "Acme",
                         ["relation_type"] = "WORKS_AT",
+                        ["fact"] = "Alice is employed by Acme."
+                    }
+                }
+            },
+            ["dedupe_edges.resolve_edge"] = new()
+            {
+                ["duplicate_facts"] = new JsonArray { 0 },
+                ["contradicted_facts"] = new JsonArray()
+            },
+            ["extract_edges.extract_attributes"] = new()
+            {
+                ["role"] = new string('x', 251),
+                ["confidence"] = 0.87
+            }
+        });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+
+        await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Alice is employed by Acme.",
+            "message",
+            new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+            groupId: "group",
+            edgeTypes: new Dictionary<string, EntityTypeDefinition>
+            {
+                ["WORKS_AT"] = new(
+                    "WORKS_AT",
+                    attributes: new Dictionary<string, EntityAttributeDefinition>
+                    {
+                        ["role"] = new("Role at the organization"),
+                        ["confidence"] = new("Extraction confidence", "number")
+                    })
+            });
+
+        var storedEdge = await EntityEdge.GetByUuidAsync(driver, existingEdge.Uuid);
+        Assert.Equal("existing role", storedEdge.Attributes["role"]);
+        Assert.Equal(0.87, storedEdge.Attributes["confidence"]);
+        Assert.False(storedEdge.Attributes.ContainsKey("stale"));
+        Assert.Single(llm.Calls, call => call.PromptName == "dedupe_edges.resolve_edge");
+        Assert.Single(llm.Calls, call => call.PromptName == "extract_edges.extract_attributes");
+    }
+
+    [Fact]
+    public async Task AddEpisode_ExactDuplicatePreservesExistingEdgeAttributesAndSkipsEdgeAttributePrompt()
+    {
+        var driver = new InMemoryGraphDriver();
+        var alice = new EntityNode { Name = "Alice", GroupId = "group" };
+        var acme = new EntityNode { Name = "Acme", GroupId = "group" };
+        await alice.SaveAsync(driver);
+        await acme.SaveAsync(driver);
+        var existingEdge = new EntityEdge
+        {
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = acme.Uuid,
+            GroupId = "group",
+            Name = "WORKS_AT",
+            Fact = "Alice works at Acme.",
+            Episodes = new List<string> { "previous-episode" },
+            Attributes = new Dictionary<string, object?>
+            {
+                ["role"] = "existing role",
+                ["confidence"] = 0.41,
+                ["stale"] = "preserve me"
+            }
+        };
+        await existingEdge.SaveAsync(driver);
+        var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["extract_nodes.extract_message"] = new()
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                    new JsonObject { ["name"] = "Acme", ["entity_type"] = "Organization" }
+                },
+                ["edges"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["source"] = "Alice",
+                        ["target"] = "Acme",
+                        ["relation_type"] = "WORKS_AT",
                         ["fact"] = "Alice works at Acme."
                     }
                 }
             },
             ["extract_edges.extract_attributes"] = new()
             {
-                ["role"] = new string('x', 251),
+                ["role"] = "engineer",
                 ["confidence"] = 0.87
             }
         });
@@ -2386,8 +2468,9 @@ public class GraphitiWorkflowTests
 
         var storedEdge = await EntityEdge.GetByUuidAsync(driver, existingEdge.Uuid);
         Assert.Equal("existing role", storedEdge.Attributes["role"]);
-        Assert.Equal(0.87, storedEdge.Attributes["confidence"]);
-        Assert.False(storedEdge.Attributes.ContainsKey("stale"));
+        Assert.Equal(0.41, storedEdge.Attributes["confidence"]);
+        Assert.Equal("preserve me", storedEdge.Attributes["stale"]);
+        Assert.DoesNotContain("extract_edges.extract_attributes", llm.PromptNames);
     }
 
     [Fact]
@@ -2462,7 +2545,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddEpisode_EdgeAttributeExtractionUsesBoundedConcurrency()
+    public async Task AddEpisode_EdgeAttributeExtractionRunsDuringResolution()
     {
         var driver = new InMemoryGraphDriver();
         var llm = new ConcurrencyTrackingLlmClient(
@@ -2532,7 +2615,7 @@ public class GraphitiWorkflowTests
 
         Assert.Equal(3, result.Edges.Count);
         Assert.Equal(3, llm.TrackedPromptCalls);
-        Assert.Equal(2, llm.MaxObservedConcurrency);
+        Assert.InRange(llm.MaxObservedConcurrency, 1, 2);
         Assert.All(result.Edges, edge => Assert.Equal("high", edge.Attributes["confidence"]));
     }
 

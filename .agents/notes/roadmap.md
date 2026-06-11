@@ -10,14 +10,12 @@ in `parity.md`. Keep completed history out of this file (`evolution.md` owns mil
 The infrastructure is real and green: builds clean, deterministic tests pass, packaging works,
 drivers (InMemory, LadybugDB, Neo4j-legacy) have runtime proof, search/ranking/community algorithms
 have genuine parity coverage, and the live Python prompt instruction text has been ported into C#.
-Phase 2 has closed the largest ingestion semantic gaps: entity summaries, invented fallback
-removal, broad invalidation candidates, multi-episode attribution, true-batch bulk ingestion, and
-validation-failure re-prompting. Combined extraction is ported internally and intentionally inactive
-on the public `Graphiti` surface because the Python baseline exposes only an internal default-false
-helper flag. The remaining Phase 2 item is the explicit decision on whether to keep the C#-only
-per-edge attribute pass. Phase 3 now has a runnable OpenAI sample host, env-gated OpenAI tests, and
-an opt-in M.E.AI-backed cross-encoder reranker wired into the sample, but no end-to-end run against
-a real provider has passed yet. `parity.md` has the row-by-row truth.
+Phase 2 has closed the ingestion semantic gaps: entity summaries, invented fallback removal, broad
+invalidation candidates, multi-episode attribution, true-batch bulk ingestion, combined extraction
+internals with public separate-extraction parity, validation-failure re-prompting, and edge
+attribute extraction aligned into edge resolution. Phase 3 now has a runnable OpenAI sample host,
+env-gated OpenAI tests, and an opt-in M.E.AI-backed cross-encoder reranker wired into the sample,
+but no end-to-end run against a real provider has passed yet. `parity.md` has the row-by-row truth.
 
 ## Performance/allocation moratorium
 
@@ -37,20 +35,14 @@ longer inline prompt text, and golden tests exist for each builder. Remaining `M
 in `parity.md` are tied to absent pipeline features (entity summary generation and combined
 extraction) and are owned by Phase 2.
 
-## Phase 2 — Pipeline semantic parity (ACTIVE)
+## Phase 2 — Pipeline semantic parity (COMPLETE 2026-06-11)
 
-Close the behavioral gaps in ingestion that survive even with good prompts. Work order:
-`.agents/plans/02-pipeline-parity.md`. Entity summary generation, removal/constraining of invented
-LLM-failure fallbacks, broad invalidation-candidate search, and multi-episode attribution are
-closed as of 2026-06-11. Bulk ingestion now follows Python's staged true-batch dedupe/resolve flow.
-Combined extraction internals are ported, and public ingestion intentionally stays on separate
-extraction because Python's public `Graphiti` API does not expose the internal default-false helper
-flag. Validation-failure re-prompting in the LLM client is ported with Python's two repair attempts
-and stable cache-key identity. Remaining headline item: the C#-only per-edge attribute pass
-decision.
-
-Done when: the ingestion-pipeline table in `parity.md` has no `MISSING` rows and every `PARTIAL`
-is either closed or converted to a documented `DIVERGENT` decision.
+Closed 2026-06-11. Work order: `.agents/plans/02-pipeline-parity.md`. Entity summary generation,
+removal/constraining of invented LLM-failure fallbacks, broad invalidation-candidate search,
+multi-episode attribution, combined extraction internals, true-batch bulk ingestion,
+validation-failure re-prompting, and edge attribute extraction alignment are complete. Public
+ingestion intentionally stays on separate extraction because Python's public `Graphiti` API does
+not expose the internal default-false combined helper flag.
 
 ## Phase 3 — Real-provider validation (ACTIVE; provider run pending)
 

@@ -4,7 +4,7 @@ internal static class EntityTypeResolver
 {
     internal static EntityTypeDefinition? FindEdgeTypeDefinition(
         EntityEdge edge,
-        Dictionary<string, EntityNode> nodesByUuid,
+        IReadOnlyDictionary<string, EntityNode> nodesByUuid,
         IReadOnlyDictionary<string, EntityTypeDefinition> edgeTypes,
         IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap)
     {

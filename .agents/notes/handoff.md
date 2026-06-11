@@ -47,7 +47,7 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
   (InMemory reference, LadybugDB runtime proof, Neo4j legacy), search ranking/fusion/reranking,
   community label propagation, text utilities, serialization/cache identity, DI/options. The
   deterministic suite is green in the latest verification checkpoint below.
-- **Phase 2 active:** the LLM-facing semantic layer has moved from scaffold prompts to ported
+- **Phase 2 complete:** the LLM-facing semantic layer has moved from scaffold prompts to ported
   Python prompt text for live call sites. Node/edge extraction prompts and edge timestamp
   extraction prompts, node dedupe prompts, edge dedupe prompts, node/edge attribute extraction
   prompts, community summary/name prompts, and saga summary prompts were ported 2026-06-11
@@ -72,15 +72,20 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
   Validation-failure re-prompting was ported 2026-06-11 in base `LlmClient`: malformed JSON or
   schema-validation `JsonException`s get Python's two repair attempts with a validation-error user
   message, while retry feedback stays out of the cache key and only final validated responses are
-  cached.
+  cached. Edge attribute extraction was aligned 2026-06-11: C# no longer runs a separate
+  ingestion-stage edge attribute pass, and custom edge attributes are extracted inside edge
+  resolution. Exact duplicate edge reuse skips the edge-attribute prompt and preserves existing
+  structured attributes like Python.
 - **Never exercised live:** any real LLM/embedding/reranker provider, end to end.
   `samples/Graphiti.Sample.OpenAI` now provides a runnable OpenAI host and
   `OpenAIProviderIntegrationTests` provides env-gated provider tests. The sample is
   compile/no-key-path verified, uses `MicrosoftExtensionsAICrossEncoderClient` for real reranking,
   and the tests skip cleanly without `OPENAI_API_KEY`, but no provider call has been executed. The
   deterministic suite cannot see prompt or schema-acceptance problems (plan 03).
-- Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority").
-  Performance/allocation rework is on moratorium (`roadmap.md`).
+- Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phase 2
+  is complete; Phase 3 real-provider validation is the next active plan item, but it is blocked on a
+  real `OPENAI_API_KEY` for the live run. Performance/allocation rework is on moratorium
+  (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
   internal services and helpers. Search boundaries: `SearchEngine` orchestrates,
   `SearchRetrievalRunner` retrieves, `SearchResultComposer` shapes results. Prompt builders live
@@ -109,26 +114,26 @@ added.
 
 Latest checkpoint, 2026-06-11:
 
-Succeeded after pinning combined extraction as an internal-only path and public separate extraction
-as the Python-baseline default:
+Succeeded after aligning edge attribute extraction into edge resolution and marking Phase 2
+complete:
 
 ```powershell
 .\eng\Verify-GraphitiCore.ps1
 ```
 
 Restore, format verification, solution build including `Graphiti.Sample.OpenAI`, full test suite
-(`928` passed, `2` skipped, `930` total), and `dotnet pack` for
+(`929` passed, `2` skipped, `931` total), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` was unset; the two skipped tests were
 `OpenAIProviderIntegrationTests.StructuredResponseSchemas_WithOpenAIProvider_AreAccepted` and
 `OpenAIProviderIntegrationTests.AddEpisodeAsync_WithOpenAIProvider_IngestsResolvedTemporalGraph`.
-No live provider run has passed yet. Focused combined-extraction/default-behavior tests also
-passed:
+No live provider run has passed yet. Focused edge-attribute and telemetry tests also passed:
 
 ```powershell
-dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~GraphitiWorkflowTests.AddEpisodeBulk_UsesSeparateExtractionByDefault|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_UsesSourceSpecificNodePromptThenSeparateEdgePrompt|FullyQualifiedName~EpisodeGraphExtractorTests.ExtractCombinedEpisodeGraph" --verbosity minimal
+dotnet test Graphiti.Core.CSharp.slnx --no-build --filter "FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_HydratesDeclaredEdgeAttributes|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_NonFastDuplicateEdgeAttributeHydrationDropsOverlongStringsAndReplacesOmittedFields|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_ExactDuplicatePreservesExistingEdgeAttributesAndSkipsEdgeAttributePrompt|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_ReusesEdgeAttributeSchemaForSameTypeBatch|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_EdgeAttributeExtractionRunsDuringResolution|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_SkipsEdgeAttributePromptWhenTypeMapDoesNotMatchEndpoints" --verbosity minimal
+dotnet test Graphiti.Core.CSharp.slnx --no-build --filter "FullyQualifiedName~TelemetryTests.Graphiti_EmitsActivitiesForIngestionAndSearch" --verbosity minimal
 ```
 
-with `6` passed.
+with `6` workflow tests and `1` telemetry test passed.
 
 Live OpenAI validation helper:
 

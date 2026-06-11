@@ -16,14 +16,18 @@ internal sealed class EdgeResolutionService(
         EpisodicNode episode,
         string groupId,
         DateTime now,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes = null,
+        IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap = null) =>
         ResolveExtractedEdgesAsync(
             extractedEdges,
             EntityTypeResolver.BuildNodeNameMap(nodes),
             episode,
             groupId,
             now,
-            cancellationToken);
+            cancellationToken,
+            edgeTypes,
+            edgeTypeMap);
 
     public async Task<List<EntityEdge>> ResolveExtractedEdgesAsync(
         IReadOnlyList<Graphiti.ExtractedEdge> extractedEdges,
@@ -32,6 +36,8 @@ internal sealed class EdgeResolutionService(
         string groupId,
         DateTime now,
         CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes = null,
+        IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap = null,
         IReadOnlyList<EntityEdge>? existingEdgesOverride = null,
         HashSet<string>? newlyCreatedEdgeUuids = null)
     {
@@ -50,6 +56,9 @@ internal sealed class EdgeResolutionService(
             now,
             cancellationToken,
             existingEdgesOverride,
+            BuildUniqueNodeList(nodesByExtractedName.Values),
+            edgeTypes,
+            edgeTypeMap,
             newlyCreatedEdgeUuids,
             inputNodeCount: nodesByExtractedName.Count).ConfigureAwait(false);
     }
@@ -61,6 +70,9 @@ internal sealed class EdgeResolutionService(
         DateTime now,
         CancellationToken cancellationToken,
         IReadOnlyList<EntityEdge>? existingEdgesOverride = null,
+        IReadOnlyList<EntityNode>? nodes = null,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes = null,
+        IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap = null,
         HashSet<string>? newlyCreatedEdgeUuids = null,
         Dictionary<string, string>? resolvedEdgeUuidMap = null,
         int? inputNodeCount = null)
@@ -84,6 +96,8 @@ internal sealed class EdgeResolutionService(
             var resultUuids = new HashSet<string>(StringComparer.Ordinal);
             var seen = new Dictionary<(string SourceUuid, string TargetUuid, string NormalizedFact), EntityEdge>();
             var skippedEdges = 0;
+            var nodesByUuid = BuildNodesByUuid(nodes);
+            var attributeSchemaCache = new Dictionary<EntityTypeDefinition, StructuredResponseSchema>();
             foreach (var candidate in extractedEdges)
             {
                 if (string.IsNullOrWhiteSpace(candidate.SourceNodeUuid)
@@ -152,7 +166,11 @@ internal sealed class EdgeResolutionService(
                     existingEdges,
                     episode,
                     now,
-                    cancellationToken).ConfigureAwait(false);
+                    cancellationToken,
+                    edgeTypes,
+                    edgeTypeMap,
+                    nodesByUuid,
+                    attributeSchemaCache).ConfigureAwait(false);
                 if (resolvedEdge.Uuid == candidate.Uuid)
                 {
                     newlyCreatedEdgeUuids?.Add(resolvedEdge.Uuid);
@@ -336,10 +354,27 @@ internal sealed class EdgeResolutionService(
         IReadOnlyList<EntityEdge> existingEdges,
         EpisodicNode episode,
         DateTime now,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes = null,
+        IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap = null,
+        IReadOnlyDictionary<string, EntityNode>? nodesByUuid = null,
+        Dictionary<EntityTypeDefinition, StructuredResponseSchema>? attributeSchemaCache = null,
+        IReadOnlyList<EntityNode>? nodes = null)
     {
+        nodesByUuid ??= BuildNodesByUuid(nodes);
+        attributeSchemaCache ??= new Dictionary<EntityTypeDefinition, StructuredResponseSchema>();
+
         if (relatedEdges.Count == 0 && existingEdges.Count == 0)
         {
+            await ExtractEdgeAttributesAsync(
+                extractedEdge,
+                episode,
+                edgeTypes,
+                edgeTypeMap,
+                nodesByUuid,
+                attributeSchemaCache,
+                clearWhenNoSchema: false,
+                cancellationToken).ConfigureAwait(false);
             await ExtractEdgeTimestampsAsync(extractedEdge, episode, now, cancellationToken).ConfigureAwait(false);
             return (extractedEdge, Array.Empty<EntityEdge>());
         }
@@ -385,6 +420,16 @@ internal sealed class EdgeResolutionService(
             resolvedEdge.ExpiredAt = now;
         }
 
+        await ExtractEdgeAttributesAsync(
+            resolvedEdge,
+            episode,
+            edgeTypes,
+            edgeTypeMap,
+            nodesByUuid,
+            attributeSchemaCache,
+            clearWhenNoSchema: true,
+            cancellationToken).ConfigureAwait(false);
+
         if (resolvedEdge.Uuid == extractedEdge.Uuid)
         {
             await ExtractEdgeTimestampsAsync(resolvedEdge, episode, now, cancellationToken).ConfigureAwait(false);
@@ -394,6 +439,98 @@ internal sealed class EdgeResolutionService(
 
         var invalidatedEdges = EdgeMergeHelpers.ResolveEdgeContradictions(resolvedEdge, invalidationCandidates, now);
         return (resolvedEdge, invalidatedEdges);
+    }
+
+    private async Task ExtractEdgeAttributesAsync(
+        EntityEdge edge,
+        EpisodicNode episode,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes,
+        IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap,
+        IReadOnlyDictionary<string, EntityNode> nodesByUuid,
+        Dictionary<EntityTypeDefinition, StructuredResponseSchema> attributeSchemaCache,
+        bool clearWhenNoSchema,
+        CancellationToken cancellationToken)
+    {
+        if (edgeTypes is null || edgeTypes.Count == 0)
+        {
+            if (clearWhenNoSchema)
+            {
+                edge.Attributes.Clear();
+            }
+
+            return;
+        }
+
+        var edgeType = EntityTypeResolver.FindEdgeTypeDefinition(
+            edge,
+            nodesByUuid,
+            edgeTypes,
+            edgeTypeMap);
+        if (edgeType is null || edgeType.Attributes.Count == 0)
+        {
+            if (clearWhenNoSchema)
+            {
+                edge.Attributes.Clear();
+            }
+
+            return;
+        }
+
+        if (!attributeSchemaCache.TryGetValue(edgeType, out var attributeSchema))
+        {
+            attributeSchema = ExtractionContextBuilder.BuildAttributeResponseSchema(
+                edgeType,
+                "EdgeAttributeResponse");
+            attributeSchemaCache[edgeType] = attributeSchema;
+        }
+
+        var response = await llmClient.GenerateResponseAsync(
+            ExtractEdgesPrompts.BuildExtractAttributes(
+                edge.Fact,
+                episode.ValidAt,
+                edge.Attributes),
+            responseSchema: attributeSchema,
+            modelSize: ModelSize.Small,
+            groupId: edge.GroupId,
+            promptName: "extract_edges.extract_attributes",
+            attributeExtraction: true,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        edge.Attributes = AttributeMerger.ReplaceExtractedAttributes(
+            edge.Attributes,
+            edgeType,
+            response);
+    }
+
+    private static Dictionary<string, EntityNode> BuildNodesByUuid(IReadOnlyList<EntityNode>? nodes)
+    {
+        var nodesByUuid = new Dictionary<string, EntityNode>(nodes?.Count ?? 0, StringComparer.Ordinal);
+        if (nodes is null)
+        {
+            return nodesByUuid;
+        }
+
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            nodesByUuid.TryAdd(nodes[i].Uuid, nodes[i]);
+        }
+
+        return nodesByUuid;
+    }
+
+    private static List<EntityNode> BuildUniqueNodeList(IEnumerable<EntityNode> nodes)
+    {
+        var result = new List<EntityNode>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var node in nodes)
+        {
+            if (seen.Add(node.Uuid))
+            {
+                result.Add(node);
+            }
+        }
+
+        return result;
     }
 
     private static bool TryGetFirstValidIndex(

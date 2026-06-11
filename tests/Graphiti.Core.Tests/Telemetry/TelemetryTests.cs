@@ -296,13 +296,6 @@ public class TelemetryTests
         Assert.Equal(1, GetTag(edgeResolution, "graphiti.result.edges"));
         Assert.Equal(1, GetTag(edgeResolution, "graphiti.result.created_edges"));
 
-        var edgeAttributes = Assert.Single(
-            activities,
-            activity => activity.OperationName == "Graphiti.Extraction.EdgeAttributes");
-        Assert.Equal(ActivityStatusCode.Ok, edgeAttributes.Status);
-        Assert.Equal(true, GetTag(edgeAttributes, "graphiti.extraction.skipped"));
-        Assert.Equal(0, GetTag(edgeAttributes, "graphiti.extraction.targets"));
-
         var nodeAttributes = Assert.Single(
             activities,
             activity => activity.OperationName == "Graphiti.Extraction.NodeAttributes");

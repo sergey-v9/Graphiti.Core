@@ -96,11 +96,17 @@ and check off here.**
         initial call. Retry feedback is excluded from cache keys; only a final validated response is
         cached. Tests cover feedback wording, retry exhaustion, original-key cache storage, and
         Microsoft.Extensions.AI repair without a Polly pipeline.
-- [ ] 8. Decide the C#-only per-edge attribute pass (Graphiti.Ingestion.cs:103, marked DIVERGENT
-      in `parity.md`): ask the user whether to keep (and document as a feature) or align with
-      Python (drop from single-episode flow). Do not silently keep it.
+- [x] 8. Decide the C#-only per-edge attribute pass: ask the user whether to keep (and document as
+      a feature) or align with Python (drop from single-episode flow). Do not silently keep it.
+      - Done 2026-06-11: aligned with Python. C# no longer runs an ingestion-stage per-edge
+        attribute pass after `ResolveExtractedEdgesAsync` / `ResolveEntityEdgesAsync`. Custom edge
+        attributes are extracted inside edge resolution, before timestamp extraction for new edges
+        and after LLM duplicate/contradiction resolution for non-fast-path edges. Exact duplicate
+        reuse returns before the attribute prompt, preserving existing structured attributes like
+        Python.
 
 ## Done when
 
 `parity.md` ingestion table has no MISSING rows and every PARTIAL is closed or explicitly
 DIVERGENT with a decision recorded in `decisions.md`; `roadmap.md` Phase 2 marked complete.
+Completed 2026-06-11.

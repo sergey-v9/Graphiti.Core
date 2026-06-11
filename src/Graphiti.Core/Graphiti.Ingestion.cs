@@ -104,14 +104,9 @@ public sealed partial class Graphiti
                 groupId,
                 now,
                 cancellationToken,
+                edgeTypes: edgeTypes,
+                edgeTypeMap: edgeTypeMap,
                 newlyCreatedEdgeUuids: newEdgeUuids).ConfigureAwait(false);
-            await _attributeExtractionService.ExtractAttributesFromEdgesAsync(
-                entityEdges,
-                nodes,
-                episode,
-                edgeTypes,
-                edgeTypeMap,
-                cancellationToken).ConfigureAwait(false);
             await _attributeExtractionService.ExtractAttributesFromNodesAsync(
                 nodes,
                 episode,
@@ -276,6 +271,7 @@ public sealed partial class Graphiti
             var edgesByEpisode = await DedupeBulkEdgesAsync(
                 edgeCandidatesByEpisode,
                 extractedEpisodes,
+                edgeTypes,
                 now,
                 cancellationToken).ConfigureAwait(false);
             var finalNodeBatch = await ResolveBulkNodesFinalAsync(
@@ -325,6 +321,9 @@ public sealed partial class Graphiti
                     now,
                     cancellationToken,
                     CopyDictionaryValues(allEdgesByUuid),
+                    finalNodeBatch.AllNodes,
+                    edgeTypes,
+                    edgeTypeMap,
                     newlyCreatedEdgeUuids: newEdgeUuids,
                     resolvedEdgeUuidMap: edgeUuidMap,
                     inputNodeCount: finalNodeBatch.AllNodes.Count).ConfigureAwait(false);
@@ -334,13 +333,6 @@ public sealed partial class Graphiti
                 }
 
                 resolvedEdgesByEpisode[episode.Uuid] = entityEdges;
-                await _attributeExtractionService.ExtractAttributesFromEdgesAsync(
-                    entityEdges,
-                    finalNodeBatch.AllNodes,
-                    episode,
-                    edgeTypes,
-                    edgeTypeMap,
-                    cancellationToken).ConfigureAwait(false);
                 await _attributeExtractionService.ExtractAttributesFromNodesAsync(
                     resolvedNodes,
                     episode,
@@ -652,6 +644,7 @@ public sealed partial class Graphiti
     private async Task<Dictionary<string, List<EntityEdge>>> DedupeBulkEdgesAsync(
         Dictionary<string, List<EntityEdge>> extractedEdgesByEpisode,
         IReadOnlyList<BulkEpisodeExtraction> extractedEpisodes,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes,
         DateTime now,
         CancellationToken cancellationToken)
     {
@@ -697,7 +690,8 @@ public sealed partial class Graphiti
                     candidates,
                     extraction.Episode,
                     now,
-                    cancellationToken).ConfigureAwait(false);
+                    cancellationToken,
+                    edgeTypes: edgeTypes).ConfigureAwait(false);
                 if (!string.Equals(resolvedEdge.Uuid, edge.Uuid, StringComparison.Ordinal))
                 {
                     duplicatePairs.Add(new UuidMapPair(edge.Uuid, resolvedEdge.Uuid));
@@ -928,7 +922,8 @@ public sealed partial class Graphiti
                     existingEdges,
                     syntheticEpisode,
                     now,
-                    cancellationToken).ConfigureAwait(false);
+                    cancellationToken,
+                    nodes: new[] { resolvedSource, resolvedTarget }).ConfigureAwait(false);
                 edges.Add(resolvedEdge);
                 edges.AddRange(invalidatedEdges);
             }

@@ -4,69 +4,6 @@ internal sealed class AttributeExtractionService(
     ILlmClient llmClient,
     Func<int> getMaxDegreeOfParallelism)
 {
-    public async Task ExtractAttributesFromEdgesAsync(
-        List<EntityEdge> edges,
-        List<EntityNode> nodes,
-        EpisodicNode episode,
-        IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes,
-        IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap,
-        CancellationToken cancellationToken)
-    {
-        using var activity = GraphitiTelemetry.StartActivity("Extraction.EdgeAttributes");
-        activity?.SetTag("graphiti.group_id", episode.GroupId);
-        activity?.SetTag("graphiti.input.edges", edges.Count);
-        activity?.SetTag("graphiti.input.nodes", nodes.Count);
-        activity?.SetTag("graphiti.extraction.edge_types.count", edgeTypes?.Count ?? 0);
-        activity?.SetTag("graphiti.extraction.edge_type_map.count", edgeTypeMap?.Count ?? 0);
-
-        try
-        {
-            if (edges.Count == 0 || edgeTypes is null || edgeTypes.Count == 0)
-            {
-                activity?.SetTag("graphiti.extraction.skipped", true);
-                activity?.SetTag("graphiti.extraction.targets", 0);
-                GraphitiTelemetry.SetOk(activity);
-                return;
-            }
-
-            var nodesByUuid = BuildNodesByUuid(nodes);
-            var extractionTargets = BuildEdgeExtractionTargets(edges, nodesByUuid, edgeTypes, edgeTypeMap);
-            activity?.SetTag("graphiti.extraction.targets", extractionTargets.Count);
-            activity?.SetTag("graphiti.extraction.skipped", extractionTargets.Count == 0);
-            ApplyEdgeAttributeSchemas(extractionTargets);
-
-            await ThrottledWork.ForEachAsync(
-                extractionTargets,
-                async (target, token) =>
-                {
-                    var response = await llmClient.GenerateResponseAsync(
-                        ExtractEdgesPrompts.BuildExtractAttributes(
-                            target.Edge.Fact,
-                            episode.ValidAt,
-                            target.Edge.Attributes),
-                        responseSchema: target.AttributeSchema,
-                        modelSize: ModelSize.Small,
-                        groupId: target.Edge.GroupId,
-                        promptName: "extract_edges.extract_attributes",
-                        attributeExtraction: true,
-                        cancellationToken: token).ConfigureAwait(false);
-
-                    target.Edge.Attributes = AttributeMerger.ReplaceExtractedAttributes(
-                        target.Edge.Attributes,
-                        target.EdgeType,
-                        response);
-                },
-                getMaxDegreeOfParallelism(),
-                cancellationToken).ConfigureAwait(false);
-            GraphitiTelemetry.SetOk(activity);
-        }
-        catch (Exception exception)
-        {
-            GraphitiTelemetry.RecordException(activity, exception);
-            throw;
-        }
-    }
-
     public async Task ExtractAttributesFromNodesAsync(
         List<EntityNode> nodes,
         EpisodicNode episode,
@@ -127,44 +64,6 @@ internal sealed class AttributeExtractionService(
         }
     }
 
-    private static Dictionary<string, EntityNode> BuildNodesByUuid(List<EntityNode> nodes)
-    {
-        var nodesByUuid = new Dictionary<string, EntityNode>(nodes.Count, StringComparer.Ordinal);
-        for (var i = 0; i < nodes.Count; i++)
-        {
-            nodesByUuid.TryAdd(nodes[i].Uuid, nodes[i]);
-        }
-
-        return nodesByUuid;
-    }
-
-    private static List<EdgeAttributeExtractionTarget> BuildEdgeExtractionTargets(
-        List<EntityEdge> edges,
-        Dictionary<string, EntityNode> nodesByUuid,
-        IReadOnlyDictionary<string, EntityTypeDefinition> edgeTypes,
-        IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap)
-    {
-        var extractionTargets = new List<EdgeAttributeExtractionTarget>(edges.Count);
-        for (var i = 0; i < edges.Count; i++)
-        {
-            var edge = edges[i];
-            var edgeType = EntityTypeResolver.FindEdgeTypeDefinition(
-                edge,
-                nodesByUuid,
-                edgeTypes,
-                edgeTypeMap);
-            if (edgeType is not null && edgeType.Attributes.Count > 0)
-            {
-                extractionTargets.Add(new EdgeAttributeExtractionTarget(
-                    edge,
-                    edgeType,
-                    AttributeSchema: null!));
-            }
-        }
-
-        return extractionTargets;
-    }
-
     private static List<NodeAttributeExtractionTarget> BuildNodeExtractionTargets(
         List<EntityNode> nodes,
         IReadOnlyDictionary<string, EntityTypeDefinition> entityTypes)
@@ -186,24 +85,6 @@ internal sealed class AttributeExtractionService(
         return extractionTargets;
     }
 
-    private static void ApplyEdgeAttributeSchemas(List<EdgeAttributeExtractionTarget> targets)
-    {
-        var schemas = new Dictionary<EntityTypeDefinition, StructuredResponseSchema>();
-        for (var i = 0; i < targets.Count; i++)
-        {
-            var target = targets[i];
-            if (!schemas.TryGetValue(target.EdgeType, out var schema))
-            {
-                schema = ExtractionContextBuilder.BuildAttributeResponseSchema(
-                    target.EdgeType,
-                    "EdgeAttributeResponse");
-                schemas[target.EdgeType] = schema;
-            }
-
-            targets[i] = target with { AttributeSchema = schema };
-        }
-    }
-
     private static void ApplyNodeAttributeSchemas(List<NodeAttributeExtractionTarget> targets)
     {
         var schemas = new Dictionary<EntityTypeDefinition, StructuredResponseSchema>();
@@ -221,11 +102,6 @@ internal sealed class AttributeExtractionService(
             targets[i] = target with { AttributeSchema = schema };
         }
     }
-
-    private sealed record EdgeAttributeExtractionTarget(
-        EntityEdge Edge,
-        EntityTypeDefinition EdgeType,
-        StructuredResponseSchema AttributeSchema);
 
     private sealed record NodeAttributeExtractionTarget(
         EntityNode Node,
