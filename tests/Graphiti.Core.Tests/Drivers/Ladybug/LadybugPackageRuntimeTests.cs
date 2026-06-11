@@ -517,6 +517,96 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_SagaEpisodeContentsSinceFiltersOrdersAndDropsEmptyAfterLimit()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var start = new DateTime(2026, 3, 6, 7, 8, 9, DateTimeKind.Utc);
+        var saga = new GraphitiSagaNode
+        {
+            Uuid = "saga-contents",
+            Name = "launch",
+            GroupId = "tenant",
+            CreatedAt = start,
+            Summary = "launch summary"
+        };
+        var beforeSince = Episode(
+            "episode-contents-before-since",
+            "tenant",
+            validAt: start.AddMinutes(10),
+            createdAt: start,
+            content: "before");
+        var emptyFirst = Episode(
+            "episode-contents-empty-first",
+            "tenant",
+            validAt: start.AddMinutes(4),
+            createdAt: start.AddMinutes(3),
+            content: string.Empty);
+        var included1 = Episode(
+            "episode-contents-included-1",
+            "tenant",
+            validAt: start.AddMinutes(5),
+            createdAt: start.AddMinutes(2),
+            content: "included-1");
+        var included2 = Episode(
+            "episode-contents-included-2",
+            "tenant",
+            validAt: start.AddMinutes(6),
+            createdAt: start.AddMinutes(4),
+            content: "included-2");
+        var afterLimit = Episode(
+            "episode-contents-after-limit",
+            "tenant",
+            validAt: start.AddMinutes(7),
+            createdAt: start.AddMinutes(5),
+            content: "after-limit");
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(saga);
+        foreach (var episode in new[] { beforeSince, emptyFirst, included1, included2, afterLimit })
+        {
+            await driver.SaveNodeAsync(episode);
+            await driver.SaveEdgeAsync(new HasEpisodeEdge
+            {
+                Uuid = "has-" + episode.Uuid,
+                SourceNodeUuid = saga.Uuid,
+                TargetNodeUuid = episode.Uuid,
+                GroupId = "tenant",
+                CreatedAt = start
+            });
+        }
+
+        var contents = await driver.GetSagaEpisodeContentsAsync(
+            saga.Uuid,
+            since: start.AddMinutes(1),
+            limit: 3);
+
+        Assert.Equal(new[] { "included-1", "included-2" }, contents.Select(content => content.Content));
+        Assert.Equal(
+            new DateTime?[] { included1.ValidAt, included2.ValidAt },
+            contents.Select(content => content.ValidAt).ToArray());
+
+        static EpisodicNode Episode(
+            string uuid,
+            string groupId,
+            DateTime validAt,
+            DateTime createdAt,
+            string content) =>
+            new()
+            {
+                Uuid = uuid,
+                Name = uuid,
+                GroupId = groupId,
+                CreatedAt = createdAt,
+                Source = EpisodeType.Message,
+                SourceDescription = "chat",
+                Content = content,
+                ValidAt = validAt,
+                EntityEdges = []
+            };
+    }
+
+    [Fact]
     public async Task PackageRuntime_GraphDriverEnumeratesEntityAndCommunityGroupIds()
     {
         await using var executor = new PackageLadybugExecutor();
@@ -590,6 +680,123 @@ public class LadybugPackageRuntimeTests
 
         Assert.Equal(new[] { "tenant-a", "tenant-b" }, entityGroupIds);
         Assert.Equal(new[] { "community-a", "community-z" }, communityGroupIds);
+    }
+
+    [Fact]
+    public async Task PackageRuntime_GraphDriverPagesNodeAndEdgeGroupReadsWithCursors()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var createdAt = new DateTime(2026, 8, 10, 11, 12, 13, DateTimeKind.Utc);
+        var nodeA = new EntityNode
+        {
+            Uuid = "entity-page-a",
+            Name = "Page A",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            NameEmbedding = [0.1f, 0.2f],
+            CreatedAt = createdAt,
+            Summary = "page a"
+        };
+        var nodeB = new EntityNode
+        {
+            Uuid = "entity-page-b",
+            Name = "Page B",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            NameEmbedding = [0.3f, 0.4f],
+            CreatedAt = createdAt,
+            Summary = "page b"
+        };
+        var nodeC = new EntityNode
+        {
+            Uuid = "entity-page-c",
+            Name = "Page C",
+            GroupId = "tenant",
+            Labels = ["Person"],
+            NameEmbedding = [0.5f, 0.6f],
+            CreatedAt = createdAt,
+            Summary = "page c"
+        };
+        var otherNode = new EntityNode
+        {
+            Uuid = "entity-page-z-other",
+            Name = "Other Page",
+            GroupId = "other",
+            Labels = ["Person"],
+            NameEmbedding = [0.7f, 0.8f],
+            CreatedAt = createdAt,
+            Summary = "other page"
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(nodeA);
+        await driver.SaveNodeAsync(nodeB);
+        await driver.SaveNodeAsync(nodeC);
+        await driver.SaveNodeAsync(otherNode);
+        await driver.SaveEdgeAsync(PageEdge("edge-page-a", nodeA.Uuid, nodeB.Uuid, [0.1f, 0.2f]));
+        await driver.SaveEdgeAsync(PageEdge("edge-page-b", nodeB.Uuid, nodeC.Uuid, [0.3f, 0.4f]));
+        await driver.SaveEdgeAsync(PageEdge("edge-page-c", nodeC.Uuid, nodeA.Uuid, [0.5f, 0.6f]));
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = "edge-page-z-other",
+            SourceNodeUuid = otherNode.Uuid,
+            TargetNodeUuid = otherNode.Uuid,
+            GroupId = "other",
+            Name = "SELF",
+            Fact = "Other page links to itself",
+            FactEmbedding = [0.7f, 0.8f],
+            CreatedAt = createdAt,
+            ValidAt = createdAt,
+            ReferenceTime = createdAt
+        });
+
+        var nodeFirstPage = await driver.GetNodesByGroupIdsAsync<EntityNode>(
+            ["tenant"],
+            limit: 2);
+        var nodeSecondPage = await driver.GetNodesByGroupIdsAsync<EntityNode>(
+            ["tenant"],
+            limit: 2,
+            uuidCursor: Assert.Single(nodeFirstPage.Skip(1)).Uuid,
+            withEmbeddings: true);
+        var edgeFirstPage = await driver.GetEdgesByGroupIdsAsync<EntityEdge>(
+            ["tenant"],
+            limit: 2);
+        var edgeSecondPage = await driver.GetEdgesByGroupIdsAsync<EntityEdge>(
+            ["tenant"],
+            limit: 2,
+            uuidCursor: Assert.Single(edgeFirstPage.Skip(1)).Uuid,
+            withEmbeddings: true);
+
+        Assert.Equal(new[] { nodeC.Uuid, nodeB.Uuid }, nodeFirstPage.Select(node => node.Uuid));
+        Assert.All(nodeFirstPage, node => Assert.Null(node.NameEmbedding));
+        var nodeSecond = Assert.Single(nodeSecondPage);
+        Assert.Equal(nodeA.Uuid, nodeSecond.Uuid);
+        Assert.Equal(new[] { 0.1f, 0.2f }, nodeSecond.NameEmbedding);
+        Assert.Equal(new[] { "edge-page-c", "edge-page-b" }, edgeFirstPage.Select(edge => edge.Uuid));
+        Assert.All(edgeFirstPage, edge => Assert.Null(edge.FactEmbedding));
+        var edgeSecond = Assert.Single(edgeSecondPage);
+        Assert.Equal("edge-page-a", edgeSecond.Uuid);
+        Assert.Equal(new[] { 0.1f, 0.2f }, edgeSecond.FactEmbedding);
+
+        EntityEdge PageEdge(
+            string uuid,
+            string sourceUuid,
+            string targetUuid,
+            List<float> embedding) =>
+            new()
+            {
+                Uuid = uuid,
+                SourceNodeUuid = sourceUuid,
+                TargetNodeUuid = targetUuid,
+                GroupId = "tenant",
+                Name = "LINKS",
+                Fact = uuid + " fact",
+                FactEmbedding = embedding,
+                CreatedAt = createdAt,
+                ValidAt = createdAt,
+                ReferenceTime = createdAt
+            };
     }
 
     [Fact]
