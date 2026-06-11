@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 
 namespace Graphiti.Core;
 
@@ -131,43 +130,6 @@ public sealed partial class Graphiti
 
         return results;
     }
-
-    internal static List<(string Name, string Type)> HeuristicEntityNames(string content)
-    {
-        var source = content ?? string.Empty;
-        var sourceSpan = source.AsSpan();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var results = new List<(string Name, string Type)>();
-
-        foreach (var match in HeuristicEntityRegex().EnumerateMatches(sourceSpan))
-        {
-            var nameSpan = sourceSpan.Slice(match.Index, match.Length);
-            if (IsIgnoredHeuristicEntityName(nameSpan))
-            {
-                continue;
-            }
-
-            var name = nameSpan.ToString();
-            if (!seen.Add(name))
-            {
-                continue;
-            }
-
-            results.Add((name, "Entity"));
-            if (results.Count == 20)
-            {
-                break;
-            }
-        }
-
-        return results;
-    }
-
-    private static bool IsIgnoredHeuristicEntityName(ReadOnlySpan<char> name) =>
-        name is "I" or "The" or "A" or "An";
-
-    [GeneratedRegex("\\b[A-Z][a-zA-Z0-9_'-]*\\b", RegexOptions.CultureInvariant)]
-    private static partial Regex HeuristicEntityRegex();
 
     private static string? ReadString(JsonObject item, string key)
     {

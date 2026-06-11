@@ -199,7 +199,43 @@ public class TelemetryTests
     {
         var (activities, exception) = await CaptureActivitiesAsync(async () =>
         {
-            var graphiti = new Graphiti(graphDriver: new InMemoryGraphDriver());
+            var graphiti = new Graphiti(
+                graphDriver: new InMemoryGraphDriver(),
+                llmClient: new StaticJsonLlmClient(messages =>
+                {
+                    var prompt = messages.Count == 0 ? string.Empty : messages[^1].Content;
+                    if (prompt.Contains("<ENTITIES>", StringComparison.Ordinal))
+                    {
+                        return new JsonObject
+                        {
+                            ["edges"] = new JsonArray
+                            {
+                                new JsonObject
+                                {
+                                    ["source"] = "Alice",
+                                    ["target"] = "Bob",
+                                    ["relation_type"] = "LIKES",
+                                    ["fact"] = "Alice likes Bob",
+                                    ["valid_at"] = "2026-01-01T00:00:00Z"
+                                }
+                            }
+                        };
+                    }
+
+                    if (prompt.Contains("<CURRENT MESSAGE>", StringComparison.Ordinal))
+                    {
+                        return new JsonObject
+                        {
+                            ["extracted_entities"] = new JsonArray
+                            {
+                                new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                                new JsonObject { ["name"] = "Bob", ["entity_type"] = "Person" }
+                            }
+                        };
+                    }
+
+                    return new JsonObject();
+                }));
             await graphiti.AddEpisodeAsync(
                 "conversation",
                 "Alice likes Bob",
@@ -231,7 +267,7 @@ public class TelemetryTests
             activities,
             activity => activity.OperationName == "Graphiti.Extraction.Nodes");
         Assert.Equal(ActivityStatusCode.Ok, nodeExtraction.Status);
-        Assert.Equal(true, GetTag(nodeExtraction, "graphiti.extraction.fallback"));
+        Assert.Equal(false, GetTag(nodeExtraction, "graphiti.extraction.fallback"));
         Assert.Equal(2, GetTag(nodeExtraction, "graphiti.extraction.candidates"));
         Assert.Equal(2, GetTag(nodeExtraction, "graphiti.result.nodes"));
 
@@ -240,7 +276,7 @@ public class TelemetryTests
             activity => activity.OperationName == "Graphiti.Extraction.Edges");
         Assert.Equal(ActivityStatusCode.Ok, edgeExtraction.Status);
         Assert.Equal(2, GetTag(edgeExtraction, "graphiti.input.nodes"));
-        Assert.Equal(true, GetTag(edgeExtraction, "graphiti.extraction.fallback"));
+        Assert.Equal(false, GetTag(edgeExtraction, "graphiti.extraction.fallback"));
         Assert.Equal(1, GetTag(edgeExtraction, "graphiti.result.edges"));
 
         var nodeResolution = Assert.Single(

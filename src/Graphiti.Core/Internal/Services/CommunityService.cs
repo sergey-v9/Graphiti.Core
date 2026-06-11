@@ -257,9 +257,14 @@ internal sealed class CommunityService(
                 promptName: "summarize_nodes.summarize_pair",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            return response.Summary is { Length: > 0 } summary
-                ? TextUtilities.TruncateAtSentence(summary, TextUtilities.MaxSummaryChars) ?? summary
-                : deterministicSummary;
+            if (response.Summary is { Length: > 0 } summary)
+            {
+                return TextUtilities.TruncateAtSentence(summary, TextUtilities.MaxSummaryChars) ?? summary;
+            }
+
+            return ShouldUseDeterministicLlmFallback()
+                ? deterministicSummary
+                : throw new InvalidOperationException("LLM did not return a community summary.");
         }
         catch (NotImplementedException)
         {
@@ -283,15 +288,22 @@ internal sealed class CommunityService(
                 promptName: "summarize_nodes.summary_description",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            return response.Description is { Length: > 0 } name
-                ? name
-                : deterministicName;
+            if (response.Description is { Length: > 0 } name)
+            {
+                return name;
+            }
+
+            return ShouldUseDeterministicLlmFallback()
+                ? deterministicName
+                : throw new InvalidOperationException("LLM did not return a community name.");
         }
         catch (NotImplementedException)
         {
             return deterministicName;
         }
     }
+
+    private bool ShouldUseDeterministicLlmFallback() => llmClient is NoOpLlmClient;
 
     private async Task<(IReadOnlyList<CommunityNode> Communities, IReadOnlyList<CommunityEdge> CommunityEdges)> UpdateCommunityAsync(
         EntityNode entity,

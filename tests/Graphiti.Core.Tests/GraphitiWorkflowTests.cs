@@ -29,10 +29,32 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddEpisode_HeuristicallyBuildsAndSearchesTemporalGraph()
+    public async Task AddEpisode_BuildsAndSearchesTemporalGraphFromLlmExtraction()
     {
         var driver = new InMemoryGraphDriver();
-        var graphiti = new Graphiti(graphDriver: driver);
+        var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["extract_nodes.extract_message"] = new()
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                    new JsonObject { ["name"] = "Bob", ["entity_type"] = "Person" }
+                },
+                ["edges"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["source"] = "Alice",
+                        ["target"] = "Bob",
+                        ["relation_type"] = "LIKES",
+                        ["fact"] = "Alice likes Bob",
+                        ["valid_at"] = "2026-01-01T00:00:00Z"
+                    }
+                }
+            }
+        });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
         var referenceTime = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
         var result = await graphiti.AddEpisodeAsync(
@@ -2025,7 +2047,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddEpisode_UsesStructuredGraphExtractionResponseAndKeepsHeuristicFallback()
+    public async Task AddEpisode_UsesStructuredGraphExtractionResponseAndDoesNotFabricateGraph()
     {
         var driver = new InMemoryGraphDriver();
         var llm = new EmptyGraphExtractionLlmClient();
@@ -2039,9 +2061,9 @@ public class GraphitiWorkflowTests
             groupId: "group");
 
         Assert.Equal("EpisodeNodeExtractionResponse", llm.ExtractionResponseModel?.Name);
-        Assert.Contains(result.Nodes, node => node.Name == "Alice");
-        Assert.Contains(result.Nodes, node => node.Name == "Bob");
-        Assert.Single(result.Edges);
+        Assert.Empty(result.Nodes);
+        Assert.Empty(result.Edges);
+        Assert.Empty(result.EpisodicEdges);
     }
 
     [Fact]

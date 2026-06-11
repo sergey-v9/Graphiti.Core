@@ -231,6 +231,43 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
+    public async Task BuildCommunities_RejectsEmptySummaryFromRealLlm()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: new StaticJsonLlmClient(_ => new JsonObject()));
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group", now, "alice");
+        var bob = Entity("Bob", "group", now, "bob");
+        await alice.SaveAsync(driver);
+        await bob.SaveAsync(driver);
+        await Relates(alice, bob, "group", now).SaveAsync(driver);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            graphiti.BuildCommunitiesAsync(new[] { "group" }));
+
+        Assert.Contains("community summary", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task BuildCommunities_RejectsEmptyNameFromRealLlm()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: new StaticJsonLlmClient(_ => new JsonObject()));
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group", now, "alice");
+        await alice.SaveAsync(driver);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            graphiti.BuildCommunitiesAsync(new[] { "group" }));
+
+        Assert.Contains("community name", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task BuildCommunities_RebuildRemovesCommunitiesAcrossAllGroups()
     {
         var driver = new InMemoryGraphDriver();
@@ -323,6 +360,16 @@ public class GraphitiCommunityTests
         {
             var user = messages.Count > 0 ? messages[^1].Content : string.Empty;
             var system = messages.Count > 0 ? messages[0].Content : string.Empty;
+            if (system.Contains("combines summaries", StringComparison.Ordinal))
+            {
+                return new JsonObject { ["summary"] = "People who work together" };
+            }
+
+            if (system.Contains("describes provided contents", StringComparison.Ordinal))
+            {
+                return new JsonObject { ["description"] = "Work group" };
+            }
+
             if (user.Contains("Carol works with Alice", StringComparison.Ordinal))
             {
                 return new JsonObject
@@ -339,16 +386,6 @@ public class GraphitiCommunityTests
                             ["fact"] = "Carol works with Alice"
                         })
                 };
-            }
-
-            if (system.Contains("Summarize", StringComparison.Ordinal))
-            {
-                return new JsonObject { ["summary"] = "People who work together" };
-            }
-
-            if (system.Contains("Name", StringComparison.Ordinal))
-            {
-                return new JsonObject { ["description"] = "Work group" };
             }
 
             return new JsonObject();
@@ -568,12 +605,12 @@ public class GraphitiCommunityTests
             new StaticJsonLlmClient(messages =>
             {
                 var system = messages.Count > 0 ? messages[0].Content : string.Empty;
-                if (system.Contains("Summarize", StringComparison.Ordinal))
+                if (system.Contains("combines summaries", StringComparison.Ordinal))
                 {
                     return new JsonObject { ["summary"] = "updated summary" };
                 }
 
-                if (system.Contains("Name", StringComparison.Ordinal))
+                if (system.Contains("describes provided contents", StringComparison.Ordinal))
                 {
                     return new JsonObject { ["description"] = "Updated community" };
                 }

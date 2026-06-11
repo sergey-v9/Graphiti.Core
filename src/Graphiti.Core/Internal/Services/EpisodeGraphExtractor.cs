@@ -89,12 +89,6 @@ internal sealed class EpisodeGraphExtractor(
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             var extractedNames = Graphiti.ExtractEntityNames(llmResponse, entityTypes);
-            var usedHeuristicFallback = false;
-            if (extractedNames.Count == 0)
-            {
-                extractedNames = Graphiti.HeuristicEntityNames(episode.Content);
-                usedHeuristicFallback = true;
-            }
 
             var excluded = BuildExcludedEntityTypeSet(excludedEntityTypes);
             var skippedExcluded = 0;
@@ -125,7 +119,7 @@ internal sealed class EpisodeGraphExtractor(
 
             var attribution = BuildFirstEpisodeAttribution(nodes);
             activity?.SetTag("graphiti.extraction.candidates", extractedNames.Count);
-            activity?.SetTag("graphiti.extraction.fallback", usedHeuristicFallback);
+            activity?.SetTag("graphiti.extraction.fallback", false);
             activity?.SetTag("graphiti.extraction.excluded", skippedExcluded);
             activity?.SetTag("graphiti.result.nodes", nodes.Count);
             GraphitiTelemetry.SetOk(activity);
@@ -186,14 +180,8 @@ internal sealed class EpisodeGraphExtractor(
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             var extractedEdges = Graphiti.ExtractEdges(llmResponse);
-            var usedHeuristicFallback = false;
-            if (extractedEdges.Count == 0 && nodes.Count >= 2)
-            {
-                extractedEdges.Add(new Graphiti.ExtractedEdge(nodes[0].Name, nodes[1].Name, "RELATES_TO", episode.Content, null, null));
-                usedHeuristicFallback = true;
-            }
 
-            activity?.SetTag("graphiti.extraction.fallback", usedHeuristicFallback);
+            activity?.SetTag("graphiti.extraction.fallback", false);
             activity?.SetTag("graphiti.result.edges", extractedEdges.Count);
             GraphitiTelemetry.SetOk(activity);
             return extractedEdges;

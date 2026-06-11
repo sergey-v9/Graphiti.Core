@@ -45,7 +45,7 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
 
 - **Solid and verified:** project/infrastructure shape (net10.0, analyzers, packaging), drivers
   (InMemory reference, LadybugDB runtime proof, Neo4j legacy), search ranking/fusion/reranking,
-  community label propagation, text utilities, serialization/cache identity, DI/options. 901
+  community label propagation, text utilities, serialization/cache identity, DI/options. 903
   deterministic tests green.
 - **Phase 2 active:** the LLM-facing semantic layer. Most prompt instruction text
   was never ported — services sent one-line system messages plus raw JSON context, which produces
@@ -55,9 +55,10 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
   2026-06-11 (`Prompts/`). Entity summary generation was ported 2026-06-11:
   `EntitySummaryService` appends short new edge facts, batches 30-node LLM summary flights, supports
   the internal filter/episode-prompt hooks, and is wired into single and bulk ingestion before save.
-  There are no inline live C# prompt call sites left; remaining `MISSING` prompt rows in
-  `parity.md` belong to absent combined-extraction features. Several invented fallbacks still mask
-  LLM failures and must be removed (plan 02 item 2).
+  Invented extractor fallbacks were removed/constrained 2026-06-11: empty structured extraction no
+  longer fabricates nodes or `RELATES_TO` edges, and community deterministic fallback is limited to
+  no-op/NotImplemented paths. There are no inline live C# prompt call sites left; remaining
+  `MISSING` prompt rows in `parity.md` belong to absent combined-extraction features.
 - **Never exercised:** any real LLM/embedding provider, end to end. The deterministic suite cannot
   see prompt or schema-acceptance problems (plan 03).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority").
@@ -91,13 +92,13 @@ added.
 Latest checkpoint, 2026-06-11:
 
 ```powershell
-.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Prompts|FullyQualifiedName~Graphiti.Core.Tests.GraphitiWorkflowTests.AddEpisode_AppendsNewEdgeFactsToEntitySummariesWithoutLlm|FullyQualifiedName~Graphiti.Core.Tests.GraphitiWorkflowTests.AddEpisode_SummarizesNodesWithNoShortEdgeFactsUsingLlm|FullyQualifiedName~Graphiti.Core.Tests.GraphitiWorkflowTests.EntitySummaryService_BatchesLlmCallsInFlightsOfThirty"
+.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.GraphitiWorkflowTests.AddEpisode_BuildsAndSearchesTemporalGraphFromLlmExtraction|FullyQualifiedName~Graphiti.Core.Tests.GraphitiWorkflowTests.AddEpisode_UsesStructuredGraphExtractionResponseAndDoesNotFabricateGraph|FullyQualifiedName~Graphiti.Core.Tests.Telemetry.TelemetryTests.Graphiti_EmitsActivitiesForIngestionAndSearch|FullyQualifiedName~Graphiti.Core.Tests.GraphitiCommunityTests.BuildCommunities_RejectsEmpty"
 ```
 
-Succeeded after the entity summary generation port: locked restore, focused prompt tests plus
-summary workflow/service coverage (`21` passed), format verification, no-incremental build, full
-test suite (`901` passed), and `dotnet pack` for `Graphiti.Core.2.0.0-alpha.1.nupkg`. No
-real-provider run has ever been executed (plan 03).
+Succeeded after the fallback-removal slice: locked restore, focused fallback/community tests (`5`
+passed), format verification, no-incremental build, full test suite (`903` passed), and `dotnet
+pack` for `Graphiti.Core.2.0.0-alpha.1.nupkg`. No real-provider run has ever been executed
+(plan 03).
 
 Primary full verification command from the C# repo root:
 

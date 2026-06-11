@@ -21,7 +21,7 @@ and check off here.**
         summaries through 30-node LLM flights, sentence-truncates LLM summaries, supports the
         internal summary-filter / episode-prompt hooks, and is wired into single and bulk ingestion
         before graph save.
-- [ ] 2. Remove invented LLM-failure fallbacks (parity + trust issue; rows in `parity.md`
+- [x] 2. Remove invented LLM-failure fallbacks (parity + trust issue; rows in `parity.md`
       "Invented C# behaviors"):
       a. Delete `HeuristicEntityNames` fallback (EpisodeGraphExtractor.cs:104) — zero extracted
          entities is a valid result, not an error to paper over.
@@ -31,6 +31,11 @@ and check off here.**
       Expect test fallout: tests that relied on fallbacks must switch to fake-LLM responses that
       exercise the real path. Do not keep the fallbacks "just gated" unless the user asks for an
       offline mode.
+      - Done 2026-06-11: extractor no longer synthesizes entity names or `RELATES_TO` facts when
+        structured LLM responses are empty; default/no-op ingestion now produces an empty episode
+        graph. Community deterministic text fallback is limited to `NoOpLlmClient` or
+        `NotImplementedException`; empty/malformed real-client community summary/name responses now
+        fail instead of silently inventing output.
 - [ ] 3. Broad edge-invalidation candidate search. Python searches beyond the immediate node pair
       for contradicted edges (`edge_operations.py:407-418` + resolve flow); C# only considers
       between-node and adjacent edges, so cross-graph contradictions are never expired. Port the

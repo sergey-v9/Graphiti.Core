@@ -75,13 +75,13 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Saga association + episode-time watermarks | graphiti.py | SagaService | OK | Watermarks present |
 | Community update on ingest | graphiti.py | CommunityService | OK | Flow parity; community summary/name prompts ported 2026-06-11 |
 
-## Invented C# behaviors (not in Python — masks LLM failures; remove or gate, see plan 02)
+## Invented C# behaviors (not in Python)
 
-| Behavior | Location | Risk |
+| Behavior | Location | Status |
 |---|---|---|
-| Heuristic entity names when LLM returns zero entities | EpisodeGraphExtractor.cs:104 | Silently fills graph with junk instead of surfacing extraction failure |
-| Fabricated `RELATES_TO` edge between first two nodes when LLM returns zero edges | EpisodeGraphExtractor.cs:205 | Invents relationships that were never stated |
-| Deterministic community summary/name fallback on LLM failure | CommunityService.cs, DeterministicCommunityText | Acceptable only for NotImplemented/no-LLM test scenarios; must not swallow real provider errors |
+| Heuristic entity names when LLM returns zero entities | EpisodeGraphExtractor.cs | REMOVED 2026-06-11; empty structured node extraction now yields zero nodes |
+| Fabricated `RELATES_TO` edge between first two nodes when LLM returns zero edges | EpisodeGraphExtractor.cs | REMOVED 2026-06-11; empty structured edge extraction now yields zero edges |
+| Deterministic community summary/name fallback on LLM failure | CommunityService.cs, DeterministicCommunityText | CONSTRAINED 2026-06-11; used only for `NoOpLlmClient` empty output or `NotImplementedException`, while real-client empty/malformed structured responses fail |
 | Lexical-overlap `IdentityCrossEncoderClient` as default reranker | CrossEncoder/ | Fine as explicit test/offline choice; wrong as silent default if Python parity expects model reranking |
 
 ## Search, drivers, infrastructure
