@@ -40,9 +40,10 @@ Close the behavioral gaps in ingestion that survive even with good prompts. Work
 `.agents/plans/02-pipeline-parity.md`. Entity summary generation, removal/constraining of invented
 LLM-failure fallbacks, broad invalidation-candidate search, and multi-episode attribution are
 closed as of 2026-06-11. Bulk ingestion now follows Python's staged true-batch dedupe/resolve flow.
-Combined extraction internals are ported but not activated. Remaining headline items: combined
-extraction activation decision/wiring, validation-failure re-prompting in the LLM client, and the
-C#-only per-edge attribute pass decision.
+Combined extraction internals are ported but not activated. Validation-failure re-prompting in the
+LLM client is ported with Python's two repair attempts and stable cache-key identity. Remaining
+headline items: combined extraction activation decision/wiring and the C#-only per-edge attribute
+pass decision.
 
 Done when: the ingestion-pipeline table in `parity.md` has no `MISSING` rows and every `PARTIAL`
 is either closed or converted to a documented `DIVERGENT` decision.

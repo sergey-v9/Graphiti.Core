@@ -776,6 +776,108 @@ public class LlmClientTests
     }
 
     [Fact]
+    public async Task GenerateResponse_RetriesStructuredValidationFailuresWithFeedback()
+    {
+        var client = new SequencedStructuredLlmClient(
+            new JsonObject { ["ok"] = "yes" },
+            new JsonObject { ["ok"] = true });
+
+        var response = await client.GenerateResponseAsync(
+            new[] { new Message("system", "sys"), new Message("user", "hello") },
+            responseModel: typeof(CacheResponseA));
+
+        Assert.True(response["ok"]?.GetValue<bool>());
+        Assert.Equal(2, client.GenerateCalls);
+        Assert.Equal(2, client.MessageSnapshots.Count);
+        var retryMessages = client.MessageSnapshots[1];
+        Assert.Equal("user", retryMessages[^1].Role);
+        Assert.Contains(
+            "The previous response attempt was invalid.",
+            retryMessages[^1].Content,
+            StringComparison.Ordinal);
+        Assert.Contains("Error type: JsonException.", retryMessages[^1].Content, StringComparison.Ordinal);
+        Assert.Contains("CacheResponseA", retryMessages[^1].Content, StringComparison.Ordinal);
+        Assert.Contains(
+            "Please try again with a valid response",
+            retryMessages[^1].Content,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GenerateResponse_StopsStructuredValidationRetriesAfterPythonLimit()
+    {
+        var client = new SequencedStructuredLlmClient(
+            new JsonObject { ["ok"] = "first" },
+            new JsonObject { ["ok"] = "second" },
+            new JsonObject { ["ok"] = "third" });
+
+        await Assert.ThrowsAsync<JsonException>(() =>
+            client.GenerateResponseAsync(
+                new[] { new Message("system", "sys"), new Message("user", "hello") },
+                responseModel: typeof(CacheResponseA)));
+
+        Assert.Equal(3, client.GenerateCalls);
+        Assert.Equal(3, client.MessageSnapshots.Count);
+        Assert.Equal(4, client.MessageSnapshots[2].Count);
+        Assert.Equal(2, client.MessageSnapshots[2].Count(message =>
+            message.Content.Contains(
+                "The previous response attempt was invalid.",
+                StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public async Task GenerateResponse_CachesOnlyValidatedRetryResponseUnderOriginalKey()
+    {
+        var cache = new MemoryLlmResponseCache();
+        var client = new SequencedStructuredLlmClient(
+            cache,
+            new JsonObject { ["ok"] = "yes" },
+            new JsonObject { ["ok"] = true });
+        var messages = new[] { new Message("system", "sys"), new Message("user", "hello") };
+
+        var first = await client.GenerateResponseAsync(
+            messages,
+            responseModel: typeof(CacheResponseA),
+            promptName: "structured");
+        var second = await client.GenerateResponseAsync(
+            messages,
+            responseModel: typeof(CacheResponseA),
+            promptName: "structured");
+
+        Assert.True(first["ok"]?.GetValue<bool>());
+        Assert.Equal(first.ToJsonString(), second.ToJsonString());
+        Assert.Equal(2, client.GenerateCalls);
+
+        var prepared = CapturingLlmClient.PrepareTestMessages(
+            messages,
+            typeof(CacheResponseA),
+            responseSchema: null,
+            groupId: null,
+            attributeExtraction: false);
+        var originalKey = client.GetTestCacheKey(
+            prepared,
+            typeof(CacheResponseA),
+            responseSchema: null,
+            maxTokens: client.MaxTokens,
+            modelSize: ModelSize.Medium,
+            promptName: "structured");
+        var retryKey = client.GetTestCacheKey(
+            client.MessageSnapshots[1],
+            typeof(CacheResponseA),
+            responseSchema: null,
+            maxTokens: client.MaxTokens,
+            modelSize: ModelSize.Medium,
+            promptName: "structured");
+
+        Assert.NotEqual(originalKey, retryKey);
+        var originalCached = await cache.GetAsync(originalKey);
+        var retryCached = await cache.GetAsync(retryKey);
+        Assert.NotNull(originalCached);
+        Assert.True(originalCached["ok"]?.GetValue<bool>());
+        Assert.Null(retryCached);
+    }
+
+    [Fact]
     public async Task GenerateResponse_RejectsInvalidResponseModelForBaseClients()
     {
         var client = new InvalidStructuredLlmClient();
@@ -955,6 +1057,55 @@ public class LlmClientTests
             string? promptName,
             CancellationToken cancellationToken) =>
             Task.FromResult(new JsonObject { ["ok"] = "yes" });
+    }
+
+    private sealed class SequencedStructuredLlmClient : LlmClient
+    {
+        private readonly Queue<JsonObject> _responses;
+        private int _generateCalls;
+
+        public SequencedStructuredLlmClient(params JsonObject[] responses)
+            : base(config: null, cache: false)
+        {
+            _responses = new Queue<JsonObject>(responses);
+        }
+
+        public SequencedStructuredLlmClient(ILlmResponseCache responseCache, params JsonObject[] responses)
+            : base(config: null, cache: responseCache)
+        {
+            _responses = new Queue<JsonObject>(responses);
+        }
+
+        public int GenerateCalls => Volatile.Read(ref _generateCalls);
+        public List<IReadOnlyList<Message>> MessageSnapshots { get; } = new();
+
+        public string GetTestCacheKey(
+            IReadOnlyList<Message> messages,
+            Type? responseModel,
+            StructuredResponseSchema? responseSchema,
+            int maxTokens,
+            ModelSize modelSize,
+            string? promptName) =>
+            GetCacheKey(messages, responseModel, responseSchema, maxTokens, modelSize, promptName);
+
+        protected override Task<JsonObject> GenerateResponseCoreAsync(
+            IReadOnlyList<Message> messages,
+            Type? responseModel,
+            StructuredResponseSchema? responseSchema,
+            int maxTokens,
+            ModelSize modelSize,
+            string? promptName,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _generateCalls);
+            MessageSnapshots.Add(messages.Select(message => new Message(message.Role, message.Content)).ToArray());
+            if (_responses.Count == 0)
+            {
+                throw new InvalidOperationException("No sequenced LLM response is available.");
+            }
+
+            return Task.FromResult((JsonObject)_responses.Dequeue().DeepClone());
+        }
     }
 
     private sealed class DirectJsonLlmClient(JsonObject response) : ILlmClient

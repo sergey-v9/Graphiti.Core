@@ -92,7 +92,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Community label propagation | OK | Algorithmically equivalent |
 | Graph drivers: InMemory (reference), LadybugDB (investment target), Neo4j (legacy reference) | OK | Runtime proof for Ladybug workflows; see kuzu-driver-port.md |
 | LLM/embedder adapters via Microsoft.Extensions.AI | DIVERGENT | Documented decision; structured output + Polly retries in place |
-| Retry-on-validation-failure with error feedback message | llm_client/client.py retry loop | PARTIAL | C# Polly retries transport errors but does not re-prompt with validation-error context the way Python does |
+| Retry-on-validation-failure with error feedback message | llm_client/client.py retry loop | OK | Ported 2026-06-11 in base `LlmClient`: `JsonException` parse/schema failures get two Python-style validation-feedback re-prompts, cache keys remain based on the original prepared messages, and only validated final responses are cached |
 | GLiNER2 local extraction client | N/A | Specialized optional Python feature; out of scope unless requested |
 | Real-provider end-to-end validation | MISSING | Never run; no sample app, no env-gated integration test. See plan 03 |
 | eval harness (eval prompts, add-episode eval) | MISSING | Optional; see plan 03 |

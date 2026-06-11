@@ -79,11 +79,16 @@ and check off here.**
         and final edge resolution preserves in-memory invalidation snapshots plus per-episode
         provenance. Focused tests cover directed node alias maps, same-episode batch edge dedupe,
         cross-episode duplicate facts, and reinvalidation snapshots.
-- [ ] 7. LLM validation-failure re-prompting. Python's retry loop appends the validation error as
+- [x] 7. LLM validation-failure re-prompting. Python's retry loop appends the validation error as
       a user message and retries (`llm_client/client.py` / `openai_base_client.py:251-304`); C#
       Polly pipeline retries transport errors only, so a malformed structured response is
       terminal. Add the re-prompt-with-error retry inside `LlmClient`/`MicrosoftExtensionsAIChatClient`
       (bounded by MAX_RETRIES=2 like Python), without disturbing cache-key identity.
+      - Done 2026-06-11: base `LlmClient` now retries `JsonException` parse/schema validation
+        failures with Python's validation-error user message, for two repair attempts after the
+        initial call. Retry feedback is excluded from cache keys; only a final validated response is
+        cached. Tests cover feedback wording, retry exhaustion, original-key cache storage, and
+        Microsoft.Extensions.AI repair without a Polly pipeline.
 - [ ] 8. Decide the C#-only per-edge attribute pass (Graphiti.Ingestion.cs:103, marked DIVERGENT
       in `parity.md`): ask the user whether to keep (and document as a feature) or align with
       Python (drop from single-episode flow). Do not silently keep it.

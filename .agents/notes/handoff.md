@@ -45,8 +45,8 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
 
 - **Solid and verified:** project/infrastructure shape (net10.0, analyzers, packaging), drivers
   (InMemory reference, LadybugDB runtime proof, Neo4j legacy), search ranking/fusion/reranking,
-  community label propagation, text utilities, serialization/cache identity, DI/options. 904
-  deterministic tests green.
+  community label propagation, text utilities, serialization/cache identity, DI/options. The
+  deterministic suite is green in the latest verification checkpoint below.
 - **Phase 2 active:** the LLM-facing semantic layer. Most prompt instruction text
   was never ported — services sent one-line system messages plus raw JSON context, which produces
   a structurally valid but semantically poor graph with a real LLM. Node/edge extraction prompts and
@@ -69,6 +69,10 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
   ingestion true-batch semantics were ported 2026-06-11: C# now stages extraction, first-pass node
   resolution, cross-batch node/edge dedupe, pointer remapping, final node/edge resolution, and
   per-episode provenance rather than running each episode through the whole maintenance chain.
+  Validation-failure re-prompting was ported 2026-06-11 in base `LlmClient`: malformed JSON or
+  schema-validation `JsonException`s get Python's two repair attempts with a validation-error user
+  message, while retry feedback stays out of the cache key and only final validated responses are
+  cached.
 - **Never exercised:** any real LLM/embedding provider, end to end. The deterministic suite cannot
   see prompt or schema-acceptance problems (plan 03).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority").
@@ -101,14 +105,14 @@ added.
 
 Latest checkpoint, 2026-06-11:
 
-Succeeded after true-batch bulk ingestion:
+Succeeded after validation-failure re-prompting:
 
 ```powershell
-.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~GraphitiWorkflowTests.AddEpisodeBulk"
+.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~LlmClientTests|FullyQualifiedName~ModernInfrastructureTests"
 ```
 
-Locked restore, focused bulk-ingestion workflow tests (`17` passed), format verification,
-no-incremental build, full test suite (`917` passed), and `dotnet pack` for
+Locked restore, focused LLM/infrastructure tests (`131` passed), format verification,
+no-incremental build, full test suite (`921` passed), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. No real-provider run has ever been executed (plan 03).
 
 Primary full verification command from the C# repo root:

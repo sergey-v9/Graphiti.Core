@@ -15,6 +15,7 @@ namespace Graphiti.Core.LlmClients;
 public abstract class LlmClient : ILlmClient, IDisposable
 {
     private const string AttributeExtractionSentinel = "<<graphiti.attr_extraction.preamble.v1>>";
+    private const int MaxValidationRetries = 2;
     private static readonly JsonTypeInfo<LlmCacheKeyPayload> CacheKeyPayloadJsonTypeInfo =
         (JsonTypeInfo<LlmCacheKeyPayload>)GraphitiJsonSerializer.Options.GetTypeInfo(typeof(LlmCacheKeyPayload));
 
@@ -134,7 +135,7 @@ public abstract class LlmClient : ILlmClient, IDisposable
                     cacheKey,
                     async token =>
                     {
-                        var generated = await GenerateResponseCoreAsync(
+                        var generated = await GenerateValidatedResponseWithRetryAsync(
                             prepared,
                             responseModel,
                             responseSchema,
@@ -142,7 +143,6 @@ public abstract class LlmClient : ILlmClient, IDisposable
                             modelSize,
                             promptName,
                             token).ConfigureAwait(false);
-                        ValidateResponse(generated, responseModel, responseSchema);
                         return generated;
                     },
                     cancellationToken).ConfigureAwait(false);
@@ -152,7 +152,7 @@ public abstract class LlmClient : ILlmClient, IDisposable
                 return cachedOrCreated;
             }
 
-            var response = await GenerateResponseCoreAsync(
+            var response = await GenerateValidatedResponseWithRetryAsync(
                 prepared,
                 responseModel,
                 responseSchema,
@@ -161,7 +161,6 @@ public abstract class LlmClient : ILlmClient, IDisposable
                 promptName,
                 cancellationToken).ConfigureAwait(false);
 
-            ValidateResponse(response, responseModel, responseSchema);
             activity?.SetTag("graphiti.llm.response_property_count", response.Count);
             GraphitiTelemetry.SetOk(activity);
             return response;
@@ -171,6 +170,62 @@ public abstract class LlmClient : ILlmClient, IDisposable
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
         }
+    }
+
+    private async Task<JsonObject> GenerateValidatedResponseWithRetryAsync(
+        IReadOnlyList<Message> preparedMessages,
+        Type? responseModel,
+        StructuredResponseSchema? responseSchema,
+        int maxTokens,
+        ModelSize modelSize,
+        string? promptName,
+        CancellationToken cancellationToken)
+    {
+        var liveMessages = preparedMessages;
+        var retryCount = 0;
+
+        while (true)
+        {
+            try
+            {
+                var response = await GenerateResponseCoreAsync(
+                    liveMessages,
+                    responseModel,
+                    responseSchema,
+                    maxTokens,
+                    modelSize,
+                    promptName,
+                    cancellationToken).ConfigureAwait(false);
+                ValidateResponse(response, responseModel, responseSchema);
+                return response;
+            }
+            catch (JsonException exception) when (retryCount < MaxValidationRetries)
+            {
+                retryCount++;
+                liveMessages = AppendValidationRetryMessage(liveMessages, exception);
+            }
+        }
+    }
+
+    private static List<Message> AppendValidationRetryMessage(
+        IReadOnlyList<Message> messages,
+        JsonException exception)
+    {
+        var retryMessages = new List<Message>(messages.Count + 1);
+        for (var i = 0; i < messages.Count; i++)
+        {
+            retryMessages.Add(messages[i]);
+        }
+
+        retryMessages.Add(new Message(
+            "user",
+            "The previous response attempt was invalid. " +
+            $"Error type: {exception.GetType().Name}. " +
+            $"Error details: {exception.Message}. " +
+            "Please try again with a valid response, ensuring the output matches " +
+            "the expected format and constraints."));
+
+        return retryMessages;
     }
 
     /// <summary>Disposes the owned response cache, if any.</summary>

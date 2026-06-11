@@ -75,6 +75,27 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
+    public async Task MicrosoftExtensionsAIChatClient_RetriesInvalidJsonWithFeedbackWithoutPipeline()
+    {
+        var chatClient = new SequencedChatClient("not-json", "{\"ok\":true}");
+        var graphitiClient = new MicrosoftExtensionsAIChatClient(chatClient);
+
+        var response = await graphitiClient.GenerateResponseAsync(
+            new[] { new Message("user", "extract") },
+            responseModel: typeof(StructuredResponse));
+
+        Assert.True(response["ok"]?.GetValue<bool>());
+        Assert.Equal(2, chatClient.Calls);
+        Assert.Equal(2, chatClient.MessageSnapshots.Count);
+        var retryMessages = chatClient.MessageSnapshots[1];
+        Assert.Contains(
+            "The previous response attempt was invalid.",
+            retryMessages[^1].Text,
+            StringComparison.Ordinal);
+        Assert.Contains("Error type: JsonException.", retryMessages[^1].Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task MicrosoftExtensionsAIChatClient_UsesSharedStructuredResponseSchema()
     {
         var chatClient = new FakeChatClient("{\"ok\":true}");
@@ -329,9 +350,9 @@ public class ModernInfrastructureTests
         await Assert.ThrowsAsync<JsonException>(() =>
             graphitiClient.GenerateResponseAsync(new[] { new Message("user", "extract") }));
 
-        Assert.Equal(1, chatClient.Calls);
-        Assert.Equal(1, rateLimiter.AcquireAsyncCalls);
-        Assert.Equal(1, rateLimiter.LeasesDisposed);
+        Assert.Equal(3, chatClient.Calls);
+        Assert.Equal(3, rateLimiter.AcquireAsyncCalls);
+        Assert.Equal(3, rateLimiter.LeasesDisposed);
     }
 
     [Fact]
@@ -1438,6 +1459,59 @@ public class ModernInfrastructureTests
             }
 
             var response = new ChatResponse(new Microsoft.Extensions.AI.ChatMessage(ChatRole.Assistant, _responseText))
+            {
+                Usage = new UsageDetails
+                {
+                    InputTokenCount = 1,
+                    OutputTokenCount = 2
+                }
+            };
+
+            return Task.FromResult(response);
+        }
+
+        public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            ChatOptions? options = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask.ConfigureAwait(false);
+            yield break;
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class SequencedChatClient : IChatClient
+    {
+        private readonly Queue<string> _responses;
+
+        public SequencedChatClient(params string[] responses) =>
+            _responses = new Queue<string>(responses);
+
+        public int Calls { get; private set; }
+        public List<IReadOnlyList<Microsoft.Extensions.AI.ChatMessage>> MessageSnapshots { get; } = new();
+
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            MessageSnapshots.Add(messages
+                .Select(message => new Microsoft.Extensions.AI.ChatMessage(message.Role, message.Text))
+                .ToArray());
+            if (_responses.Count == 0)
+            {
+                throw new InvalidOperationException("No sequenced chat response is available.");
+            }
+
+            var response = new ChatResponse(
+                new Microsoft.Extensions.AI.ChatMessage(ChatRole.Assistant, _responses.Dequeue()))
             {
                 Usage = new UsageDetails
                 {
