@@ -219,6 +219,82 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_GraphDriverEnumeratesEntityAndCommunityGroupIds()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var createdAt = new DateTime(2026, 8, 9, 10, 11, 12, DateTimeKind.Utc);
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(new EntityNode
+        {
+            Uuid = "entity-group-b",
+            Name = "Entity Group B",
+            GroupId = "tenant-b",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            Summary = "entity group b"
+        });
+        await driver.SaveNodeAsync(new EntityNode
+        {
+            Uuid = "entity-group-a-1",
+            Name = "Entity Group A",
+            GroupId = "tenant-a",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            Summary = "entity group a"
+        });
+        await driver.SaveNodeAsync(new EntityNode
+        {
+            Uuid = "entity-group-a-2",
+            Name = "Entity Group A Duplicate",
+            GroupId = "tenant-a",
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            Summary = "entity group a duplicate"
+        });
+        await driver.SaveNodeAsync(new EntityNode
+        {
+            Uuid = "entity-group-blank",
+            Name = "Entity Blank Group",
+            GroupId = string.Empty,
+            Labels = ["Person"],
+            CreatedAt = createdAt,
+            Summary = "entity blank group"
+        });
+        await driver.SaveNodeAsync(new CommunityNode
+        {
+            Uuid = "community-group-z",
+            Name = "Community Z",
+            GroupId = "community-z",
+            CreatedAt = createdAt,
+            Summary = "community z"
+        });
+        await driver.SaveNodeAsync(new CommunityNode
+        {
+            Uuid = "community-group-a",
+            Name = "Community A",
+            GroupId = "community-a",
+            CreatedAt = createdAt,
+            Summary = "community a"
+        });
+        await driver.SaveNodeAsync(new CommunityNode
+        {
+            Uuid = "community-group-blank",
+            Name = "Community Blank",
+            GroupId = string.Empty,
+            CreatedAt = createdAt,
+            Summary = "community blank"
+        });
+
+        var entityGroupIds = await driver.GetEntityGroupIdsAsync();
+        var communityGroupIds = await driver.GetCommunityGroupIdsAsync();
+
+        Assert.Equal(new[] { "tenant-a", "tenant-b" }, entityGroupIds);
+        Assert.Equal(new[] { "community-a", "community-z" }, communityGroupIds);
+    }
+
+    [Fact]
     public async Task PackageRuntime_SearchExecutorRunsFtsAndVectorStatements()
     {
         await using var executor = new PackageLadybugExecutor();
