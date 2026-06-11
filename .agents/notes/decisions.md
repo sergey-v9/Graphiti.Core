@@ -163,6 +163,11 @@ semantics, wire compatibility, or performance/allocation discipline.
   `Graphiti.*Response` DTOs, but DTO type identity and snake_case schema/wire names must stay stable.
 - Token usage tracking keeps the idiomatic C# `InputTokens`/`OutputTokens` totals, and also exposes
   Python-equivalent per-prompt `CallCount`, `AvgInputTokens`, and `AvgOutputTokens` values.
+- Combined node+edge extraction is ported as an internal `EpisodeGraphExtractor` path, but public
+  `Graphiti` ingestion stays on separate node then edge extraction by default. The Python baseline
+  exposes `use_combined_extraction` only as an internal bulk helper flag defaulting to `False`, not
+  on `Graphiti.__init__`, `add_episode`, or `add_episode_bulk`; adding a C# public option or changing
+  the default is a future product/API decision.
 
 ## Provider Status
 

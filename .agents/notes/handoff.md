@@ -62,9 +62,10 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
   metadata. Combined extraction internals were ported 2026-06-11: the
   `extract_nodes_and_edges.extract_message` prompt, `extract_edges.extract_timestamps_batch`,
   orphan dropping, node attribution from facts, and self-fact preservation are covered behind
-  `EpisodeGraphExtractor.ExtractCombinedEpisodeGraphAsync`, but public ingestion does not call it
-  yet because the current Python baseline leaves combined extraction behind
-  `use_combined_extraction=False`; a user decision is needed for default vs option wiring. Bulk
+  `EpisodeGraphExtractor.ExtractCombinedEpisodeGraphAsync`. Public ingestion intentionally does not
+  call it because the current Python baseline exposes `use_combined_extraction` only as an internal
+  bulk helper flag defaulting to `False`, not on the `Graphiti` public surface; tests pin separate
+  extraction as the default for both `add_episode` and `add_episode_bulk`. Bulk
   ingestion true-batch semantics were ported 2026-06-11: C# now stages extraction, first-pass node
   resolution, cross-batch node/edge dedupe, pointer remapping, final node/edge resolution, and
   per-episode provenance rather than running each episode through the whole maintenance chain.
@@ -108,24 +109,26 @@ added.
 
 Latest checkpoint, 2026-06-11:
 
-Succeeded after adding the M.E.AI-backed cross-encoder reranker:
+Succeeded after pinning combined extraction as an internal-only path and public separate extraction
+as the Python-baseline default:
 
 ```powershell
 .\eng\Verify-GraphitiCore.ps1
 ```
 
 Restore, format verification, solution build including `Graphiti.Sample.OpenAI`, full test suite
-(`927` passed, `2` skipped, `929` total), and `dotnet pack` for
+(`928` passed, `2` skipped, `930` total), and `dotnet pack` for
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` was unset; the two skipped tests were
 `OpenAIProviderIntegrationTests.StructuredResponseSchemas_WithOpenAIProvider_AreAccepted` and
 `OpenAIProviderIntegrationTests.AddEpisodeAsync_WithOpenAIProvider_IngestsResolvedTemporalGraph`.
-No live provider run has passed yet. Focused cross-encoder tests also passed:
+No live provider run has passed yet. Focused combined-extraction/default-behavior tests also
+passed:
 
 ```powershell
-dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~CrossEncoder" --verbosity minimal
+dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~GraphitiWorkflowTests.AddEpisodeBulk_UsesSeparateExtractionByDefault|FullyQualifiedName~GraphitiWorkflowTests.AddEpisode_UsesSourceSpecificNodePromptThenSeparateEdgePrompt|FullyQualifiedName~EpisodeGraphExtractorTests.ExtractCombinedEpisodeGraph" --verbosity minimal
 ```
 
-with `20` passed.
+with `6` passed.
 
 Live OpenAI validation helper:
 

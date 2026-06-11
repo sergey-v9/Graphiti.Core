@@ -56,7 +56,7 @@ and check off here.**
         episodic edge creation, and uses edge attribution for fact `Episodes`/`ReferenceTime`.
         This does not change C# bulk ingestion's per-episode loop or batch dedupe/resolve
         semantics, which remain item 6.
-- [ ] 5. Combined extraction path. Python's newer single-call node+edge extraction
+- [x] 5. Combined extraction path. Python's newer single-call node+edge extraction
       (`utils/maintenance/combined_extraction.py`, prompt `extract_nodes_and_edges.extract_message`,
       batch timestamps via `extract_edges.extract_timestamps_batch`). Decide with the user whether
       C# adopts it as the default (as upstream is heading) or as an option; then port. Depends on
@@ -67,6 +67,13 @@ and check off here.**
         node attribution from facts, and self-fact preservation. It is intentionally not wired into
         public ingestion yet because the current Python baseline keeps combined extraction behind
         `use_combined_extraction=False`, and a C# default/option decision is still needed.
+      - Closed 2026-06-11: current Python does not expose `use_combined_extraction` on
+        `Graphiti.__init__`, `add_episode`, or `add_episode_bulk`; it is only an internal helper
+        flag on `extract_nodes_and_edges_bulk`, defaulting to `False`, and public bulk ingestion
+        omits it. C# therefore keeps public ingestion on the separate extraction path for parity,
+        leaves `ExtractCombinedEpisodeGraphAsync` as the internal equivalent, and pins both
+        single-episode and bulk public behavior with tests that reject the combined prompt by
+        default. Any future activation is a public API/product decision, not an unfinished port.
 - [x] 6. Bulk ingestion true-batch semantics. Python `add_episode_bulk` dedupes/resolves across the
       whole batch (`bulk_utils.py`, `_extract_and_dedupe_nodes_bulk`, `dedupe_edges_bulk`); C#
       loops per-episode with an accumulated candidate set, which changes dedup outcomes and loses

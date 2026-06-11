@@ -1471,6 +1471,73 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisodeBulk_UsesSeparateExtractionByDefault()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["extract_nodes.extract_message"] = new()
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                    new JsonObject { ["name"] = "Acme", ["entity_type"] = "Organization" }
+                }
+            },
+            ["extract_nodes.extract_text"] = new()
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                    new JsonObject { ["name"] = "Acme", ["entity_type"] = "Organization" }
+                }
+            },
+            ["extract_edges.edge"] = new()
+            {
+                ["edges"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["source"] = "Alice",
+                        ["target"] = "Acme",
+                        ["relation_type"] = "WORKS_AT",
+                        ["fact"] = "Alice works at Acme."
+                    }
+                }
+            }
+        });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+
+        await graphiti.AddEpisodeBulkAsync(
+            new[]
+            {
+                new RawEpisode
+                {
+                    Name = "chat",
+                    Content = "Alice works at Acme.",
+                    SourceDescription = "message",
+                    Source = EpisodeType.Message,
+                    ReferenceTime = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)
+                },
+                new RawEpisode
+                {
+                    Name = "brief",
+                    Content = "Alice works at Acme.",
+                    SourceDescription = "document",
+                    Source = EpisodeType.Text,
+                    ReferenceTime = new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc)
+                }
+            },
+            groupId: "group");
+
+        Assert.Equal(1, llm.PromptNames.Count(prompt => prompt == "extract_nodes.extract_message"));
+        Assert.Equal(1, llm.PromptNames.Count(prompt => prompt == "extract_nodes.extract_text"));
+        Assert.Equal(2, llm.PromptNames.Count(prompt => prompt == "extract_edges.edge"));
+        Assert.DoesNotContain("extract_nodes_and_edges.extract_message", llm.PromptNames);
+        Assert.DoesNotContain("extract_edges.extract_timestamps_batch", llm.PromptNames);
+    }
+
+    [Fact]
     public async Task AddEpisodeBulk_UsesSavedBatchEpisodesForPreviousContext()
     {
         var driver = new InMemoryGraphDriver();
