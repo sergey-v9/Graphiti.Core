@@ -7,8 +7,8 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 
 - `Graphiti.Core` owns the LadybugDB package and native references.
 - `Drivers/Ladybug/` owns schema, statement construction, record mapping, statement normalization,
-  full-text query construction, the concrete package executor, and executor-backed graph/search
-  behavior.
+  full-text query construction, Ladybug label-filter fragments, the concrete package executor, and
+  executor-backed graph/search behavior.
 - `LadybugGraphDriver` is internal, implements the graph-driver surface, and delegates search through
   `LadybugSearchExecutor`.
 - `LadybugDbGraphDriverFactory` creates LadybugDB-backed drivers directly from core.
@@ -74,11 +74,12 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 
 - `Drivers/GraphProvider.cs`: keeps `GraphProvider.Kuzu` as compatibility vocabulary.
 - `Drivers/Ladybug/`: schema, statement, normalizer, record mapper, driver, concrete executor, search
-  full-text query helper, statements, search executor, and driver factory.
+  full-text query helper, search-filter adapter, statements, search executor, and driver factory.
 - `Configuration/LadybugDbOptions.cs`: host-facing LadybugDB driver options.
 - `Configuration/LadybugDbServiceCollectionExtensions.cs`: LadybugDB DI helper.
 - `Configuration/GraphitiServiceCollectionExtensions.cs`: core `GraphProvider.Kuzu` driver creation.
-- `Search/CompiledSearchFilter.cs`: Kuzu label-query behavior for node and edge filters.
+- `Search/CompiledSearchFilter.cs`: keeps Kuzu label-query behavior for node and edge filters for
+  non-driver compatibility callers; active Ladybug search uses `Drivers/Ladybug/LadybugSearchFilter`.
 - `Search/SearchUtilities.cs`: keeps the `GraphProvider.Kuzu` full-text branch and
   `BuildKuzuFulltextQuery` for non-driver compatibility callers; active Ladybug search uses
   `Drivers/Ladybug/LadybugFulltextQuery`.
@@ -93,10 +94,10 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
    speculative options.
 3. Add native-gated integration smoke tests if they provide coverage beyond the current runtime tests.
 4. Decide the final driver-facing naming beyond the current `GraphProvider.Kuzu` compatibility value.
-5. Revisit remaining interim Kuzu query/filter helpers and move provider-specific behavior into the
-   driver when appropriate. Active Ladybug full-text query construction now lives in
-   `Drivers/Ladybug/LadybugFulltextQuery`; the shared `SearchUtilities` Kuzu branch remains for
-   compatibility callers.
+5. Revisit any remaining interim Kuzu query/filter helpers and move provider-specific behavior into
+   the driver when appropriate. Active Ladybug full-text query construction now lives in
+   `Drivers/Ladybug/LadybugFulltextQuery`, and active Ladybug label-filter fragments now live in
+   `Drivers/Ladybug/LadybugSearchFilter`; shared Kuzu branches remain for compatibility callers.
 6. Finish the Kuzu-to-LadybugDB terminology transition once the provider is stable.
 7. Update `decisions.md`, `evolution.md`, `handoff.md`, and `roadmap.md` when provider status or
    support level changes.

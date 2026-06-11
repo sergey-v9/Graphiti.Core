@@ -19,9 +19,7 @@ internal static class LadybugSearchStatementBuilder
         IReadOnlyList<string>? groupIds,
         int limit)
     {
-        var (filterQueries, parameters) = CompiledSearchFilter
-            .Compile(searchFilter)
-            .BuildNodeQuery(GraphProvider.Kuzu);
+        var (filterQueries, parameters) = LadybugSearchFilter.BuildNodeQuery(searchFilter);
         AddGroupFilter(filterQueries, parameters, "n", groupIds);
         parameters["query"] = fulltextQuery;
         parameters["limit"] = limit;
@@ -49,9 +47,7 @@ internal static class LadybugSearchStatementBuilder
         float minScore)
     {
         ArgumentNullException.ThrowIfNull(searchVector);
-        var (filterQueries, parameters) = CompiledSearchFilter
-            .Compile(searchFilter)
-            .BuildNodeQuery(GraphProvider.Kuzu);
+        var (filterQueries, parameters) = LadybugSearchFilter.BuildNodeQuery(searchFilter);
         AddGroupFilter(filterQueries, parameters, "n", groupIds);
         parameters["search_vector"] = SnapshotList(searchVector);
         parameters["limit"] = limit;
@@ -78,9 +74,7 @@ internal static class LadybugSearchStatementBuilder
         IReadOnlyList<string>? groupIds,
         int limit)
     {
-        var (filterQueries, parameters) = CompiledSearchFilter
-            .Compile(searchFilter)
-            .BuildEdgeQuery(GraphProvider.Kuzu);
+        var (filterQueries, parameters) = LadybugSearchFilter.BuildEdgeQuery(searchFilter);
         AddGroupFilter(filterQueries, parameters, "e", groupIds);
         parameters["query"] = fulltextQuery;
         parameters["limit"] = limit;
@@ -111,9 +105,7 @@ internal static class LadybugSearchStatementBuilder
         string? targetNodeUuid = null)
     {
         ArgumentNullException.ThrowIfNull(searchVector);
-        var (filterQueries, parameters) = CompiledSearchFilter
-            .Compile(searchFilter)
-            .BuildEdgeQuery(GraphProvider.Kuzu);
+        var (filterQueries, parameters) = LadybugSearchFilter.BuildEdgeQuery(searchFilter);
         AddGroupFilter(filterQueries, parameters, "e", groupIds);
         if (sourceNodeUuid is not null)
         {
@@ -158,9 +150,7 @@ internal static class LadybugSearchStatementBuilder
             return Array.Empty<LadybugStatement>();
         }
 
-        var (filterQueries, filterParams) = CompiledSearchFilter
-            .Compile(searchFilter)
-            .BuildNodeQuery(GraphProvider.Kuzu);
+        var (filterQueries, filterParams) = LadybugSearchFilter.BuildNodeQuery(searchFilter);
         AddGroupFilter(filterQueries, filterParams, "n", groupIds);
         var filterQuery = AndClause(filterQueries);
         var doubledDepth = maxDepth * 2;
@@ -227,9 +217,7 @@ internal static class LadybugSearchStatementBuilder
             return Array.Empty<LadybugStatement>();
         }
 
-        var (filterQueries, filterParams) = CompiledSearchFilter
-            .Compile(searchFilter)
-            .BuildEdgeQuery(GraphProvider.Kuzu);
+        var (filterQueries, filterParams) = LadybugSearchFilter.BuildEdgeQuery(searchFilter);
         AddGroupFilter(filterQueries, filterParams, "e", groupIds);
         var filterQuery = WhereClause(filterQueries);
         var doubledDepth = maxDepth * 2;

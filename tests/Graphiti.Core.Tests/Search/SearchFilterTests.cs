@@ -37,8 +37,8 @@ public sealed class SearchFilterTests
         Assert.Empty(parameters);
     }
 
-    // NOTE: Kuzu remains the LadybugDB parity/compatibility value. This test pins the interim
-    // label-query behavior that the LadybugDB provider should preserve or deliberately replace.
+    // NOTE: Kuzu remains the LadybugDB parity/compatibility value. This pins the shared
+    // compatibility utility; the active Ladybug driver path has separate statement coverage.
     [Fact]
     public void NodeSearchFilterQueryConstructor_BuildsKuzuLabelQuery()
     {
@@ -557,8 +557,8 @@ public sealed class SearchFilterTests
         Assert.DoesNotContain(parameters, parameter => parameter.Key.StartsWith("valid_at", StringComparison.Ordinal));
     }
 
-    // NOTE: Kuzu remains the LadybugDB parity/compatibility value. This test pins the interim
-    // label-query behavior that the LadybugDB provider should preserve or deliberately replace.
+    // NOTE: Kuzu remains the LadybugDB parity/compatibility value. This pins the shared
+    // compatibility utility; the active Ladybug driver path has separate statement coverage.
     [Fact]
     public void EdgeSearchFilterQueryConstructor_BuildsKuzuNodeLabelQuery()
     {

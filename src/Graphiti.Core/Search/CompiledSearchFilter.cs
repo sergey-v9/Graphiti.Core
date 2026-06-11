@@ -182,8 +182,8 @@ internal sealed class CompiledSearchFilter
         }
 
         GraphitiHelpers.ValidateNodeLabels(nodeLabels);
-        // NOTE: LadybugDB is the primary provider target; Kuzu remains the Python-parity
-        // compatibility value. Preserve this interim behavior until LadybugDB owns it.
+        // NOTE: Active Ladybug query construction owns this syntax in Drivers/Ladybug.
+        // Keep this branch for GraphProvider.Kuzu compatibility callers outside the driver.
         if (provider == GraphProvider.Kuzu)
         {
             filterQueries.Add(includeTarget

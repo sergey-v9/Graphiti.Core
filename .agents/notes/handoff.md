@@ -105,6 +105,8 @@ and Python Kuzu's `':memory:'` sentinel, normalizing the sentinel at the Graphit
 Active Ladybug full-text search builds Python Kuzu-style raw whitespace queries inside
 `Drivers/Ladybug/LadybugFulltextQuery`; `SearchUtilities` keeps a separate `GraphProvider.Kuzu`
 branch only for compatibility callers outside the driver.
+Active Ladybug node-label search filters are built by `Drivers/Ladybug/LadybugSearchFilter` so the
+driver no longer asks shared search filtering for `GraphProvider.Kuzu` fragments.
 
 For provider status, package facts, package quirks, runtime proof, and remaining work, read
 `kuzu-driver-port.md`. If implementation uncovers a likely LadybugDB package/binding issue, mark it
@@ -120,7 +122,7 @@ added.
 
 Latest checkpoint, 2026-06-11:
 
-Succeeded after moving active LadybugDB full-text query construction into the Ladybug driver:
+Succeeded after moving active LadybugDB label-filter construction into the Ladybug driver:
 
 ```powershell
 .\eng\Verify-GraphitiCore.ps1
@@ -131,7 +133,14 @@ Restore, format verification, solution build including `Graphiti.Sample.OpenAI`,
 `Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` was unset; the two skipped tests were
 `OpenAIProviderIntegrationTests.StructuredResponseSchemas_WithOpenAIProvider_AreAccepted` and
 `OpenAIProviderIntegrationTests.AddEpisodeAsync_WithOpenAIProvider_IngestsResolvedTemporalGraph`.
-No live provider run has passed yet. Focused Ladybug search executor and runtime tests also passed:
+No live provider run has passed yet. Focused Ladybug statement, shared search-filter, search
+executor, and runtime tests also passed:
+
+```powershell
+dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~LadybugSearchStatementTests|FullyQualifiedName~SearchFilterTests" --verbosity minimal
+```
+
+with `34` Ladybug statement/shared search-filter tests passed.
 
 ```powershell
 dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~LadybugSearchExecutorTests" --verbosity minimal
