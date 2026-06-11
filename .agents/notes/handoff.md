@@ -41,30 +41,28 @@ not duplicate its proof matrix here.
 
 ## Current State
 
-- Decomposition is largely complete. `Graphiti` remains the public orchestrator; behavior lives in
-  partials plus internal services and helpers.
-- Search has stable internal boundaries: `SearchEngine` orchestrates, `SearchRetrievalRunner`
-  delegates driver-backed retrieval, and `SearchResultComposer` owns fusion/reranking/result shaping.
-- Performance work should preserve parity while avoiding avoidable hot-path allocations. Prefer
-  explicit loops, pre-sized buffers, visitor-style token scanning, source generation, and non-throwing
-  parse paths where they improve default implementation code without obscuring behavior.
-- The in-memory driver is a real deterministic reference/test driver with broad persistence/search
-  behavior. Keep it correct and deterministic, but do not treat it as a product provider investment
-  target.
-- Neo4j is present only as existing/reference behavior and is expected to be removed later. FalkorDB
-  and Neptune are compatibility/helper surfaces, not supported configured C# providers today.
-  LadybugDB is where provider design and workflow coverage should go.
+Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the full matrix):
+
+- **Solid and verified:** project/infrastructure shape (net10.0, analyzers, packaging), drivers
+  (InMemory reference, LadybugDB runtime proof, Neo4j legacy), search ranking/fusion/reranking,
+  community label propagation, text utilities, serialization/cache identity, DI/options. 879
+  deterministic tests green.
+- **Hollow until plans 01–02 land:** the LLM-facing semantic layer. Most prompt instruction text
+  was never ported — services sent one-line system messages plus raw JSON context, which produces
+  a structurally valid but semantically poor graph with a real LLM. Node/edge extraction prompts
+  were ported 2026-06-11 (`Prompts/`); the remaining prompt rows in `parity.md` are still STUB or
+  MISSING. Entity summaries are never generated during ingestion. Several invented fallbacks mask
+  LLM failures and must be removed (plan 02).
+- **Never exercised:** any real LLM/embedding provider, end to end. The deterministic suite cannot
+  see prompt or schema-acceptance problems (plan 03).
+- Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority").
+  Performance/allocation rework is on moratorium (`roadmap.md`).
+- Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
+  internal services and helpers. Search boundaries: `SearchEngine` orchestrates,
+  `SearchRetrievalRunner` retrieves, `SearchResultComposer` shapes results. Prompt builders live
+  in `Prompts/` (one static class per Python prompt module).
 - Optional local `.agents/skills` files are specialist references only. Use them for matching tasks,
   but do not let generic AI/ML/framework advice override `decisions.md`.
-
-## Paused Modernization Queue
-
-Broad modernization is paused after the bounded span-based token-boundary slice. Do not continue
-implementing these automatically; when work resumes, pick one small reviewable slice and verify it
-before committing.
-
-1. Revisit `AttributeMerger` only if more allocation work is wanted; preserve case-insensitive
-   response matching, overlong-drop semantics, prior-value retention, and replace-mode stale removal.
 
 ## LadybugDB / Kuzu
 
@@ -83,11 +81,11 @@ contract.
 Rerun verification before claiming the tree is green; historical test counts drift as coverage is
 added.
 
-Latest checkpoint, 2026-06-11:
-`.\eng\Verify-GraphitiCore.ps1 -FocusedFilter "FullyQualifiedName~Graphiti.Core.Tests.Internal.ExtractionContextBuilderTests|FullyQualifiedName~Graphiti.Core.Tests.GraphitiWorkflowTests.AddEpisode_PassesTypeMetadataAndCustomInstructionsToExtractionPrompt"`
-succeeded. It ran locked restore, focused extraction-context coverage (`2` passed), format
-verification, no-incremental build, the full test suite (`879` passed), and `dotnet pack` for
-`Graphiti.Core.2.0.0-alpha.1.nupkg`.
+Latest checkpoint, 2026-06-11: `.\eng\Verify-GraphitiCore.ps1` succeeded after the node/edge
+extraction prompt port: locked restore, format verification, no-incremental build, full test suite
+(`886` passed, including the new golden prompt tests under `Graphiti.Core.Tests.Prompts`), and
+`dotnet pack` for `Graphiti.Core.2.0.0-alpha.1.nupkg`. No real-provider run has ever been executed
+(plan 03).
 
 Primary full verification command from the C# repo root:
 
@@ -122,8 +120,9 @@ beyond a single throwaway investigation.
 - Treat implicit allocations as part of the review surface in shared ingestion, search, parsing,
   serialization, embedding/vector, and provider paths.
 - Keep note updates scoped: durable decisions in `decisions.md`, milestone history in
-  `evolution.md`, current state or gotchas here, planned work in `roadmap.md`, provider-specific
-  details in `kuzu-driver-port.md`, and commit rules in `commit-policy.md`.
+  `evolution.md`, current state or gotchas here, phase plan in `roadmap.md`, parity ground truth in
+  `parity.md`, executable work orders in `.agents/plans/`, provider-specific details in
+  `kuzu-driver-port.md`, and commit rules in `commit-policy.md`.
 
 ## Known Audited Areas
 

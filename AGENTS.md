@@ -5,12 +5,21 @@ the behavioral source of truth; C# should be idiomatic where behavior, JSON/wire
 identity, cache semantics, and performance/allocation discipline stay compatible.
 
 **Working notes - read first, keep current.** The main living docs under `.agents/notes/` carry
-context across agent sessions: `roadmap.md` (phase status / what's left), `handoff.md` (current state
-and verified context), `decisions.md` (standing port/parity/design decisions), and `evolution.md`
-(milestone history for major divergences from Python). Start substantive work by reading the relevant
-note and update it in the same change when a standing fact changes. LadybugDB/Kuzu has its own focused
-handoff in `.agents/notes/kuzu-driver-port.md`. For C# submodule commit rules, read
-`.agents/notes/commit-policy.md`.
+context across agent sessions: `roadmap.md` (phased long-term plan), `parity.md` (row-by-row Python
+parity ground truth — update it in the same change that closes or reopens a gap), `handoff.md`
+(current state and verified context), `decisions.md` (standing port/parity/design decisions), and
+`evolution.md` (milestone history for major divergences from Python). Start substantive work by
+reading the relevant note and update it in the same change when a standing fact changes.
+LadybugDB/Kuzu has its own focused handoff in `.agents/notes/kuzu-driver-port.md`. For C# submodule
+commit rules, read `.agents/notes/commit-policy.md`.
+
+**Current priority - how to pick work.** Concrete work orders live in `.agents/plans/`; the
+roadmap orders them. Pick the lowest-numbered plan with unchecked items, do exactly one item as a
+slice (implement → verify → commit → check it off and update `parity.md`), then stop or pick the
+next. Do not invent work outside the plans while they have open items: in particular, no
+performance/allocation slices, no doc-tidying-only slices, and no new modernization queues — the
+moratorium in `roadmap.md` applies until Phases 1–3 are done. If every plan item is blocked or
+done, re-read `roadmap.md` for the next phase instead of polishing.
 
 The notes can change outside your session. Re-read relevant notes before finalizing work that touches
 direction, architecture, providers, verification, or roadmap items; if current notes contradict your
@@ -34,6 +43,13 @@ Optional local .NET skills:
   and update the notes if the product direction truly changes.
 
 Never:
+- Do not paraphrase, summarize, or "improve" Python prompt instruction text when porting it; port
+  near-verbatim per the prompt parity contract in `.agents/notes/decisions.md`. Prompt prose is
+  product behavior, not documentation.
+- Do not add fallbacks that fabricate graph content when an LLM call fails or returns nothing
+  (heuristic entities, synthetic edges, and similar). Surface the empty/failed result; Python does.
+- Do not start a performance/allocation slice while `.agents/plans/` has open parity items, except
+  to fix a measured regression you introduced.
 - Do not replace Graphiti's temporal graph behavior with Semantic Kernel memory, an agent framework,
   LangChain-style memory, an OGM, or a vector DB abstraction. Adapters are fine; replacement is not.
 - Do not treat a generic .NET AI/ML skill as permission to add Microsoft Agent Framework, Semantic
@@ -52,10 +68,9 @@ Never:
 Always:
 - Treat Python `graphiti_core/` in this repo as the behavioral source of truth; keep C# idiomatic
   where behavior and wire compatibility stay intact.
-- Treat allocation behavior as part of idiomatic C# design. Prefer simple loops, pre-sized
-  collections, spans, source generation, and non-throwing parse paths in hot/shared code when they
-  preserve clarity; be skeptical of LINQ chains, closure captures, regex/split arrays, boxing, and
-  extra materialization on frequently executed paths.
+- Write new code allocation-aware by default (simple loops, pre-sized collections, non-throwing
+  parse paths), but do not rework existing code for allocations: that is paused by the moratorium
+  in `roadmap.md` until the parity phases are done, and resumes benchmark-first in Phase 5.
 - If an iteration keeps repeating the same build/test/format commands, create a small helper script
   and run that instead of manually stepping through the loop. Commit the script when it becomes useful
   workflow, and keep one-off throwaway scripts out of durable source.

@@ -24,6 +24,27 @@ semantics, wire compatibility, or performance/allocation discipline.
 - Preserve Python wire values for serialized enums and configuration names, such as `fact_triple`
   and `reciprocal_rank_fusion`.
 
+## Prompt Parity Contract (added 2026-06-11)
+
+- Python prompt instruction text in `graphiti_core/prompts/` is product behavior, the same way
+  ranking math is. Porting a prompt means transcribing its system and user text near-verbatim into
+  a builder under `src/Graphiti.Core/Prompts/`, pinned by a golden full-text rendering test. The
+  earlier scheme — a one-line system message plus the raw JSON data context — was scaffolding and
+  is being replaced (plan 01); do not introduce new call sites that follow it.
+- Allowed mechanical divergences from Python rendering, and only these: collections interpolate as
+  compact JSON via `PromptJson.Serialize` (Python uses `json.dumps` spacing or repr); timestamps
+  render ISO-8601 round-trip format; em-dash may render as a plain hyphen; insignificant trailing
+  whitespace before a final newline is not reproduced; dictionary-ordered collections may render in
+  deterministic sorted order where Python relies on insertion order. Anything else requires a
+  recorded decision here.
+- `promptName` strings, response DTO identity, and cache-key inputs stay stable when prompt text
+  changes; prompt content is deliberately part of the LLM cache key, so content changes invalidate
+  cached responses — that is correct behavior, not a regression.
+- Do not add LLM-failure fallbacks that fabricate graph content (heuristic entity names, synthetic
+  edges). Empty extraction results are valid outputs. Deterministic text fallbacks are acceptable
+  only where the LLM client explicitly reports the capability as unimplemented, never for real
+  provider errors.
+
 ## Project Shape
 
 - Target framework is currently `net10.0`.
@@ -88,6 +109,10 @@ semantics, wire compatibility, or performance/allocation discipline.
 
 ## Performance And Allocation Direction
 
+- **Status 2026-06-11: paused.** Allocation/performance rework is on moratorium until roadmap
+  Phases 1–3 (prompt parity, pipeline parity, real-provider validation) are complete; it resumes
+  benchmark-first in Phase 5. The guidance below applies to writing new code and to that future
+  phase — it is not a license to refactor existing code now.
 - Treat avoidable allocations as design feedback in shared or repeated paths. This includes hidden
   allocations from LINQ chains, iterator/async state machines, closure captures, interface
   enumeration over value types, regex/split-array helpers, exception-driven control flow, and
