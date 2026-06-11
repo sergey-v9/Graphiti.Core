@@ -170,11 +170,12 @@ The C# port is moving toward a LadybugDB-centered provider model:
 
 - `Graphiti.Core` owns the LadybugDB package and native references.
 - Internal core helpers under `Drivers/Ladybug/` own shared statement, schema, mapping, normalizer,
-  concrete package execution, and executor-backed behavior.
+  active full-text query construction, active label-filter fragments, concrete package execution, and
+  executor-backed behavior.
 - `Configuration/LadybugDbOptions.cs` and `AddLadybugDbGraphDriver` provide host-facing
   `DatabasePath` configuration.
 - `GraphProvider.Kuzu` remains compatibility vocabulary and is a supported core options/DI path that
-  resolves to the LadybugDB-backed driver.
+  resolves to the LadybugDB-backed driver and honors `GraphitiOptions.Database`.
 - Neo4j is retained only as existing/reference behavior while present, FalkorDB is not a C# provider
   investment target, and InMemory remains a deterministic reference/test driver.
 
@@ -185,7 +186,9 @@ The C# port is moving toward a LadybugDB-centered provider model:
 - `kuzu-driver-port.md` records detailed package facts, provider policy, runtime proof, quirks, and
   remaining work.
 - Tests provide runtime proof for main ingest/search/removal/triplet/bulk/saga/community workflows,
-  core DI registration, `GraphProvider.Kuzu` resolution, and file-backed `DatabasePath` persistence.
+  package/native execution, core DI registration, `GraphProvider.Kuzu` resolution, file-backed
+  `DatabasePath` persistence, core `GraphProvider.Kuzu` `Database` persistence, `':memory:'`
+  sentinel compatibility, and active Ladybug-owned full-text/label-filter construction.
 
 ### Boundaries
 
@@ -199,7 +202,8 @@ The LadybugDB milestone must still preserve:
 
 - Final driver-facing naming: Kuzu compatibility vocabulary versus LadybugDB product naming.
 - Whether Neo4j removal becomes its own milestone.
-- How much provider-specific query/filter behavior should move fully into the LadybugDB driver.
+- Whether shared Kuzu compatibility helpers remain indefinitely after the final LadybugDB provider
+  surface is named.
 
 ## Candidate Future Milestones
 

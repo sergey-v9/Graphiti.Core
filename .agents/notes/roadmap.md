@@ -61,9 +61,10 @@ search returns relevant results; findings are recorded in `parity.md`/`handoff.m
 ## Phase 4 — LadybugDB productization
 
 Existing direction, unchanged: LadybugDB is the provider investment target. Remaining work lives in
-`kuzu-driver-port.md` (naming decision, native-gated smoke tests, moving provider-specific query
-behavior into the driver, Kuzu→LadybugDB terminology transition). Neo4j removal is a user
-decision; do not remove without asking.
+`kuzu-driver-port.md` (final naming decision, conditional native/CI smoke tests, remaining
+Kuzu→LadybugDB terminology transition). Active Ladybug full-text and label-filter behavior now lives
+inside `Drivers/Ladybug/`; shared Kuzu branches remain for compatibility callers only. Neo4j removal
+is a user decision; do not remove without asking.
 
 ## Phase 5 — Release readiness
 

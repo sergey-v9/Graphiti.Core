@@ -142,9 +142,11 @@ semantics, wire compatibility, or performance/allocation discipline.
   it. Treat this as an intentional C# feature.
 - Date-filter Cypher uses unique parameter names across OR branches; Python's reset-per-branch
   behavior can collide.
-- Kuzu full-text query construction follows Python's raw-whitespace semantics: it splits on
-  whitespace and truncates to the first `SearchUtilities.MaxQueryLength` words instead of using
-  Lucene/Falkor sanitization or rejecting over-limit queries.
+- Kuzu-compatible full-text query construction follows Python's raw-whitespace semantics: it splits
+  on whitespace and truncates to the first `SearchUtilities.MaxQueryLength` words instead of using
+  Lucene/Falkor sanitization or rejecting over-limit queries. Active Ladybug search owns this behavior
+  in `Drivers/Ladybug/LadybugFulltextQuery`; `SearchUtilities` keeps the `GraphProvider.Kuzu` branch
+  for compatibility callers outside the driver.
 - LadybugDB/Kuzu foundation uses the full C# `SagaNode` model shape for Saga schema/save/get and
   includes entity-edge `reference_time` in save/get/search projections. This deliberately fixes
   Python Kuzu operation mismatches so the C# runtime path can persist and read Graphiti's model
@@ -186,9 +188,10 @@ semantics, wire compatibility, or performance/allocation discipline.
   provider. `GraphProvider.FalkorDb` and `GraphProvider.Neptune` remain enum/helper compatibility
   surfaces and are rejected by default options validation unless a separate provider decision changes
   that. LadybugDB is the provider path to invest in.
-- `GraphProvider.Kuzu` is valid in core DI/options and creates the LadybugDB-backed driver. Kuzu
-  remains the compatibility enum value until the final driver-facing LadybugDB naming decision is
-  explicit. See `kuzu-driver-port.md` for current runtime coverage.
+- `GraphProvider.Kuzu` is valid in core DI/options and creates the LadybugDB-backed driver. It honors
+  `GraphitiOptions.Database` for LadybugDB-backed file persistence. Kuzu remains the compatibility
+  enum value until the final driver-facing LadybugDB naming decision is explicit. See
+  `kuzu-driver-port.md` for current runtime coverage.
 - LadybugDB package/backend behavior that appears buggy during driver implementation should be marked
   separately from C# port gaps. Work around proven backend limitations deliberately when useful, but
   keep them visible for later LadybugDB fixes.

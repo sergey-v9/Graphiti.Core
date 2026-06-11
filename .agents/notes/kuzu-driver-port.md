@@ -100,8 +100,8 @@ compatibility vocabulary while the driver-facing name moves toward LadybugDB.
 3. Add native-gated integration smoke tests only if they provide coverage beyond the current package
    runtime tests or solve a CI/platform constraint.
 4. Decide the final driver-facing naming beyond the current `GraphProvider.Kuzu` compatibility value.
-5. Revisit any remaining interim Kuzu query/filter helpers and move provider-specific behavior into
-   the driver when appropriate. Active Ladybug full-text query construction now lives in
+5. Decide whether shared Kuzu compatibility helpers should remain or be retired after final
+   LadybugDB naming. Active Ladybug full-text query construction now lives in
    `Drivers/Ladybug/LadybugFulltextQuery`, and active Ladybug label-filter fragments now live in
    `Drivers/Ladybug/LadybugSearchFilter`; shared Kuzu branches remain for compatibility callers.
 6. Finish the Kuzu-to-LadybugDB terminology transition once the provider is stable.
