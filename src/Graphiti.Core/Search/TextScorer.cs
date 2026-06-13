@@ -28,8 +28,8 @@ public sealed class TextScorer
             return 0;
         }
 
-        var state = new ScoreState(_queryTerms);
-        SearchUtilities.VisitTokens<ScoreState, ScoreTokenVisitor>(
+        var state = new ScoreState(_queryTerms.GetAlternateLookup<ReadOnlySpan<char>>());
+        SearchUtilities.VisitTokenSpans<ScoreState, ScoreTokenVisitor>(
             text,
             ref state);
 
@@ -42,19 +42,23 @@ public sealed class TextScorer
                        / (double)(state.TextTermCount + _queryTerms.Count));
     }
 
-    private record struct ScoreState(FrozenSet<string> QueryTerms)
+    private struct ScoreState(FrozenSet<string>.AlternateLookup<ReadOnlySpan<char>> queryTerms)
     {
+        public FrozenSet<string>.AlternateLookup<ReadOnlySpan<char>> QueryTerms { get; } = queryTerms;
+
         public int TextTermCount { get; set; }
 
         public int MatchCount { get; set; }
 
         public HashSet<string>? DistinctMatches { get; set; }
+
+        public HashSet<string>.AlternateLookup<ReadOnlySpan<char>> DistinctMatchesLookup { get; set; }
     }
 
     private readonly record struct ScoreTokenVisitor
-        : SearchUtilities.ITokenVisitor<ScoreState>
+        : SearchUtilities.ISpanTokenVisitor<ScoreState>
     {
-        public static void Visit(string term, ref ScoreState state)
+        public static void Visit(ReadOnlySpan<char> term, ref ScoreState state)
         {
             state.TextTermCount++;
             if (!state.QueryTerms.Contains(term))
@@ -63,8 +67,16 @@ public sealed class TextScorer
             }
 
             state.MatchCount++;
-            state.DistinctMatches ??= new HashSet<string>(StringComparer.Ordinal);
-            state.DistinctMatches.Add(term);
+            if (state.DistinctMatches is null)
+            {
+                var distinct = new HashSet<string>(StringComparer.Ordinal);
+                state.DistinctMatches = distinct;
+                state.DistinctMatchesLookup = distinct.GetAlternateLookup<ReadOnlySpan<char>>();
+            }
+
+            // Materializes the string key only on first insertion of a distinct match; repeated
+            // matches probe by span and allocate nothing.
+            state.DistinctMatchesLookup.Add(term);
         }
     }
 }

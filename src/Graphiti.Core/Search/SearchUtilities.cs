@@ -987,9 +987,41 @@ public static partial class SearchUtilities
         }
     }
 
+    /// <summary>
+    /// Token visit that hands the visitor a lowercased <see cref="ReadOnlySpan{Char}"/> instead of a
+    /// materialized string, so visitors can probe span-keyed lookups without allocating a string for
+    /// every token (materializing only when a token must be retained). Token lowercasing matches
+    /// <see cref="CreateToken"/> exactly (<c>ToLowerInvariant</c>), so span-keyed ordinal lookups are
+    /// byte-for-byte equivalent to the string-based path.
+    /// </summary>
+    internal static void VisitTokenSpans<TState, TVisitor>(
+        string? text,
+        ref TState state)
+        where TVisitor : struct, ISpanTokenVisitor<TState>
+    {
+        var source = (text ?? string.Empty).AsSpan();
+        Span<char> stackBuffer = stackalloc char[TokenLowerStackBufferSize];
+        foreach (var match in SearchTokenRegex().EnumerateMatches(source))
+        {
+            var slice = source.Slice(match.Index, match.Length);
+            Span<char> lowered = match.Length <= stackBuffer.Length
+                ? stackBuffer[..match.Length]
+                : new char[match.Length];
+            _ = slice.ToLowerInvariant(lowered);
+            TVisitor.Visit(lowered, ref state);
+        }
+    }
+
+    private const int TokenLowerStackBufferSize = 256;
+
     internal interface ITokenVisitor<TState>
     {
         static abstract void Visit(string token, ref TState state);
+    }
+
+    internal interface ISpanTokenVisitor<TState>
+    {
+        static abstract void Visit(ReadOnlySpan<char> token, ref TState state);
     }
 
     private static string CreateToken(string source, int index, int length) =>
