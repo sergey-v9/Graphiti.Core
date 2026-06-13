@@ -52,7 +52,9 @@ public class MicrosoftExtensionsAICrossEncoderClientTests
         Assert.Equal(3, chatClient.Calls.Count);
         Assert.All(chatClient.Options, option =>
         {
-            Assert.Equal("small-model", option.ModelId);
+            // Mirrors openai_reranker_client.py:87 `model=self.config.model or DEFAULT_MODEL`: the
+            // reranker uses the PRIMARY model, never the configured small model.
+            Assert.Equal("large-model", option.ModelId);
             Assert.Equal(64, option.MaxOutputTokens);
             Assert.Equal(0f, option.Temperature);
             var responseFormat = Assert.IsType<ChatResponseFormatJson>(option.ResponseFormat);
@@ -82,6 +84,22 @@ public class MicrosoftExtensionsAICrossEncoderClientTests
             ranked.Select(item => item.Score),
             score => Assert.Equal(0.7f, score, precision: 6),
             score => Assert.Equal(0.4f, score, precision: 6));
+    }
+
+    [Fact]
+    public async Task RankIndexedAsync_DefaultsToPrimaryRerankerModelWhenNoConfig()
+    {
+        // Mirrors openai_reranker_client.py:87 with config.model unset: `config.model or DEFAULT_MODEL`
+        // falls back to gpt-4.1-nano (DEFAULT_MODEL, line 31). The no-config constructor sets the
+        // primary model to DefaultModel, so requests must target gpt-4.1-nano.
+        var chatClient = new RelevanceChatClient(static _ => "{\"is_relevant\":true,\"confidence\":0.5}");
+        var client = new MicrosoftExtensionsAICrossEncoderClient(chatClient, maxConcurrency: 1);
+
+        await client.RankIndexedAsync("query", new[] { "passage" });
+
+        Assert.Equal(
+            MicrosoftExtensionsAICrossEncoderClient.DefaultModel,
+            Assert.Single(chatClient.Options).ModelId);
     }
 
     [Fact]

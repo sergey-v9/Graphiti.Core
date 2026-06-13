@@ -68,6 +68,7 @@ public sealed class MicrosoftExtensionsAIChatClient : LlmClient
                 cancellationToken).ConfigureAwait(false);
 
         TrackUsage(response, promptName);
+        ThrowIfRefused(response);
         return ParseJsonResponse(response.Text);
 
         async ValueTask<ChatResponse> ExecuteProviderCallAsync(CancellationToken token)
@@ -143,11 +144,34 @@ public sealed class MicrosoftExtensionsAIChatClient : LlmClient
     private static Microsoft.Extensions.AI.ChatMessage ToAIMessage(Message message) =>
         new(new ChatRole(message.Role), message.Content);
 
+    /// <summary>
+    /// Surfaces a non-retryable refusal when the provider signals a content filter. Mirrors Python's
+    /// RefusalError path (openai_base_client.py:133-134), which is excluded from the retry loop
+    /// (line 263-266). Microsoft.Extensions.AI does not expose a structured refusal field through the
+    /// abstraction, so the only refusal signal reliably available is
+    /// <see cref="ChatFinishReason.ContentFilter"/>; an explicit textual refusal that the provider
+    /// reports with a normal finish reason cannot be distinguished here and falls through to JSON
+    /// validation (where it is retried like any other malformed response).
+    /// </summary>
+    private static void ThrowIfRefused(ChatResponse response)
+    {
+        if (response.FinishReason == ChatFinishReason.ContentFilter)
+        {
+            throw new LlmRefusalException(
+                "The LLM refused to generate a response (content filter finish reason).");
+        }
+    }
+
     private static JsonObject ParseJsonResponse(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            return new JsonObject();
+            // Mirrors openai_base_client.py:131-136: an empty/whitespace model response is NOT a
+            // valid (empty) object but a failure -- Python raises `Exception('Invalid response from
+            // LLM')`, which routes through its generic-Exception retry (line 275) to re-prompt with
+            // feedback. Throwing JsonException here routes the same way through
+            // LlmClient.GenerateValidatedResponseWithRetryAsync instead of silently returning {}.
+            throw new JsonException("Invalid response from LLM: the model returned an empty response.");
         }
 
         var trimmed = text.Trim();

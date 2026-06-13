@@ -38,19 +38,29 @@ public class LadybugSearchExecutorTests
     }
 
     [Fact]
-    public async Task FulltextSearch_UsesLadybugRawWhitespaceQuerySemantics()
+    public async Task FulltextSearch_UsesKuzuVerbatimOrEmptyQuerySemantics()
     {
+        // Mirrors graphiti_core/search/search_utils.py:88-92 (KUZU branch of fulltext_query):
+        // the query is returned VERBATIM (no whitespace normalization, no per-term truncation), and
+        // when the single-space word count exceeds MAX_QUERY_LENGTH the search is skipped entirely
+        // (empty string => LadybugSearchExecutor returns no results without querying the index).
         var recorder = new RecordingLadybugExecutor();
         var search = new LadybugSearchExecutor(recorder);
-        var longQuery = string.Join(" ", Enumerable.Repeat("term", SearchUtilities.MaxQueryLength + 1));
+
+        // 129 single-space-separated words => 129 > 128 => over the limit => no search issued.
+        var overLimitQuery = string.Join(" ", Enumerable.Repeat("term", SearchUtilities.MaxQueryLength + 1));
+
+        // A query that contains internal tabs/newlines but only enough spaces to stay within the
+        // single-space word limit must pass through unchanged, preserving every character.
+        const string verbatimQuery = "  Alice+(Bob)\tgroup_id:tenant/one\r\nCarol  ";
 
         await search.SearchEntityNodesFulltextAsync(
-            "  Alice+(Bob)\tgroup_id:tenant/one\r\nCarol  ",
+            verbatimQuery,
             new SearchFilters(),
             new[] { "tenant" },
             limit: 5);
-        await search.SearchEntityEdgesFulltextAsync(
-            longQuery,
+        var overLimit = await search.SearchEntityEdgesFulltextAsync(
+            overLimitQuery,
             new SearchFilters(),
             groupIds: null,
             limit: 5);
@@ -64,14 +74,32 @@ public class LadybugSearchExecutorTests
             new[] { "tenant" },
             limit: 5);
 
-        Assert.Equal(4, recorder.Queried.Count);
-        Assert.Equal("Alice+(Bob) group_id:tenant/one Carol", recorder.Queried[0].Parameters["query"]);
-        Assert.Equal(
-            string.Join(" ", Enumerable.Repeat("term", SearchUtilities.MaxQueryLength)),
-            recorder.Queried[1].Parameters["query"]);
-        Assert.Equal("Episode Query", recorder.Queried[2].Parameters["query"]);
-        Assert.Equal("Community+(Team) Launch", recorder.Queried[3].Parameters["query"]);
+        // The over-limit edge search performs no query, so only three statements are recorded.
+        Assert.Empty(overLimit);
+        Assert.Equal(3, recorder.Queried.Count);
+        Assert.Equal(verbatimQuery, recorder.Queried[0].Parameters["query"]);
+        Assert.Equal("  Episode\tQuery  ", recorder.Queried[1].Parameters["query"]);
+        Assert.Equal("  Community+(Team)\r\nLaunch  ", recorder.Queried[2].Parameters["query"]);
         Assert.Equal(new[] { "tenant" }, Assert.IsType<List<string>>(recorder.Queried[0].Parameters["group_ids"]));
+    }
+
+    [Fact]
+    public async Task FulltextSearch_AllowsExactlyMaxQueryLengthWords()
+    {
+        // Boundary check: 128 single-space-separated words equals MAX_QUERY_LENGTH and is NOT over
+        // the limit (Python uses a strict `>` comparison at search_utils.py:90), so it still searches.
+        var recorder = new RecordingLadybugExecutor();
+        var search = new LadybugSearchExecutor(recorder);
+        var atLimitQuery = string.Join(" ", Enumerable.Repeat("term", SearchUtilities.MaxQueryLength));
+
+        await search.SearchEntityEdgesFulltextAsync(
+            atLimitQuery,
+            new SearchFilters(),
+            groupIds: null,
+            limit: 5);
+
+        Assert.Single(recorder.Queried);
+        Assert.Equal(atLimitQuery, recorder.Queried[0].Parameters["query"]);
     }
 
     [Fact]

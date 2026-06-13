@@ -128,7 +128,10 @@ public sealed class MicrosoftExtensionsAICrossEncoderClient : CrossEncoderClient
         var options = new ChatOptions
         {
             MaxOutputTokens = Math.Min(_config.MaxTokens, MaxOutputTokens),
-            ModelId = _config.SmallModel ?? _config.Model,
+            // Mirrors openai_reranker_client.py:87 `model=self.config.model or DEFAULT_MODEL`: the
+            // reranker always uses the PRIMARY model (never the small model), falling back to
+            // gpt-4.1-nano (DEFAULT_MODEL, line 31) only when the configured model is unset/blank.
+            ModelId = string.IsNullOrWhiteSpace(_config.Model) ? DefaultModel : _config.Model,
             Temperature = 0,
             ResponseFormat = StructuredResponseValidator.CreateResponseFormat(typeof(RerankerRelevanceResponse))
         };

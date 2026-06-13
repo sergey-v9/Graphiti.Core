@@ -1,8 +1,10 @@
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Graphiti.Core;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -826,6 +828,53 @@ public class LlmClientTests
     }
 
     [Fact]
+    public async Task GenerateResponse_RetriesEmptyProviderResponseWithFeedback()
+    {
+        // Mirrors openai_base_client.py:131-136: an empty/whitespace model response is treated as
+        // "Invalid response from LLM" and routed through the re-prompt-with-feedback retry (line 275),
+        // not silently turned into an empty JSON object. The first provider reply here is whitespace,
+        // so MicrosoftExtensionsAIChatClient raises JsonException and re-prompts; the second is valid.
+        var chatClient = new ScriptedChatClient(
+            new ScriptedReply("   "),
+            new ScriptedReply("{\"ok\":true}"));
+        var graphitiClient = new MicrosoftExtensionsAIChatClient(chatClient);
+
+        var response = await graphitiClient.GenerateResponseAsync(
+            new[] { new Message("user", "extract") },
+            responseModel: typeof(CacheResponseA));
+
+        Assert.True(response["ok"]?.GetValue<bool>());
+        Assert.Equal(2, chatClient.Calls);
+        Assert.Equal(2, chatClient.MessageSnapshots.Count);
+        var retryMessages = chatClient.MessageSnapshots[1];
+        Assert.Contains(
+            "The previous response attempt was invalid.",
+            retryMessages[^1].Text,
+            StringComparison.Ordinal);
+        Assert.Contains("Error type: JsonException.", retryMessages[^1].Text, StringComparison.Ordinal);
+        Assert.Contains("empty response", retryMessages[^1].Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GenerateResponse_DoesNotRetryContentFilterRefusal()
+    {
+        // Mirrors openai_base_client.py:133-134,263-266: a refusal (RefusalError) is surfaced and NOT
+        // retried. Microsoft.Extensions.AI exposes the refusal only via the ContentFilter finish
+        // reason; that must propagate as a non-retryable LlmRefusalException with no re-prompt.
+        var chatClient = new ScriptedChatClient(
+            new ScriptedReply("{\"ok\":false}", ChatFinishReason.ContentFilter),
+            new ScriptedReply("{\"ok\":true}"));
+        var graphitiClient = new MicrosoftExtensionsAIChatClient(chatClient);
+
+        await Assert.ThrowsAsync<LlmRefusalException>(() =>
+            graphitiClient.GenerateResponseAsync(
+                new[] { new Message("user", "extract") },
+                responseModel: typeof(CacheResponseA)));
+
+        Assert.Equal(1, chatClient.Calls);
+    }
+
+    [Fact]
     public async Task GenerateResponse_CachesOnlyValidatedRetryResponseUnderOriginalKey()
     {
         var cache = new MemoryLlmResponseCache();
@@ -1147,6 +1196,59 @@ public class LlmClientTests
         }
 
         public void Dispose() => Disposed = true;
+    }
+
+    private sealed record ScriptedReply(string Text, ChatFinishReason? FinishReason = null);
+
+    private sealed class ScriptedChatClient : IChatClient
+    {
+        private readonly Queue<ScriptedReply> _replies;
+
+        public ScriptedChatClient(params ScriptedReply[] replies) =>
+            _replies = new Queue<ScriptedReply>(replies);
+
+        public int Calls { get; private set; }
+
+        public List<IReadOnlyList<Microsoft.Extensions.AI.ChatMessage>> MessageSnapshots { get; } = new();
+
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            MessageSnapshots.Add(messages
+                .Select(message => new Microsoft.Extensions.AI.ChatMessage(message.Role, message.Text))
+                .ToArray());
+            if (_replies.Count == 0)
+            {
+                throw new InvalidOperationException("No scripted chat response is available.");
+            }
+
+            var reply = _replies.Dequeue();
+            var response = new ChatResponse(
+                new Microsoft.Extensions.AI.ChatMessage(ChatRole.Assistant, reply.Text))
+            {
+                FinishReason = reply.FinishReason
+            };
+
+            return Task.FromResult(response);
+        }
+
+        public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            ChatOptions? options = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask.ConfigureAwait(false);
+            yield break;
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public void Dispose()
+        {
+        }
     }
 
     private sealed class CacheResponseA
