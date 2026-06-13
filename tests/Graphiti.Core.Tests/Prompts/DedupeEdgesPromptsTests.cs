@@ -89,6 +89,7 @@ public class DedupeEdgesPromptsTests
             NEW FACT: "Bob ran 3 miles on Wednesday"
             Result: duplicate_facts=[], contradicted_facts=[] (different events on different days - neither duplicate nor contradiction)
             </EXAMPLE>
+
             """;
         Assert.Equal(expected, messages[1].Content);
     }

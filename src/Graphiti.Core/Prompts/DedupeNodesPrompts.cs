@@ -151,21 +151,24 @@ internal static class DedupeNodesPrompts
         EntityNode node,
         IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
     {
-        if (entityTypes is null)
-        {
-            return "Default Entity Type";
-        }
-
+        // Python _get_entity_type_description (node_operations.py:184-189) selects ONLY the
+        // first label != "Entity" (default ""), does a SINGLE lookup, and returns its
+        // description if non-empty else "Default Entity Type". It never falls through to
+        // later labels.
+        var typeName = string.Empty;
         for (var i = 0; i < node.Labels.Count; i++)
         {
-            var label = node.Labels[i];
-            if (string.Equals(label, "Entity", StringComparison.Ordinal)
-                || !entityTypes.TryGetValue(label, out var definition)
-                || string.IsNullOrWhiteSpace(definition.Description))
+            if (!string.Equals(node.Labels[i], "Entity", StringComparison.Ordinal))
             {
-                continue;
+                typeName = node.Labels[i];
+                break;
             }
+        }
 
+        if (entityTypes is not null
+            && entityTypes.TryGetValue(typeName, out var definition)
+            && !string.IsNullOrWhiteSpace(definition.Description))
+        {
             return definition.Description;
         }
 

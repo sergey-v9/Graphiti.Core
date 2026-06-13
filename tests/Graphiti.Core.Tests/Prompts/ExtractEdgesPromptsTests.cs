@@ -216,6 +216,7 @@ public class ExtractEdgesPromptsTests
             <REFERENCE TIME>
             2026-01-02T03:04:05.0000000Z
             </REFERENCE TIME>
+
             """;
         Assert.Equal(expected, messages[1].Content);
     }
@@ -269,6 +270,7 @@ public class ExtractEdgesPromptsTests
             <FACTS>
             [{"fact":"Alice started at Acme last week.","reference_time":"2026-01-02T03:04:05.0000000Z"},{"fact":"Bob visited Paris.","reference_time":"unknown"}]
             </FACTS>
+
             """;
         Assert.Equal(expected, messages[1].Content);
     }
@@ -337,6 +339,7 @@ public class ExtractEdgesPromptsTests
             <EXISTING ATTRIBUTES>
             {"role":"engineer"}
             </EXISTING ATTRIBUTES>
+
             """;
         Assert.Equal(expected, messages[1].Content);
     }

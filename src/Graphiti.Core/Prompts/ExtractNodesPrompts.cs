@@ -461,20 +461,20 @@ internal static class ExtractNodesPrompts
 
             ENTITY: {"name": "Sam Rivera", "phones": "415-555-0142"}
             MESSAGES contain no phone information for Sam.
-            GOOD -> "phones": "415-555-0142"   (preserved existing value)
-            BAD  -> "phones": "415-555-0142 (implied by original entity, but no new information in
+            GOOD → "phones": "415-555-0142"   (preserved existing value)
+            BAD  → "phones": "415-555-0142 (implied by original entity, but no new information in
                     messages, retaining original value as per instruction...)"
 
             ENTITY: {"name": "Northwind", "industry": null}
             MESSAGES mention Northwind only as the platform some content was posted to.
-            GOOD -> "industry": null   (no explicit industry classification was stated)
-            BAD  -> "industry": "Content platform, SaaS (implied by usage context, though not stated
+            GOOD → "industry": null   (no explicit industry classification was stated)
+            BAD  → "industry": "Content platform, SaaS (implied by usage context, though not stated
                     explicitly as industry classification...)"
 
             ENTITY: {"name": "Priya"}
             MESSAGES contain no phone for Priya, but discuss a project she contributed to.
-            GOOD -> "phones": null
-            BAD  -> "phones": "Worked with Lin and Marco on the Q3 launch..."   (off-topic content dump)
+            GOOD → "phones": null
+            BAD  → "phones": "Worked with Lin and Marco on the Q3 launch..."   (off-topic content dump)
 
             <MESSAGES>
             {{context.PreviousEpisodesJson}}
@@ -674,6 +674,7 @@ internal static class ExtractNodesPrompts
             {{PromptJson.Serialize(descriptions)}}
             </ENTITY_TYPE_DESCRIPTIONS>
             When an entity's type appears in ENTITY_TYPE_DESCRIPTIONS, use the description to decide which facts are most relevant to that entity type. NEVER mention the entity type, type description, or classification in the summary text itself.
+
             """;
     }
 }

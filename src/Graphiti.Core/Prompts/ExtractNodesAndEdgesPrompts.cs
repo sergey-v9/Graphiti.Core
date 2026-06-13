@@ -51,6 +51,7 @@ internal static class ExtractNodesAndEdgesPrompts
     {
         var edgeTypesSection = BuildEdgeTypesSection(context.EdgeTypesJson);
         var userPrompt = $$"""
+
             ENTITY RULES:
             1. Extract speakers and named entities explicitly mentioned in CURRENT MESSAGES.
             2. Entity names must be at most 5 words. Use the most specific form mentioned.
@@ -76,7 +77,7 @@ internal static class ExtractNodesAndEdgesPrompts
                   "1 cup granulated white sugar", "4 cups water", "15-30 minutes"). Numbers
                   are properties of the thing they measure - preserve them inside the fact.
                e. Geographic coordinates / latitudes / longitudes ("52 degrees north",
-                  "66 degrees 33' north of the equator"). They are attributes of the location entity.
+                  "66°33' north of the equator"). They are attributes of the location entity.
                f. Multiple-choice answer labels, response-option tokens, or rubric/template
                   scaffolding the assistant is constrained to emit ("Agree",
                   "Strongly disagree", "the four answers", "the score", "scorr"). These are
@@ -103,9 +104,9 @@ internal static class ExtractNodesAndEdgesPrompts
             1. source_entity_name and target_entity_name must match your extracted entity names.
             2. When a fact involves two entities that are BOTH in your extracted entities list,
                you MUST use both as source and target - never collapse into a self-referencing fact:
-               "Nate plays games on a Gamecube" -> Nate -> PLAYS_GAMES_ON -> Gamecube
-               "Sarah lives in San Francisco" -> Sarah -> LIVES_IN -> San Francisco
-               "James has a dog named Maximilian" -> James -> HAS_PET -> Maximilian
+               "Nate plays games on a Gamecube" → Nate -> PLAYS_GAMES_ON -> Gamecube
+               "Sarah lives in San Francisco" → Sarah -> LIVES_IN -> San Francisco
+               "James has a dog named Maximilian" → James -> HAS_PET -> Maximilian
                Only use a self-referencing fact when no second entity in your list fits.
                Self-referencing facts are still common and valuable - do NOT skip them:
                - Routines/health: "Deborah goes jogging every morning", "Evan has a knee injury"
@@ -131,7 +132,7 @@ internal static class ExtractNodesAndEdgesPrompts
                with different episode numbers.
             5. You MAY use PREVIOUS MESSAGES to resolve what the current message refers to.
                If the current message reacts to or confirms prior context, extract the full
-               contextualized fact (e.g., "all the hard work paid off" -> extract what paid off).
+               contextualized fact (e.g., "all the hard work paid off" → extract what paid off).
             6. Extract liberally - when in doubt, extract the fact. Preferences, opinions,
                reactions, advice, plans, states, and experiences are all valuable. Only skip
                content-free utterances like "Hi!", "Bye!", "Thanks!".
@@ -157,7 +158,7 @@ internal static class ExtractNodesAndEdgesPrompts
                own/identify with) as source, not an observation noun.
 
             OUTPUT DISCIPLINE:
-            - Entity `name` is a literal mention from CURRENT MESSAGES, <=5 words. NEVER use a full
+            - Entity `name` is a literal mention from CURRENT MESSAGES, ≤5 words. NEVER use a full
               sentence, action item, goal statement, or quoted aspiration as a name.
               BAD: "Establish a firm training/onboarding program",
                    "Secure competitive advantage through IP",
@@ -252,6 +253,7 @@ internal static class ExtractNodesAndEdgesPrompts
             </CURRENT MESSAGES>
 
             {{context.CustomExtractionInstructions}}
+
             """;
 
         return new[]
@@ -275,6 +277,7 @@ internal static class ExtractNodesAndEdgesPrompts
         }
 
         return $$"""
+
             <FACT TYPES>
             {{edgeTypesJson}}
             </FACT TYPES>

@@ -139,4 +139,43 @@ public class DedupeNodesPromptsTests
             """;
         Assert.Equal(expected, messages[1].Content);
     }
+
+    [Fact]
+    public void BuildNodes_EntityTypeDescription_UsesFirstNonEntityLabelOnly()
+    {
+        // Python _get_entity_type_description (node_operations.py:184-189) selects ONLY the first
+        // label != "Entity", does a SINGLE lookup, and falls back to "Default Entity Type" when
+        // that label is absent from entity_types. It NEVER falls through to later labels, even if a
+        // later label (here "Location") IS present with a description.
+        var episode = CreateEpisode(
+            "Alice mentioned an unknown place.",
+            new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc));
+        var extractedNodes = new[]
+        {
+            CreateNode("Mystery", "Entity", "Unknown", "Location")
+        };
+        var candidates = Array.Empty<EntityNode>();
+        var entityTypes = new Dictionary<string, EntityTypeDefinition>
+        {
+            // "Unknown" is intentionally absent; "Location" IS present with a description.
+            ["Location"] = new("Location", "A city, region, or other place.")
+        };
+
+        var context = DedupeNodesPrompts.BuildContext(
+            extractedNodes,
+            candidates,
+            episode,
+            Array.Empty<EpisodicNode>(),
+            entityTypes);
+        var messages = DedupeNodesPrompts.BuildNodes(context);
+
+        // First non-Entity label is "Unknown" (absent) -> single lookup misses -> default.
+        // It must NOT fall through to "Location"'s real description.
+        Assert.Contains(
+            "\"entity_type_description\":\"Default Entity Type\"",
+            messages[1].Content);
+        Assert.DoesNotContain(
+            "\"entity_type_description\":\"A city, region, or other place.\"",
+            messages[1].Content);
+    }
 }
