@@ -156,6 +156,7 @@ internal static class ExtractEdgesPrompts
             <REFERENCE TIME>
             {{GraphitiHelpers.EnsureUtc(referenceTime).ToString("O")}}
             </REFERENCE TIME>
+
             """;
 
         return new[]
@@ -198,6 +199,7 @@ internal static class ExtractEdgesPrompts
             <FACTS>
             {{PromptJson.Serialize(facts)}}
             </FACTS>
+
             """;
 
         return new[]
@@ -257,6 +259,7 @@ internal static class ExtractEdgesPrompts
             <EXISTING ATTRIBUTES>
             {{PromptJson.Serialize(JsonSerializer.SerializeToNode(existingAttributes, GraphitiJsonSerializer.Options))}}
             </EXISTING ATTRIBUTES>
+
             """;
 
         return new[]

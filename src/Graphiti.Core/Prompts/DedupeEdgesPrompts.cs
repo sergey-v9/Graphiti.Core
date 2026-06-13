@@ -75,6 +75,7 @@ internal static class DedupeEdgesPrompts
             NEW FACT: "Bob ran 3 miles on Wednesday"
             Result: duplicate_facts=[], contradicted_facts=[] (different events on different days - neither duplicate nor contradiction)
             </EXAMPLE>
+
             """;
 
         return new[]
