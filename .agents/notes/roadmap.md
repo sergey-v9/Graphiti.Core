@@ -17,6 +17,15 @@ attribute extraction aligned into edge resolution. Phase 3 now has a runnable Op
 env-gated OpenAI tests, and an opt-in M.E.AI-backed cross-encoder reranker wired into the sample,
 but no end-to-end run against a real provider has passed yet. `parity.md` has the row-by-row truth.
 
+A supervisor-driven adversarial parity review on 2026-06-13 (the 2026-06-11 work was self-tested, so
+golden tests could not catch transcription/logic drift) found and fixed real divergences in edge
+resolution (duplicate-candidate reranking, concurrency restoration), bulk ingestion (summary edge
+facts, candidate-pool widening), community summaries, the cross-encoder model, LLM empty/refusal
+handling, several prompts, and the Ladybug full-text query. Integrated green (948 tests). Two bulk
+behaviors were kept as documented DIVERGENT and a set of low/latent items recorded as tracked — see
+`decisions.md`. This hardens Phases 1–2; it does not substitute for the Phase 3 real-provider run,
+which remains the outstanding acceptance gate and needs an `OPENAI_API_KEY` the agents cannot supply.
+
 ## Performance/allocation moratorium
 
 Performance and allocation work is **paused** until Phases 1–3 are complete. Exception: fixing a

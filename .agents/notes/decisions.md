@@ -142,11 +142,14 @@ semantics, wire compatibility, or performance/allocation discipline.
   it. Treat this as an intentional C# feature.
 - Date-filter Cypher uses unique parameter names across OR branches; Python's reset-per-branch
   behavior can collide.
-- Kuzu-compatible full-text query construction follows Python's raw-whitespace semantics: it splits
-  on whitespace and truncates to the first `SearchUtilities.MaxQueryLength` words instead of using
-  Lucene/Falkor sanitization or rejecting over-limit queries. Active Ladybug search owns this behavior
-  in `Drivers/Ladybug/LadybugFulltextQuery`; `SearchUtilities` keeps the `GraphProvider.Kuzu` branch
-  for compatibility callers outside the driver.
+- Kuzu-compatible full-text query construction matches Python's `fulltext_query` KUZU branch
+  (`search_utils.py:88-92`) exactly: it counts words by splitting on a single space, returns an empty
+  string (no search) when the count exceeds `SearchUtilities.MaxQueryLength` (128), and otherwise
+  returns the query **verbatim** with no whitespace normalization or per-term truncation. (Corrected
+  2026-06-13: an earlier note and the original `LadybugFulltextQuery` wrongly collapsed whitespace and
+  truncated over-limit queries while still searching; Python rejects over-limit queries outright.)
+  Active Ladybug search owns this in `Drivers/Ladybug/LadybugFulltextQuery`; `SearchUtilities` keeps
+  the `GraphProvider.Kuzu` branch for compatibility callers outside the driver.
 - LadybugDB/Kuzu foundation uses the full C# `SagaNode` model shape for Saga schema/save/get,
   includes entity-edge `reference_time` in save/get/search projections, and returns entity edges
   incident to either endpoint from `GetEntityEdgesByNodeUuidAsync`. This deliberately fixes Python
@@ -175,6 +178,69 @@ semantics, wire compatibility, or performance/allocation discipline.
   Preserve Python's distinction: exact duplicate edge reuse returns before the edge-attribute prompt
   and keeps existing attributes, while non-fast-path resolution may replace or clear attributes
   according to the matched custom edge type.
+
+## Deliberate divergences accepted in the 2026-06-13 parity-hardening pass
+
+A supervisor-driven adversarial review of the 2026-06-11 agent work found two bulk-ingestion
+behaviors where C# deliberately differs from Python. They are KEPT as intentional divergences (not
+defects) because each is a defensible improvement, and they are recorded here so they are not later
+"corrected" toward Python or mistaken for accidental drift. If a future product decision prefers
+strict Python-bulk parity, align them and update this note plus `parity.md`.
+
+- **Bulk cross-episode edge invalidation is more aggressive than Python.** In `add_episode_bulk`,
+  C# threads each episode's freshly resolved edges back as `existingEdgesOverride` so a later episode
+  in the same batch can dedupe/contradict an earlier episode's edge. Python's `_resolve_nodes_and_edges_bulk`
+  passes no override and resolves episodes in parallel against the live (not-yet-written) graph, so
+  its bulk path applies cross-episode temporal invalidation *less* aggressively (Python's own bulk
+  docstring concedes this). C# is the stronger behavior; it is pinned by
+  `AddEpisodeBulk_DoesNotReinvalidateAlreadyInvalidatedSnapshotEdge`. Note: override edges feed only
+  the duplicate/invalidation-candidate *resolution*, not a Python-absent invalidation-candidate
+  *search* — that separate over-reach was removed in the hardening pass.
+- **Bulk episodes own their entity edges (`episode.EntityEdges`); Python's bulk leaves it empty.**
+  C# populates `episode.EntityEdges` in the bulk path (as the single-episode path and Python's single
+  `add_episode` do), so bulk-ingested episodes report and remove their edges consistently. Python's
+  `add_episode_bulk` never sets `entity_edges`, so bulk episodes there own no edges for
+  `remove_episode`/`get_nodes_and_edges_by_episode`. C# deliberately makes bulk consistent with
+  single-episode removal semantics rather than replicating Python's bulk/single inconsistency.
+
+Other accepted, smaller divergences confirmed in the same pass:
+
+- The `MicrosoftExtensionsAICrossEncoderClient` user prompt adds one sentence — "Return your decision
+  and confidence as JSON matching the provided schema." — absent from Python's `openai_reranker_client`.
+  This is a necessary consequence of the already-documented structured boolean+confidence scoring
+  divergence (generic M.E.AI lacks OpenAI top-logprob controls); the system prompt and first user
+  sentence remain verbatim.
+- Refusal detection is best-effort: M.E.AI exposes no structured refusal field, so only a
+  `ChatFinishReason.ContentFilter` is surfaced as the non-retryable `LlmRefusalException` (mirroring
+  Python's non-retried `RefusalError`). A textual refusal returned with a normal finish reason cannot
+  be distinguished and is retried like any malformed response.
+
+## Tracked-but-unfixed divergences (low impact / latent; from the 2026-06-13 review)
+
+These were confirmed real but left as-is, with a rationale. Revisit if the relevant path is wired or
+the impact grows.
+
+- **Multi-episode attribution internals** diverge from Python in several latent ways (reference-time
+  first-valid vs first-element, resolved-vs-extracted index-map remap, dropped-duplicate episode
+  merging). Unreachable today: both Python and C# extract exactly one episode per extraction call, so
+  every path reduces to a single episode index `[0]`. If multi-episode extraction is ever wired,
+  port `node_operations.py:104-112` / `edge_operations.py:170-181` attribution blocks and reconcile
+  the helpers in `EpisodeAttribution.cs`.
+- **Edge signature resolution does not DB-fetch missing endpoint nodes** (`edge_operations.py:439-455`),
+  so an edge whose endpoint is absent from the resolved-node set can lose a custom edge type. Only
+  reachable for override-derived/cross-pair endpoints; standard paths carry both endpoints.
+- **A single `now` is shared across a batch's edges** rather than Python's per-edge `utc_now()`;
+  expired_at/invalid_at values are identical within a batch (arguably preferable for determinism).
+- **Ladybug distance/mention rerankers** dedup input UUIDs and would surface backend-only UUIDs; not
+  reachable through the real per-UUID Cypher (which constrains `n.uuid = $node_uuid`). A test enshrines
+  the divergent shape using impossible foreign rows — test hygiene, not a production defect.
+- **Ladybug `RetrieveEpisodes` returns oldest-first**, matching the documented `retrieve_episodes`
+  contract (`graph_operations.py:223`, `graph_data_operations.py` `list(reversed(...))`); Python's
+  Kuzu operations-interface path returns newest-first, violating its own contract. C# is the
+  defensible choice; do not "fix" it toward newest-first.
+- **Combined-edge parsing defaults a missing `relation_type` to `"RELATES_TO"`** where Python rejects
+  the response (required Pydantic field). Reachable only if a provider returns an edge with valid
+  endpoints but no relation type; left lenient for now.
 
 ## Provider Status
 

@@ -17,6 +17,35 @@ baseline, add rows or reopen statuses for anything affected, then move the ancho
 - `DIVERGENT` — deliberate, documented C# difference (see `decisions.md`); not a gap.
 - `N/A` — intentionally out of scope for C#.
 
+## 2026-06-13 parity-hardening pass (supervisor review of the 2026-06-11 agent work)
+
+An adversarial Python-vs-C# review (every flagged issue independently re-checked) found the
+2026-06-11 work largely faithful but surfaced real divergences the green unit suite could not see —
+because the agent authored both the code and its golden tests. Fixed on four review branches and
+integrated; full verification green (948 passed, 2 skipped, format/build/pack clean). What changed:
+
+- **Prompts:** restored Unicode glyphs folded to ASCII (`°`, `≤`, `→`) and trailing newlines/blank
+  lines that C# raw strings had dropped (notably the saga `EXISTING_KNOWLEDGE` blank line, reachable
+  on every incremental update); fixed `dedupe_nodes` `entity_type_description` to use the first
+  non-Entity label only; converted the substring-only combined-prompt golden test to full-string
+  equality (it then exposed and fixed four more latent glyph/newline defects).
+- **Edge resolution:** the duplicate-candidate facts shown to the resolve-edge LLM are now relevance-
+  reranked and limited via `EDGE_HYBRID_SEARCH_RRF` (was raw/unlimited); timestamp prompt uses
+  `episode.valid_at`; override edges no longer leak into invalidation candidates; duplicate hits
+  attach only the resolution episode UUID; the serialized edge loop was restored to concurrent
+  resolution (`ThrottledWork.SelectAsync`) and the test that had been loosened to hide the
+  serialization was reverted to `Equal(2)`.
+- **Ingestion/summary:** bulk summaries no longer append edge facts (Python `edges=None`); community
+  summaries use the raw entity summary, not name-prefixed text; bulk first-pass node dedup no longer
+  over-widens the candidate pool.
+- **Infra:** Ladybug full-text is now verbatim-or-empty (was collapse+truncate+search); cross-encoder
+  uses the primary model not the small model; empty LLM responses re-prompt instead of being swallowed;
+  content-filter refusals surface as a non-retryable `LlmRefusalException`.
+
+Deliberate divergences and tracked-but-unfixed items from this pass are recorded in `decisions.md`
+("Deliberate divergences accepted…" and "Tracked-but-unfixed divergences"). The bulk row below is
+flagged accordingly.
+
 ## Prompts (LLM instruction text)
 
 This is the highest-risk area. The prompt prose in `graphiti_core/prompts/` is core Graphiti IP:
@@ -71,7 +100,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Combined node+edge extraction path | utils/maintenance/combined_extraction.py | EpisodeGraphExtractor.ExtractCombinedEpisodeGraphAsync | OK | Internal path ported 2026-06-11: single LLM call, orphan dropping, node attribution from facts, self-fact preservation, and batch timestamps. Public `Graphiti` ingestion remains on separate extraction because Python exposes `use_combined_extraction` only as an internal bulk helper flag defaulting to `False`; tests pin that `add_episode` and `add_episode_bulk` do not call the combined prompt by default |
 | Edge attribute extraction during add_episode | edge_operations.resolve_extracted_edge | EdgeResolutionService | OK | Aligned 2026-06-11: structured edge attributes are extracted during edge resolution only. There is no post-resolution ingestion-stage edge attribute pass; exact duplicate reuse skips the prompt and preserves existing attributes, while non-fast-path resolution replaces/clears attributes like Python |
 | Episodic edge building | edge_operations.build_episodic_edges | MaintenanceUtilities | OK | |
-| Bulk ingestion (true batch dedup/resolve) | bulk_utils, graphiti.py:1230+ | Graphiti.Ingestion.cs:195+ | OK | Ported 2026-06-11; staged extraction, first-pass node resolution against live graph, directed node UUID maps, cross-batch node/edge dedupe, final node/edge resolution, pointer remapping, and per-episode provenance are covered |
+| Bulk ingestion (true batch dedup/resolve) | bulk_utils, graphiti.py:1230+ | Graphiti.Ingestion.cs:195+ | OK + 2 DIVERGENT | Staged extraction, cross-batch node/edge dedupe, final resolution, pointer remapping, per-episode provenance. 2026-06-13 fixes: bulk summaries no longer append edge facts (Python `edges=None`); first-pass node dedup no longer over-widens the candidate pool. Two behaviors KEPT as documented DIVERGENT (see `decisions.md`): cross-episode edge invalidation is more aggressive than Python, and bulk episodes own `episode.EntityEdges` where Python's bulk leaves it empty |
 | Saga association + episode-time watermarks | graphiti.py | SagaService | OK | Watermarks present |
 | Community update on ingest | graphiti.py | CommunityService | OK | Flow parity; community summary/name prompts ported 2026-06-11 |
 

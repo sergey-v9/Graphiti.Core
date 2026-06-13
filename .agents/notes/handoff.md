@@ -124,7 +124,17 @@ when needed.
 Rerun verification before claiming the tree is green; historical test counts drift as coverage is
 added.
 
-Latest checkpoint, 2026-06-11:
+Latest checkpoint, 2026-06-13:
+
+Succeeded after integrating the supervisor-driven parity-hardening pass (review branches `ws/a`
+prompts, `ws/b` edge resolution, `ws/c` ingestion/summary, `ws/d` infra, merged to `main`):
+`.\eng\Verify-GraphitiCore.ps1` — restore, format verification, warning-clean build including
+`Graphiti.Sample.OpenAI`, full test suite (`948` passed, `2` skipped, `950` total), and `dotnet pack`
+for `Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` unset; the 2 skips are the env-gated
+`OpenAIProviderIntegrationTests`. See `parity.md` "2026-06-13 parity-hardening pass" and `decisions.md`
+for what changed and the accepted divergences. No real-provider run has executed yet (plan 03).
+
+Previous checkpoint, 2026-06-11:
 
 Succeeded after repairing LadybugDB .NET list/null binding locally, wiring Graphiti to the local
 `0.17.0-alpha.2-graphiti.1` package family, removing Graphiti's Ladybug statement normalizer, and
