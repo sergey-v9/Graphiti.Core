@@ -340,7 +340,10 @@ internal sealed class EdgeResolutionService(
                 TargetNodeUuid = targetNode.Uuid,
                 GroupId = groupId,
                 CreatedAt = now,
-                Name = string.IsNullOrWhiteSpace(extracted.RelationType) ? "RELATES_TO" : extracted.RelationType,
+                // Python uses name=edge_data.relation_type with no fallback (edge_operations.py:302);
+                // relation_type is a required field, and ExtractEdges/BuildCombinedEdges now skip any
+                // edge lacking one, so there is no empty value to fabricate a "RELATES_TO" name from.
+                Name = extracted.RelationType,
                 Fact = extracted.Fact,
                 Episodes = EpisodeAttribution.MapIndicesToEpisodeUuids(extracted.EpisodeIndices, episodes),
                 ValidAt = extracted.ValidAt,
