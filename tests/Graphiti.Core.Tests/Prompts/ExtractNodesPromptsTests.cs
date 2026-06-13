@@ -397,20 +397,20 @@ public class ExtractNodesPromptsTests
 
             ENTITY: {"name": "Sam Rivera", "phones": "415-555-0142"}
             MESSAGES contain no phone information for Sam.
-            GOOD -> "phones": "415-555-0142"   (preserved existing value)
-            BAD  -> "phones": "415-555-0142 (implied by original entity, but no new information in
+            GOOD → "phones": "415-555-0142"   (preserved existing value)
+            BAD  → "phones": "415-555-0142 (implied by original entity, but no new information in
                     messages, retaining original value as per instruction...)"
 
             ENTITY: {"name": "Northwind", "industry": null}
             MESSAGES mention Northwind only as the platform some content was posted to.
-            GOOD -> "industry": null   (no explicit industry classification was stated)
-            BAD  -> "industry": "Content platform, SaaS (implied by usage context, though not stated
+            GOOD → "industry": null   (no explicit industry classification was stated)
+            BAD  → "industry": "Content platform, SaaS (implied by usage context, though not stated
                     explicitly as industry classification...)"
 
             ENTITY: {"name": "Priya"}
             MESSAGES contain no phone for Priya, but discuss a project she contributed to.
-            GOOD -> "phones": null
-            BAD  -> "phones": "Worked with Lin and Marco on the Q3 launch..."   (off-topic content dump)
+            GOOD → "phones": null
+            BAD  → "phones": "Worked with Lin and Marco on the Q3 launch..."   (off-topic content dump)
 
             <MESSAGES>
             [{"content":"Sam Rivera kept the 415-555-0142 number.","timestamp":"2026-01-02T03:04:05.0000000Z"}]
@@ -529,12 +529,12 @@ public class ExtractNodesPromptsTests
             "<EPISODES>\n[]\n\"Jordan now supervises two studio assistants.\"\n</EPISODES>",
             messages[1].Content,
             StringComparison.Ordinal);
+        // The descriptions section must end with a blank line before <ENTITIES> to match Python
+        // _entity_type_descriptions_section (extract_nodes.py:499-506, used at :527-528/:633-634).
         Assert.Contains(
-            "<ENTITY_TYPE_DESCRIPTIONS>\n{\"Person\":\"A human person.\"}\n</ENTITY_TYPE_DESCRIPTIONS>",
-            messages[1].Content,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "<ENTITIES>\n[{\"name\":\"Jordan Lee\",\"summary\":\"Jordan Lee works at Belmont Arts Center.\",\"entity_types\":[\"Entity\",\"Person\"],\"attributes\":{}}]\n</ENTITIES>",
+            "</EPISODES>\n\n<ENTITY_TYPE_DESCRIPTIONS>\n{\"Person\":\"A human person.\"}\n</ENTITY_TYPE_DESCRIPTIONS>\n" +
+            "When an entity's type appears in ENTITY_TYPE_DESCRIPTIONS, use the description to decide which facts are most relevant to that entity type. NEVER mention the entity type, type description, or classification in the summary text itself.\n" +
+            "\n<ENTITIES>\n[{\"name\":\"Jordan Lee\",\"summary\":\"Jordan Lee works at Belmont Arts Center.\",\"entity_types\":[\"Entity\",\"Person\"],\"attributes\":{}}]\n</ENTITIES>",
             messages[1].Content,
             StringComparison.Ordinal);
     }
