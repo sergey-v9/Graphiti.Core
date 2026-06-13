@@ -204,7 +204,11 @@ internal sealed class CommunityService(
         var summaries = new List<string>(cluster.Count);
         foreach (var node in cluster)
         {
-            var summary = DeterministicCommunityText.BuildNodeSummary(node);
+            // Seed the pairwise reduction with the RAW entity summary, not name-prefixed
+            // text. Python build_community (community_operations.py:177) uses
+            // `entity.summary` directly; for a single-node cluster this seed is persisted
+            // verbatim via truncate_at_sentence (:199).
+            var summary = node.Summary;
             if (!string.IsNullOrWhiteSpace(summary))
             {
                 summaries.Add(summary);
@@ -316,8 +320,11 @@ internal sealed class CommunityService(
             return (Array.Empty<CommunityNode>(), Array.Empty<CommunityEdge>());
         }
 
+        // Pair the RAW entity summary with the existing community summary, matching
+        // Python update_community (community_operations.py:336):
+        // summarize_pair(llm_client, (entity.summary, community.summary)).
         var newSummary = await GeneratePairSummaryAsync(
-            DeterministicCommunityText.BuildNodeSummary(entity),
+            entity.Summary,
             community.Summary,
             cancellationToken).ConfigureAwait(false);
         var newName = await GenerateCommunityNameAsync(
