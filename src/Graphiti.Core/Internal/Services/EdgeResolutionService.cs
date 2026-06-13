@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 
 namespace Graphiti.Core.Internal.Services;
@@ -6,7 +7,8 @@ internal sealed class EdgeResolutionService(
     Func<IGraphDriver> driverAccessor,
     GraphitiClients clients,
     ILlmClient llmClient,
-    ILogger logger)
+    ILogger logger,
+    Func<int>? getMaxDegreeOfParallelism = null)
 {
     public static string NormalizeFact(string fact) => GraphitiHelpers.NormalizeEntityKey(fact);
 
@@ -91,13 +93,19 @@ internal sealed class EdgeResolutionService(
 
         try
         {
-            var driver = driverAccessor();
             var result = new List<EntityEdge>();
             var resultUuids = new HashSet<string>(StringComparer.Ordinal);
             var seen = new Dictionary<(string SourceUuid, string TargetUuid, string NormalizedFact), EntityEdge>();
             var skippedEdges = 0;
             var nodesByUuid = BuildNodesByUuid(nodes);
-            var attributeSchemaCache = new Dictionary<EntityTypeDefinition, StructuredResponseSchema>();
+            var attributeSchemaCache = new ConcurrentDictionary<EntityTypeDefinition, StructuredResponseSchema>();
+
+            // Serial preparation pass (mirrors Python resolve_extracted_edges:344-358 fast-path
+            // dedup): keep the first occurrence of each (source, target, normalized fact) within the
+            // batch, drop later duplicates (attaching only this episode's uuid to the kept edge), and
+            // initialise per-edge fields. Ordering is preserved so the concurrent gather and result
+            // collection below remain deterministic.
+            var prepared = new List<EntityEdge>(extractedEdges.Count);
             foreach (var candidate in extractedEdges)
             {
                 if (string.IsNullOrWhiteSpace(candidate.SourceNodeUuid)
@@ -115,7 +123,11 @@ internal sealed class EdgeResolutionService(
                     NormalizedFact: NormalizeFact(candidate.Fact));
                 if (seen.TryGetValue(key, out var duplicateCandidate))
                 {
-                    AddEpisodesIfMissing(duplicateCandidate, candidate.Episodes, episode.Uuid);
+                    // Python resolve_extracted_edges (edge_operations.py:344-358) keeps the first
+                    // occurrence and drops later within-batch duplicates without merging their
+                    // episode lists; the kept edge picks up the current episode's uuid during its
+                    // own resolution. Attach only the resolution episode here.
+                    EdgeMergeHelpers.AddEpisodeIfMissing(duplicateCandidate, episode.Uuid);
                     resolvedEdgeUuidMap?.TryAdd(candidate.Uuid, duplicateCandidate.Uuid);
                     skippedEdges++;
                     continue;
@@ -137,48 +149,45 @@ internal sealed class EdgeResolutionService(
                     candidate.ExpiredAt ??= now;
                 }
 
-                var relatedEdges = await driver.GetEntityEdgesBetweenNodesAsync(
-                    candidate.SourceNodeUuid,
-                    candidate.TargetNodeUuid,
-                    cancellationToken).ConfigureAwait(false);
-                relatedEdges = EdgeMergeHelpers.MergeEdgeOverrides(
-                    relatedEdges,
-                    existingEdgesOverride,
-                    edge => edge.SourceNodeUuid == candidate.SourceNodeUuid && edge.TargetNodeUuid == candidate.TargetNodeUuid);
-                var duplicate = FindDuplicateFact(relatedEdges, key.NormalizedFact);
-                if (duplicate is not null)
-                {
-                    AddEpisodesIfMissing(duplicate, candidate.Episodes, episode.Uuid);
-                    resolvedEdgeUuidMap?.TryAdd(candidate.Uuid, duplicate.Uuid);
-                    EdgeMergeHelpers.AddResolvedEdge(result, resultUuids, duplicate);
-                    continue;
-                }
+                prepared.Add(candidate);
+            }
 
-                var existingEdges = await GetEdgeInvalidationCandidatesAsync(
+            // Concurrent resolve pass (mirrors Python's semaphore_gather over resolve_extracted_edge,
+            // edge_operations.py:489-509). Each prepared edge runs its independent between-nodes
+            // fetch, duplicate/invalidation searches, and LLM resolution. Mutations to existing graph
+            // edges shared across candidates (episode attribution, contradiction expiry) are
+            // serialised under sharedEdgeMutationLock so real-thread parallelism stays as safe as
+            // Python's cooperative single-thread async. SelectAsync preserves input order in the
+            // returned array, keeping the result collection deterministic.
+            var sharedEdgeMutationLock = new object();
+            var outcomes = await ThrottledWork.SelectAsync(
+                prepared,
+                (candidate, token) => ResolvePreparedEdgeAsync(
                     candidate,
-                    groupId,
-                    relatedEdges,
-                    existingEdgesOverride,
-                    cancellationToken).ConfigureAwait(false);
-                var (resolvedEdge, invalidatedEdges) = await ResolveEdgeWithLlmAsync(
-                    candidate,
-                    relatedEdges,
-                    existingEdges,
                     episode,
+                    groupId,
                     now,
-                    cancellationToken,
+                    sharedEdgeMutationLock,
+                    existingEdgesOverride,
                     edgeTypes,
                     edgeTypeMap,
                     nodesByUuid,
-                    attributeSchemaCache).ConfigureAwait(false);
-                if (resolvedEdge.Uuid == candidate.Uuid)
+                    attributeSchemaCache,
+                    token),
+                getMaxDegreeOfParallelism?.Invoke() ?? Environment.ProcessorCount,
+                cancellationToken).ConfigureAwait(false);
+
+            // Serial collection pass in input order (mirrors edge_operations.py:511-526).
+            foreach (var outcome in outcomes)
+            {
+                resolvedEdgeUuidMap?.TryAdd(outcome.ExtractedEdgeUuid, outcome.ResolvedEdge.Uuid);
+                if (outcome.IsNew)
                 {
-                    newlyCreatedEdgeUuids?.Add(resolvedEdge.Uuid);
+                    newlyCreatedEdgeUuids?.Add(outcome.ResolvedEdge.Uuid);
                 }
 
-                resolvedEdgeUuidMap?.TryAdd(candidate.Uuid, resolvedEdge.Uuid);
-                EdgeMergeHelpers.AddResolvedEdge(result, resultUuids, resolvedEdge);
-                foreach (var invalidatedEdge in invalidatedEdges)
+                EdgeMergeHelpers.AddResolvedEdge(result, resultUuids, outcome.ResolvedEdge);
+                foreach (var invalidatedEdge in outcome.InvalidatedEdges)
                 {
                     EdgeMergeHelpers.AddResolvedEdge(result, resultUuids, invalidatedEdge);
                 }
@@ -198,6 +207,93 @@ internal sealed class EdgeResolutionService(
             throw;
         }
     }
+
+    private async Task<EdgeResolveOutcome> ResolvePreparedEdgeAsync(
+        EntityEdge candidate,
+        EpisodicNode episode,
+        string groupId,
+        DateTime now,
+        object sharedEdgeMutationLock,
+        IReadOnlyList<EntityEdge>? existingEdgesOverride,
+        IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes,
+        IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap,
+        IReadOnlyDictionary<string, EntityNode> nodesByUuid,
+        ConcurrentDictionary<EntityTypeDefinition, StructuredResponseSchema> attributeSchemaCache,
+        CancellationToken cancellationToken)
+    {
+        var driver = driverAccessor();
+        var normalizedFact = NormalizeFact(candidate.Fact);
+
+        var betweenNodesEdges = await driver.GetEntityEdgesBetweenNodesAsync(
+            candidate.SourceNodeUuid,
+            candidate.TargetNodeUuid,
+            cancellationToken).ConfigureAwait(false);
+        // Python edge_operations.py:376-390 appends per-pair override edges onto the
+        // between-nodes (valid_edges) list before the duplicate-candidate hybrid search.
+        betweenNodesEdges = EdgeMergeHelpers.MergeEdgeOverrides(
+            betweenNodesEdges,
+            existingEdgesOverride,
+            edge => edge.SourceNodeUuid == candidate.SourceNodeUuid && edge.TargetNodeUuid == candidate.TargetNodeUuid);
+
+        // Keep the exact-match scan over the full between-nodes superset for verbatim
+        // duplicate detection (Python fast path, edge_operations.py:684-695 operates on the
+        // reranked related_edges, but the full superset here is a safe extension that never
+        // mislabels a non-duplicate).
+        var duplicate = FindDuplicateFact(betweenNodesEdges, normalizedFact);
+        if (duplicate is not null)
+        {
+            // Python resolve_extracted_edge fast path (edge_operations.py:692-694) appends
+            // only episode.uuid to the matched existing edge. The edge is shared across
+            // candidates, so guard the append under the gather lock.
+            RunSharedEdgeMutation(
+                sharedEdgeMutationLock,
+                () => EdgeMergeHelpers.AddEpisodeIfMissing(duplicate, episode.Uuid));
+            return new EdgeResolveOutcome(candidate.Uuid, duplicate, Array.Empty<EntityEdge>(), IsNew: false);
+        }
+
+        // Python edge_operations.py:392-405 re-searches the valid_edges via
+        // EDGE_HYBRID_SEARCH_RRF (SearchFilters(edge_uuids=[...]), default limit 10,
+        // sim_min_score 0.6) and feeds the reranked/truncated result (in relevance order)
+        // to the resolve_edge prompt as the EXISTING FACTS / duplicate candidates.
+        var relatedEdges = await GetEdgeDuplicateCandidatesAsync(
+            candidate,
+            groupId,
+            betweenNodesEdges,
+            existingEdgesOverride,
+            cancellationToken).ConfigureAwait(false);
+
+        var existingEdges = await GetEdgeInvalidationCandidatesAsync(
+            candidate,
+            groupId,
+            relatedEdges,
+            existingEdgesOverride,
+            cancellationToken).ConfigureAwait(false);
+
+        var (resolvedEdge, invalidatedEdges) = await ResolveEdgeWithLlmAsync(
+            candidate,
+            relatedEdges,
+            existingEdges,
+            episode,
+            now,
+            cancellationToken,
+            edgeTypes,
+            edgeTypeMap,
+            nodesByUuid,
+            attributeSchemaCache,
+            sharedEdgeMutationLock: sharedEdgeMutationLock).ConfigureAwait(false);
+
+        return new EdgeResolveOutcome(
+            candidate.Uuid,
+            resolvedEdge,
+            invalidatedEdges,
+            IsNew: resolvedEdge.Uuid == candidate.Uuid);
+    }
+
+    private readonly record struct EdgeResolveOutcome(
+        string ExtractedEdgeUuid,
+        EntityEdge ResolvedEdge,
+        IReadOnlyList<EntityEdge> InvalidatedEdges,
+        bool IsNew);
 
     internal static List<EntityEdge> BuildExtractedEdgeCandidates(
         IReadOnlyList<Graphiti.ExtractedEdge> extractedEdges,
@@ -280,6 +376,70 @@ internal sealed class EdgeResolutionService(
         return null;
     }
 
+    public async Task<IReadOnlyList<EntityEdge>> GetEdgeDuplicateCandidatesAsync(
+        EntityEdge extractedEdge,
+        string groupId,
+        IReadOnlyList<EntityEdge> betweenNodesEdges,
+        IReadOnlyList<EntityEdge>? existingEdgesOverride,
+        CancellationToken cancellationToken)
+    {
+        // Python edge_operations.py:392-405 builds the duplicate-candidate list by re-searching the
+        // valid_edges (between-nodes edges plus per-pair overrides) via EDGE_HYBRID_SEARCH_RRF with
+        // SearchFilters(edge_uuids=[valid_edges uuids]). The reranked, limit-10 result (in relevance
+        // order) is what the resolve_edge prompt sees as EXISTING FACTS.
+        var validEdgeUuids = new List<string>(betweenNodesEdges.Count);
+        var validEdgeUuidSet = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < betweenNodesEdges.Count; i++)
+        {
+            var uuid = betweenNodesEdges[i].Uuid;
+            if (validEdgeUuidSet.Add(uuid))
+            {
+                validEdgeUuids.Add(uuid);
+            }
+        }
+
+        // Python applies the edge_uuids filter whenever it is not None (search_filters.py:132), so an
+        // empty valid_edges list yields zero matches. The shared C# CompiledSearchFilter skips an
+        // empty edge_uuids filter (treating it as no filter), which would instead run an unfiltered
+        // search; short-circuit here to preserve Python's zero-result semantics.
+        if (validEdgeUuids.Count == 0)
+        {
+            return Array.Empty<EntityEdge>();
+        }
+
+        var searchConfig = SearchConfigRecipes.EdgeHybridSearchRrf;
+        searchConfig.Limit = SearchUtilities.RelevantSchemaLimit;
+        var searchResults = await SearchEngine.SearchAsync(
+            clients,
+            extractedEdge.Fact,
+            new[] { groupId },
+            searchConfig,
+            new SearchFilters { EdgeUuids = validEdgeUuids },
+            driver: driverAccessor(),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        // Benign override object-substitution: when a search-returned UUID matches an override edge,
+        // surface the richer override instance (it may carry attributes/timestamps not yet indexed).
+        var overrideLookup = EdgeMergeHelpers.BuildOverrideLookup(
+            existingEdgesOverride,
+            new HashSet<string>(StringComparer.Ordinal));
+        var candidates = new List<EntityEdge>(searchResults.Edges.Count);
+        var seenUuids = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < searchResults.Edges.Count; i++)
+        {
+            var edge = searchResults.Edges[i];
+            var candidate = overrideLookup.TryGetValue(edge.Uuid, out var overrideEdge)
+                ? overrideEdge
+                : edge;
+            if (seenUuids.Add(candidate.Uuid))
+            {
+                candidates.Add(candidate);
+            }
+        }
+
+        return candidates;
+    }
+
     public async Task<IReadOnlyList<EntityEdge>> GetEdgeInvalidationCandidatesAsync(
         EntityEdge extractedEdge,
         string groupId,
@@ -327,24 +487,11 @@ internal sealed class EdgeResolutionService(
             }
         }
 
-        var overrideCandidates = EdgeMergeHelpers.RankOverrideInvalidationCandidates(
-            extractedEdge.Fact,
-            existingEdgesOverride,
-            relatedUuids,
-            SearchUtilities.RelevantSchemaLimit);
-        for (var i = 0; i < overrideCandidates.Count; i++)
-        {
-            var candidate = overrideCandidates[i];
-            if (seenUuids.Add(candidate.Uuid))
-            {
-                candidates.Add(candidate);
-                if (candidates.Count >= SearchUtilities.RelevantSchemaLimit)
-                {
-                    break;
-                }
-            }
-        }
-
+        // Python edge_operations.py:407-418 runs the invalidation search with a plain
+        // SearchFilters() and never injects existing_edges_override into the invalidation
+        // candidate list (overrides are merged only into the duplicate/related path,
+        // edge_operations.py:376-390). The benign override object-substitution above is kept
+        // because it only swaps richer override instances in for search-returned UUIDs.
         return candidates;
     }
 
@@ -358,11 +505,12 @@ internal sealed class EdgeResolutionService(
         IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes = null,
         IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap = null,
         IReadOnlyDictionary<string, EntityNode>? nodesByUuid = null,
-        Dictionary<EntityTypeDefinition, StructuredResponseSchema>? attributeSchemaCache = null,
-        IReadOnlyList<EntityNode>? nodes = null)
+        ConcurrentDictionary<EntityTypeDefinition, StructuredResponseSchema>? attributeSchemaCache = null,
+        IReadOnlyList<EntityNode>? nodes = null,
+        object? sharedEdgeMutationLock = null)
     {
         nodesByUuid ??= BuildNodesByUuid(nodes);
-        attributeSchemaCache ??= new Dictionary<EntityTypeDefinition, StructuredResponseSchema>();
+        attributeSchemaCache ??= new ConcurrentDictionary<EntityTypeDefinition, StructuredResponseSchema>();
 
         if (relatedEdges.Count == 0 && existingEdges.Count == 0)
         {
@@ -397,7 +545,12 @@ internal sealed class EdgeResolutionService(
             : extractedEdge;
         if (resolvedEdge.Uuid != extractedEdge.Uuid)
         {
-            AddEpisodesIfMissing(resolvedEdge, extractedEdge.Episodes, episode.Uuid);
+            // Python resolve_extracted_edge LLM path (edge_operations.py:751-752) appends only
+            // episode.uuid to the matched existing (duplicate) edge. This mutates a shared graph
+            // edge, so guard the append when running under the concurrent gather.
+            RunSharedEdgeMutation(
+                sharedEdgeMutationLock,
+                () => EdgeMergeHelpers.AddEpisodeIfMissing(resolvedEdge, episode.Uuid));
         }
 
         var invalidationCandidates = new List<EntityEdge>();
@@ -435,10 +588,40 @@ internal sealed class EdgeResolutionService(
             await ExtractEdgeTimestampsAsync(resolvedEdge, episode, now, cancellationToken).ConfigureAwait(false);
         }
 
-        ExpireResolvedEdgeIfLaterCandidateExists(resolvedEdge, invalidationCandidates, now);
+        // Expiry of the resolved edge and contradiction handling write invalid_at/expired_at on the
+        // resolved edge and on shared invalidation-candidate edges (Python edge_operations.py:820-840
+        // and resolve_edge_contradictions:538-573). Serialise under the gather lock to keep these
+        // in-place mutations atomic; the returned invalidated set is still collected in input order.
+        List<EntityEdge> invalidatedEdges;
+        if (sharedEdgeMutationLock is null)
+        {
+            ExpireResolvedEdgeIfLaterCandidateExists(resolvedEdge, invalidationCandidates, now);
+            invalidatedEdges = EdgeMergeHelpers.ResolveEdgeContradictions(resolvedEdge, invalidationCandidates, now);
+        }
+        else
+        {
+            lock (sharedEdgeMutationLock)
+            {
+                ExpireResolvedEdgeIfLaterCandidateExists(resolvedEdge, invalidationCandidates, now);
+                invalidatedEdges = EdgeMergeHelpers.ResolveEdgeContradictions(resolvedEdge, invalidationCandidates, now);
+            }
+        }
 
-        var invalidatedEdges = EdgeMergeHelpers.ResolveEdgeContradictions(resolvedEdge, invalidationCandidates, now);
         return (resolvedEdge, invalidatedEdges);
+    }
+
+    private static void RunSharedEdgeMutation(object? sharedEdgeMutationLock, Action mutation)
+    {
+        if (sharedEdgeMutationLock is null)
+        {
+            mutation();
+            return;
+        }
+
+        lock (sharedEdgeMutationLock)
+        {
+            mutation();
+        }
     }
 
     private async Task ExtractEdgeAttributesAsync(
@@ -447,7 +630,7 @@ internal sealed class EdgeResolutionService(
         IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes,
         IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap,
         IReadOnlyDictionary<string, EntityNode> nodesByUuid,
-        Dictionary<EntityTypeDefinition, StructuredResponseSchema> attributeSchemaCache,
+        ConcurrentDictionary<EntityTypeDefinition, StructuredResponseSchema> attributeSchemaCache,
         bool clearWhenNoSchema,
         CancellationToken cancellationToken)
     {
@@ -476,13 +659,11 @@ internal sealed class EdgeResolutionService(
             return;
         }
 
-        if (!attributeSchemaCache.TryGetValue(edgeType, out var attributeSchema))
-        {
-            attributeSchema = ExtractionContextBuilder.BuildAttributeResponseSchema(
-                edgeType,
-                "EdgeAttributeResponse");
-            attributeSchemaCache[edgeType] = attributeSchema;
-        }
+        var attributeSchema = attributeSchemaCache.GetOrAdd(
+            edgeType,
+            static type => ExtractionContextBuilder.BuildAttributeResponseSchema(
+                type,
+                "EdgeAttributeResponse"));
 
         var response = await llmClient.GenerateResponseAsync(
             ExtractEdgesPrompts.BuildExtractAttributes(
@@ -609,7 +790,7 @@ internal sealed class EdgeResolutionService(
         try
         {
             var response = await llmClient.GenerateTypedResponseAsync<Graphiti.EdgeTimestampResponse>(
-                ExtractEdgesPrompts.BuildExtractTimestamps(edge.Fact, edge.ReferenceTime ?? episode.ValidAt),
+                ExtractEdgesPrompts.BuildExtractTimestamps(edge.Fact, episode.ValidAt),
                 modelSize: ModelSize.Small,
                 promptName: "extract_edges.extract_timestamps",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -635,22 +816,5 @@ internal sealed class EdgeResolutionService(
         }
 
         return GraphitiHelpers.TryParseDbDate(value, out var parsed) ? parsed : null;
-    }
-
-    private static void AddEpisodesIfMissing(
-        EntityEdge edge,
-        List<string> episodeUuids,
-        string fallbackEpisodeUuid)
-    {
-        if (episodeUuids.Count == 0)
-        {
-            EdgeMergeHelpers.AddEpisodeIfMissing(edge, fallbackEpisodeUuid);
-            return;
-        }
-
-        for (var i = 0; i < episodeUuids.Count; i++)
-        {
-            EdgeMergeHelpers.AddEpisodeIfMissing(edge, episodeUuids[i]);
-        }
     }
 }

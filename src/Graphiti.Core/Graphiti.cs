@@ -102,7 +102,12 @@ public sealed partial class Graphiti : IAsyncDisposable
         _sagaService = new SagaService(() => Driver, LlmClient, _timeProvider);
 
         Clients = new GraphitiClients(_rootDriver, LlmClient, Embedder, CrossEncoder);
-        _edgeResolutionService = new EdgeResolutionService(() => Driver, Clients, LlmClient, _logger);
+        _edgeResolutionService = new EdgeResolutionService(
+            () => Driver,
+            Clients,
+            LlmClient,
+            _logger,
+            GetMaxDegreeOfParallelism);
         Nodes = new NodeNamespace(_rootDriver, Embedder);
         Edges = new EdgeNamespace(_rootDriver, Embedder);
     }

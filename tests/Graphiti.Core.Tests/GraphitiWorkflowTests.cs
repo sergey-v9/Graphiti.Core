@@ -2615,7 +2615,7 @@ public class GraphitiWorkflowTests
 
         Assert.Equal(3, result.Edges.Count);
         Assert.Equal(3, llm.TrackedPromptCalls);
-        Assert.InRange(llm.MaxObservedConcurrency, 1, 2);
+        Assert.Equal(2, llm.MaxObservedConcurrency);
         Assert.All(result.Edges, edge => Assert.Equal("high", edge.Attributes["confidence"]));
     }
 

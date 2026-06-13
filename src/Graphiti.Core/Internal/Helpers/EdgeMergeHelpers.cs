@@ -5,34 +5,6 @@ namespace Graphiti.Core.Internal.Helpers;
 
 internal static class EdgeMergeHelpers
 {
-    internal static IReadOnlyList<EntityEdge> RankOverrideInvalidationCandidates(
-        string fact,
-        IReadOnlyList<EntityEdge>? existingEdgesOverride,
-        HashSet<string> excludedUuids,
-        int limit)
-    {
-        if (existingEdgesOverride is null || existingEdgesOverride.Count == 0 || limit <= 0)
-        {
-            return Array.Empty<EntityEdge>();
-        }
-
-        var ranked = SearchUtilities.TopByScore(
-            existingEdgesOverride,
-            edge => excludedUuids.Contains(edge.Uuid)
-                ? 0
-                : SearchUtilities.TextScore(fact, $"{edge.Name} {edge.Fact}"),
-            limit,
-            minScore: 0,
-            includeMinScore: false);
-        var candidates = new List<EntityEdge>(ranked.Count);
-        for (var i = 0; i < ranked.Count; i++)
-        {
-            candidates.Add(ranked[i].Item);
-        }
-
-        return candidates;
-    }
-
     internal static Dictionary<string, EntityEdge> BuildOverrideLookup(
         IReadOnlyList<EntityEdge>? overrides,
         HashSet<string> excludedUuids)
