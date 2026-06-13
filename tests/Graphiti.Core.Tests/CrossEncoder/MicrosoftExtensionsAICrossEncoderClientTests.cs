@@ -69,6 +69,41 @@ public class MicrosoftExtensionsAICrossEncoderClientTests
     }
 
     [Fact]
+    public async Task RankIndexedAsync_RendersExactRerankerSystemAndUserPrompt()
+    {
+        // Golden full-string assertion of the reranker system + user prompt. The system prompt and the
+        // first user sentence are transcribed VERBATIM from Python openai_reranker_client.py:61-78. The
+        // single added sentence ("Return your decision and confidence as JSON matching the provided
+        // schema.") is the one documented divergence required by the structured boolean+confidence
+        // scoring (decisions.md, "the M.E.AI cross-encoder user prompt adds one sentence"). Python's
+        // leading indentation on each user line is an allowed mechanical whitespace divergence.
+        var chatClient = new RelevanceChatClient(static _ => "{\"is_relevant\":true,\"confidence\":0.5}");
+        var client = new MicrosoftExtensionsAICrossEncoderClient(chatClient, maxConcurrency: 1);
+
+        await client.RankIndexedAsync("Is this about cats?", new[] { "A passage about cats." });
+
+        var messages = Assert.Single(chatClient.Calls);
+        Assert.Equal(2, messages.Count);
+        Assert.Equal(ChatRole.System, messages[0].Role);
+        Assert.Equal(
+            "You are an expert tasked with determining whether the passage is relevant to the query",
+            messages[0].Text);
+        Assert.Equal(ChatRole.User, messages[1].Role);
+
+        var expectedUser = """
+            Respond with "True" if PASSAGE is relevant to QUERY and "False" otherwise.
+            Return your decision and confidence as JSON matching the provided schema.
+            <PASSAGE>
+            A passage about cats.
+            </PASSAGE>
+            <QUERY>
+            Is this about cats?
+            </QUERY>
+            """;
+        Assert.Equal(expectedUser, messages[1].Text);
+    }
+
+    [Fact]
     public async Task RankAsync_ProjectsRankedPassages()
     {
         var chatClient = new RelevanceChatClient(
