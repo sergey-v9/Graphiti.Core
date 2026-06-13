@@ -6,23 +6,44 @@ using Graphiti.Core.Drivers;
 using Graphiti.Core.Embedding;
 using Graphiti.Core.LlmClients;
 using Graphiti.Core.Models;
-using Graphiti.Core.Models.Edges;
+using Graphiti.Core.Models.Results;
 using Graphiti.Core.Prompts;
+using Graphiti.Core.Serialization;
 using Microsoft.Extensions.AI;
 
-// Eval harness for the Graphiti C# port. Ingests a small, self-contained fixture with known
-// ground-truth facts, then for each gold (question, expected-answer) pair retrieves facts from the
-// graph, forms a deterministic candidate answer, and scores it with the ported eval_prompt LLM judge
-// (graphiti_core/prompts/eval.py). Prints per-question detail, an aggregate score, and a final
-// machine-readable JSON line. Bounded and cheap: temperature 0, a handful of questions, no fan-out.
+// Eval harness for the Graphiti C# port. Two modes:
+//
+//   (default)  GRAPH-BUILDING regression eval. Mirrors Python
+//              tests/evals/eval_e2e_graph_building.py::eval_graph. Ingests the fixture episodes to
+//              build a CANDIDATE graph, capturing each AddEpisodeResults. A persisted baseline
+//              artifact (eval-artifacts/baseline_graph_results.json) provides the BASELINE: if it
+//              exists it is loaded and the ported eval_add_episode_results LLM judge
+//              (graphiti_core/prompts/eval.py) decides, per episode, whether the candidate extraction
+//              is WORSE than the baseline; otherwise this run writes the artifact and establishes the
+//              baseline (no judging). Score = fraction of episodes whose candidate is NOT worse.
+//
+//   --qa       RETRIEVAL-QA eval. Ingests the same fixture, and for each gold (question, answer) pair
+//              retrieves facts, forms a candidate answer from the TOP-1 retrieved fact only, and scores
+//              it with the ported eval_prompt LLM judge. Includes a distractor question whose gold
+//              answer is NOT in the fixture: a perfect pass there would signal a retrieval/judge leak.
+//
+// Both modes are gated on OPENAI_API_KEY (exit 2 if absent), use temperature 0, and bound the
+// question/episode counts. The runner injects OPENAI_API_KEY; this program never reads .env itself.
 const string GroupId = "eval-atlas";
+
+var qaMode = args.Any(arg => string.Equals(arg, "--qa", StringComparison.OrdinalIgnoreCase))
+    || string.Equals(
+        Environment.GetEnvironmentVariable("GRAPHITI_EVAL_MODE"),
+        "qa",
+        StringComparison.OrdinalIgnoreCase);
 
 var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 if (string.IsNullOrWhiteSpace(apiKey))
 {
     Console.Error.WriteLine("Set OPENAI_API_KEY before running the eval harness.");
     Console.Error.WriteLine("Optional: OPENAI_CHAT_MODEL, OPENAI_SMALL_MODEL, OPENAI_RERANKER_MODEL, OPENAI_EMBEDDING_MODEL, OPENAI_EMBEDDING_DIMENSIONS.");
-    Console.Error.WriteLine("Usage: dotnet run --project samples/Graphiti.Eval");
+    Console.Error.WriteLine("Modes: default = graph-building regression eval; --qa = retrieval-QA eval.");
+    Console.Error.WriteLine("Usage: dotnet run --project samples/Graphiti.Eval [--qa]");
     return 2;
 }
 
@@ -125,19 +146,12 @@ var episodes = new[]
         start.AddMinutes(25))
 };
 
-// --- Gold (question, expected-answer) pairs ----------------------------------------------------
-var goldPairs = new[]
-{
-    new GoldPair("Who owns the Atlas rollout?", "Leo Chen"),
-    new GoldPair("What company is Atlas at?", "Nimbus Health"),
-    new GoldPair("Who manages the Atlas migration project?", "Maya Patel"),
-    new GoldPair("What is the current Atlas rollout date?", "March 29, 2026"),
-    new GoldPair("Why was the Atlas rollout delayed?", "An authentication regression QA found"),
-    new GoldPair("When did QA clear the authentication regression?", "March 22, 2026")
-};
-
 Console.WriteLine($"Using chat model {chatModel}, reranker model {rerankerModel}, embedding model {embeddingModel} ({embeddingDimensions.ToString(CultureInfo.InvariantCulture)} dimensions).");
+Console.WriteLine($"Mode: {(qaMode ? "retrieval-QA (measures whether top-1 retrieved fact answers a gold question)" : "graph-building regression (measures whether the candidate extraction is worse than a persisted baseline)")}.");
 Console.WriteLine("Ingesting fixture episodes...");
+
+// Ingest every episode through the real pipeline, capturing each per-episode AddEpisodeResults.
+var addResults = new List<AddEpisodeResults>(episodes.Length);
 foreach (var episode in episodes)
 {
     var result = await graphiti.AddEpisodeAsync(
@@ -148,96 +162,264 @@ foreach (var episode in episodes)
         episode.Source,
         groupId: GroupId);
 
+    addResults.Add(result);
     Console.WriteLine(
         string.Create(
             CultureInfo.InvariantCulture,
             $"  {episode.Name}: {result.Nodes.Count} node(s), {result.Edges.Count} edge(s)"));
 }
 
-// --- Score each gold question against the LLM judge --------------------------------------------
-var queryExpansionSchema = BuildSchema("QueryExpansion", ("query", "string"));
-var evalSchema = BuildSchema("EvalResponse", ("is_correct", "boolean"), ("reasoning", "string"));
+return qaMode
+    ? await RunRetrievalQaAsync()
+    : await RunGraphBuildingAsync();
 
-const int TopFacts = 5;
-var passed = 0;
-
-Console.WriteLine();
-Console.WriteLine("Evaluating gold questions...");
-foreach (var gold in goldPairs)
+// ===============================================================================================
+// GRAPH-BUILDING regression eval (default). Mirrors eval_e2e_graph_building.py::eval_graph.
+// ===============================================================================================
+async Task<int> RunGraphBuildingAsync()
 {
-    // Optionally expand the question into a third-person retrieval query (eval.py::query_expansion).
-    var expandedQuery = await ExpandQueryAsync(gold.Question);
+    // Persisted-artifact baseline: stable, gitignored path. The first run establishes it; later runs
+    // load it and judge the current (candidate) extraction against it for cross-run regression
+    // detection (Python writes baseline_graph_results.json / candidate_graph_results.json).
+    var artifactDir = Path.Combine(AppContext.BaseDirectory, "eval-artifacts");
+    Directory.CreateDirectory(artifactDir);
+    var baselinePath = Path.Combine(artifactDir, "baseline_graph_results.json");
+    var candidatePath = Path.Combine(artifactDir, "candidate_graph_results.json");
 
-    var hits = await graphiti.SearchAsync(
-        expandedQuery,
-        groupIds: new[] { GroupId },
-        numResults: TopFacts);
-    var topFacts = hits.Select(edge => edge.Fact).ToList();
+    // Serialize the candidate per-episode extraction results with stable snake_case Graphiti JSON,
+    // nulling embeddings first (Python eval_e2e clears name_embedding/fact_embedding before dumping).
+    var candidateJsonByEpisode = episodes
+        .Select((episode, index) => SerializeResult(addResults[index]))
+        .ToList();
 
-    // Deterministic candidate answer: the retrieved facts joined into one response. eval_prompt marks
-    // a response correct as long as it references the gold answer's topic, so concatenated facts are
-    // the intended cheap candidate (no RAG chain).
-    var candidateAnswer = topFacts.Count == 0
-        ? "(no facts retrieved)"
-        : string.Join(" ", topFacts);
-
-    var verdict = await JudgeAsync(gold.Question, gold.ExpectedAnswer, candidateAnswer);
-    if (verdict.IsCorrect)
+    var candidateArtifact = new JsonArray();
+    for (var i = 0; i < candidateJsonByEpisode.Count; i++)
     {
-        passed++;
+        candidateArtifact.Add(JsonNode.Parse(candidateJsonByEpisode[i]));
     }
+
+    await File.WriteAllTextAsync(
+        candidatePath,
+        candidateArtifact.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+    if (!File.Exists(baselinePath))
+    {
+        await File.WriteAllTextAsync(
+            baselinePath,
+            candidateArtifact.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine();
+        Console.WriteLine($"baseline established: wrote {episodes.Length} episode result(s) to {baselinePath}");
+        Console.WriteLine("Re-run to judge a future candidate against this baseline. No judging this run.");
+        var established = new JsonObject
+        {
+            ["mode"] = "graph_building",
+            ["baseline_established"] = true,
+            ["episodes"] = episodes.Length
+        };
+        Console.WriteLine(established.ToJsonString(new JsonSerializerOptions { WriteIndented = false }));
+        return 0;
+    }
+
+    var baselineRaw = await File.ReadAllTextAsync(baselinePath);
+    var baselineArtifact = JsonNode.Parse(baselineRaw) as JsonArray
+        ?? throw new InvalidOperationException($"Baseline artifact {baselinePath} is not a JSON array.");
+    var baselineJsonByEpisode = baselineArtifact
+        .Select(node => node?.ToJsonString(new JsonSerializerOptions { WriteIndented = false }) ?? "null")
+        .ToList();
 
     Console.WriteLine();
-    Console.WriteLine($"Q: {gold.Question}");
-    if (!string.Equals(expandedQuery, gold.Question, StringComparison.Ordinal))
-    {
-        Console.WriteLine($"  expanded query: {expandedQuery}");
-    }
+    Console.WriteLine($"Loaded baseline from {baselinePath} ({baselineJsonByEpisode.Count} episode result(s)).");
+    Console.WriteLine("Judging candidate extraction against baseline (eval_add_episode_results)...");
 
-    Console.WriteLine("  retrieved facts:");
-    if (topFacts.Count == 0)
+    var episodeCount = Math.Min(baselineJsonByEpisode.Count, candidateJsonByEpisode.Count);
+    var notWorse = 0;
+    for (var i = 0; i < episodeCount; i++)
     {
-        Console.WriteLine("    (none)");
-    }
-    else
-    {
-        foreach (var fact in topFacts)
+        // Context mirrors eval_e2e_graph_building.py:161-166: the current MESSAGE plus the PREVIOUS
+        // messages, with the BASELINE and CANDIDATE graph extractions to compare. (Python slices the
+        // message string char-wise via episodes[0]/episodes[1:], a latent bug; we pass the real message
+        // body and the joined prior bodies, which is the clearly-intended meaning.)
+        var message = episodes[i].Body;
+        var previousMessages = i == 0
+            ? "[]"
+            : "[" + string.Join(", ", episodes.Take(i).Select(e => JsonSerializer.Serialize(e.Body))) + "]";
+
+        var verdict = await JudgeCandidateWorseAsync(
+            previousMessages,
+            message,
+            baselineJsonByEpisode[i],
+            candidateJsonByEpisode[i]);
+
+        if (!verdict.CandidateIsWorse)
         {
-            Console.WriteLine($"    - {fact}");
+            notWorse++;
         }
+
+        Console.WriteLine();
+        Console.WriteLine($"Episode {(i + 1).ToString(CultureInfo.InvariantCulture)}: {episodes[i].Name}");
+        Console.WriteLine($"  candidate worse than baseline: {(verdict.CandidateIsWorse ? "YES (regression)" : "no")}");
+        Console.WriteLine($"  reasoning: {verdict.Reasoning}");
     }
 
-    Console.WriteLine($"  candidate answer: {candidateAnswer}");
-    Console.WriteLine($"  gold answer:      {gold.ExpectedAnswer}");
-    Console.WriteLine($"  verdict:          {(verdict.IsCorrect ? "PASS" : "FAIL")}");
-    Console.WriteLine($"  reasoning:        {verdict.Reasoning}");
+    var score = episodeCount == 0 ? 1d : (double)notWorse / episodeCount;
+    Console.WriteLine();
+    Console.WriteLine(string.Create(
+        CultureInfo.InvariantCulture,
+        $"Graph-building score (fraction not worse than baseline): {notWorse}/{episodeCount}."));
+    Console.WriteLine($"Candidate artifact written to {candidatePath}.");
+
+    var summary = new JsonObject
+    {
+        ["mode"] = "graph_building",
+        ["episodes"] = episodeCount,
+        ["not_worse"] = notWorse,
+        ["score"] = Math.Round(score, 2)
+    };
+    Console.WriteLine(summary.ToJsonString(new JsonSerializerOptions { WriteIndented = false }));
+    return 0;
 }
 
-var total = goldPairs.Length;
-var score = total == 0 ? 0d : (double)passed / total;
-
-Console.WriteLine();
-Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Score: {passed}/{total} passed."));
-
-// Machine-readable final line for the runner to parse.
-var summary = new JsonObject
+// ===============================================================================================
+// RETRIEVAL-QA eval (--qa). Secondary mode. Measures whether the TOP-1 retrieved fact answers each
+// gold question; includes a distractor whose answer is absent from the fixture.
+// ===============================================================================================
+async Task<int> RunRetrievalQaAsync()
 {
-    ["passed"] = passed,
-    ["total"] = total,
-    ["score"] = Math.Round(score, 2)
-};
-Console.WriteLine(summary.ToJsonString(new JsonSerializerOptions { WriteIndented = false }));
+    // Gold (question, expected-answer) pairs. The final pair is a DISTRACTOR: its answer ("Helsinki")
+    // is nowhere in the fixture, so it should FAIL. A PASS there signals a retrieval or judge leak.
+    var goldPairs = new[]
+    {
+        new GoldPair("Who owns the Atlas rollout?", "Leo Chen", InFixture: true),
+        new GoldPair("What company is Atlas at?", "Nimbus Health", InFixture: true),
+        new GoldPair("Who manages the Atlas migration project?", "Maya Patel", InFixture: true),
+        new GoldPair("What is the current Atlas rollout date?", "March 29, 2026", InFixture: true),
+        new GoldPair("Why was the Atlas rollout delayed?", "An authentication regression QA found", InFixture: true),
+        new GoldPair("When did QA clear the authentication regression?", "March 22, 2026", InFixture: true),
+        // Distractor: the fixture never mentions a city; the only correct judge verdict is FAIL.
+        new GoldPair("In which city is the Atlas data center located?", "Helsinki", InFixture: false)
+    };
 
-return 0;
+    var queryExpansionSchema = BuildSchema("QueryExpansion", ("query", "string"));
+    var evalSchema = BuildSchema("EvalResponse", ("is_correct", "boolean"), ("reasoning", "string"));
 
-async Task<string> ExpandQueryAsync(string question)
+    var passed = 0;
+    var leakDetected = false;
+
+    Console.WriteLine();
+    Console.WriteLine("Evaluating gold questions (candidate answer = top-1 retrieved fact only)...");
+    foreach (var gold in goldPairs)
+    {
+        var expandedQuery = await ExpandQueryAsync(gold.Question, queryExpansionSchema);
+
+        var hits = await graphiti.SearchAsync(
+            expandedQuery,
+            groupIds: new[] { GroupId },
+            numResults: 5);
+
+        // Build the candidate answer from ONLY the single top-ranked fact, not a concatenation of all
+        // retrieved facts. Concatenating every fact inflates pass rates because the gold topic is far
+        // more likely to appear somewhere in the union.
+        var topFact = hits.Count == 0 ? null : hits[0].Fact;
+        var candidateAnswer = topFact ?? "(no facts retrieved)";
+
+        var verdict = await JudgeQaAsync(gold.Question, gold.ExpectedAnswer, candidateAnswer, evalSchema);
+        if (verdict.IsCorrect)
+        {
+            passed++;
+            if (!gold.InFixture)
+            {
+                // A distractor judged correct means a retrieval/judge leak, not real quality.
+                leakDetected = true;
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"Q: {gold.Question}{(gold.InFixture ? string.Empty : "  [DISTRACTOR - expected FAIL]")}");
+        if (!string.Equals(expandedQuery, gold.Question, StringComparison.Ordinal))
+        {
+            Console.WriteLine($"  expanded query: {expandedQuery}");
+        }
+
+        Console.WriteLine($"  top-1 fact:       {topFact ?? "(none)"}");
+        Console.WriteLine($"  candidate answer: {candidateAnswer}");
+        Console.WriteLine($"  gold answer:      {gold.ExpectedAnswer}");
+        Console.WriteLine($"  verdict:          {(verdict.IsCorrect ? "PASS" : "FAIL")}");
+        Console.WriteLine($"  reasoning:        {verdict.Reasoning}");
+    }
+
+    var total = goldPairs.Length;
+    var score = total == 0 ? 0d : (double)passed / total;
+
+    Console.WriteLine();
+    Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"Retrieval-QA score: {passed}/{total} passed."));
+    if (leakDetected)
+    {
+        Console.WriteLine("WARNING: a distractor question PASSED - this indicates a retrieval or judge leak.");
+    }
+
+    var summary = new JsonObject
+    {
+        ["mode"] = "retrieval_qa",
+        ["passed"] = passed,
+        ["total"] = total,
+        ["score"] = Math.Round(score, 2),
+        ["distractor_leak"] = leakDetected
+    };
+    Console.WriteLine(summary.ToJsonString(new JsonSerializerOptions { WriteIndented = false }));
+    return 0;
+}
+
+// --- Helpers -----------------------------------------------------------------------------------
+
+string SerializeResult(AddEpisodeResults result)
+{
+    // Clear embeddings so the artifact is stable and free of float noise (Python eval_e2e nulls
+    // name_embedding/fact_embedding before model_dump). Only the result graph shape is compared.
+    foreach (var node in result.Nodes)
+    {
+        node.NameEmbedding = null;
+    }
+
+    foreach (var edge in result.Edges)
+    {
+        edge.FactEmbedding = null;
+    }
+
+    return JsonSerializer.Serialize(result, GraphitiJsonSerializer.Options);
+}
+
+async Task<CandidateVerdict> JudgeCandidateWorseAsync(
+    string previousMessages,
+    string message,
+    string baselineJson,
+    string candidateJson)
+{
+    var schema = BuildSchema(
+        "EvalAddEpisodeResults",
+        ("candidate_is_worse", "boolean"),
+        ("reasoning", "string"));
+    var messages = EvalPrompts.BuildEvalAddEpisodeResults(
+        previousMessages,
+        message,
+        baselineJson,
+        candidateJson);
+    var response = await llmClient.GenerateResponseAsync(
+        messages,
+        responseSchema: schema,
+        promptName: "eval.eval_add_episode_results");
+    var candidateIsWorse = response["candidate_is_worse"]?.GetValue<bool>() ?? false;
+    var reasoning = response["reasoning"]?.GetValue<string>() ?? string.Empty;
+    return new CandidateVerdict(candidateIsWorse, reasoning);
+}
+
+async Task<string> ExpandQueryAsync(string question, StructuredResponseSchema schema)
 {
     try
     {
         var messages = EvalPrompts.BuildQueryExpansion(question);
         var response = await llmClient.GenerateResponseAsync(
             messages,
-            responseSchema: queryExpansionSchema,
+            responseSchema: schema,
             modelSize: ModelSize.Small,
             promptName: "eval.query_expansion");
         var expanded = response["query"]?.GetValue<string>();
@@ -251,12 +433,16 @@ async Task<string> ExpandQueryAsync(string question)
     }
 }
 
-async Task<Verdict> JudgeAsync(string question, string goldAnswer, string candidateAnswer)
+async Task<Verdict> JudgeQaAsync(
+    string question,
+    string goldAnswer,
+    string candidateAnswer,
+    StructuredResponseSchema schema)
 {
     var messages = EvalPrompts.BuildEval(question, goldAnswer, candidateAnswer);
     var response = await llmClient.GenerateResponseAsync(
         messages,
-        responseSchema: evalSchema,
+        responseSchema: schema,
         promptName: "eval.eval_prompt");
     var isCorrect = response["is_correct"]?.GetValue<bool>() ?? false;
     var reasoning = response["reasoning"]?.GetValue<string>() ?? string.Empty;
@@ -309,6 +495,8 @@ internal readonly record struct EpisodeInput(
     string SourceDescription,
     DateTime ReferenceTime);
 
-internal readonly record struct GoldPair(string Question, string ExpectedAnswer);
+internal readonly record struct GoldPair(string Question, string ExpectedAnswer, bool InFixture);
 
 internal readonly record struct Verdict(bool IsCorrect, string Reasoning);
+
+internal readonly record struct CandidateVerdict(bool CandidateIsWorse, string Reasoning);

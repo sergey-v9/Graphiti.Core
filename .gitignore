@@ -1,6 +1,8 @@
 bin/
 obj/
 artifacts/
+# Graphiti.Eval graph-building baseline/candidate result artifacts (regression eval output).
+eval-artifacts/
 BenchmarkDotNet.Artifacts/
 .vs/
 .agents/skills/
