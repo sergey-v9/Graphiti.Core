@@ -235,9 +235,6 @@ public sealed partial class Graphiti
                 Array.Empty<EntityEdge>(),
                 cancellationToken).ConfigureAwait(false);
 
-            var existingNodes = CopyList(await Driver.GetNodesByGroupIdsAsync<EntityNode>(
-                new[] { groupId },
-                cancellationToken: cancellationToken).ConfigureAwait(false));
             var extractedEpisodes = await SelectThrottledAsync(
                 episodes,
                 async (episode, token) => await ExtractBulkEpisodeAsync(
@@ -255,7 +252,6 @@ public sealed partial class Graphiti
                 extractedEpisodes,
                 groupId,
                 entityTypes,
-                existingNodes,
                 cancellationToken).ConfigureAwait(false);
             var allEpisodicEdges = BuildBulkEpisodicEdges(extractedEpisodes, nodeBatch, now);
             var edgeCandidatesByEpisode = BuildBulkEdgeCandidates(
@@ -467,20 +463,25 @@ public sealed partial class Graphiti
         IReadOnlyList<BulkEpisodeExtraction> extractedEpisodes,
         string groupId,
         IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes,
-        IReadOnlyList<EntityNode> existingNodes,
         CancellationToken cancellationToken)
     {
         var firstPassResults = await SelectThrottledAsync(
             extractedEpisodes.ToList(),
             async (extraction, token) =>
             {
+                // Do NOT widen the candidate pool with the whole group. Python
+                // dedupe_nodes_bulk first pass (bulk_utils.py:389-400) calls
+                // resolve_extracted_nodes with no existing_nodes_override, so candidates come
+                // solely from the driver's per-name semantic search
+                // (node_operations.py:407-450). Pass null to mirror the FINAL pass and rely on
+                // NodeResolutionService's ISearchGraphDriver search for candidates.
                 var resolution = await _nodeResolutionService.ResolveExtractedNodesAsync(
                     extraction.Nodes,
                     groupId,
                     extraction.Episode,
                     extraction.PreviousEpisodes,
                     entityTypes,
-                    CloneEntityNodes(existingNodes),
+                    existingNodesOverride: null,
                     token).ConfigureAwait(false);
                 return new BulkNodeFirstPass(extraction, resolution);
             },
@@ -1035,30 +1036,6 @@ public sealed partial class Graphiti
 
         return copy;
     }
-
-    private static List<EntityNode> CloneEntityNodes(IReadOnlyList<EntityNode> nodes)
-    {
-        var clones = new List<EntityNode>(nodes.Count);
-        for (var i = 0; i < nodes.Count; i++)
-        {
-            clones.Add(CloneEntityNode(nodes[i]));
-        }
-
-        return clones;
-    }
-
-    private static EntityNode CloneEntityNode(EntityNode node) =>
-        new()
-        {
-            Uuid = node.Uuid,
-            Name = node.Name,
-            GroupId = node.GroupId,
-            Labels = new List<string>(node.Labels),
-            CreatedAt = node.CreatedAt,
-            NameEmbedding = node.NameEmbedding is null ? null : new List<float>(node.NameEmbedding),
-            Summary = node.Summary,
-            Attributes = new Dictionary<string, object?>(node.Attributes, StringComparer.Ordinal)
-        };
 
     private static EntityNode? FindCanonicalNodeByNormalizedName(
         IEnumerable<EntityNode> nodes,
