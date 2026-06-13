@@ -94,6 +94,7 @@ longer true, mark it `Superseded` and explain the successor direction.
 |---|---|---|---|
 | M1 | Landed | Deep C# modernization | The port moved from literal translation toward idiomatic .NET structure, infrastructure, and allocation-aware implementation while preserving Graphiti behavior. |
 | M2 | Active | LadybugDB-first provider strategy | The C# port's provider investment target is a core LadybugDB-backed driver, unlike the Python provider priorities. |
+| M3 | Landed | First real-provider validation | The port ran end-to-end against the real OpenAI API for the first time (2026-06-13): structured schemas accepted, sane temporally-correct graph, relevant reranked search. The LLM-facing layer is now empirically validated, not just unit-tested against fakes. |
 
 ## M1: Deep C# Modernization
 
@@ -208,6 +209,39 @@ The LadybugDB milestone must still preserve:
 - Whether Neo4j removal becomes its own milestone.
 - Whether shared Kuzu compatibility helpers remain indefinitely after the final LadybugDB provider
   surface is named.
+
+## M3: First Real-Provider Validation
+
+**Status:** Landed
+**Visible range:** 2026-06-13, after the parity-hardening pass
+**Thesis:** A port of an LLM-driven library is unverified until it has talked to a real LLM. On
+2026-06-13 the C# port did, successfully — moving the LLM-facing layer from "unit-tested against fake
+clients" to "empirically validated against the real OpenAI API."
+
+### Evidence
+
+- Both env-gated `OpenAIProviderIntegrationTests` passed live: every Graphiti structured response
+  schema (11 response models + the dynamic attribute schema) was accepted by the real provider, and a
+  real 2-episode ingest produced a resolved temporal graph.
+- The 6-episode `Graphiti.Sample.OpenAI` produced a sane graph: clean entities with rich, accurate
+  summaries; correct bi-temporal invalidation (a "blocked" fact `invalid_at` exactly the QA-clearance
+  date; a superseded fact contradiction-invalidated); and relevant, well-ordered hybrid + cross-encoder
+  search results.
+- Re-runnable via `eng/Run-OpenAIProviderValidation.ps1` (auto-loads a gitignored `.env`); `.env` is
+  now gitignored to protect the key.
+
+### Boundaries
+
+- Schema acceptance and graph sanity are validated; a quantitative quality comparison against Python
+  is NOT yet done — that needs the optional eval harness (plan 03 item 4), still gated on user
+  approval.
+- One extraction observation (a reschedule not invalidating the prior date fact) is LLM/entity-modeling
+  variance, not a confirmed port divergence; the eval harness is the way to attribute such cases.
+
+### Follow-Up Decisions
+
+- Whether to build the eval harness for a durable C#-vs-Python quality score.
+- Whether to wire a key-gated provider-validation job into CI.
 
 ## Candidate Future Milestones
 

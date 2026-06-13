@@ -5,3 +5,8 @@ artifacts/
 .agents/skills/
 *.nupkg
 *.snupkg
+
+# Local secrets (e.g. OPENAI_API_KEY for provider validation). Never commit.
+.env
+.env.*
+!.env.example

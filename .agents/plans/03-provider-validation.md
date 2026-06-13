@@ -14,6 +14,28 @@ strongly recommended first.
 **Non-goals:** no new provider SDK dependencies in `Graphiti.Core` (M.E.AI adapters or a sample
 host project own provider packages); no CI wiring yet; no perf measurement.
 
+## Live validation result — PASSED 2026-06-13
+
+First successful end-to-end run against the real OpenAI API (key supplied locally via `.env`,
+`gpt-4.1-mini` chat / `gpt-4.1-nano` reranker / `text-embedding-3-small` @1536). Run with
+`.\eng\Run-OpenAIProviderValidation.ps1` (now auto-loads `.env`).
+
+- **Both env-gated integration tests passed** (26s): every Graphiti structured response schema (11
+  response models + the dynamic attribute schema) was accepted by the real provider — the schema
+  acceptance the fake-client suite could never verify — and a real 2-episode ingest produced a
+  resolved temporal graph with a `Maya` entity and a timestamped edge.
+- **6-episode sample produced a sane graph:** clean entities with rich, accurate summaries (entity
+  summary generation confirmed live); bi-temporal invalidation works (the "Atlas blocked by
+  authentication regression" fact was `invalid_at` exactly the QA-clearance date 2026-03-22; a
+  superseded "Maya manages Atlas" fact was contradiction-invalidated); hybrid search + the live
+  cross-encoder reranker returned relevant, well-ordered results (owner query → Leo Chen first;
+  current-date query → March 29 above the stale March 15).
+- **Observation (not a port defect):** the "first rollout window 2026-03-15" fact was not invalidated
+  by the "moved to March 29" episode, because that episode's March-29 info landed in a memory-note
+  edge rather than a contradicting rollout-date edge. This is LLM extraction/entity-modeling variance
+  (dates-as-entities) that would vary identically in Python; confirming it would need the item-4 eval
+  harness. Tracked as a future-eval comparison, not a fix.
+
 ## Work items
 
 - [x] 1. Sample host. New `samples/Graphiti.Sample.OpenAI` console project (separate from the
@@ -41,8 +63,9 @@ host project own provider packages); no CI wiring yet; no perf measurement.
       - Done 2026-06-11: added `OpenAIProviderIntegrationTests`, gated by
         `OPENAI_API_KEY`, with a two-episode ingestion test and a structured-output schema
         acceptance test covering ingestion DTOs, optional/internal DTOs, and runtime attribute
-        schemas. No-key skip path was verified (`2` skipped, `0` failed). No live provider run was
-        performed in this environment, so the phase-level "passed at least once" gate remains open.
+        schemas. No-key skip path was verified (`2` skipped, `0` failed). Live run 2026-06-13: both
+        tests PASSED against the real OpenAI API (see "Live validation result" above) — the
+        phase-level "passed at least once" gate is now CLOSED.
 - [x] 3. Cross-encoder reality check. Default DI currently injects lexical
       `IdentityCrossEncoderClient`. Implement the M.E.AI-based reranker path equivalent to
       Python `openai_reranker_client.py` (boolean classification; use logprobs if the adapter
@@ -67,11 +90,14 @@ host project own provider packages); no CI wiring yet; no perf measurement.
         ports the eval prompts near-verbatim, loads a tiny fixture or local LongMemEval path, emits
         baseline/candidate JSON, and reports LLM-judge scores without becoming part of normal
         deterministic verification.
-- [ ] 5. Record everything found (provider quirks, schema failures, prompt issues) as new rows or
-      notes in `parity.md` and file follow-up items; close the loop by updating `roadmap.md`
-      Phase 3.
+- [x] 5. Record everything found. Done 2026-06-13: the live run is recorded here, in `parity.md`
+      (real-provider row → PASSED), `roadmap.md`, `handoff.md`, and `evolution.md` (milestone M3).
+      `eng/Run-OpenAIProviderValidation.ps1` now auto-loads a gitignored `.env`, and `.env` was added
+      to `.gitignore`. No provider quirks or schema failures were found; the one extraction
+      observation is recorded above for the future eval comparison.
 
-## Done when
+## Done when — MET 2026-06-13
 
-Sample app demonstrates a sane real-provider graph; env-gated tests exist and have passed at least
-once (checkpoint recorded); cross-encoder default decided; findings recorded.
+Sample app demonstrates a sane real-provider graph; env-gated tests passed at least once (checkpoint
+recorded); cross-encoder default decided; findings recorded. Remaining item 4 (eval harness) stays
+optional and gated on explicit user approval.

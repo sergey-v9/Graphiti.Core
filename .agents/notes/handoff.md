@@ -132,7 +132,15 @@ prompts, `ws/b` edge resolution, `ws/c` ingestion/summary, `ws/d` infra, merged 
 `Graphiti.Sample.OpenAI`, full test suite (`948` passed, `2` skipped, `950` total), and `dotnet pack`
 for `Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` unset; the 2 skips are the env-gated
 `OpenAIProviderIntegrationTests`. See `parity.md` "2026-06-13 parity-hardening pass" and `decisions.md`
-for what changed and the accepted divergences. No real-provider run has executed yet (plan 03).
+for what changed and the accepted divergences.
+
+Real-provider validation, 2026-06-13: the Phase 3 acceptance gate is now MET. With the key supplied
+locally via `.env` (gitignored), both `OpenAIProviderIntegrationTests` passed against the real OpenAI
+API (all structured schemas accepted; real resolved temporal graph) and the 6-episode
+`Graphiti.Sample.OpenAI` produced a sane graph (rich summaries, correct bi-temporal invalidation,
+relevant reranked search). Re-run with `.\eng\Run-OpenAIProviderValidation.ps1` (auto-loads `.env`).
+Details and the one tracked extraction observation are in plan 03 "Live validation result" and
+`evolution.md` M3. The only remaining Phase 3 work is the optional eval harness (user-approval gated).
 
 Previous checkpoint, 2026-06-11:
 

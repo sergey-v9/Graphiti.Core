@@ -23,8 +23,15 @@ resolution (duplicate-candidate reranking, concurrency restoration), bulk ingest
 facts, candidate-pool widening), community summaries, the cross-encoder model, LLM empty/refusal
 handling, several prompts, and the Ladybug full-text query. Integrated green (948 tests). Two bulk
 behaviors were kept as documented DIVERGENT and a set of low/latent items recorded as tracked — see
-`decisions.md`. This hardens Phases 1–2; it does not substitute for the Phase 3 real-provider run,
-which remains the outstanding acceptance gate and needs an `OPENAI_API_KEY` the agents cannot supply.
+`decisions.md`. This hardens Phases 1–2.
+
+**Phase 3 acceptance gate MET 2026-06-13.** The first live OpenAI run passed: both env-gated
+integration tests (all structured schemas accepted by the real provider; a real resolved temporal
+graph) and the 6-episode sample (rich entity summaries, correct bi-temporal invalidation, relevant
+reranked search). Re-runnable via `eng/Run-OpenAIProviderValidation.ps1` (auto-loads a gitignored
+`.env`). See plan 03 "Live validation result" and `evolution.md` M3. The optional eval harness
+(plan 03 item 4 / `eval-harness-proposal.md`) — the durable "is C# as good as Python" answer —
+remains the only Phase 3 work left and is gated on explicit user approval.
 
 ## Performance/allocation moratorium
 
@@ -53,7 +60,7 @@ validation-failure re-prompting, and edge attribute extraction alignment are com
 ingestion intentionally stays on separate extraction because Python's public `Graphiti` API does
 not expose the internal default-false combined helper flag.
 
-## Phase 3 — Real-provider validation (ACTIVE; provider run pending)
+## Phase 3 — Real-provider validation (ACCEPTANCE GATE MET 2026-06-13; eval harness optional)
 
 Prove the library end-to-end with a real LLM + embedder. Work order:
 `.agents/plans/03-provider-validation.md`. A sample OpenAI host, env-gated OpenAI integration
