@@ -126,7 +126,7 @@ internal static partial class GraphitiLog
     [LoggerMessage(
         EventId = 1070,
         Level = LogLevel.Warning,
-        Message = "LLM returned summary for unknown entity {EntityName}.")]
+        Message = "LLM returned summary for unknown entity (first 30 chars): {EntityName}.")]
     public static partial void UnknownEntitySummaryReturned(
         ILogger logger,
         string entityName);

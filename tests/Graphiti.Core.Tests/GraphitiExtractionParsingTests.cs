@@ -147,6 +147,7 @@ public class GraphitiExtractionParsingTests
                 {
                     ["source"] = "Alice",
                     ["target"] = "Acme",
+                    ["relation_type"] = "WORKED_AT",
                     ["fact"] = "Alice worked at Acme.",
                     ["valid_at"] = "2026-01-02T03:04:05+01:30",
                     ["invalid_at"] = "not-a-date"
@@ -161,6 +162,68 @@ public class GraphitiExtractionParsingTests
     }
 
     [Fact]
+    public void ExtractEdges_SkipsEdgesMissingRelationTypeInsteadOfFabricatingRelatesTo()
+    {
+        // relation_type is a required Pydantic field on Edge (extract_edges.py:32-35) and CombinedFact
+        // (extract_nodes_and_edges.py:44-48); Python rejects a response whose edge lacks one. The C#
+        // parser must NOT invent a "RELATES_TO" default — it skips the edge instead (no-fabrication
+        // parity contract in .agents/notes/decisions.md).
+        var response = new JsonObject
+        {
+            ["edges"] = new JsonArray
+            {
+                // No relation_type and no `name` alias -> must be skipped, not defaulted.
+                new JsonObject
+                {
+                    ["source"] = "Alice",
+                    ["target"] = "Bob",
+                    ["fact"] = "Alice knows Bob."
+                },
+                // Blank relation_type -> also skipped (treated as absent).
+                new JsonObject
+                {
+                    ["source_entity_name"] = "Carol",
+                    ["target_entity_name"] = "Dave",
+                    ["relation_type"] = "   ",
+                    ["fact"] = "Carol knows Dave."
+                },
+                // Valid relation_type -> survives.
+                new JsonObject
+                {
+                    ["source"] = "Eve",
+                    ["target"] = "Acme",
+                    ["relation_type"] = "WORKS_AT",
+                    ["fact"] = "Eve works at Acme."
+                },
+                // `name` alias supplies the relation_type -> survives.
+                new JsonObject
+                {
+                    ["source"] = "Frank",
+                    ["target"] = "Globex",
+                    ["name"] = "FOUNDED",
+                    ["fact"] = "Frank founded Globex."
+                }
+            }
+        };
+
+        var edges = Graphiti.ExtractEdges(response);
+
+        Assert.Collection(
+            edges,
+            item =>
+            {
+                Assert.Equal("Eve", item.SourceName);
+                Assert.Equal("WORKS_AT", item.RelationType);
+            },
+            item =>
+            {
+                Assert.Equal("Frank", item.SourceName);
+                Assert.Equal("FOUNDED", item.RelationType);
+            });
+        Assert.DoesNotContain(edges, e => e.RelationType == "RELATES_TO");
+    }
+
+    [Fact]
     public void ExtractEdges_PreservesEpisodeIndicesAndDefaultsMissingIndices()
     {
         var response = new JsonObject
@@ -171,6 +234,7 @@ public class GraphitiExtractionParsingTests
                 {
                     ["source"] = "Alice",
                     ["target"] = "Bob",
+                    ["relation_type"] = "KNOWS",
                     ["fact"] = "Alice knows Bob.",
                     ["episode_indices"] = new JsonArray { 1, "0", 99 }
                 },
@@ -178,12 +242,14 @@ public class GraphitiExtractionParsingTests
                 {
                     ["source"] = "Alice",
                     ["target"] = "Acme",
+                    ["relation_type"] = "WORKS_AT",
                     ["fact"] = "Alice works at Acme."
                 },
                 new JsonObject
                 {
                     ["source"] = "Bob",
                     ["target"] = "Acme",
+                    ["relation_type"] = "WORKS_AT",
                     ["fact"] = "Bob works at Acme.",
                     ["episode_indices"] = new JsonArray()
                 }

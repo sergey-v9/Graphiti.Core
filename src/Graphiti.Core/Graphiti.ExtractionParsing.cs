@@ -132,11 +132,17 @@ public sealed partial class Graphiti
 
             var source = ReadString(item, "source_entity_name") ?? ReadString(item, "source") ?? string.Empty;
             var target = ReadString(item, "target_entity_name") ?? ReadString(item, "target") ?? string.Empty;
-            var relation = ReadString(item, "relation_type") ?? ReadString(item, "name") ?? "RELATES_TO";
+            // relation_type is a required Pydantic field on both Edge (extract_edges.py:32-35) and
+            // CombinedFact (extract_nodes_and_edges.py:44-48); Python rejects a response whose edge
+            // lacks one. Never fabricate a relation name: skip the edge when neither relation_type
+            // nor the C#-lenient `name` alias is present (matches the no-fabrication parity contract).
+            var relation = ReadString(item, "relation_type") ?? ReadString(item, "name");
             var fact = ReadString(item, "fact") ?? string.Empty;
             var validAt = ParseOptionalDate(ReadString(item, "valid_at"));
             var invalidAt = ParseOptionalDate(ReadString(item, "invalid_at"));
-            if (!string.IsNullOrWhiteSpace(source) && !string.IsNullOrWhiteSpace(target))
+            if (!string.IsNullOrWhiteSpace(source)
+                && !string.IsNullOrWhiteSpace(target)
+                && !string.IsNullOrWhiteSpace(relation))
             {
                 results.Add(new ExtractedEdge(
                     source,

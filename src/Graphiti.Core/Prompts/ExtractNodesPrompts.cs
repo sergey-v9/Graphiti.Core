@@ -532,6 +532,7 @@ internal static class ExtractNodesPrompts
             For each entity, combine relevant information from the MESSAGES with any existing summary content.
             Only return summaries for entities that have meaningful information to summarize.
             If an entity has no relevant information in the messages and no existing summary, you may skip it.
+
             """;
 
         return new[]
@@ -562,6 +563,7 @@ internal static class ExtractNodesPrompts
 
             Only return summaries for entities that have meaningful information to summarize.
             If an entity has no relevant information in the episodes and no existing summary, you may skip it.
+
             """;
 
         return new[]

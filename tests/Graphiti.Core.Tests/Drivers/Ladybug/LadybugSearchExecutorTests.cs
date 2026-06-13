@@ -236,21 +236,25 @@ public class LadybugSearchExecutorTests
     }
 
     [Fact]
-    public async Task Rankers_PreserveFirstInputTiesUnknownRowsAndLastBackendScore()
+    public async Task Rankers_DedupeInputsBreakScoreTiesByFirstInputAndKeepDefaults()
     {
+        // The per-uuid rank Cypher constrains `n.uuid = $node_uuid` and returns `n.uuid AS uuid`
+        // (LadybugSearchStatementBuilder.BuildNodeDistanceRankStatements / *EpisodeMentions*), so each
+        // statement can only ever return rows whose uuid equals the requested input uuid - never a
+        // foreign uuid, and (the aggregate `count(*)` / hardcoded `1 AS score`) at most one score per
+        // uuid. This test therefore feeds only rows the real package can actually produce, and pins the
+        // behaviors that survive: duplicate input UUIDs are deduplicated (the center is also skipped),
+        // a score tie is broken by first input position, unconnected/unmentioned inputs keep their
+        // default (0 for distance, +inf for mentions), and the center node is forced to 10.
         var recorder = new RecordingLadybugExecutor();
-        recorder.EnqueueQuery(new Dictionary<string, object?> { ["uuid"] = "first", ["score"] = 2 });
-        recorder.EnqueueQuery(
-            new Dictionary<string, object?> { ["uuid"] = "dup", ["score"] = 1 },
-            new Dictionary<string, object?> { ["uuid"] = "dup", ["score"] = 3 });
-        recorder.EnqueueQuery(
-            new Dictionary<string, object?> { ["uuid"] = "unknown", ["score"] = 2 },
-            new Dictionary<string, object?> { ["uuid"] = "second", ["score"] = 2 });
+        // Distance statements run in deduped input order: first, dup, second (center is skipped).
+        recorder.EnqueueQuery(new Dictionary<string, object?> { ["uuid"] = "first", ["score"] = 1 });
+        recorder.EnqueueQuery(new Dictionary<string, object?> { ["uuid"] = "dup", ["score"] = 1 });
+        recorder.EnqueueQuery(); // `second` is not connected to center -> keeps default 0.
+        // Mentions statements run in deduped input order: node-b, node-a, node-c.
         recorder.EnqueueQuery(new Dictionary<string, object?> { ["uuid"] = "node-b", ["score"] = 5 });
-        recorder.EnqueueQuery(
-            new Dictionary<string, object?> { ["uuid"] = "node-a", ["score"] = 3 },
-            new Dictionary<string, object?> { ["uuid"] = "node-a", ["score"] = 1 });
-        recorder.EnqueueQuery(new Dictionary<string, object?> { ["uuid"] = "mention-unknown", ["score"] = 1 });
+        recorder.EnqueueQuery(new Dictionary<string, object?> { ["uuid"] = "node-a", ["score"] = 3 });
+        recorder.EnqueueQuery(); // `node-c` has no mentions -> keeps default +inf.
         var search = new LadybugSearchExecutor(recorder);
 
         var distance = await search.RankNodeDistanceAsync(
@@ -261,13 +265,18 @@ public class LadybugSearchExecutorTests
             new[] { "node-b", "node-a", "node-b", "node-c" },
             minScore: 0);
 
-        Assert.Equal(new[] { "center", "dup", "first", "second", "unknown" }, distance.Select(rank => rank.Uuid));
-        Assert.Equal(new[] { 10f, 3f, 2f, 2f, 2f }, distance.Select(rank => rank.Score));
-        Assert.Equal(new[] { "node-a", "mention-unknown", "node-b", "node-c" }, mentions.Select(rank => rank.Uuid));
-        Assert.Equal(1f, mentions[0].Score);
-        Assert.Equal(1f, mentions[1].Score);
-        Assert.Equal(5f, mentions[2].Score);
-        Assert.True(float.IsPositiveInfinity(mentions[3].Score));
+        // center=10 (forced); first and dup both score 1, tie broken by first input index
+        // (first at index 0 precedes dup at index 1); second keeps default 0.
+        Assert.Equal(new[] { "center", "first", "dup", "second" }, distance.Select(rank => rank.Uuid));
+        Assert.Equal(new[] { 10f, 1f, 1f, 0f }, distance.Select(rank => rank.Score));
+
+        // Ascending mention score: node-a (3) before node-b (5); node-c keeps default +inf last.
+        Assert.Equal(new[] { "node-a", "node-b", "node-c" }, mentions.Select(rank => rank.Uuid));
+        Assert.Equal(3f, mentions[0].Score);
+        Assert.Equal(5f, mentions[1].Score);
+        Assert.True(float.IsPositiveInfinity(mentions[2].Score));
+
+        // The center node is never queried per-uuid (it is excluded from the distance statements).
         Assert.DoesNotContain(
             recorder.Queried,
             statement => statement.Parameters.TryGetValue("node_uuid", out var uuid)

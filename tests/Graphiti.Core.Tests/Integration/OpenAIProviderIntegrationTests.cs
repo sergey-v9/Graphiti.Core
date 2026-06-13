@@ -105,6 +105,40 @@ public sealed class OpenAIProviderIntegrationTests
         Assert.NotNull(attributeResponse);
     }
 
+    [Fact]
+    public async Task CrossEncoder_WithOpenAIProvider_RanksRelevantPassageFirst()
+    {
+        var settings = RequireOpenAISettings();
+
+        // Wire the real provider through MicrosoftExtensionsAICrossEncoderClient (the reranker hosts
+        // are expected to opt into, per decisions.md). It uses the structured boolean+confidence
+        // scoring path against a live OpenAI chat model.
+        var chatClient = new OpenAI.Chat.ChatClient(settings.ChatModel, settings.ApiKey).AsIChatClient();
+        var crossEncoder = new MicrosoftExtensionsAICrossEncoderClient(
+            chatClient,
+            new LlmConfig
+            {
+                Model = settings.ChatModel,
+                SmallModel = settings.SmallModel,
+                Temperature = 0
+            },
+            maxConcurrency: 2);
+
+        const string query = "What is the capital of France?";
+        const string relevant = "Paris is the capital and largest city of France.";
+        const string irrelevant = "Photosynthesis converts sunlight into chemical energy in plants.";
+
+        var ranked = await crossEncoder.RankAsync(query, new[] { irrelevant, relevant });
+
+        Assert.Equal(2, ranked.Count);
+        // The clearly-relevant passage must outrank the unrelated one.
+        Assert.Equal(relevant, ranked[0].Passage);
+        Assert.Equal(irrelevant, ranked[1].Passage);
+        Assert.True(
+            ranked[0].Score > ranked[1].Score,
+            $"Expected relevant score ({ranked[0].Score}) to exceed irrelevant score ({ranked[1].Score}).");
+    }
+
     private static Message[] BuildSchemaProbeMessages(string schemaName) =>
         new[]
         {
