@@ -61,6 +61,7 @@ Write 2-6 dense sentences. Use third person. Preserve all names, dates, counts, 
 Prior launch decision
 </EXISTING_KNOWLEDGE>
 The EXISTING_KNOWLEDGE contains previously extracted facts. Merge any new facts from MESSAGES into it. When newer messages contradict older facts, prefer the newer fact. If MESSAGES add no new durable facts, return the existing knowledge unchanged.
+
 <MESSAGES>
 Launch moved to March 15.
 ---

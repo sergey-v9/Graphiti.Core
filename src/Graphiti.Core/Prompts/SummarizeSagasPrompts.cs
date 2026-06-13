@@ -20,6 +20,7 @@ internal static class SummarizeSagasPrompts
 {saga.Summary}
 </EXISTING_KNOWLEDGE>
 The EXISTING_KNOWLEDGE contains previously extracted facts. Merge any new facts from MESSAGES into it. When newer messages contradict older facts, prefer the newer fact. If MESSAGES add no new durable facts, return the existing knowledge unchanged.
+
 """;
 
         var userPrompt = $"""
