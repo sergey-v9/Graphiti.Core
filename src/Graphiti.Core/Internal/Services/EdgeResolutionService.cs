@@ -98,6 +98,19 @@ internal sealed class EdgeResolutionService(
             var seen = new Dictionary<(string SourceUuid, string TargetUuid, string NormalizedFact), EntityEdge>();
             var skippedEdges = 0;
             var nodesByUuid = BuildNodesByUuid(nodes);
+
+            // Python edge_operations.py:439-455 augments uuid_entity_map by DB-fetching any edge
+            // endpoint UUID absent from the resolved-node set (scoped by the batch's group_id) before
+            // signature resolution, so an override/cross-pair endpoint that is not in `nodes` still
+            // contributes its real labels and a custom edge type is not silently lost. Mirror that
+            // here; FindEdgeTypeDefinition then falls back to ["Entity"] only when still missing.
+            await FetchMissingEndpointNodesAsync(
+                extractedEdges,
+                nodesByUuid,
+                groupId,
+                edgeTypeMap,
+                cancellationToken).ConfigureAwait(false);
+
             var attributeSchemaCache = new ConcurrentDictionary<EntityTypeDefinition, StructuredResponseSchema>();
 
             // Serial preparation pass (mirrors Python resolve_extracted_edges:344-358 fast-path
@@ -700,6 +713,58 @@ internal sealed class EdgeResolutionService(
         }
 
         return nodesByUuid;
+    }
+
+    /// <summary>
+    /// DB-fetches edge endpoint nodes that are referenced by the extracted edges but absent from the
+    /// resolved-node set, adding them to <paramref name="nodesByUuid"/>. Mirrors Python
+    /// <c>resolve_extracted_edges</c> (edge_operations.py:439-455): it only matters for node-signature
+    /// resolution, so the fetch is skipped when there is no edge-type map to match against. The lookup
+    /// is scoped by the batch's group_id (the first edge's group_id, like Python). Endpoints still
+    /// missing after the fetch are handled by <c>FindEdgeTypeDefinition</c>'s ["Entity"] fallback.
+    /// </summary>
+    private async Task FetchMissingEndpointNodesAsync(
+        IReadOnlyList<EntityEdge> extractedEdges,
+        Dictionary<string, EntityNode> nodesByUuid,
+        string groupId,
+        IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap,
+        CancellationToken cancellationToken)
+    {
+        if (edgeTypeMap is null || edgeTypeMap.Count == 0 || extractedEdges.Count == 0)
+        {
+            return;
+        }
+
+        HashSet<string>? missing = null;
+        foreach (var edge in extractedEdges)
+        {
+            if (!string.IsNullOrWhiteSpace(edge.SourceNodeUuid) && !nodesByUuid.ContainsKey(edge.SourceNodeUuid))
+            {
+                (missing ??= new HashSet<string>(StringComparer.Ordinal)).Add(edge.SourceNodeUuid);
+            }
+
+            if (!string.IsNullOrWhiteSpace(edge.TargetNodeUuid) && !nodesByUuid.ContainsKey(edge.TargetNodeUuid))
+            {
+                (missing ??= new HashSet<string>(StringComparer.Ordinal)).Add(edge.TargetNodeUuid);
+            }
+        }
+
+        if (missing is null)
+        {
+            return;
+        }
+
+        // Python scopes the lookup by the first edge's group_id (edge_operations.py:450).
+        var edgeGroupId = string.IsNullOrWhiteSpace(extractedEdges[0].GroupId)
+            ? groupId
+            : extractedEdges[0].GroupId;
+        var fetched = await driverAccessor()
+            .GetNodesByUuidsAsync<EntityNode>(missing, edgeGroupId, cancellationToken)
+            .ConfigureAwait(false);
+        for (var i = 0; i < fetched.Count; i++)
+        {
+            nodesByUuid.TryAdd(fetched[i].Uuid, fetched[i]);
+        }
     }
 
     private static List<EntityNode> BuildUniqueNodeList(IEnumerable<EntityNode> nodes)
