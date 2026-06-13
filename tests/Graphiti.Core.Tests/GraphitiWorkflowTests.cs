@@ -2919,6 +2919,66 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisodeBulk_DoesNotAppendEdgeFactsToExistingShortSummary()
+    {
+        // Python _resolve_nodes_and_edges_bulk (graphiti.py:875-886) calls
+        // extract_attributes_from_nodes with NO edges argument, so the bulk summary path runs
+        // _build_edges_by_node(None) -> {} (node_operations.py:714-715) and a node with an
+        // existing short summary keeps it verbatim (node_operations.py:868-878). Bulk ingestion
+        // must therefore NOT concatenate edge facts onto an entity's existing summary, unlike the
+        // single-episode path (graphiti.py:1166 passes edges=new_edges).
+        var driver = new InMemoryGraphDriver();
+        var existing = new EntityNode
+        {
+            Name = "OpenAI",
+            GroupId = "group",
+            Summary = "OpenAI is a research lab."
+        };
+        await existing.SaveAsync(driver);
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: new StaticLlmClient(new JsonObject
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Open AI", ["entity_type"] = "Organization" },
+                    new JsonObject { ["name"] = "Bob", ["entity_type"] = "Person" }
+                },
+                ["edges"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["source"] = "Open AI",
+                        ["target"] = "Bob",
+                        ["relation_type"] = "HIRED",
+                        ["fact"] = "Open AI hired Bob."
+                    }
+                }
+            }));
+
+        var result = await graphiti.AddEpisodeBulkAsync(
+            new[]
+            {
+                new RawEpisode
+                {
+                    Name = "first",
+                    Content = "Open AI hired Bob.",
+                    SourceDescription = "message",
+                    ReferenceTime = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)
+                }
+            },
+            groupId: "group");
+
+        var resolved = Assert.Single(result.Nodes, node => node.Uuid == existing.Uuid);
+        Assert.Equal("OpenAI is a research lab.", resolved.Summary);
+        Assert.DoesNotContain("Open AI hired Bob.", resolved.Summary, StringComparison.Ordinal);
+
+        var storedNodes = await driver.GetNodesByGroupIdsAsync<EntityNode>(new[] { "group" });
+        var storedResolved = Assert.Single(storedNodes, node => node.Uuid == existing.Uuid);
+        Assert.Equal("OpenAI is a research lab.", storedResolved.Summary);
+    }
+
+    [Fact]
     public async Task AddEpisodeBulk_PreservesDirectedNodeUuidMapWhenCanonicalUuidSortsLater()
     {
         var driver = new InMemoryGraphDriver();

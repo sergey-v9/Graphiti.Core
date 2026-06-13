@@ -340,11 +340,15 @@ public sealed partial class Graphiti
                     entityTypes,
                     EdgeMergeHelpers.FilterEdgesByUuid(entityEdges, newEdgeUuids),
                     cancellationToken).ConfigureAwait(false);
+                // Bulk summaries must NOT append edge facts. Python _resolve_nodes_and_edges_bulk
+                // (graphiti.py:875-886) calls extract_attributes_from_nodes with no edges argument
+                // (edges defaults to None -> _build_edges_by_node returns {} -> nodes with short
+                // summaries keep them verbatim). Pass an empty edge collection to match.
                 await _entitySummaryService.ExtractEntitySummariesAsync(
                     resolvedNodes,
                     episode,
                     previousEpisodes,
-                    EdgeMergeHelpers.FilterEdgesByUuid(entityEdges, newEdgeUuids),
+                    Array.Empty<EntityEdge>(),
                     cancellationToken).ConfigureAwait(false);
                 EdgeMergeHelpers.UpsertCanonicalEdges(allEdgesByUuid, entityEdges);
                 for (var i = 0; i < resolvedNodes.Count; i++)
