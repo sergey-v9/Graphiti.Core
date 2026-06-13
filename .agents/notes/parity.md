@@ -46,6 +46,14 @@ Deliberate divergences and tracked-but-unfixed items from this pass are recorded
 ("Deliberate divergences accepted…" and "Tracked-but-unfixed divergences"). The bulk row below is
 flagged accordingly.
 
+**2026-06-14 follow-up pass:** real-provider validation passed (Phase 3 gate met — see the
+real-provider row); the eval harness was built to the proposal's graph-building design and run live;
+and plan-04 follow-ups landed (full-string golden tests for the remaining prompts; missing-endpoint
+DB fetch; dropped the fabricated `RELATES_TO` default; cross-encoder golden + smoke; log/test hygiene).
+A second adversarial review of that work caught and fixed eval-prompt interior trailing spaces, F3
+over-scoping by group_id, and the eval measuring retrieval-QA instead of graph-building. All
+integrated; verification green (962 tests). Plans 03 and 04 are closed.
+
 ## Prompts (LLM instruction text)
 
 This is the highest-risk area. The prompt prose in `graphiti_core/prompts/` is core Graphiti IP:
@@ -125,4 +133,4 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Retry-on-validation-failure with error feedback message | llm_client/client.py retry loop | OK | Ported 2026-06-11 in base `LlmClient`: `JsonException` parse/schema failures get two Python-style validation-feedback re-prompts, cache keys remain based on the original prepared messages, and only validated final responses are cached |
 | GLiNER2 local extraction client | N/A | Specialized optional Python feature; out of scope unless requested |
 | Real-provider end-to-end validation | OK (PASSED 2026-06-13) | First live OpenAI run passed: both `OpenAIProviderIntegrationTests` green (all 11 structured schemas + dynamic attribute schema accepted by the real provider; real 2-episode resolved temporal graph), and the 6-episode `Graphiti.Sample.OpenAI` produced a sane graph — rich entity summaries, correct bi-temporal invalidation (blocked-fact `invalid_at` = QA-clearance date), and relevant reranked search. `gpt-4.1-mini`/`gpt-4.1-nano`/`text-embedding-3-small@1536`. Re-run via `eng/Run-OpenAIProviderValidation.ps1` (auto-loads gitignored `.env`). One extraction observation (March-15 rollout not invalidated by the reschedule) is LLM-variance, tracked for the future eval. See plan 03 |
-| eval harness (eval prompts, add-episode eval) | MISSING | Optional; Plan 03 proposal drafted in `.agents/notes/eval-harness-proposal.md`, awaiting user approval before implementation |
+| eval harness (eval prompts, add-episode eval) | OK (BUILT + RUN 2026-06-14) | The four `eval.py` prompts ported with full-string golden tests (`Prompts/EvalPrompts.cs`); `samples/Graphiti.Eval` implements the proposal's graph-building regression eval (mirrors Python `tests/evals/eval_e2e_graph_building.py`: candidate per-episode `AddEpisodeResults` judged vs a persisted baseline artifact via `eval_add_episode_results`) plus a fixed `--qa` retrieval mode (top-1 fact + distractor). Live: graph-building **6/6 not-worse** on identical code (judge genuinely diffs extractions); QA **3/7 honest**, distractor correctly fails. An adversarial review caught and fixed that the first cut measured retrieval-QA instead of graph-building. See plan 03 item 4 |

@@ -6,35 +6,33 @@ parity-hardening pass"). This plan tracks the remainder. Pick the lowest-numbere
 reviewable slice per commit; verify against Python before editing; update `parity.md`/`decisions.md`
 in the same change.
 
-## Priority order
+## Status — essentially complete (2026-06-14)
 
-The single highest-value remaining step is **Phase 3 real-provider validation (plan 03)** — the port
-has still never run against a real LLM, and that is the acceptance gate for all the parity work.
-Everything in this plan is lower priority than that, and Phase 3 needs an `OPENAI_API_KEY` the agent
-cannot supply, so it requires the user. Do the items below only when Phase 3 is blocked on the key.
+Items 1, 3, 4, 5, 6 landed via branches `ws/f-followups` and `ws/h-review-fixes`; item 2 is resolved
+by documentation. Phase 3 real-provider validation passed 2026-06-13 (see plan 03). The adversarial
+review of these branches itself found and fixed follow-on defects (eval-prompt interior trailing
+spaces, F3 over-scoping by group_id, entity-type-descriptions verbatim) — all integrated. The eval
+harness was reworked to the proposal's graph-building regression design and run live (plan 03 item 4).
 
-## Items (all low/latent — confirmed real but deferred; rationale in `decisions.md`)
+## Items
 
-1. [ ] Extend the full-string golden-test pattern to the remaining prompt builders. The combined-
-   prompt test was converted from substring to full-string equality and immediately caught four more
-   defects; the other prompt tests that still use `Assert.Contains` should get the same treatment so
-   transcription drift cannot recur. This is the most valuable item here (prevents regressions).
-2. [ ] Multi-episode attribution parity (`EpisodeAttribution.cs`): reconcile reference-time selection,
-   the resolved-vs-extracted index-map remap, and dropped-duplicate episode merging with
-   `node_operations.py:104-112` / `edge_operations.py:170-181,290-313`. ONLY relevant if/when
-   multi-episode extraction is wired (today every extraction call processes one episode). If it stays
-   single-episode, instead record in `decisions.md` that the attribution prompt blocks are
-   intentionally unported.
-3. [ ] Edge signature resolution: DB-fetch endpoint nodes missing from the resolved-node set before
-   signature matching (`edge_operations.py:439-455`), and fall back to `["Entity"]` labels, so a
-   custom edge type is not silently lost for override/cross-pair endpoints.
-4. [ ] Combined-edge parsing: drop the `?? "RELATES_TO"` default for a missing `relation_type` and
-   reject/skip the edge instead, matching Python's required-field validation — invented relation names
-   are exactly the fabrication class the port avoids elsewhere.
-5. [ ] Cross-encoder: add an exact-prompt golden assertion and (when `OPENAI_API_KEY` is present) an
-   integration smoke test wiring `MicrosoftExtensionsAICrossEncoderClient` through Graphiti search.
-6. [ ] Cosmetic: truncate the unknown-entity warning log to 30 chars (`node_operations.py:1001-1004`);
-   remove the Ladybug reranker test's impossible foreign-row assertions (test hygiene).
+1. [x] Extend the full-string golden-test pattern to the remaining prompt builders. Done (`ws/f`):
+   the entity-summary prompt tests were the last substring holdouts and were converted to full-string
+   equality, which surfaced and fixed a dropped-trailing-newline divergence. All main prompt builders
+   now have full-string golden assertions.
+2. [~] Multi-episode attribution parity (`EpisodeAttribution.cs`). RESOLVED BY DOCUMENTATION: the
+   wiring is single-episode only, so the divergences are latent. Recorded under `decisions.md`
+   "Tracked-but-unfixed divergences". Reopen only if multi-episode extraction is ever wired.
+3. [x] Edge signature resolution: DB-fetch missing endpoint nodes + `["Entity"]` fallback. Done
+   (`ws/f`), with the group-scoping corrected in `ws/h` to fetch by UUID only like Python's default
+   driver (`nodes.py:609-632` ignores group_id on the core path).
+4. [x] Combined-edge parsing: dropped the `?? "RELATES_TO"` default; missing `relation_type` now skips
+   the edge, matching Python's required-field validation. Done (`ws/f`); a second fabrication site in
+   edge resolution was removed too.
+5. [x] Cross-encoder: exact-prompt golden assertion + key-gated provider smoke test (ranks a relevant
+   passage above an irrelevant one). Done (`ws/f`); the smoke test passed live 2026-06-13.
+6. [x] Truncate the unknown-entity warning log to 30 chars; remove the Ladybug reranker test's
+   impossible foreign-row assertions. Done (`ws/f`).
 
 ## Decisions deliberately NOT actioned (kept as documented divergences)
 
@@ -46,8 +44,7 @@ intentional in `decisions.md` ("Deliberate divergences accepted…"):
 - Ladybug `RetrieveEpisodes` oldest-first ordering (C# matches the documented contract).
 - Property-filter Cypher emission (pre-existing intentional C# feature).
 
-## Done when
+## Done when — MET 2026-06-14
 
-Item 1 is done (regression guard in place); items 2–6 are either closed or explicitly recorded as
-intentional/deferred in `decisions.md`; and Phase 3 (plan 03) has had a successful real-provider run
-recorded in `handoff.md`.
+Item 1 done (regression guard in place); items 3–6 done; item 2 recorded as intentional/deferred in
+`decisions.md`; Phase 3 (plan 03) real-provider run recorded in `handoff.md`. This plan is closed.

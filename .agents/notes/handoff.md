@@ -134,13 +134,21 @@ for `Graphiti.Core.2.0.0-alpha.1.nupkg`. `OPENAI_API_KEY` unset; the 2 skips are
 `OpenAIProviderIntegrationTests`. See `parity.md` "2026-06-13 parity-hardening pass" and `decisions.md`
 for what changed and the accepted divergences.
 
-Real-provider validation, 2026-06-13: the Phase 3 acceptance gate is now MET. With the key supplied
+Real-provider validation, 2026-06-13: the Phase 3 acceptance gate is MET. With the key supplied
 locally via `.env` (gitignored), both `OpenAIProviderIntegrationTests` passed against the real OpenAI
 API (all structured schemas accepted; real resolved temporal graph) and the 6-episode
 `Graphiti.Sample.OpenAI` produced a sane graph (rich summaries, correct bi-temporal invalidation,
 relevant reranked search). Re-run with `.\eng\Run-OpenAIProviderValidation.ps1` (auto-loads `.env`).
-Details and the one tracked extraction observation are in plan 03 "Live validation result" and
-`evolution.md` M3. The only remaining Phase 3 work is the optional eval harness (user-approval gated).
+
+Follow-up checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 959 passed, 3 skipped, 962
+total; format/build/pack clean). Landed since 06-13: the eval harness (`samples/Graphiti.Eval`) built
+to the proposal's graph-building regression design and run live (6/6 no-regression on identical code;
+QA mode 3/7 honest, distractor correctly fails); plan-04 follow-ups (full-string golden tests,
+missing-endpoint DB fetch, dropped `RELATES_TO` fabrication, cross-encoder golden + smoke, log/test
+hygiene); and a benchmark-first performance pass (two measured parity-safe wins). A second adversarial
+review of all this work caught and fixed eval-prompt interior trailing spaces, F3 group-scoping, and
+the eval's measurement target. Plans 03 and 04 are closed; the two bulk divergences are finalized as
+documented (`decisions.md`). Phases 1–3 done; performance moratorium lifted (evidence-driven only).
 
 Previous checkpoint, 2026-06-11:
 

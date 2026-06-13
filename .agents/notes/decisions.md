@@ -184,8 +184,9 @@ semantics, wire compatibility, or performance/allocation discipline.
 A supervisor-driven adversarial review of the 2026-06-11 agent work found two bulk-ingestion
 behaviors where C# deliberately differs from Python. They are KEPT as intentional divergences (not
 defects) because each is a defensible improvement, and they are recorded here so they are not later
-"corrected" toward Python or mistaken for accidental drift. If a future product decision prefers
-strict Python-bulk parity, align them and update this note plus `parity.md`.
+"corrected" toward Python or mistaken for accidental drift. **Decision finalized 2026-06-13:** the
+user reviewed the flag and opted to proceed; these two stay as documented divergences. If a future
+product decision prefers strict Python-bulk parity, align them and update this note plus `parity.md`.
 
 - **Bulk cross-episode edge invalidation is more aggressive than Python.** In `add_episode_bulk`,
   C# threads each episode's freshly resolved edges back as `existingEdgesOverride` so a later episode

@@ -29,9 +29,15 @@ behaviors were kept as documented DIVERGENT and a set of low/latent items record
 integration tests (all structured schemas accepted by the real provider; a real resolved temporal
 graph) and the 6-episode sample (rich entity summaries, correct bi-temporal invalidation, relevant
 reranked search). Re-runnable via `eng/Run-OpenAIProviderValidation.ps1` (auto-loads a gitignored
-`.env`). See plan 03 "Live validation result" and `evolution.md` M3. The optional eval harness
-(plan 03 item 4 / `eval-harness-proposal.md`) — the durable "is C# as good as Python" answer —
-remains the only Phase 3 work left and is gated on explicit user approval.
+`.env`). See plan 03 "Live validation result" and `evolution.md` M3.
+
+**Phase 3 fully complete 2026-06-14.** The eval harness (plan 03 item 4) was built to the proposal's
+graph-building regression design (mirrors Python `eval_e2e_graph_building.py`) and run live: 6/6
+no-regression on identical code via the `eval_add_episode_results` judge, plus a fixed retrieval-QA
+mode (3/7 honest, distractor correctly fails). Plan 04 follow-ups also landed. With Phases 1–3 done,
+the **performance moratorium is lifted** — a first benchmark-first pass already landed two measured,
+parity-safe wins (RRF pre-sizing, span-token scoring); future perf work stays evidence-driven
+(BenchmarkDotNet before/after) per Phase 5.
 
 ## Performance/allocation moratorium
 

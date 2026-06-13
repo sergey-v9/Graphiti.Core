@@ -82,14 +82,22 @@ First successful end-to-end run against the real OpenAI API (key supplied locall
       - Repeatability support 2026-06-11: added `eng/Run-OpenAIProviderValidation.ps1`, which
         requires `OPENAI_API_KEY`, restores/builds, runs the focused OpenAI integration tests, and
         runs the OpenAI sample. No-key behavior is verified; no live provider run was performed.
-- [ ] 4. (Optional, with user buy-in) Port the eval harness: Python `prompts/eval.py` +
-      `tests/evals/` give scored end-to-end extraction comparisons. This is the durable answer to
-      "is the C# port as good as Python" — propose before building.
-      - Proposal drafted 2026-06-11 in `.agents/notes/eval-harness-proposal.md`. Await explicit
-        user approval before building. Proposed scope is a separate sample/tool executable that
-        ports the eval prompts near-verbatim, loads a tiny fixture or local LongMemEval path, emits
-        baseline/candidate JSON, and reports LLM-judge scores without becoming part of normal
-        deterministic verification.
+- [x] 4. Eval harness — BUILT and RUN LIVE 2026-06-14 (user approved "do it"). The four `eval.py`
+      prompts are ported with full-string golden tests (`Prompts/EvalPrompts.cs`), and
+      `samples/Graphiti.Eval` implements the proposal's design:
+      - **Graph-building regression eval (default)** mirrors Python `tests/evals/eval_e2e_graph_building.py`:
+        ingest the fixture → capture per-episode `AddEpisodeResults` (candidate), persist a gitignored
+        `eval-artifacts/baseline_graph_results.json` (first run establishes it), then judge candidate-vs-
+        baseline per episode via the now-wired `eval_add_episode_results` judge. Live: establish then
+        re-judge returned **6/6 not-worse (score 1.0)** on identical code, with the judge genuinely
+        diffing extractions — proving the regression-detection path works end to end.
+      - **Retrieval-QA mode (`--qa`)** is a secondary surface, fixed per review to use the top-1
+        retrieved fact (not concatenate-all) and to include a distractor question. Live: **3/7 honest**,
+        distractor correctly failed (`distractor_leak: false`). The lower-than-inflated score reflects
+        the known reschedule-extraction gap and two ranking misses — real signal, not a harness flaw.
+      An adversarial review caught that the first cut measured retrieval-QA instead of graph-building
+      (the ported `eval_add_episode_results` was dead code); reworked to the proposal design before
+      finalizing.
 - [x] 5. Record everything found. Done 2026-06-13: the live run is recorded here, in `parity.md`
       (real-provider row → PASSED), `roadmap.md`, `handoff.md`, and `evolution.md` (milestone M3).
       `eng/Run-OpenAIProviderValidation.ps1` now auto-loads a gitignored `.env`, and `.env` was added
