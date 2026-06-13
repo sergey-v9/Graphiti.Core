@@ -231,6 +231,30 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
+    public async Task BuildCommunities_SingleNodeClusterPersistsRawEntitySummary()
+    {
+        // Python build_community (community_operations.py:177) seeds the pairwise reduction with
+        // the RAW entity.summary, and for a single-node cluster (:199) persists
+        // truncate_at_sentence(entity.summary) verbatim. The community summary must therefore be
+        // the entity's own summary, NOT the name-prefixed "{Name}: {Summary}" deterministic text.
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var solo = Entity("Solo", "group", now);
+        await solo.SaveAsync(driver);
+
+        var (communities, _) = await graphiti.BuildCommunitiesAsync(new[] { "group" });
+
+        var community = Assert.Single(communities);
+        Assert.Equal("Solo summary", community.Summary);
+        Assert.DoesNotContain("Solo: Solo summary", community.Summary, StringComparison.Ordinal);
+
+        var storedCommunities = await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group" });
+        var storedCommunity = Assert.Single(storedCommunities);
+        Assert.Equal("Solo summary", storedCommunity.Summary);
+    }
+
+    [Fact]
     public async Task BuildCommunities_RejectsEmptySummaryFromRealLlm()
     {
         var driver = new InMemoryGraphDriver();

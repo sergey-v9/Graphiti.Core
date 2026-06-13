@@ -26,11 +26,6 @@ internal static class DeterministicCommunityText
         return TextUtilities.TruncateAtSentence(summary, TextUtilities.MaxSummaryChars) ?? summary;
     }
 
-    internal static string BuildNodeSummary(EntityNode node) =>
-        string.IsNullOrWhiteSpace(node.Summary)
-            ? node.Name
-            : $"{node.Name}: {node.Summary}";
-
     internal static string BuildCommunityName(IReadOnlyList<EntityNode> cluster)
     {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
