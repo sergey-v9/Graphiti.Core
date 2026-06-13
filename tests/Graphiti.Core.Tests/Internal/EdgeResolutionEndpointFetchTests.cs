@@ -9,9 +9,11 @@ namespace Graphiti.Core.Tests.Internal;
 /// <summary>
 /// Covers the edge-type signature resolution endpoint fetch ported from Python
 /// <c>resolve_extracted_edges</c> (edge_operations.py:439-486): an edge endpoint absent from the
-/// resolved-node set is DB-fetched (scoped by group_id) so its real labels participate in signature
-/// matching, and an endpoint that is still missing falls back to ["Entity"] labels. Without these,
-/// a custom edge type for an override/cross-pair endpoint was silently lost.
+/// resolved-node set is DB-fetched by UUID only (Python's default-driver
+/// <c>EntityNode.get_by_uuids</c>, nodes.py:609-632, ignores group_id on the core path) so its real
+/// labels participate in signature matching, and an endpoint that is still missing falls back to
+/// ["Entity"] labels. Without these, a custom edge type for an override/cross-pair endpoint was
+/// silently lost.
 /// </summary>
 public class EdgeResolutionEndpointFetchTests
 {
@@ -105,6 +107,71 @@ public class EdgeResolutionEndpointFetchTests
         Assert.True(edge.Attributes.ContainsKey("confidence"));
         Assert.Equal(0.91, edge.Attributes["confidence"]);
         Assert.Contains("extract_edges.extract_attributes", llm.PromptNames);
+    }
+
+    [Fact]
+    public async Task ResolveEntityEdges_FetchesCrossGroupEndpointNode_PreservingCustomEdgeType()
+    {
+        var driver = new InMemoryGraphDriver();
+        // The target endpoint (Acme, an Organization) lives in a DIFFERENT group than the edge/episode.
+        // Python's default-driver EntityNode.get_by_uuids (nodes.py:609-632) matches by UUID only and
+        // ignores group_id on the core path, so this cross-group endpoint is still fetched and its real
+        // Organization label survives. Scoping the fetch by the edge's group_id would drop it and the
+        // custom WORKS_AT edge type (with its confidence attribute) would be silently lost.
+        await driver.SaveNodeAsync(new EntityNode
+        {
+            Uuid = "acme-uuid",
+            Name = "Acme",
+            GroupId = "other-group",
+            Labels = new List<string> { "Entity", "Organization" }
+        });
+
+        var aliceInSet = new EntityNode
+        {
+            Uuid = "alice-uuid",
+            Name = "Alice",
+            GroupId = "group",
+            Labels = new List<string> { "Entity", "Person" }
+        };
+
+        var llm = new PromptResponseLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["extract_edges.extract_attributes"] = new() { ["confidence"] = 0.88 }
+        });
+        var service = new EdgeResolutionService(
+            () => driver,
+            new GraphitiClients(driver, llm, new HashEmbedder(2), new IdentityCrossEncoderClient()),
+            llm,
+            NullLogger.Instance);
+
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode-1",
+            Name = "episode",
+            Content = "Alice works at Acme.",
+            Source = EpisodeType.Message,
+            GroupId = "group",
+            ValidAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc)
+        };
+        var (edgeTypes, edgeTypeMap) = BuildWorksAtOntology();
+
+        var resolved = await service.ResolveEntityEdgesAsync(
+            new[] { BuildWorksAtEdge() }, // edge.GroupId = "group", endpoint lives in "other-group"
+            episode,
+            "group",
+            now: episode.ValidAt,
+            CancellationToken.None,
+            existingEdgesOverride: null,
+            nodes: new[] { aliceInSet }, // Acme deliberately omitted from the resolved-node set
+            edgeTypes,
+            edgeTypeMap);
+
+        var edge = Assert.Single(resolved);
+        Assert.Equal("WORKS_AT", edge.Name);
+        // The custom edge type matched only because the cross-group Acme endpoint was DB-fetched by
+        // UUID (not scoped by group_id) and seen as an Organization; its confidence attribute survived.
+        Assert.True(edge.Attributes.ContainsKey("confidence"));
+        Assert.Equal(0.88, edge.Attributes["confidence"]);
     }
 
     [Fact]

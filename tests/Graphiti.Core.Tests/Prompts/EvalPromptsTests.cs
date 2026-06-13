@@ -99,7 +99,7 @@ public class EvalPromptsTests
             "\n",
             string.Empty,
             Indent + "Given the QUESTION and the gold standard ANSWER determine if the RESPONSE to the question is correct or incorrect.",
-            Indent + "Although the RESPONSE may be more verbose, mark it as correct as long as it references the same topic",
+            Indent + "Although the RESPONSE may be more verbose, mark it as correct as long as it references the same topic ",
             Indent + "as the gold standard ANSWER. Also include your reasoning for the grade.",
             Indent + "<QUESTION>",
             Indent + "Who owns the Atlas rollout?",
@@ -135,7 +135,7 @@ public class EvalPromptsTests
         var expected = string.Join(
             "\n",
             string.Empty,
-            Indent + "Given the following PREVIOUS MESSAGES and MESSAGE, determine if the BASELINE graph data extracted from the",
+            Indent + "Given the following PREVIOUS MESSAGES and MESSAGE, determine if the BASELINE graph data extracted from the ",
             Indent + "conversation is higher quality than the CANDIDATE graph data extracted from the conversation.",
             Indent,
             Indent + "Return False if the BASELINE extraction is better, and True otherwise. If the CANDIDATE extraction and",

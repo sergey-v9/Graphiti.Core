@@ -100,14 +100,13 @@ internal sealed class EdgeResolutionService(
             var nodesByUuid = BuildNodesByUuid(nodes);
 
             // Python edge_operations.py:439-455 augments uuid_entity_map by DB-fetching any edge
-            // endpoint UUID absent from the resolved-node set (scoped by the batch's group_id) before
-            // signature resolution, so an override/cross-pair endpoint that is not in `nodes` still
-            // contributes its real labels and a custom edge type is not silently lost. Mirror that
+            // endpoint UUID absent from the resolved-node set (by UUID only on the default-driver path)
+            // before signature resolution, so an override/cross-pair endpoint that is not in `nodes`
+            // still contributes its real labels and a custom edge type is not silently lost. Mirror that
             // here; FindEdgeTypeDefinition then falls back to ["Entity"] only when still missing.
             await FetchMissingEndpointNodesAsync(
                 extractedEdges,
                 nodesByUuid,
-                groupId,
                 edgeTypeMap,
                 cancellationToken).ConfigureAwait(false);
 
@@ -720,13 +719,13 @@ internal sealed class EdgeResolutionService(
     /// resolved-node set, adding them to <paramref name="nodesByUuid"/>. Mirrors Python
     /// <c>resolve_extracted_edges</c> (edge_operations.py:439-455): it only matters for node-signature
     /// resolution, so the fetch is skipped when there is no edge-type map to match against. The lookup
-    /// is scoped by the batch's group_id (the first edge's group_id, like Python). Endpoints still
-    /// missing after the fetch are handled by <c>FindEdgeTypeDefinition</c>'s ["Entity"] fallback.
+    /// matches by UUID only, like Python's default-driver <c>EntityNode.get_by_uuids</c>
+    /// (nodes.py:609-632), so cross-group endpoints are still fetched. Endpoints still missing after
+    /// the fetch are handled by <c>FindEdgeTypeDefinition</c>'s ["Entity"] fallback.
     /// </summary>
     private async Task FetchMissingEndpointNodesAsync(
         IReadOnlyList<EntityEdge> extractedEdges,
         Dictionary<string, EntityNode> nodesByUuid,
-        string groupId,
         IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap,
         CancellationToken cancellationToken)
     {
@@ -754,12 +753,15 @@ internal sealed class EdgeResolutionService(
             return;
         }
 
-        // Python scopes the lookup by the first edge's group_id (edge_operations.py:450).
-        var edgeGroupId = string.IsNullOrWhiteSpace(extractedEdges[0].GroupId)
-            ? groupId
-            : extractedEdges[0].GroupId;
+        // Python's default-driver EntityNode.get_by_uuids (nodes.py:609-632) matches by UUID ONLY:
+        // "MATCH (n:Entity) WHERE n.uuid IN $uuids". The group_id forwarded by edge_operations.py:450
+        // is consumed solely by the optional graph_operations_interface (nodes.py:611-614) and is
+        // ignored on the core path. Scoping the C# fetch by group_id would drop a cross-group endpoint
+        // that Python would fetch (losing the node labels that select the edge's custom type), so we
+        // fetch by UUID only. All C# drivers treat a null groupId as "no group filter"
+        // (Neo4jGraphDriver.cs:295-297, InMemoryGraphDriver.cs:342, LadybugGraphDriver.cs:389).
         var fetched = await driverAccessor()
-            .GetNodesByUuidsAsync<EntityNode>(missing, edgeGroupId, cancellationToken)
+            .GetNodesByUuidsAsync<EntityNode>(missing, groupId: null, cancellationToken)
             .ConfigureAwait(false);
         for (var i = 0; i < fetched.Count; i++)
         {

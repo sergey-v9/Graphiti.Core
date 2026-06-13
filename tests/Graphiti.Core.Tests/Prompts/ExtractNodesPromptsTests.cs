@@ -459,9 +459,11 @@ public class ExtractNodesPromptsTests
 
         // Full-string golden transcribed from Python extract_summaries_batch (extract_nodes.py:509-537)
         // with summary_instructions interpolated (snippets.py:19-34, MAX_SUMMARY_CHARS=1000). Allowed
-        // mechanical divergences only: compact JSON via PromptJson.Serialize, and Python's insignificant
-        // trailing whitespace line after the GOOD example (8 spaces before the snippet's closing """)
-        // is not reproduced. entity_type_descriptions is absent here, so that section renders empty.
+        // mechanical divergences only: compact JSON via PromptJson.Serialize. The snippet's closing """
+        // sits at 8-space indentation, so summary_instructions ends with "\n        " (newline + 8
+        // spaces); after the GOOD example line that renders an interior line of exactly 8 spaces before
+        // the blank line and <MESSAGES> (extract_nodes.py:521-523). That interior trailing-space line is
+        // reproduced verbatim here. entity_type_descriptions is absent, so that section renders empty.
         var expected = """
 
             Given the MESSAGES and a list of ENTITIES, generate an updated summary for each entity that needs one.
@@ -482,6 +484,11 @@ public class ExtractNodesPromptsTests
                     Example summary:
                     BAD: "The context shows John ordered pizza. Due to length constraints, other details are omitted from this summary."
                     GOOD: "John ordered pepperoni pizza from Mario's at 7:30 PM and had it delivered to the office."
+            """
+            // Interior line of exactly 8 spaces: the "\n        " tail of summary_instructions
+            // (snippets.py closing """ at 8-space indent), made explicit so it is not stripped.
+            + "\n        \n"
+            + """
 
             <MESSAGES>
             [{"content":"Alice joined Acme.","timestamp":"2026-01-02T03:04:05.0000000Z"}]
@@ -614,6 +621,40 @@ public class ExtractNodesPromptsTests
 
             """;
         Assert.Equal(expected, messages[1].Content);
+    }
+
+    [Fact]
+    public void BuildExtractSummaries_RendersEmptyStringEntityTypeDescriptionVerbatim()
+    {
+        // Python _entity_type_descriptions_section (extract_nodes.py:494-506) only short-circuits when the
+        // whole descriptions mapping is empty/None ("if not descriptions: return ''"); it then serializes
+        // every entry verbatim via to_prompt_json with no per-value filter. A type whose description is an
+        // empty string must therefore still render as "":"" inside ENTITY_TYPE_DESCRIPTIONS.
+        var nodes = new[]
+        {
+            new EntityNode
+            {
+                Name = "Jordan Lee",
+                GroupId = "group",
+                Labels = new List<string> { "Entity", "Person" }
+            }
+        };
+        var context = ExtractNodesPrompts.BuildExtractSummariesContext(
+            nodes,
+            "Jordan now supervises two studio assistants.",
+            previousEpisodes: Array.Empty<EpisodicNode>(),
+            entityTypeDescriptions: new Dictionary<string, string>
+            {
+                ["Person"] = "A human person.",
+                ["Blank"] = string.Empty
+            });
+
+        var messages = ExtractNodesPrompts.BuildExtractEntitySummariesFromEpisodes(context);
+
+        Assert.Contains(
+            "<ENTITY_TYPE_DESCRIPTIONS>\n{\"Person\":\"A human person.\",\"Blank\":\"\"}\n</ENTITY_TYPE_DESCRIPTIONS>",
+            messages[1].Content,
+            StringComparison.Ordinal);
     }
 
     [Fact]

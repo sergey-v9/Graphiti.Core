@@ -55,7 +55,7 @@ internal static class ExtractNodesPrompts
                 Example summary:
                 BAD: "The context shows John ordered pizza. Due to length constraints, other details are omitted from this summary."
                 GOOD: "John ordered pepperoni pizza from Mario's at 7:30 PM and had it delivered to the office."
-        """;
+        """ + "\n        ";
 
     private const string EntityEpisodeSummarySystemPrompt = """
         You maintain detailed, information-dense entity memories from episode text.
@@ -656,18 +656,14 @@ internal static class ExtractNodesPrompts
             return string.Empty;
         }
 
+        // Python (extract_nodes.py:494-498) only short-circuits when the whole descriptions mapping is
+        // empty/None ("if not descriptions: return ''"); it then serializes every entry verbatim via
+        // to_prompt_json with no per-value filter. Mirror that: keep the whole-section check above but
+        // render each description (including empty strings) in the input's iteration order.
         var descriptions = new JsonObject();
         foreach (var pair in entityTypeDescriptions)
         {
-            if (!string.IsNullOrWhiteSpace(pair.Value))
-            {
-                descriptions[pair.Key] = pair.Value;
-            }
-        }
-
-        if (descriptions.Count == 0)
-        {
-            return string.Empty;
+            descriptions[pair.Key] = pair.Value;
         }
 
         return $$"""
