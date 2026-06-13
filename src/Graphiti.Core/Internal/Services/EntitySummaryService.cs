@@ -203,7 +203,10 @@ internal sealed class EntitySummaryService(
 
             if (!nameToNodes.TryGetValue(summary.Name, out var matchingNodes))
             {
-                GraphitiLog.UnknownEntitySummaryReturned(logger, summary.Name);
+                // Python logs only the first 30 chars of the name (node_operations.py:1001-1004,
+                // '%.30s') so a runaway hallucinated name does not flood the log.
+                var loggedName = summary.Name.Length > 30 ? summary.Name[..30] : summary.Name;
+                GraphitiLog.UnknownEntitySummaryReturned(logger, loggedName);
                 continue;
             }
 
