@@ -687,7 +687,9 @@ public static partial class SearchUtilities
             return [];
         }
 
-        var scores = new Dictionary<string, (T Item, float Score, int Index)>(StringComparer.Ordinal);
+        var scores = new Dictionary<string, (T Item, float Score, int Index)>(
+            first.Count,
+            StringComparer.Ordinal);
         var nextIndex = 0;
         AddRankedItemScores(first, keySelector, rankConstant, scores, ref nextIndex);
         return ProjectRankedItemScores(scores, limit, minScore);
@@ -711,7 +713,9 @@ public static partial class SearchUtilities
             return [];
         }
 
-        var scores = new Dictionary<string, (T Item, float Score, int Index)>(StringComparer.Ordinal);
+        var scores = new Dictionary<string, (T Item, float Score, int Index)>(
+            first.Count + second.Count,
+            StringComparer.Ordinal);
         var nextIndex = 0;
         AddRankedItemScores(first, keySelector, rankConstant, scores, ref nextIndex);
         AddRankedItemScores(second, keySelector, rankConstant, scores, ref nextIndex);
@@ -738,7 +742,9 @@ public static partial class SearchUtilities
             return [];
         }
 
-        var scores = new Dictionary<string, (T Item, float Score, int Index)>(StringComparer.Ordinal);
+        var scores = new Dictionary<string, (T Item, float Score, int Index)>(
+            first.Count + second.Count + third.Count,
+            StringComparer.Ordinal);
         var nextIndex = 0;
         AddRankedItemScores(first, keySelector, rankConstant, scores, ref nextIndex);
         AddRankedItemScores(second, keySelector, rankConstant, scores, ref nextIndex);

@@ -151,7 +151,11 @@ internal static class SearchResultComposer
         ArgumentNullException.ThrowIfNull(second);
         ArgumentNullException.ThrowIfNull(keySelector);
 
-        var merged = new Dictionary<string, (T Item, float Score, int Index)>(StringComparer.Ordinal);
+        // Pre-size to the upper bound (one entry per input item); deduplication only shrinks the
+        // final count, so this never exceeds capacity and avoids incremental rehashing.
+        var merged = new Dictionary<string, (T Item, float Score, int Index)>(
+            first.Count + second.Count,
+            StringComparer.Ordinal);
         var index = 0;
         AddMergedCandidates(first, keySelector, merged, ref index);
         AddMergedCandidates(second, keySelector, merged, ref index);
@@ -169,7 +173,9 @@ internal static class SearchResultComposer
         ArgumentNullException.ThrowIfNull(third);
         ArgumentNullException.ThrowIfNull(keySelector);
 
-        var merged = new Dictionary<string, (T Item, float Score, int Index)>(StringComparer.Ordinal);
+        var merged = new Dictionary<string, (T Item, float Score, int Index)>(
+            first.Count + second.Count + third.Count,
+            StringComparer.Ordinal);
         var index = 0;
         AddMergedCandidates(first, keySelector, merged, ref index);
         AddMergedCandidates(second, keySelector, merged, ref index);
