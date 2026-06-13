@@ -3,6 +3,7 @@
     <Project Path="src/Graphiti.Core/Graphiti.Core.csproj" />
   </Folder>
   <Folder Name="/samples/">
+    <Project Path="samples/Graphiti.Eval/Graphiti.Eval.csproj" />
     <Project Path="samples/Graphiti.Sample.OpenAI/Graphiti.Sample.OpenAI.csproj" />
   </Folder>
   <Folder Name="/tests/">
