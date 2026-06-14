@@ -7,7 +7,7 @@ namespace Graphiti.Core.LlmClients;
 /// by <see cref="LlmClient"/>'s validation-retry loop, which only re-prompts on
 /// <see cref="System.Text.Json.JsonException"/>.
 /// </summary>
-public sealed class LlmRefusalException : Exception
+public sealed class LlmRefusalException : GraphitiException
 {
     /// <summary>Creates the exception with a message describing the refusal.</summary>
     public LlmRefusalException(string message)

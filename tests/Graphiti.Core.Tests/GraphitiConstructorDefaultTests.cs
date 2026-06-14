@@ -104,4 +104,17 @@ public class GraphitiConstructorDefaultTests
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => graphiti.AddEpisodeAsync((AddEpisodeOptions)null!));
     }
+
+    [Fact]
+    public void AddEpisodeOptions_SagaName_IsTypeSafeConvenienceOverSaga()
+    {
+        // SagaName is a typed view over the object? Saga escape hatch: the setter funnels into Saga,
+        // the getter returns the string back (and null when Saga holds a non-string value).
+        var options = new AddEpisodeOptions { SagaName = "release-train" };
+        Assert.Equal("release-train", options.Saga);
+        Assert.Equal("release-train", options.SagaName);
+
+        options.Saga = 42;
+        Assert.Null(options.SagaName);
+    }
 }

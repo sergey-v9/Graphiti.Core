@@ -17,6 +17,7 @@ namespace Graphiti.Core
         public System.Collections.Generic.IReadOnlyList<string>? PreviousEpisodeUuids { get; set; }
         public System.DateTime ReferenceTime { get; set; }
         public object? Saga { get; set; }
+        public string? SagaName { get; set; }
         public string? SagaPreviousEpisodeUuid { get; set; }
         public Graphiti.Core.Models.EpisodeType Source { get; set; }
         public string SourceDescription { get; set; }
@@ -89,6 +90,7 @@ namespace Graphiti.Core
     public class GraphitiException : System.Exception
     {
         public GraphitiException(string message) { }
+        public GraphitiException(string message, System.Exception innerException) { }
     }
     public sealed class GroupIdValidationException : Graphiti.Core.GraphitiException
     {
@@ -510,7 +512,7 @@ namespace Graphiti.Core.LlmClients
         public string? SmallModel { get; set; }
         public double Temperature { get; set; }
     }
-    public sealed class LlmRefusalException : System.Exception
+    public sealed class LlmRefusalException : Graphiti.Core.GraphitiException
     {
         public LlmRefusalException(string message) { }
         public LlmRefusalException(string message, System.Exception innerException) { }
@@ -1259,9 +1261,6 @@ namespace Graphiti.Core.Text
         public static float[] NormalizeL2(System.Collections.Generic.IEnumerable<float> embedding) { }
         public static System.DateTime? ParseDbDate(object? input) { }
         public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>> SemaphoreGatherAsync<T>(System.Collections.Generic.IEnumerable<System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>>> operations, int? maxConcurrency = default, System.Threading.CancellationToken cancellationToken = default) { }
-        [System.Obsolete("Use TimeProvider.GetUtcNow() in workflows or GraphitiHelpers.DefaultTimestamp for" +
-            " deterministic missing values.")]
-        public static System.DateTime UtcNow() { }
         public static void ValidateEntityTypes(System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityTypeDefinition>? entityTypes) { }
         public static void ValidateExcludedEntityTypes(System.Collections.Generic.IEnumerable<string>? excludedEntityTypes, System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityTypeDefinition>? entityTypes) { }
         public static void ValidateGroupId(string? groupId) { }

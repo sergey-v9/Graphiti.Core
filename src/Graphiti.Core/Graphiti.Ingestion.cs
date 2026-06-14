@@ -1383,8 +1383,23 @@ public sealed class AddEpisodeOptions
     /// <summary>Extra natural-language guidance appended to extraction prompts.</summary>
     public string? CustomExtractionInstructions { get; set; }
 
-    /// <summary>Optional saga to associate the episode with (name or saga reference).</summary>
+    /// <summary>
+    /// Optional saga to associate the episode with. Accepts a saga <b>name</b> (<see cref="string"/>)
+    /// or an existing <c>SagaNode</c>; any other runtime type throws <see cref="ArgumentException"/>
+    /// during ingestion. For the common by-name case prefer the type-safe <see cref="SagaName"/>.
+    /// </summary>
     public object? Saga { get; set; }
+
+    /// <summary>
+    /// Type-safe convenience for associating the episode with a saga by name. Setting this assigns
+    /// <see cref="Saga"/>; reading returns the value only when <see cref="Saga"/> holds a string
+    /// (null when it holds a <c>SagaNode</c> or is unset).
+    /// </summary>
+    public string? SagaName
+    {
+        get => Saga as string;
+        set => Saga = value;
+    }
 
     /// <summary>Explicit predecessor episode within the saga.</summary>
     public string? SagaPreviousEpisodeUuid { get; set; }

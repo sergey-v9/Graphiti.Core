@@ -10,6 +10,13 @@ public class GraphitiException : Exception
     public GraphitiException(string message) : base(message)
     {
     }
+
+    /// <summary>Initializes a new instance with an error message and the underlying cause.</summary>
+    /// <param name="message">A human-readable description of the failure.</param>
+    /// <param name="innerException">The exception that caused this failure.</param>
+    public GraphitiException(string message, Exception innerException) : base(message, innerException)
+    {
+    }
 }
 
 /// <summary>Thrown when a single edge cannot be found by its UUID.</summary>

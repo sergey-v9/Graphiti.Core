@@ -46,10 +46,6 @@ public static partial class GraphitiHelpers
     /// <summary>Deterministic default timestamp (Unix epoch) used for missing/uninitialized values.</summary>
     public static DateTime DefaultTimestamp { get; } = DateTime.UnixEpoch;
 
-    /// <summary>Current UTC time. Obsolete: prefer an injected <see cref="TimeProvider"/>.</summary>
-    [Obsolete("Use TimeProvider.GetUtcNow() in workflows or GraphitiHelpers.DefaultTimestamp for deterministic missing values.")]
-    public static DateTime UtcNow() => TimeProvider.System.GetUtcNow().UtcDateTime;
-
     /// <summary>Generates a new time-ordered (version 7) UUID string.</summary>
     public static string NewUuid() => Guid.CreateVersion7().ToString();
 
