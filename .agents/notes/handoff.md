@@ -169,6 +169,15 @@ concurrently — the LadybugDB native package deadlocks across worktrees (1.5h h
 by killing orphaned testhost processes). Have worktree agents build/format-only and run the
 consolidated test centrally.
 
+WS-1 pre-bump audit checkpoint, 2026-06-14: direct local verification was green before any pin change
+(`dotnet build -c Release -clp:ErrorsOnly`, `dotnet test -c Release --no-build` with 968 passed,
+3 skipped, 971 total, and `dotnet format --verify-no-changes --no-restore`). Read-only subagent audits
+confirmed the nearby `W:\code\ladybug\tools\csharp_api` `0.17.1` artifacts include the Graphiti
+list/array/empty-list/null parameter-binding repair, FTS/vector regression coverage, and Unix
+`RTLD_GLOBAL` native-loader work. Graphiti still pins `0.17.0-alpha.2-graphiti.1`; get explicit user
+confirmation before bumping to `0.17.1`. Do not adopt `LadybugDB.Extensions` without a concrete
+Graphiti Core need.
+
 Follow-up checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 959 passed, 3 skipped, 962
 total; format/build/pack clean). Landed since 06-13: the eval harness (`samples/Graphiti.Eval`) built
 to the proposal's graph-building regression design and run live (6/6 no-regression on identical code;

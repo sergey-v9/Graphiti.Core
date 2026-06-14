@@ -108,8 +108,10 @@ Remaining (release infra, partly gated on external work): **E.2** — publish/re
 package family (`W:\code\ladybug` repo work) so `Graphiti.Core.Drivers.Ladybug` restores off-machine;
 **versioning** (2.0.0 line / alpha→beta cadence); and **CI** (a `Graphiti.Core`-only lane can run now; the
 full Ladybug suite is gated on E.2). The "Stable public API release" candidate milestone in `evolution.md`
-is the target. The public-API snapshot stays a drift guard (not a freeze); surface changes regenerate the
-baseline.
+is the target. A WS-1 audit on 2026-06-14 found local LadybugDB `0.17.1` artifacts with the needed
+binding and Unix-loader repairs, but Graphiti remains pinned to `0.17.0-alpha.2-graphiti.1` until the
+package-family change is explicitly approved. The public-API snapshot stays a drift guard (not a
+freeze); surface changes regenerate the baseline.
 
 NOTE for future parallel batches: do NOT run multiple worktree agents' `dotnet test` concurrently —
 the LadybugDB native package serializes poorly across worktrees and deadlocks. Stagger the test step

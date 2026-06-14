@@ -44,6 +44,34 @@ the inline `CAST($search_vector AS FLOAT[dim])`. The local binding has since adv
 a `LadybugDB.Extensions` package and the P0–P3 `feature/parity-extensions-2026-06` initiative; Graphiti
 still pins `0.17.0-alpha.2-graphiti.1` (C API unchanged 0.17.0→0.17.2).
 
+## WS-1 binding and cross-platform audit (2026-06-14)
+
+Read-only audit result: the newer nearby `W:\code\ladybug\tools\csharp_api` checkout is on
+`feature/parity-extensions-2026-06` at `0e709a095ad9d767a096cb8eb2a207b0091914f3`, clean, and has
+local package artifacts for `LadybugDB` / `LadybugDB.Native` version `0.17.1` plus RID native packages
+for Windows, Linux, and macOS. The earlier Graphiti parameter-binding repair is still present: commit
+`d13d2e9` is an ancestor of that checkout, `PreparedStatement.Bind` routes nulls, lists, arrays, and
+typed empty lists through native `lbug_value` handles, and the package tests cover `List<string>`,
+`float[]`, `Array.Empty<string>()`, and null parameters. Search-extension tests in the binding repo
+mirror Graphiti's `QUERY_FTS_INDEX(... $query, TOP := $limit)` and inline
+`array_cosine_similarity(... CAST($search_vector AS FLOAT[3]))` paths; loader code now uses
+`dlopen(RTLD_NOW | RTLD_GLOBAL)` on Unix-like systems and rethrows undefined-symbol failures.
+
+Graphiti cross-platform audit result: Graphiti itself does not hard-code a `win-x64` package or runtime
+identifier; the Ladybug driver references the cross-platform meta packages. The remaining Linux and
+off-machine risk is restore/runtime validation, not an obvious source-level Windows dependency:
+`NuGet.config` points at the sibling local feed, and Graphiti has only been run on win-x64 locally.
+Persisted Ladybug DB reopen coverage reads data after reopening, but does not yet prove that rerunning
+`BuildIndicesAndConstraintsAsync` against an existing FTS index is idempotent; the FTS index statements
+do not include `IF NOT EXISTS`.
+
+Decision point before implementation: do not silently bump Graphiti from
+`0.17.0-alpha.2-graphiti.1` to `0.17.1`. The evidence supports the bump, but user confirmation is
+required because it changes the local package family used by the C# port. `LadybugDB.Extensions` should
+not be adopted by default in Graphiti Core: the current Graphiti package already owns its DI helper,
+options, factory, and driver boundary, and adopting the Extensions package would add host-level
+abstractions without a demonstrated Graphiti Core requirement.
+
 ## Current Status
 
 - The LadybugDB package and native references are owned by the `Graphiti.Core.Drivers.Ladybug` project
@@ -103,7 +131,9 @@ still pins `0.17.0-alpha.2-graphiti.1` (C API unchanged 0.17.0→0.17.2).
 
 - Package id: `LadybugDB`; version comes from central package management. Graphiti currently uses
   the local repaired package family `0.17.0-alpha.2-graphiti.1` from
-  `../../ladybug/tools/csharp_api/artifacts` via `NuGet.config`.
+  `../../ladybug/tools/csharp_api/artifacts` via `NuGet.config`. A read-only 2026-06-14 audit found
+  local `0.17.1` artifacts with the same Graphiti binding repair plus Unix native-loader work; do not
+  change the Graphiti pin until that bump is explicitly approved.
 - Native assets are packaged separately, for example `LadybugDB.Native` and RID-specific native
   packages.
 - Exposed API includes `Database`, `Connection`, `Query`, `Prepare`, `Execute`,

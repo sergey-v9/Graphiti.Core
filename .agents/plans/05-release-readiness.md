@@ -27,7 +27,11 @@ B2/B3 follow-through is 968 passed, 3 skipped, 971 total, with build and format 
 - **E.2 — publish the LadybugDB package family.** The `Graphiti.Core.Drivers.Ladybug` package still consumes
   the local `0.17.0-alpha.2-graphiti.1` feed (`NuGet.config`). A real off-machine release needs that family
   published to / replaced on a real feed — work in the separate `W:\code\ladybug` repo (see
-  `kuzu-driver-port.md`). `Graphiti.Core` + samples are already off-machine-restorable.
+  `kuzu-driver-port.md`). WS-1 audit on 2026-06-14 found that the nearby
+  `W:\code\ladybug\tools\csharp_api` checkout has clean `0.17.1` artifacts with the Graphiti
+  parameter-binding repair and Linux/macOS native loader work, but Graphiti has not yet changed the pin;
+  get explicit user confirmation before replacing the `0.17.0-alpha.2-graphiti.1` pin. `Graphiti.Core` +
+  samples are already off-machine-restorable.
 - **Versioning** (confirm 2.0.0 line / alpha→beta cadence; package metadata) and **CI**. CI for the full
   suite is itself gated on E.2 (the native Ladybug tests need the package); a `Graphiti.Core`-only CI lane
   (build/format/pack + non-Ladybug tests) could run now. Remember the parallel-`dotnet test` deadlock.
