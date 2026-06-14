@@ -96,15 +96,18 @@ Landed 2026-06-14: XML docs across the consumer-facing public surface; a public-
 and a consumer `README.md` + `docs/search.md`. A first benchmark-first perf pass already landed
 (two measured parity-safe wins).
 
-Remaining work is the ordered action plan in `.agents/plans/05-release-readiness.md` (findings in
-`.agents/notes/api-freeze-review.md`). Decision (user, 2026-06-14): **no API freeze — implement all of
-A–E**, then release infrastructure. A: safe internal hardening; B: provider naming
-`GraphProvider.Kuzu`→`LadybugDb` (Kuzu obsolete alias); C: `AddGraphitiCore`→`AddGraphiti`;
-D: constructor ergonomics / drop the Neo4j-default; E: split LadybugDB into its own package so
-off-machine `restore` works (the real publish blocker). Then packaging/versioning (2.0.0 line), CI, and
-publishing/replacing the local LadybugDB package family. The "Stable public API release" candidate
-milestone in `evolution.md` is the target. The public-API snapshot test stays as a drift guard (not a
-freeze); each surface change regenerates its baseline.
+Plan `.agents/plans/05-release-readiness.md` steps **A–E are COMPLETE (2026-06-14)**, integrated and
+green (974 tests): surface hardening (A), `GraphProvider.LadybugDb`/`AddGraphiti` with obsolete aliases
+(B+C), InMemory-default constructor + `AddEpisodeOptions` (D), and the LadybugDB package split (E.1+E.3) —
+`Graphiti.Core` is now LadybugDB-free and restores from nuget.org alone, with the LadybugDB driver in the
+opt-in `Graphiti.Core.Drivers.Ladybug` package. The public-API snapshot guards both assemblies.
+
+Remaining (release infra, partly gated on external work): **E.2** — publish/replace the local LadybugDB
+package family (`W:\code\ladybug` repo work) so `Graphiti.Core.Drivers.Ladybug` restores off-machine;
+**versioning** (2.0.0 line / alpha→beta cadence); and **CI** (a `Graphiti.Core`-only lane can run now; the
+full Ladybug suite is gated on E.2). The "Stable public API release" candidate milestone in `evolution.md`
+is the target. The public-API snapshot stays a drift guard (not a freeze); surface changes regenerate the
+baseline.
 
 NOTE for future parallel batches: do NOT run multiple worktree agents' `dotnet test` concurrently —
 the LadybugDB native package serializes poorly across worktrees and deadlocks. Stagger the test step

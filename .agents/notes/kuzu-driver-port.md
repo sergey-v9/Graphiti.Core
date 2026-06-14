@@ -1,11 +1,22 @@
 # LadybugDB Provider / Kuzu Parity
 
 LadybugDB is the C# port's main graph-provider target. Kuzu remains the Python parity lineage and
-compatibility vocabulary while the driver-facing name moves toward LadybugDB.
+compatibility vocabulary.
+
+**Update 2026-06-14 (plan 05 B + E):** the driver-facing provider value is now `GraphProvider.LadybugDb`
+(`GraphProvider.Kuzu` is an `[Obsolete]` alias that still resolves to the driver), and the LadybugDB
+driver was extracted into a separate opt-in package `src/Graphiti.Core.Drivers.Ladybug/`. `Graphiti.Core`
+no longer references the LadybugDB packages; the new project owns them and `AddLadybugDbGraphDriver`.
+Some bullets below that say "`Graphiti.Core` owns the LadybugDB package" are superseded by this split —
+the package references and driver implementation now live in `Graphiti.Core.Drivers.Ladybug`. The one
+remaining release blocker is publishing/replacing the local `0.17.0-alpha.2-graphiti.1` package family
+(Step E.2): patch+pack in `W:\code\ladybug\tools\csharp_api`, publish to a real feed (or keep the local
+feed for dev), then point `Graphiti.Core.Drivers.Ladybug` at it.
 
 ## Current Status
 
-- `Graphiti.Core` owns the LadybugDB package and native references.
+- The LadybugDB package and native references are owned by the `Graphiti.Core.Drivers.Ladybug` project
+  (superseding the historical "`Graphiti.Core` owns" bullets below).
 - `Drivers/Ladybug/` owns schema, statement construction, record mapping,
   full-text query construction, Ladybug label-filter fragments, the concrete package executor, and
   executor-backed graph/search behavior.

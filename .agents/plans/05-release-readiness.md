@@ -7,6 +7,28 @@ guarded by a public-API snapshot test. This plan turns the pre-freeze review
 test is kept as a drift guard, not a freeze: each step that changes the public surface regenerates
 `tests/Graphiti.Core.Tests/Api/Graphiti.Core.approved.txt` in the same commit.
 
+## Status — A–E COMPLETE (2026-06-14)
+
+All five steps landed on `main` and verified green (974 tests, format/build/pack clean):
+- **A** — `init` setters, `Options`/`ActivitySource`/`TokenCounter` get-only, 7 port-artifact helpers internalized.
+- **B+C** — `GraphProvider.LadybugDb=5` and `AddGraphiti` primary; `Kuzu`/`AddGraphitiCore` `[Obsolete]` aliases
+  (GRPH0001/2 `NoWarn` so internal callers stay clean, external consumers warned).
+- **D** — constructor defaults to InMemory (precedence: explicit driver > `uri`→Neo4j > InMemory); additive
+  `AddEpisodeOptions` overload.
+- **E.1 + E.3** — LadybugDB extracted to `src/Graphiti.Core.Drivers.Ladybug/`; `Graphiti.Core` is LadybugDB-free
+  and restores from nuget.org alone; core resolves `LadybugDb`/`Kuzu` via `GraphDriverFactory` (set by
+  `AddLadybugDbGraphDriver`) and throws a clear error if the package is absent. README/samples updated.
+- The public-API snapshot now guards BOTH assemblies (`Graphiti.Core` + `Graphiti.Core.Drivers.Ladybug`).
+
+**Remaining (release infra; partly gated on external work):**
+- **E.2 — publish the LadybugDB package family.** The `Graphiti.Core.Drivers.Ladybug` package still consumes
+  the local `0.17.0-alpha.2-graphiti.1` feed (`NuGet.config`). A real off-machine release needs that family
+  published to / replaced on a real feed — work in the separate `W:\code\ladybug` repo (see
+  `kuzu-driver-port.md`). `Graphiti.Core` + samples are already off-machine-restorable.
+- **Versioning** (confirm 2.0.0 line / alpha→beta cadence; package metadata) and **CI**. CI for the full
+  suite is itself gated on E.2 (the native Ladybug tests need the package); a `Graphiti.Core`-only CI lane
+  (build/format/pack + non-Ladybug tests) could run now. Remember the parallel-`dotnet test` deadlock.
+
 ## Standing constraints (apply to every step)
 
 - **Parity & wire compatibility unchanged.** Do not change prompt text, JSON/snake_case wire values,

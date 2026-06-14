@@ -86,6 +86,17 @@ no wire/prompt/cache/temporal behavior changed):
   and `ContentChunking.TokenCounter` are get-only (token-counter selection is the DI/`IContentChunker`
   path). `GraphDriverBase`, the `*Namespace` facades, `EpisodeTypeExtensions` (wire-value helpers), and
   the schema/cache-identity DTOs stay public.
+- **LadybugDB is a separate package.** `Graphiti.Core` carries only the driver contract (`IGraphDriver`,
+  `GraphProvider`, `GraphDriverBase`, `InMemoryGraphDriver`, `Neo4jGraphDriver`) and depends only on
+  nuget.org packages — it restores off-machine without the local Ladybug feed. The LadybugDB driver,
+  `LadybugDbOptions`, `AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory` live in
+  `src/Graphiti.Core.Drivers.Ladybug/` (which owns the `LadybugDB`/`LadybugDB.Native` package refs).
+  Core resolves `GraphProvider.LadybugDb`/`Kuzu` via `GraphitiOptions.GraphDriverFactory` (set by
+  `AddLadybugDbGraphDriver`) and throws a clear `InvalidOperationException` if the package is not
+  referenced/registered. `Graphiti.Core` adds `InternalsVisibleTo("Graphiti.Core.Drivers.Ladybug")`; the
+  Ladybug package adds `InternalsVisibleTo("Graphiti.Core.Tests")`. The public-API snapshot guards both
+  assemblies. A real off-machine release still requires the local `0.17.0-alpha.2-graphiti.1` LadybugDB
+  package family to be published/replaced (plan 05 Step E.2; `kuzu-driver-port.md`).
 
 ## Library Boundaries
 
