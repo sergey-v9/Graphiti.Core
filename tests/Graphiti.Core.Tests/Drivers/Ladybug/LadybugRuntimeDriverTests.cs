@@ -577,6 +577,11 @@ public class LadybugRuntimeDriverTests
         var services = new ServiceCollection();
         services.AddGraphitiCore(options => options.Provider = GraphProvider.Kuzu);
 
+        // Post-split: the LadybugDB driver is opt-in. AddLadybugDbGraphDriver (from the
+        // Graphiti.Core.Drivers.Ladybug package) registers the GraphDriverFactory that core honors for
+        // GraphProvider.Kuzu (and GraphProvider.LadybugDb); without it, core throws a clear error.
+        services.AddLadybugDbGraphDriver();
+
         await using var serviceProvider = services.BuildServiceProvider(
             new ServiceProviderOptions
             {
@@ -590,9 +595,29 @@ public class LadybugRuntimeDriverTests
         await driver.CloseAsync();
 
         Assert.Equal(GraphProvider.Kuzu, options.Provider);
-        Assert.Null(options.GraphDriverFactory);
+        Assert.NotNull(options.GraphDriverFactory);
         Assert.Equal(GraphProvider.Kuzu, driver.Provider);
         Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
+    }
+
+    [Fact]
+    public void GraphProviderKuzuWithoutLadybugPackageThrowsClearError()
+    {
+        var services = new ServiceCollection();
+        services.AddGraphitiCore(options => options.Provider = GraphProvider.Kuzu);
+
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+
+        var options = scope.ServiceProvider.GetRequiredService<IOptions<GraphitiOptions>>().Value;
+        Assert.Null(options.GraphDriverFactory);
+
+        // Core alone cannot build the LadybugDB driver after the package split; it fails with a clear
+        // message pointing the caller at AddLadybugDbGraphDriver().
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => scope.ServiceProvider.GetRequiredService<IGraphDriver>());
+        Assert.Contains("Graphiti.Core.Drivers.Ladybug", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("AddLadybugDbGraphDriver", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -604,11 +629,10 @@ public class LadybugRuntimeDriverTests
         try
         {
             var services = new ServiceCollection();
-            services.AddGraphitiCore(options =>
-            {
-                options.Provider = GraphProvider.Kuzu;
-                options.Database = databasePath;
-            });
+            services.AddGraphitiCore(options => options.Provider = GraphProvider.Kuzu);
+            // Post-split the LadybugDB file path is configured through the package's LadybugDbOptions
+            // (the Ladybug GraphDriverFactory reads DatabasePath), not GraphitiOptions.Database.
+            services.AddLadybugDbGraphDriver(options => options.DatabasePath = databasePath);
 
             await using (var serviceProvider = services.BuildServiceProvider())
             {

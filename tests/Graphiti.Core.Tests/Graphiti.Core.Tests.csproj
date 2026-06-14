@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Graphiti.Core\Graphiti.Core.csproj" />
+    <ProjectReference Include="..\..\src\Graphiti.Core.Drivers.Ladybug\Graphiti.Core.Drivers.Ladybug.csproj" />
   </ItemGroup>
 
 </Project>
