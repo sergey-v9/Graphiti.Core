@@ -106,6 +106,13 @@ candidate list, while `AddTripletAsync` mirrors Python by deriving `relatedEdges
 `existing_summary` is a non-empty string, including whitespace-only strings. C# now uses the same
 non-empty truthiness instead of trimming whitespace before deciding whether to render the section.
 
+**2026-06-14 node extraction prompt golden hardening:** strengthened
+`extract_nodes.extract_message` coverage for the dynamic entity-types + previous-messages +
+custom-instructions case from fragment/suffix assertions to full-string equality. A read-only
+Python-vs-C# audit confirmed custom instructions remain appended immediately after the final
+`</EXAMPLE>` block with no wrapper; compact JSON rendering stays the documented mechanical C#
+prompt divergence.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
@@ -158,7 +165,7 @@ an internal default-false helper flag; C# pins the same public default.
 
 | Prompt | Python source | C# call site | Status | Notes |
 |---|---|---|---|---|
-| `extract_nodes.extract_message` | prompts/extract_nodes.py | EpisodeGraphExtractor → Prompts/ExtractNodesPrompts | OK | Ported 2026-06-11; golden-text tests pin content |
+| `extract_nodes.extract_message` | prompts/extract_nodes.py | EpisodeGraphExtractor → Prompts/ExtractNodesPrompts | OK | Ported 2026-06-11; golden-text tests pin content, including custom entity types, previous messages, and post-example custom instructions |
 | `extract_nodes.extract_text` | prompts/extract_nodes.py | same | OK | same |
 | `extract_nodes.extract_json` | prompts/extract_nodes.py | same | OK | same; C# previously never branched to a JSON-specific prompt |
 | `extract_edges.edge` | prompts/extract_edges.py | EpisodeGraphExtractor → Prompts/ExtractEdgesPrompts | OK | Ported 2026-06-11; golden-text tests pin content |

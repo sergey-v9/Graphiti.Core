@@ -135,7 +135,7 @@ added.
 
 Latest checkpoint, 2026-06-14:
 
-`.\eng\Verify-GraphitiCore.ps1` is green after the saga prompt truthiness follow-up: restore,
+`.\eng\Verify-GraphitiCore.ps1` is green after the node extraction prompt golden hardening: restore,
 format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`984` passed,
 `3` skipped, `987` total), `dotnet pack` for both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
