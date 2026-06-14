@@ -13,7 +13,7 @@ public class SearchEngineDriverBackedTests
         var community = new CommunityNode { Uuid = "community", Name = "Community", Summary = "alpha community", GroupId = "group" };
         var driver = new DriverBackedSearchDriver
         {
-            SearchDelay = TimeSpan.FromMilliseconds(50),
+            ExpectedConcurrentSearchCalls = 4,
             EdgeFulltextHits = { new SearchHit<EntityEdge>(edge, 2) },
             NodeFulltextHits = { new SearchHit<EntityNode>(node, 2) },
             EpisodeFulltextHits = { new SearchHit<EpisodicNode>(episode, 2) },
@@ -24,6 +24,7 @@ public class SearchEngineDriverBackedTests
             new NoOpLlmClient(),
             new HashEmbedder(2),
             new IdentityCrossEncoderClient());
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         var results = await SearchEngine.SearchAsync(
             clients,
@@ -49,7 +50,8 @@ public class SearchEngineDriverBackedTests
                     Reranker = CommunityReranker.Rrf
                 }
             },
-            new SearchFilters());
+            new SearchFilters(),
+            cancellationToken: timeout.Token);
 
         Assert.Equal(4, driver.MaxConcurrentSearchCalls);
         Assert.Equal("edge", Assert.Single(results.Edges).Uuid);
@@ -162,10 +164,11 @@ public class SearchEngineDriverBackedTests
         };
         var driver = new DriverBackedSearchDriver
         {
-            SearchDelay = TimeSpan.FromMilliseconds(50),
+            ExpectedConcurrentSearchCalls = 2,
             NodeFulltextHits = { new SearchHit<EntityNode>(textNode, 12) },
             NodeVectorHits = { new SearchHit<EntityNode>(vectorNode, 0.9f) }
         };
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         var ranked = await SearchEngine.NodeSearchAsync(
             driver,
@@ -179,7 +182,8 @@ public class SearchEngineDriverBackedTests
                 Reranker = NodeReranker.Rrf
             },
             filter,
-            limit: 3);
+            limit: 3,
+            cancellationToken: timeout.Token);
 
         Assert.Equal(1, driver.NodeFulltextCalls);
         Assert.Equal(1, driver.NodeVectorCalls);
@@ -654,10 +658,11 @@ public class SearchEngineDriverBackedTests
         };
         var driver = new DriverBackedSearchDriver
         {
-            SearchDelay = TimeSpan.FromMilliseconds(50),
+            ExpectedConcurrentSearchCalls = 2,
             EdgeFulltextHits = { new SearchHit<EntityEdge>(textEdge, 8) },
             EdgeVectorHits = { new SearchHit<EntityEdge>(vectorEdge, 0.8f) }
         };
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         var ranked = await SearchEngine.EdgeSearchAsync(
             driver,
@@ -671,7 +676,8 @@ public class SearchEngineDriverBackedTests
                 Reranker = EdgeReranker.Rrf
             },
             filter,
-            limit: 3);
+            limit: 3,
+            cancellationToken: timeout.Token);
 
         Assert.Equal(1, driver.EdgeFulltextCalls);
         Assert.Equal(1, driver.EdgeVectorCalls);
@@ -1069,10 +1075,11 @@ public class SearchEngineDriverBackedTests
         var queryVector = new[] { 1f, 0f };
         var driver = new DriverBackedSearchDriver
         {
-            SearchDelay = TimeSpan.FromMilliseconds(50),
+            ExpectedConcurrentSearchCalls = 2,
             CommunityFulltextHits = { new SearchHit<CommunityNode>(textCommunity, 4) },
             CommunityVectorHits = { new SearchHit<CommunityNode>(vectorCommunity, 0.8f) }
         };
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         var ranked = await SearchEngine.CommunitySearchAsync(
             driver,
@@ -1081,7 +1088,8 @@ public class SearchEngineDriverBackedTests
             queryVector,
             new[] { "group" },
             new CommunitySearchConfig(),
-            limit: 3);
+            limit: 3,
+            cancellationToken: timeout.Token);
 
         Assert.Equal(1, driver.CommunityFulltextCalls);
         Assert.Equal(1, driver.CommunityVectorCalls);
@@ -1322,6 +1330,7 @@ public class SearchEngineDriverBackedTests
         public List<SearchRank> NodeDistanceRanks { get; } = new();
         public List<SearchRank> NodeEpisodeMentionRanks { get; } = new();
         public TimeSpan SearchDelay { get; set; }
+        public int ExpectedConcurrentSearchCalls { get; set; }
         public int MaxConcurrentSearchCalls => _maxConcurrentSearchCalls;
         public bool NodeFulltextCancelsImmediately { get; set; }
         public Exception? NodeFulltextException { get; set; }
@@ -1380,6 +1389,8 @@ public class SearchEngineDriverBackedTests
         public float LastCommunityVectorMinScore { get; private set; }
         private int _activeSearchCalls;
         private int _maxConcurrentSearchCalls;
+        private readonly TaskCompletionSource _expectedConcurrentSearchCallsReached =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesFulltextAsync(
             string query,
@@ -1574,6 +1585,9 @@ public class SearchEngineDriverBackedTests
             UpdateMaxConcurrentSearchCalls(active);
             try
             {
+                await WaitForExpectedConcurrentSearchCallsAsync(active, cancellationToken)
+                    .ConfigureAwait(false);
+
                 if (SearchDelay > TimeSpan.Zero)
                 {
                     await Task.Delay(SearchDelay, cancellationToken).ConfigureAwait(false);
@@ -1585,6 +1599,26 @@ public class SearchEngineDriverBackedTests
             {
                 System.Threading.Interlocked.Decrement(ref _activeSearchCalls);
             }
+        }
+
+        private async Task WaitForExpectedConcurrentSearchCallsAsync(
+            int active,
+            CancellationToken cancellationToken)
+        {
+            var expected = ExpectedConcurrentSearchCalls;
+            if (expected <= 0)
+            {
+                return;
+            }
+
+            if (active >= expected)
+            {
+                _expectedConcurrentSearchCallsReached.TrySetResult();
+            }
+
+            await _expectedConcurrentSearchCallsReached.Task
+                .WaitAsync(cancellationToken)
+                .ConfigureAwait(false);
         }
 
         private async Task<IReadOnlyList<T>> WaitForSearchCancellationAsync<T>(
