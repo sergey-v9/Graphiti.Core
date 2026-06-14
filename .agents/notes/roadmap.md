@@ -96,12 +96,15 @@ Landed 2026-06-14: XML docs across the consumer-facing public surface; a public-
 and a consumer `README.md` + `docs/search.md`. A first benchmark-first perf pass already landed
 (two measured parity-safe wins).
 
-Remaining: the pre-freeze API decisions are catalogued in `.agents/notes/api-freeze-review.md`
-(A: safe internal hardening — recommended; B: provider naming `GraphProvider.Kuzu`→`LadybugDb`;
-C: `AddGraphitiCore`→`AddGraphiti`; D: constructor ergonomics / Neo4j-default; E: split LadybugDB into
-its own package so off-machine `restore` works — the real publish blocker). Then: packaging/versioning
-decision (2.0.0 line), CI story, and publishing/replacing the local LadybugDB package family. The
-"Stable public API release" candidate milestone in `evolution.md` is the target.
+Remaining work is the ordered action plan in `.agents/plans/05-release-readiness.md` (findings in
+`.agents/notes/api-freeze-review.md`). Decision (user, 2026-06-14): **no API freeze — implement all of
+A–E**, then release infrastructure. A: safe internal hardening; B: provider naming
+`GraphProvider.Kuzu`→`LadybugDb` (Kuzu obsolete alias); C: `AddGraphitiCore`→`AddGraphiti`;
+D: constructor ergonomics / drop the Neo4j-default; E: split LadybugDB into its own package so
+off-machine `restore` works (the real publish blocker). Then packaging/versioning (2.0.0 line), CI, and
+publishing/replacing the local LadybugDB package family. The "Stable public API release" candidate
+milestone in `evolution.md` is the target. The public-API snapshot test stays as a drift guard (not a
+freeze); each surface change regenerates its baseline.
 
 NOTE for future parallel batches: do NOT run multiple worktree agents' `dotnet test` concurrently —
 the LadybugDB native package serializes poorly across worktrees and deadlocks. Stagger the test step
