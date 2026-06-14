@@ -185,6 +185,42 @@ public sealed partial class Graphiti
     }
 
     /// <summary>
+    /// Ingests a single episode using an <see cref="AddEpisodeOptions"/> bundle instead of the long
+    /// positional parameter list. This is purely ergonomic: it delegates to the parameter-list
+    /// <see cref="AddEpisodeAsync(string, string, string, DateTime, EpisodeType, string?, string?, bool, IReadOnlyDictionary{string, EntityTypeDefinition}?, IReadOnlyList{string}?, IReadOnlyList{string}?, IReadOnlyDictionary{string, EntityTypeDefinition}?, IReadOnlyDictionary{ValueTuple{string, string}, IReadOnlyList{string}}?, string?, object?, string?, CancellationToken)"/>
+    /// overload with no change in ingestion, temporal, or wire behavior.
+    /// </summary>
+    /// <param name="options">The episode content and extraction options.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>The episode plus the nodes, edges, and communities created or updated.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> is null.</exception>
+    public Task<AddEpisodeResults> AddEpisodeAsync(
+        AddEpisodeOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        return AddEpisodeAsync(
+            options.Name,
+            options.EpisodeBody,
+            options.SourceDescription,
+            options.ReferenceTime,
+            options.Source,
+            options.GroupId,
+            options.Uuid,
+            options.UpdateCommunities,
+            options.EntityTypes,
+            options.ExcludedEntityTypes,
+            options.PreviousEpisodeUuids,
+            options.EdgeTypes,
+            options.EdgeTypeMap,
+            options.CustomExtractionInstructions,
+            options.Saga,
+            options.SagaPreviousEpisodeUuid,
+            cancellationToken);
+    }
+
+    /// <summary>
     /// Ingests many episodes in one pass with batched extraction and deduplication. Faster than
     /// repeated <c>AddEpisodeAsync</c> calls, but applies cross-episode temporal invalidation less
     /// aggressively.
@@ -1295,4 +1331,61 @@ public sealed partial class Graphiti
 
     private static string ResolveUuid(string uuid, IReadOnlyDictionary<string, string> uuidMap) =>
         uuidMap.TryGetValue(uuid, out var resolvedUuid) ? resolvedUuid : uuid;
+}
+
+/// <summary>
+/// Options bundle for <see cref="Graphiti.AddEpisodeAsync(AddEpisodeOptions, CancellationToken)"/>.
+/// Carries the same inputs as the positional-parameter overload of <c>AddEpisodeAsync</c>; property
+/// defaults mirror that overload's parameter defaults exactly, so the two paths are behaviorally
+/// identical.
+/// </summary>
+public sealed class AddEpisodeOptions
+{
+    /// <summary>Display name for the episode.</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Raw content to ingest, interpreted according to <see cref="Source"/>.</summary>
+    public string EpisodeBody { get; set; } = string.Empty;
+
+    /// <summary>Free-text description of where the content came from.</summary>
+    public string SourceDescription { get; set; } = string.Empty;
+
+    /// <summary>Event time at which the content became true.</summary>
+    public DateTime ReferenceTime { get; set; } = GraphitiHelpers.DefaultTimestamp;
+
+    /// <summary>The kind of content in <see cref="EpisodeBody"/>.</summary>
+    public EpisodeType Source { get; set; } = EpisodeType.Message;
+
+    /// <summary>Graph partition to write to; the default group is used when omitted.</summary>
+    public string? GroupId { get; set; }
+
+    /// <summary>Optional explicit episode UUID.</summary>
+    public string? Uuid { get; set; }
+
+    /// <summary>Whether to update community membership after ingestion.</summary>
+    public bool UpdateCommunities { get; set; }
+
+    /// <summary>Custom entity type ontology to guide extraction.</summary>
+    public IReadOnlyDictionary<string, EntityTypeDefinition>? EntityTypes { get; set; }
+
+    /// <summary>Entity type names to exclude from extraction.</summary>
+    public IReadOnlyList<string>? ExcludedEntityTypes { get; set; }
+
+    /// <summary>Explicit prior episodes to use as context, instead of the recent window.</summary>
+    public IReadOnlyList<string>? PreviousEpisodeUuids { get; set; }
+
+    /// <summary>Custom edge (fact) type ontology to guide extraction.</summary>
+    public IReadOnlyDictionary<string, EntityTypeDefinition>? EdgeTypes { get; set; }
+
+    /// <summary>Allowed edge types per (source type, target type) pair.</summary>
+    public IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? EdgeTypeMap { get; set; }
+
+    /// <summary>Extra natural-language guidance appended to extraction prompts.</summary>
+    public string? CustomExtractionInstructions { get; set; }
+
+    /// <summary>Optional saga to associate the episode with (name or saga reference).</summary>
+    public object? Saga { get; set; }
+
+    /// <summary>Explicit predecessor episode within the saga.</summary>
+    public string? SagaPreviousEpisodeUuid { get; set; }
 }
