@@ -68,6 +68,31 @@ public class MaintenanceUtilitiesTests
     }
 
     [Fact]
+    public void BuildEpisodicEdges_UnmappedResolvedNodeDefaultsToAllEpisodesLikePython()
+    {
+        var createdAt = new DateTime(2026, 5, 31, 12, 0, 0, DateTimeKind.Utc);
+        var resolvedNode = new EntityNode { Uuid = "resolved-node", GroupId = "group" };
+
+        var edges = MaintenanceUtilities.BuildEpisodicEdges(
+            new[] { resolvedNode },
+            new[] { "episode-0", "episode-1", "episode-2" },
+            createdAt,
+            new Dictionary<string, IReadOnlyList<int>>(StringComparer.Ordinal)
+            {
+                ["extracted-node"] = new[] { 1 }
+            });
+
+        Assert.Equal(
+            new[]
+            {
+                "episode-0->resolved-node:group",
+                "episode-1->resolved-node:group",
+                "episode-2->resolved-node:group"
+            },
+            edges.Select(EdgeKey));
+    }
+
+    [Fact]
     public void BuildEpisodicEdges_SingleEpisodeOverloadUsesEpisodeSourceAndEntityGroup()
     {
         var createdAt = new DateTime(2026, 5, 31, 12, 0, 0, DateTimeKind.Utc);

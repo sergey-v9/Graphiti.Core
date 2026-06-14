@@ -8,11 +8,12 @@ in the same change.
 
 ## Status — essentially complete (2026-06-14)
 
-Items 1, 3, 4, 5, 6 landed via branches `ws/f-followups` and `ws/h-review-fixes`; item 2 is resolved
-by documentation. Phase 3 real-provider validation passed 2026-06-13 (see plan 03). The adversarial
-review of these branches itself found and fixed follow-on defects (eval-prompt interior trailing
-spaces, F3 over-scoping by group_id, entity-type-descriptions verbatim) — all integrated. The eval
-harness was reworked to the proposal's graph-building regression design and run live (plan 03 item 4).
+Items 1, 3, 4, 5, 6 landed via branches `ws/f-followups` and `ws/h-review-fixes`; item 2 is now
+closed by code alignment and tests. Phase 3 real-provider validation passed 2026-06-13 (see plan 03).
+The adversarial review of these branches itself found and fixed follow-on defects (eval-prompt
+interior trailing spaces, F3 over-scoping by group_id, entity-type-descriptions verbatim) — all
+integrated. The eval harness was reworked to the proposal's graph-building regression design and run
+live (plan 03 item 4).
 
 ## Items
 
@@ -20,9 +21,10 @@ harness was reworked to the proposal's graph-building regression design and run 
    the entity-summary prompt tests were the last substring holdouts and were converted to full-string
    equality, which surfaced and fixed a dropped-trailing-newline divergence. All main prompt builders
    now have full-string golden assertions.
-2. [~] Multi-episode attribution parity (`EpisodeAttribution.cs`). RESOLVED BY DOCUMENTATION: the
-   wiring is single-episode only, so the divergences are latent. Recorded under `decisions.md`
-   "Tracked-but-unfixed divergences". Reopen only if multi-episode extraction is ever wired.
+2. [x] Multi-episode attribution parity (`EpisodeAttribution.cs`). Done: edge `reference_time`
+   follows Python's first-raw-index rule, and node attribution now remains keyed to extracted-node
+   UUIDs through episodic-edge construction. A resolved canonical UUID mismatch therefore falls back
+   to all provided episodes like Python.
 3. [x] Edge signature resolution: DB-fetch missing endpoint nodes + `["Entity"]` fallback. Done
    (`ws/f`), with the group-scoping corrected in `ws/h` to fetch by UUID only like Python's default
    driver (`nodes.py:609-632` ignores group_id on the core path).
@@ -46,5 +48,4 @@ intentional in `decisions.md` ("Deliberate divergences accepted…"):
 
 ## Done when — MET 2026-06-14
 
-Item 1 done (regression guard in place); items 3–6 done; item 2 recorded as intentional/deferred in
-`decisions.md`; Phase 3 (plan 03) real-provider run recorded in `handoff.md`. This plan is closed.
+Items 1–6 done; Phase 3 (plan 03) real-provider run recorded in `handoff.md`. This plan is closed.

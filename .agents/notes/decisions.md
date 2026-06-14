@@ -220,6 +220,10 @@ no wire/prompt/cache/temporal behavior changed):
   exposes `use_combined_extraction` only as an internal bulk helper flag defaulting to `False`, not
   on `Graphiti.__init__`, `add_episode`, or `add_episode_bulk`; adding a C# public option or changing
   the default is a future product/API decision.
+- Multi-episode node attribution keeps Python's extracted-node UUID map semantics. If a node resolves
+  to a different canonical UUID before episodic edges are built, the attribution map does not remap
+  to that canonical UUID; `BuildEpisodicEdges` therefore falls back to linking the resolved node to
+  all provided episodes.
 - Structured edge attributes are edge-resolution behavior, not a separate ingestion-stage pass.
   Preserve Python's distinction: exact duplicate edge reuse returns before the edge-attribute prompt
   and keeps existing attributes, while non-fast-path resolution may replace or clear attributes
@@ -294,17 +298,6 @@ Other accepted public-workflow divergences confirmed in a 2026-06-14 surface aud
 These were confirmed real but left as-is, with a rationale. Revisit if the relevant path is wired or
 the impact grows.
 
-- **Multi-episode node attribution after resolution** still has a latent Python/C# difference.
-  Unreachable today: both Python and C# extract exactly one episode per public extraction call, so
-  every public path reduces to a single episode index `[0]`. If multi-episode extraction is ever
-  wired, decide whether to preserve C#'s defensive remap/merge behavior or copy Python's current
-  pre-resolution map behavior exactly. Python passes the extracted-node UUID attribution map into
-  `build_episodic_edges`; when a multi-episode extracted node resolves to a different UUID, that map
-  no longer matches and the node defaults to every episode. C# remaps and merges attribution through
-  the resolved canonical node in `EpisodeAttribution.RemapNodeIndexMap`, so it preserves the narrower
-  attributed subset. The former edge `reference_time` drift is closed: C# now matches Python's
-  first-raw-episode-index rule (`[99, 1]` maps the episode UUID to episode 1 but keeps the primary
-  episode's reference time).
 - **Ladybug `RetrieveEpisodes` returns oldest-first**, matching the documented `retrieve_episodes`
   contract (`graph_operations.py:223`, `graph_data_operations.py` `list(reversed(...))`); Python's
   Kuzu operations-interface path returns newest-first, violating its own contract. C# is the

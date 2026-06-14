@@ -82,7 +82,6 @@ public sealed partial class Graphiti
                 customExtractionInstructions,
                 cancellationToken).ConfigureAwait(false);
 
-            var extractedNodes = nodes;
             var nodeResolution = await _nodeResolutionService.ResolveExtractedNodesAsync(
                 nodes,
                 groupId,
@@ -92,10 +91,6 @@ public sealed partial class Graphiti
                 existingNodesOverride: null,
                 cancellationToken).ConfigureAwait(false);
             nodes = nodeResolution.Nodes;
-            var resolvedAttribution = EpisodeAttribution.RemapNodeIndexMap(
-                extractedNodes,
-                attribution,
-                nodeResolution.NodesByExtractedName);
             var newEdgeUuids = new HashSet<string>(StringComparer.Ordinal);
             var entityEdges = await _edgeResolutionService.ResolveExtractedEdgesAsync(
                 extractedEdges,
@@ -121,7 +116,7 @@ public sealed partial class Graphiti
                 EdgeMergeHelpers.FilterEdgesByUuid(entityEdges, newEdgeUuids),
                 cancellationToken).ConfigureAwait(false);
             var episodicEdges = CopyList(
-                MaintenanceUtilities.BuildEpisodicEdges(nodes, episode.Uuid, now, resolvedAttribution));
+                MaintenanceUtilities.BuildEpisodicEdges(nodes, episode.Uuid, now, attribution));
 
             episode.EntityEdges = BuildEntityEdgeUuidList(entityEdges);
             if (!_storeRawEpisodeContent)
@@ -617,10 +612,7 @@ public sealed partial class Graphiti
             }
 
             nodesByExtractedNameByEpisode[episodeUuid] = nodesByExtractedName;
-            attributionByEpisode[episodeUuid] = EpisodeAttribution.RemapNodeIndexMap(
-                firstPass.Extraction.Nodes,
-                firstPass.Extraction.Attribution,
-                nodesByExtractedName);
+            attributionByEpisode[episodeUuid] = firstPass.Extraction.Attribution;
         }
 
         return new BulkNodeDedupeResult(

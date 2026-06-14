@@ -98,7 +98,7 @@ and a consumer `README.md` + `docs/search.md`. A first benchmark-first perf pass
 (two measured parity-safe wins).
 
 Plan `.agents/plans/05-release-readiness.md` steps **A–E are COMPLETE (2026-06-14)**, integrated and
-green (latest `.\eng\Verify-GraphitiCore.ps1`: 974 passed, 3 skipped, 977 total; both shippable
+green (latest `.\eng\Verify-GraphitiCore.ps1`: 983 passed, 3 skipped, 986 total; both shippable
 packages pack as `.nupkg` + `.snupkg`, then fresh temp package consumers restore/build/setup/run,
 including a Ladybug smoke that embeds the packed driver in `Graphiti`):
 surface

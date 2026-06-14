@@ -304,42 +304,6 @@ public class GraphitiExtractionParsingTests
             EpisodeAttribution.ReferenceTimeForFirstIndex(null, episodes, fallback));
     }
 
-    [Fact]
-    public void EpisodeAttribution_RemapsExtractedNodeIndicesToResolvedNodes()
-    {
-        var singleRemap = EpisodeAttribution.RemapNodeIndexMap(
-            new[] { new EntityNode { Uuid = "ordered-extracted", Name = "Ordered" } },
-            new Dictionary<string, IReadOnlyList<int>>(StringComparer.Ordinal)
-            {
-                ["ordered-extracted"] = new[] { 2, 0 }
-            },
-            new Dictionary<string, EntityNode>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Ordered"] = new EntityNode { Uuid = "ordered-resolved", Name = "Ordered" }
-            });
-
-        Assert.Equal(new[] { 2, 0 }, Assert.Single(singleRemap).Value);
-
-        var firstExtracted = new EntityNode { Uuid = "first-extracted", Name = "Alice" };
-        var secondExtracted = new EntityNode { Uuid = "second-extracted", Name = "Alicia" };
-        var resolved = new EntityNode { Uuid = "resolved-alice", Name = "Alice" };
-
-        var remapped = EpisodeAttribution.RemapNodeIndexMap(
-            new[] { firstExtracted, secondExtracted },
-            new Dictionary<string, IReadOnlyList<int>>(StringComparer.Ordinal)
-            {
-                ["first-extracted"] = new[] { 2, 0 },
-                ["second-extracted"] = new[] { 1, 2 }
-            },
-            new Dictionary<string, EntityNode>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Alice"] = resolved,
-                ["Alicia"] = resolved
-            });
-
-        Assert.Equal(new[] { 0, 1, 2 }, Assert.Single(remapped).Value);
-    }
-
     private sealed class ThrowingEnumerationEntityTypes : IReadOnlyDictionary<string, EntityTypeDefinition>
     {
         public EntityTypeDefinition this[string key] => throw new NotSupportedException();

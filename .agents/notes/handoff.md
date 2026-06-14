@@ -135,7 +135,7 @@ added.
 
 Latest checkpoint, 2026-06-14:
 
-`.\eng\Verify-GraphitiCore.ps1` is green after the triplet duplicate parity follow-up: restore,
+`.\eng\Verify-GraphitiCore.ps1` is green after the node-attribution parity follow-up: restore,
 format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`983` passed,
 `3` skipped, `986` total), `dotnet pack` for both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
@@ -218,9 +218,12 @@ backend-anomalous rows from surfacing backend-only UUIDs.
 Attribution reference-time follow-up, 2026-06-14: the latent edge `reference_time` helper now matches
 Python's first-raw-episode-index rule. Valid episode UUIDs are still filtered from all valid
 `episode_indices`, but `reference_time` comes only from the first raw index when that first index is
-valid; otherwise it falls back to the primary episode. The remaining latent multi-episode attribution
-difference is node remapping after resolution: C# preserves the narrower resolved-node attribution,
-while Python's current pre-resolution map would default a resolved UUID mismatch to all episodes.
+valid; otherwise it falls back to the primary episode.
+
+Node attribution remap follow-up, 2026-06-14: the remaining latent multi-episode node-attribution
+difference was closed. C# now keeps node attribution keyed to extracted-node UUIDs through episodic
+edge construction, so a resolved canonical UUID mismatch falls back to all provided episodes like
+Python's `build_episodic_edges`.
 
 Public-surface audit follow-up, 2026-06-14: a read-only Python-vs-C# audit found no missing core
 `Graphiti` public workflow. It did identify tested but under-documented C# public-workflow
