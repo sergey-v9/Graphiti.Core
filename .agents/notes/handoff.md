@@ -133,6 +133,18 @@ when needed.
 Rerun verification before claiming the tree is green; historical test counts drift as coverage is
 added.
 
+Latest checkpoint, 2026-06-14:
+
+`.\eng\Verify-GraphitiCore.ps1` is green after package release-readiness follow-through: restore,
+format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`973` passed,
+`3` skipped, `976` total), and `dotnet pack` for both shippable packages:
+`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
+`Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`. The verifier now packs both
+projects, both csprojs set `IncludeSymbols=true`/`SymbolPackageFormat=snupkg`, and
+`PackageReadinessTests` guards shared NuGet metadata, README packing, symbol settings, SemVer-like
+same-version alignment, and the two-project pack loop. `OPENAI_API_KEY` was unset; the three skipped
+tests were the env-gated `OpenAIProviderIntegrationTests`.
+
 Latest checkpoint, 2026-06-13:
 
 Succeeded after integrating the supervisor-driven parity-hardening pass (review branches `ws/a`
@@ -297,6 +309,7 @@ dotnet format Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal
 dotnet build Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal
 dotnet test Graphiti.Core.CSharp.slnx --no-build --verbosity minimal
 dotnet pack src\Graphiti.Core\Graphiti.Core.csproj --configuration Release --no-restore --verbosity minimal
+dotnet pack src\Graphiti.Core.Drivers.Ladybug\Graphiti.Core.Drivers.Ladybug.csproj --configuration Release --no-restore --verbosity minimal
 ```
 
 If a slice repeatedly needs the same focused tests plus broader build/test/format checks, create a

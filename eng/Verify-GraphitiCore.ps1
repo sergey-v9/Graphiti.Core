@@ -48,7 +48,14 @@ Invoke-VerifyStep "test" {
 }
 
 if (-not $SkipPack) {
-    Invoke-VerifyStep "pack core" {
-        dotnet pack "src\Graphiti.Core\Graphiti.Core.csproj" --configuration Release --no-restore --verbosity minimal
+    $packageProjects = @(
+        "src\Graphiti.Core\Graphiti.Core.csproj",
+        "src\Graphiti.Core.Drivers.Ladybug\Graphiti.Core.Drivers.Ladybug.csproj"
+    )
+
+    foreach ($packageProject in $packageProjects) {
+        Invoke-VerifyStep "pack $packageProject" {
+            dotnet pack $packageProject --configuration Release --no-restore --verbosity minimal
+        }
     }
 }

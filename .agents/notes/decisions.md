@@ -58,8 +58,10 @@ semantics, wire compatibility, or performance/allocation discipline.
   partials, and `Exceptions.cs`.
 - Prefer one public type per file.
 - The two shippable package projects (`Graphiti.Core` and `Graphiti.Core.Drivers.Ladybug`) generate
-  XML documentation files. With warnings treated as errors, missing or broken XML docs on their public
-  surface are build failures; tests/samples do not enable package XML generation.
+  XML documentation files and `.snupkg` symbol packages. With warnings treated as errors, missing or
+  broken XML docs on their public surface are build failures; tests/samples do not enable package XML
+  generation. `PackageReadinessTests` guards shared NuGet metadata, README packing, symbol settings,
+  same-version alignment, and the two-project `Verify-GraphitiCore.ps1` pack loop.
 
 ## Public API surface (plan 05, 2026-06-14)
 

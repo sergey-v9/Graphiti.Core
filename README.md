@@ -508,8 +508,8 @@ full verifier from the `csharp` folder:
 .\eng\Verify-GraphitiCore.ps1
 ```
 
-It runs restore, formatting checks, build, tests, and package creation. For a quick local test-only
-loop:
+It runs restore, formatting checks, build, tests, and package creation for both `Graphiti.Core` and
+`Graphiti.Core.Drivers.Ladybug`. For a quick local test-only loop:
 
 ```powershell
 dotnet test Graphiti.Core.CSharp.slnx
@@ -593,5 +593,7 @@ and treats FalkorDB/Neptune as compatibility surfaces only.
 
 ## License
 
-Apache-2.0 (see the `PackageLicenseExpression` in `src/Graphiti.Core/Graphiti.Core.csproj`), matching
-upstream Graphiti.
+Apache-2.0. See [`LICENSE`](LICENSE) and the `PackageLicenseExpression` in both shippable package
+projects (`src/Graphiti.Core/Graphiti.Core.csproj` and
+`src/Graphiti.Core.Drivers.Ladybug/Graphiti.Core.Drivers.Ladybug.csproj`), matching upstream
+Graphiti.

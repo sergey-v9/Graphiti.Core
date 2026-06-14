@@ -9,8 +9,10 @@ test is kept as a drift guard, not a freeze: each step that changes the public s
 
 ## Status — A–E COMPLETE (2026-06-14)
 
-All five steps landed on `main` and verified green. Latest direct full-suite verification after the
-B2/B3 follow-through is 968 passed, 3 skipped, 971 total, with build and format clean:
+All five steps landed on `main` and verified green. Latest direct full verification after package
+metadata/symbols follow-through is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14: 973 passed,
+3 skipped, 976 total, with restore/format/build clean and both packages packed as `.nupkg` +
+`.snupkg`:
 - **A** — `init` setters, `Options`/`ActivitySource`/`TokenCounter` get-only, 7 port-artifact helpers
   internalized, and shippable package projects generating IntelliSense XML documentation.
 - **B+C** — `GraphProvider.LadybugDb=5` and `AddGraphiti` primary; `Kuzu`/`AddGraphitiCore` `[Obsolete]`
@@ -31,9 +33,11 @@ B2/B3 follow-through is 968 passed, 3 skipped, 971 total, with build and format 
   parameter-binding repair and Linux/macOS native loader work, but Graphiti has not yet changed the pin;
   get explicit user confirmation before replacing the `0.17.0-alpha.2-graphiti.1` pin. `Graphiti.Core` +
   samples are already off-machine-restorable.
-- **Versioning** (confirm 2.0.0 line / alpha→beta cadence; package metadata) and **CI**. CI for the full
-  suite is itself gated on E.2 (the native Ladybug tests need the package); a `Graphiti.Core`-only CI lane
-  (build/format/pack + non-Ladybug tests) could run now. Remember the parallel-`dotnet test` deadlock.
+- **Versioning** (confirm 2.0.0 line / alpha→beta cadence) and **CI**. NuGet metadata, README packing,
+  XML docs, and symbol package generation are now present and guarded for both shippable packages. CI
+  for the full suite is itself gated on E.2 (the native Ladybug tests need the package); a
+  `Graphiti.Core`-only CI lane (build/format/pack + non-Ladybug tests) could run now. Remember the
+  parallel-`dotnet test` deadlock.
 
 ## Standing constraints (apply to every step)
 
@@ -176,8 +180,9 @@ builds/tests with it; full Verify green; both packages `pack`. This is a milesto
 ## Release infrastructure (after A–E)
 
 - **Versioning:** confirm the `2.0.0` line (the namespace migration is already documented as 2.0.0). Decide
-  alpha→beta→rc cadence; set package metadata (authors, license=Apache-2.0, repo URL, README as
-  `PackageReadmeFile`, symbols).
+  alpha→beta→rc cadence. Package metadata (authors, license=Apache-2.0, repo URL, README as
+  `PackageReadmeFile`, XML docs, and `.snupkg` symbols) is already set and covered by
+  `PackageReadinessTests`.
 - **CI:** a build/format/test/pack pipeline (GitHub Actions or equivalent). Encode the native-package
   test-concurrency gotcha (single-threaded or serialized Ladybug tests). Gate the key-dependent OpenAI
   integration tests behind a secret (skip by default).

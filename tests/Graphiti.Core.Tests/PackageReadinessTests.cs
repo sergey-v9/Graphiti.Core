@@ -7,76 +7,60 @@ public class PackageReadinessTests
     [Fact]
     public void CoreProject_HasNuGetMetadataAndCoreDriverDependencies()
     {
-        var csharpRoot = FindCSharpRoot();
-        var project = XDocument.Load(Path.Combine(
-            csharpRoot,
-            "src",
-            "Graphiti.Core",
-            "Graphiti.Core.csproj"));
-        var properties = project.Root!
-            .Elements("PropertyGroup")
-            .Elements()
-            .ToDictionary(element => element.Name.LocalName, element => element.Value, StringComparer.Ordinal);
-        var packageReferences = project.Root!
-            .Elements("ItemGroup")
-            .Elements("PackageReference")
-            .Select(element => element.Attribute("Include")?.Value)
-            .Where(value => value is not null)
-            .ToHashSet(StringComparer.Ordinal);
+        var project = LoadProject("src", "Graphiti.Core", "Graphiti.Core.csproj");
+        var properties = GetProperties(project);
+        var packageReferences = GetPackageReferences(project);
 
-        Assert.Equal("Graphiti.Core", properties["PackageId"]);
-        Assert.Equal("Apache-2.0", properties["PackageLicenseExpression"]);
-        Assert.Equal("README.md", properties["PackageReadmeFile"]);
-        Assert.Equal("https://github.com/getzep/graphiti", properties["RepositoryUrl"]);
-        Assert.Equal("true", properties["EnablePackageValidation"]);
-        Assert.Contains("-", properties["Version"]);
+        AssertShippablePackageMetadata(project, properties, "Graphiti.Core");
         Assert.Contains("temporal-graph", properties["PackageTags"], StringComparison.Ordinal);
+        Assert.Contains("neo4j", properties["PackageTags"], StringComparison.Ordinal);
         Assert.Contains("Neo4j.Driver", packageReferences);
         // After the Step E package split, Graphiti.Core is LadybugDB-free so it restores from
         // nuget.org alone; the LadybugDB packages live in Graphiti.Core.Drivers.Ladybug instead.
         Assert.DoesNotContain("LadybugDB", packageReferences);
         Assert.DoesNotContain("LadybugDB.Native", packageReferences);
         Assert.DoesNotContain("OpenTelemetry", packageReferences);
-        Assert.Contains(
-            project.Root.Elements("ItemGroup").Elements("None"),
-            element => element.Attribute("Pack")?.Value == "true"
-                       && element.Attribute("PackagePath")?.Value == "\\"
-                       && element.Attribute("Include")?.Value == @"..\..\README.md");
     }
 
     [Fact]
     public void LadybugDriverProject_OwnsLadybugPackagesAndReferencesCore()
     {
-        var csharpRoot = FindCSharpRoot();
-        var project = XDocument.Load(Path.Combine(
-            csharpRoot,
+        var project = LoadProject(
             "src",
             "Graphiti.Core.Drivers.Ladybug",
-            "Graphiti.Core.Drivers.Ladybug.csproj"));
-        var properties = project.Root!
-            .Elements("PropertyGroup")
-            .Elements()
-            .ToDictionary(element => element.Name.LocalName, element => element.Value, StringComparer.Ordinal);
-        var packageReferences = project.Root!
-            .Elements("ItemGroup")
-            .Elements("PackageReference")
-            .Select(element => element.Attribute("Include")?.Value)
-            .Where(value => value is not null)
-            .ToHashSet(StringComparer.Ordinal);
+            "Graphiti.Core.Drivers.Ladybug.csproj");
+        var properties = GetProperties(project);
+        var packageReferences = GetPackageReferences(project);
         var projectReferences = project.Root!
             .Elements("ItemGroup")
             .Elements("ProjectReference")
             .Select(element => element.Attribute("Include")?.Value)
-            .Where(value => value is not null)
+            .OfType<string>()
             .ToList();
 
-        Assert.Equal("Graphiti.Core.Drivers.Ladybug", properties["PackageId"]);
-        Assert.Equal("Apache-2.0", properties["PackageLicenseExpression"]);
+        AssertShippablePackageMetadata(project, properties, "Graphiti.Core.Drivers.Ladybug");
+        Assert.Contains("temporal-graph", properties["PackageTags"], StringComparison.Ordinal);
+        Assert.Contains("ladybugdb", properties["PackageTags"], StringComparison.Ordinal);
+        Assert.Contains("kuzu", properties["PackageTags"], StringComparison.Ordinal);
         Assert.Contains("LadybugDB", packageReferences);
         Assert.Contains("LadybugDB.Native", packageReferences);
         Assert.Contains(
             projectReferences,
             value => value!.EndsWith(@"Graphiti.Core\Graphiti.Core.csproj", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ShippablePackageProjects_UseSameSemVerVersion()
+    {
+        var coreProperties = GetProperties(LoadProject("src", "Graphiti.Core", "Graphiti.Core.csproj"));
+        var ladybugProperties = GetProperties(LoadProject(
+            "src",
+            "Graphiti.Core.Drivers.Ladybug",
+            "Graphiti.Core.Drivers.Ladybug.csproj"));
+        var version = coreProperties["Version"];
+
+        AssertSemVerLike(version);
+        Assert.Equal(version, ladybugProperties["Version"]);
     }
 
     [Fact]
@@ -93,13 +77,13 @@ public class PackageReadinessTests
             .Elements("ItemGroup")
             .Elements("PackageVersion")
             .Select(element => element.Attribute("Include")?.Value)
-            .Where(value => value is not null)
+            .OfType<string>()
             .ToHashSet(StringComparer.Ordinal);
         var testPackageReferences = testProject.Root!
             .Elements("ItemGroup")
             .Elements("PackageReference")
             .Select(element => element.Attribute("Include")?.Value)
-            .Where(value => value is not null)
+            .OfType<string>()
             .ToHashSet(StringComparer.Ordinal);
 
         Assert.DoesNotContain("OpenTelemetry", packageVersions);
@@ -121,6 +105,121 @@ public class PackageReadinessTests
         Assert.Contains("obj/", gitIgnore);
         Assert.Contains("*.nupkg", gitIgnore);
         Assert.Contains("*.snupkg", gitIgnore);
+    }
+
+    [Fact]
+    public void VerifyScript_PacksBothShippableProjects()
+    {
+        var csharpRoot = FindCSharpRoot();
+        var verifyScript = File.ReadAllText(Path.Combine(csharpRoot, "eng", "Verify-GraphitiCore.ps1"));
+
+        Assert.Contains(@"src\Graphiti.Core\Graphiti.Core.csproj", verifyScript);
+        Assert.Contains(
+            @"src\Graphiti.Core.Drivers.Ladybug\Graphiti.Core.Drivers.Ladybug.csproj",
+            verifyScript);
+        Assert.Contains("dotnet pack $packageProject", verifyScript);
+    }
+
+    private static XDocument LoadProject(params string[] paths)
+    {
+        var csharpRoot = FindCSharpRoot();
+        var allPaths = new string[paths.Length + 1];
+        allPaths[0] = csharpRoot;
+        Array.Copy(paths, 0, allPaths, 1, paths.Length);
+        return XDocument.Load(Path.Combine(allPaths));
+    }
+
+    private static Dictionary<string, string> GetProperties(XDocument project)
+    {
+        return project.Root!
+            .Elements("PropertyGroup")
+            .Elements()
+            .ToDictionary(element => element.Name.LocalName, element => element.Value, StringComparer.Ordinal);
+    }
+
+    private static HashSet<string> GetPackageReferences(XDocument project)
+    {
+        return project.Root!
+            .Elements("ItemGroup")
+            .Elements("PackageReference")
+            .Select(element => element.Attribute("Include")?.Value)
+            .OfType<string>()
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static void AssertShippablePackageMetadata(
+        XDocument project,
+        Dictionary<string, string> properties,
+        string packageId)
+    {
+        Assert.Equal(packageId, properties["PackageId"]);
+        Assert.False(string.IsNullOrWhiteSpace(properties["Version"]));
+        AssertSemVerLike(properties["Version"]);
+        Assert.False(string.IsNullOrWhiteSpace(properties["Title"]));
+        Assert.Equal("Zep Software, Inc.; Graphiti Contributors", properties["Authors"]);
+        Assert.Equal("Zep Software, Inc.", properties["Company"]);
+        Assert.False(string.IsNullOrWhiteSpace(properties["Description"]));
+        Assert.Contains("graphiti", properties["PackageTags"], StringComparison.Ordinal);
+        Assert.Contains("knowledge-graph", properties["PackageTags"], StringComparison.Ordinal);
+        Assert.Equal("Apache-2.0", properties["PackageLicenseExpression"]);
+        Assert.Equal("https://github.com/getzep/graphiti", properties["PackageProjectUrl"]);
+        Assert.Equal("https://github.com/getzep/graphiti", properties["RepositoryUrl"]);
+        Assert.Equal("git", properties["RepositoryType"]);
+        Assert.Equal("README.md", properties["PackageReadmeFile"]);
+        Assert.Equal("true", properties["PublishRepositoryUrl"]);
+        Assert.Equal("true", properties["EmbedUntrackedSources"]);
+        Assert.Equal("true", properties["IncludeSymbols"]);
+        Assert.Equal("snupkg", properties["SymbolPackageFormat"]);
+        Assert.Equal("true", properties["EnablePackageValidation"]);
+        Assert.Equal("true", properties["GenerateDocumentationFile"]);
+        Assert.Contains(
+            project.Root!.Elements("ItemGroup").Elements("None"),
+            element => element.Attribute("Pack")?.Value == "true"
+                       && element.Attribute("PackagePath")?.Value == "\\"
+                       && element.Attribute("Include")?.Value == @"..\..\README.md");
+    }
+
+    private static void AssertSemVerLike(string version)
+    {
+        var buildParts = version.Split('+', 2);
+        var prereleaseParts = buildParts[0].Split('-', 2);
+        var releaseSegments = prereleaseParts[0].Split('.');
+
+        Assert.Equal(3, releaseSegments.Length);
+        foreach (var segment in releaseSegments)
+        {
+            Assert.False(string.IsNullOrEmpty(segment));
+            Assert.True(int.TryParse(segment, out _), $"Version segment '{segment}' must be numeric.");
+            Assert.False(segment.Length > 1 && segment[0] == '0');
+        }
+
+        if (prereleaseParts.Length == 2)
+        {
+            AssertVersionIdentifierSet(prereleaseParts[1], "Prerelease");
+        }
+
+        if (buildParts.Length == 2)
+        {
+            AssertVersionIdentifierSet(buildParts[1], "Build metadata");
+        }
+    }
+
+    private static void AssertVersionIdentifierSet(string value, string section)
+    {
+        Assert.False(string.IsNullOrWhiteSpace(value), $"{section} identifiers must be present.");
+        foreach (var identifier in value.Split('.'))
+        {
+            Assert.False(string.IsNullOrEmpty(identifier), $"{section} identifier cannot be empty.");
+            foreach (var character in identifier)
+            {
+                var valid =
+                    character is >= '0' and <= '9'
+                    || character is >= 'A' and <= 'Z'
+                    || character is >= 'a' and <= 'z'
+                    || character == '-';
+                Assert.True(valid, $"{section} identifier '{identifier}' contains invalid character '{character}'.");
+            }
+        }
     }
 
     private static string FindCSharpRoot()
