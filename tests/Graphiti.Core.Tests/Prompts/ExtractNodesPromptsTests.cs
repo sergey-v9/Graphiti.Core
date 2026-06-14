@@ -651,10 +651,45 @@ public class ExtractNodesPromptsTests
 
         var messages = ExtractNodesPrompts.BuildExtractEntitySummariesFromEpisodes(context);
 
-        Assert.Contains(
-            "<ENTITY_TYPE_DESCRIPTIONS>\n{\"Person\":\"A human person.\",\"Blank\":\"\"}\n</ENTITY_TYPE_DESCRIPTIONS>",
-            messages[1].Content,
-            StringComparison.Ordinal);
+        Assert.Equal(2, messages.Length);
+        Assert.Equal("system", messages[0].Role);
+        Assert.Equal("user", messages[1].Role);
+
+        var expectedEntityTypeDescriptionsSection = """
+            <ENTITY_TYPE_DESCRIPTIONS>
+            {"Person":"A human person.","Blank":""}
+            </ENTITY_TYPE_DESCRIPTIONS>
+            When an entity's type appears in ENTITY_TYPE_DESCRIPTIONS, use the description to decide which facts are most relevant to that entity type. NEVER mention the entity type, type description, or classification in the summary text itself.
+            """;
+        var expectedEntitiesJson =
+            """[{"name":"Jordan Lee","summary":"","entity_types":["Entity","Person"],"attributes":{}}]""";
+        var expected = $$"""
+            NEVER include meta-language about the summarization process. Use ONLY facts from the provided EPISODES.
+            Each summary must be under 1000 characters. Write 2-6 dense sentences in third person. Preserve all material names, roles, dates, counts, and changes over time that are explicitly supported.
+
+            For each entity below, generate an updated summary using ONLY the provided EPISODES and any existing summary already on the entity.
+
+            <EPISODES>
+            []
+            "Jordan now supervises two studio assistants."
+            </EPISODES>
+
+            {{expectedEntityTypeDescriptionsSection}}
+
+            <ENTITIES>
+            {{expectedEntitiesJson}}
+            </ENTITIES>
+
+            Only return summaries for entities that have meaningful information to summarize.
+            If an entity has no relevant information in the episodes and no existing summary, you may skip it.
+
+            """;
+
+        Assert.Equal(
+            "\n" + expectedEntityTypeDescriptionsSection + "\n",
+            context.EntityTypeDescriptionsSection);
+        Assert.Equal(expectedEntitiesJson, context.EntitiesJson);
+        Assert.Equal(expected, messages[1].Content);
     }
 
     [Fact]

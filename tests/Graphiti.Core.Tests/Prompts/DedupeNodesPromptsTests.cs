@@ -169,13 +169,70 @@ public class DedupeNodesPromptsTests
             entityTypes);
         var messages = DedupeNodesPrompts.BuildNodes(context);
 
+        var expectedExtractedNodesJson =
+            """[{"id":0,"name":"Mystery","entity_type":["Entity","Unknown","Location"],"entity_type_description":"Default Entity Type"}]""";
+
         // First non-Entity label is "Unknown" (absent) -> single lookup misses -> default.
         // It must NOT fall through to "Location"'s real description.
-        Assert.Contains(
-            "\"entity_type_description\":\"Default Entity Type\"",
-            messages[1].Content);
-        Assert.DoesNotContain(
-            "\"entity_type_description\":\"A city, region, or other place.\"",
-            messages[1].Content);
+        Assert.Equal(expectedExtractedNodesJson, context.ExtractedNodesJson);
+        Assert.Equal("[]", context.PreviousEpisodesJson);
+        Assert.Equal("[]", context.ExistingNodesJson);
+        Assert.Equal(1, context.ExtractedNodeCount);
+
+        var expected = $$"""
+
+            <PREVIOUS MESSAGES>
+            []
+            </PREVIOUS MESSAGES>
+
+            <CURRENT MESSAGE>
+            Alice mentioned an unknown place.
+            </CURRENT MESSAGE>
+
+            <ENTITIES>
+            {{expectedExtractedNodesJson}}
+            </ENTITIES>
+
+            <EXISTING ENTITIES>
+            []
+            </EXISTING ENTITIES>
+
+            Each of the above ENTITIES was extracted from the CURRENT MESSAGE.
+            For each entity, determine if it is a duplicate of any EXISTING ENTITY.
+            Entities should only be considered duplicates if they refer to the *same real-world object or concept*.
+
+            NEVER mark entities as duplicates if:
+            - They are related but distinct.
+            - They have similar names or purposes but refer to separate instances or concepts.
+
+            Task:
+            ENTITIES contains 1 entities with IDs 0 through 0.
+            Your response MUST include EXACTLY 1 resolutions with IDs 0 through 0. Do not skip or add IDs.
+
+            For every entity, provide:
+            - `id`: integer id from ENTITIES
+            - `name`: the best full name for the entity (preserve the original name unless a duplicate has a more complete name)
+            - `duplicate_candidate_id`: the `candidate_id` of the EXISTING ENTITY that is the best duplicate match, or -1 if there is no duplicate
+
+            <EXAMPLE>
+            ENTITY: "Sam" (Person)
+            EXISTING ENTITIES: [{"candidate_id": 0, "name": "Sam", "entity_types": ["Person"], "summary": "Sam enjoys hiking and photography"}]
+            Result: duplicate_candidate_id = 0 (same person referenced in conversation)
+
+            ENTITY: "NYC"
+            EXISTING ENTITIES: [{"candidate_id": 0, "name": "New York City", "entity_types": ["Location"]}, {"candidate_id": 1, "name": "New York Knicks", "entity_types": ["Organization"]}]
+            Result: duplicate_candidate_id = 0 (same location, abbreviated name)
+
+            ENTITY: "Java" (programming language)
+            EXISTING ENTITIES: [{"candidate_id": 0, "name": "Java", "entity_types": ["Location"], "summary": "An island in Indonesia"}]
+            Result: duplicate_candidate_id = -1 (same name but distinct real-world things)
+
+            ENTITY: "Marco's car"
+            EXISTING ENTITIES: [{"candidate_id": 0, "name": "Marco's vehicle", "entity_types": ["Entity"], "summary": "Marco drives a red sedan."}]
+            Result: duplicate_candidate_id = 0 (synonym - "car" and "vehicle" refer to the same thing, same possessor)
+            </EXAMPLE>
+            """;
+
+        Assert.Equal(expected, messages[1].Content);
     }
 }
