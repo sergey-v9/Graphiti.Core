@@ -13,6 +13,10 @@ public sealed class CommunityNodeNamespace
         _embedder = embedder;
     }
 
+    /// <summary>
+    /// Persists the community node, generating its name embedding first if one is not already present,
+    /// and returns the saved node.
+    /// </summary>
     public async Task<CommunityNode> SaveAsync(CommunityNode node, CancellationToken cancellationToken = default)
     {
         if (node.NameEmbedding is null)
@@ -24,6 +28,7 @@ public sealed class CommunityNodeNamespace
         return node;
     }
 
+    /// <summary>Persists many community nodes in batches, backfilling missing name embeddings.</summary>
     public async Task SaveBulkAsync(
         IEnumerable<CommunityNode> nodes,
         int batchSize = 100,
@@ -42,9 +47,11 @@ public sealed class CommunityNodeNamespace
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Deletes the community node.</summary>
     public Task DeleteAsync(CommunityNode node, CancellationToken cancellationToken = default) =>
         node.DeleteAsync(_driver, cancellationToken);
 
+    /// <summary>Deletes every community node in the given group partition, in batches.</summary>
     public Task DeleteByGroupIdAsync(
         string groupId,
         int batchSize = 100,
@@ -55,6 +62,7 @@ public sealed class CommunityNodeNamespace
             batchSize,
             cancellationToken);
 
+    /// <summary>Deletes the community nodes with the given UUIDs.</summary>
     public Task DeleteByUuidsAsync(
         IEnumerable<string> uuids,
         int batchSize = 100,
@@ -65,14 +73,17 @@ public sealed class CommunityNodeNamespace
             batchSize,
             cancellationToken);
 
+    /// <summary>Loads a single community node by UUID.</summary>
     public Task<CommunityNode> GetByUuidAsync(string uuid, CancellationToken cancellationToken = default) =>
         CommunityNode.GetByUuidAsync(_driver, uuid, cancellationToken);
 
+    /// <summary>Loads the community nodes with the given UUIDs.</summary>
     public Task<IReadOnlyList<CommunityNode>> GetByUuidsAsync(
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
         CommunityNode.GetByUuidsAsync(_driver, uuids, cancellationToken);
 
+    /// <summary>Loads community nodes across the given group partitions, with optional UUID-cursor paging.</summary>
     public Task<IReadOnlyList<CommunityNode>> GetByGroupIdsAsync(
         IEnumerable<string> groupIds,
         int? limit = null,
@@ -80,6 +91,7 @@ public sealed class CommunityNodeNamespace
         CancellationToken cancellationToken = default) =>
         CommunityNode.GetByGroupIdsAsync(_driver, groupIds, limit, uuidCursor, cancellationToken);
 
+    /// <summary>Populates the community node's name embedding from storage.</summary>
     public Task LoadNameEmbeddingAsync(CommunityNode node, CancellationToken cancellationToken = default) =>
         node.LoadNameEmbeddingAsync(_driver, cancellationToken);
 }

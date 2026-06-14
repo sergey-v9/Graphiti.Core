@@ -97,6 +97,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
     /// <summary>The authentication password, if any.</summary>
     public string? Password { get; }
 
+    /// <inheritdoc />
     public override async Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, CancellationToken cancellationToken = default)
     {
         if (deleteExisting)
@@ -119,6 +120,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
     internal static IReadOnlyList<string> BuildSchemaResetStatements() =>
         Neo4jSchemaResetStatements;
 
+    /// <inheritdoc />
     public override async Task CloseAsync(CancellationToken cancellationToken = default)
     {
         if (!_ownsDriver)
@@ -135,9 +137,11 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         await _driver.DisposeAsync().ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public override IGraphDriver Clone(string database) =>
         new Neo4jGraphDriver(_driver, Uri, User, Password, database, ownsDriver: false);
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<string>> GetEntityGroupIdsAsync(CancellationToken cancellationToken = default)
     {
         var records = await RunReadAsync(
@@ -152,6 +156,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return records.Select(record => record["group_id"].As<string>()).ToList();
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<string>> GetCommunityGroupIdsAsync(CancellationToken cancellationToken = default)
     {
         var records = await RunReadAsync(
@@ -166,6 +171,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return records.Select(record => record["group_id"].As<string>()).ToList();
     }
 
+    /// <inheritdoc />
     public override Task SaveNodeAsync(Node node, CancellationToken cancellationToken = default)
     {
         var (query, parameters) = Neo4jStatementBuilder.BuildNodeSave(node);
@@ -173,6 +179,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return RunWriteAsync(query, parameters, cancellationToken);
     }
 
+    /// <inheritdoc />
     public override Task SaveEdgeAsync(Edge edge, CancellationToken cancellationToken = default)
     {
         var (query, parameters) = Neo4jStatementBuilder.BuildEdgeSave(edge);
@@ -180,6 +187,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return RunWriteAsync(query, parameters, cancellationToken);
     }
 
+    /// <inheritdoc />
     public override async Task SaveBulkAsync(
         IEnumerable<EpisodicNode> episodicNodes,
         IEnumerable<EpisodicEdge> episodicEdges,
@@ -209,9 +217,11 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         await RunWritesAsync(statements, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public override Task DeleteNodeAsync(string uuid, CancellationToken cancellationToken = default) =>
         RunWriteAsync("MATCH (n {uuid: $uuid}) DETACH DELETE n", new Dictionary<string, object?> { ["uuid"] = uuid }, cancellationToken);
 
+    /// <inheritdoc />
     public override async Task DeleteNodesByGroupIdAsync(
         string groupId,
         int batchSize = 100,
@@ -232,6 +242,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override async Task DeleteNodesByUuidsAsync(
         IEnumerable<string> uuids,
         int batchSize = 100,
@@ -243,12 +254,14 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task DeleteEdgeAsync(string uuid, CancellationToken cancellationToken = default) =>
         RunWriteAsync(
             "MATCH ()-[e {uuid: $uuid}]-() DELETE e",
             new Dictionary<string, object?> { ["uuid"] = uuid },
             cancellationToken);
 
+    /// <inheritdoc />
     public override Task DeleteEdgesByUuidsAsync(IEnumerable<string> uuids, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uuids);
@@ -262,6 +275,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             cancellationToken);
     }
 
+    /// <inheritdoc />
     public override Task ClearDataAsync(IReadOnlyList<string>? groupIds = null, CancellationToken cancellationToken = default) =>
         groupIds is null
             ? RunWriteAsync("MATCH (n) DETACH DELETE n", new Dictionary<string, object?>(), cancellationToken)
@@ -270,6 +284,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
                 new Dictionary<string, object?> { ["group_ids"] = groupIds.ToList() },
                 cancellationToken);
 
+    /// <inheritdoc />
     public override async Task<TNode> GetNodeByUuidAsync<TNode>(string uuid, CancellationToken cancellationToken = default)
     {
         var label = Neo4jStatementBuilder.LabelFor<TNode>();
@@ -286,6 +301,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return (TNode)Neo4jRecordMapper.MapNode(records[0]["n"].As<INode>());
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<TNode>> GetNodesByUuidsAsync<TNode>(
         IEnumerable<string> uuids,
         string? groupId = null,
@@ -303,6 +319,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return records.Select(record => (TNode)Neo4jRecordMapper.MapNode(record["n"].As<INode>())).ToList();
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<TNode>> GetNodesByGroupIdsAsync<TNode>(
         IEnumerable<string> groupIds,
         int? limit = null,
@@ -330,6 +347,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             .ToList();
     }
 
+    /// <inheritdoc />
     public override async Task<T> GetEdgeByUuidAsync<T>(string uuid, CancellationToken cancellationToken = default)
     {
         var records = await QueryEdgesAsync<T>("e.uuid = $uuid", new Dictionary<string, object?> { ["uuid"] = uuid }, null, cancellationToken).ConfigureAwait(false);
@@ -341,9 +359,11 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return records[0];
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(IEnumerable<string> uuids, CancellationToken cancellationToken = default) =>
         QueryEdgesAsync<T>("e.uuid IN $uuids", new Dictionary<string, object?> { ["uuids"] = uuids.ToList() }, null, cancellationToken);
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(
         IEnumerable<string> groupIds,
         int? limit = null,
@@ -362,6 +382,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             cancellationToken);
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<EntityEdge>> GetEntityEdgesBetweenNodesAsync(
         string sourceNodeUuid,
         string targetNodeUuid,
@@ -372,6 +393,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             null,
             cancellationToken);
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<EntityEdge>> GetEntityEdgesByNodeUuidAsync(string nodeUuid, CancellationToken cancellationToken = default) =>
         QueryEdgesAsync<EntityEdge>(
             "source.uuid = $node_uuid OR target.uuid = $node_uuid",
@@ -379,6 +401,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             null,
             cancellationToken);
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<EpisodicNode>> GetEpisodesByEntityNodeUuidAsync(string entityNodeUuid, CancellationToken cancellationToken = default)
     {
         var records = await RunReadAsync(
@@ -391,6 +414,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return records.Select(record => (EpisodicNode)Neo4jRecordMapper.MapNode(record["n"].As<INode>())).ToList();
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<EpisodicNode>> RetrieveEpisodesAsync(
         DateTime referenceTime,
         int lastN,
@@ -405,6 +429,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return records.Select(record => (EpisodicNode)Neo4jRecordMapper.MapNode(record["n"].As<INode>())).Reverse().ToList();
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<EntityNode>> GetMentionedNodesAsync(IReadOnlyList<EpisodicNode> episodes, CancellationToken cancellationToken = default)
     {
         var records = await RunReadAsync(
@@ -418,6 +443,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return records.Select(record => (EntityNode)Neo4jRecordMapper.MapNode(record["n"].As<INode>())).ToList();
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<CommunityNode>> GetCommunitiesByNodesAsync(IReadOnlyList<EntityNode> nodes, CancellationToken cancellationToken = default)
     {
         var records = await RunReadAsync(
@@ -431,6 +457,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return records.Select(record => (CommunityNode)Neo4jRecordMapper.MapNode(record["n"].As<INode>())).ToList();
     }
 
+    /// <inheritdoc />
     public override async Task<SagaNode?> FindSagaByNameAsync(string name, string groupId, CancellationToken cancellationToken = default)
     {
         var records = await RunReadAsync(
@@ -440,6 +467,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return records.Count == 0 ? null : (SagaNode)Neo4jRecordMapper.MapNode(records[0]["n"].As<INode>());
     }
 
+    /// <inheritdoc />
     public override async Task<string?> GetSagaPreviousEpisodeUuidAsync(string sagaUuid, string currentEpisodeUuid, CancellationToken cancellationToken = default)
     {
         var records = await RunReadAsync(
@@ -455,6 +483,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
         return records.Count == 0 ? null : records[0]["uuid"].As<string>();
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<SagaEpisodeContent>> GetSagaEpisodeContentsAsync(
         string sagaUuid,
         DateTime? since = null,
@@ -480,6 +509,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesFulltextAsync(
         string query,
         SearchFilters searchFilter,
@@ -509,6 +539,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesByEmbeddingAsync(
         IReadOnlyList<float> searchVector,
         SearchFilters searchFilter,
@@ -534,6 +565,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesFulltextAsync(
         string query,
         SearchFilters searchFilter,
@@ -569,6 +601,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesByEmbeddingAsync(
         IReadOnlyList<float> searchVector,
         SearchFilters searchFilter,
@@ -604,6 +637,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesBfsAsync(
         IReadOnlyList<string>? originNodeUuids,
         SearchFilters searchFilter,
@@ -636,6 +670,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesBfsAsync(
         IReadOnlyList<string>? originNodeUuids,
         SearchFilters searchFilter,
@@ -672,6 +707,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SearchHit<EpisodicNode>>> SearchEpisodesFulltextAsync(
         string query,
         SearchFilters searchFilter,
@@ -700,6 +736,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SearchHit<CommunityNode>>> SearchCommunitiesFulltextAsync(
         string query,
         IReadOnlyList<string>? groupIds,
@@ -726,6 +763,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SearchHit<CommunityNode>>> SearchCommunitiesByEmbeddingAsync(
         IReadOnlyList<float> searchVector,
         IReadOnlyList<string>? groupIds,
@@ -748,6 +786,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SearchRank>> RankNodeDistanceAsync(
         IReadOnlyList<string> nodeUuids,
         string centerNodeUuid,
@@ -790,6 +829,7 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SearchRank>> RankNodeEpisodeMentionsAsync(
         IReadOnlyList<string> nodeUuids,
         float minScore = 0,

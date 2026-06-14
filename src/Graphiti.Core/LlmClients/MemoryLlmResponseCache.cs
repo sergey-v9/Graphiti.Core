@@ -26,6 +26,7 @@ public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
         };
     }
 
+    /// <inheritdoc />
     public Task<JsonObject?> GetAsync(string key, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -35,6 +36,7 @@ public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
             : null);
     }
 
+    /// <inheritdoc />
     public Task SetAsync(string key, JsonObject value, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -43,6 +45,7 @@ public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public async Task<JsonObject> GetOrCreateAsync(
         string key,
         Func<CancellationToken, Task<JsonObject>> factory,
@@ -90,6 +93,7 @@ public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
         return false;
     }
 
+    /// <summary>Releases resources held by the cache.</summary>
     public void Dispose()
     {
         if (_disposed)

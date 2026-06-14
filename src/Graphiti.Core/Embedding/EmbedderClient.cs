@@ -20,10 +20,12 @@ public abstract class EmbedderClient : IEmbedderClient
     /// <inheritdoc />
     public int EmbeddingDimension => Config.EmbeddingDimension;
 
+    /// <inheritdoc />
     public abstract Task<IReadOnlyList<float>> CreateAsync(
         string input,
         CancellationToken cancellationToken = default);
 
+    /// <inheritdoc />
     public virtual async Task<IReadOnlyList<float>> CreateAsync(
         IReadOnlyList<string> input,
         CancellationToken cancellationToken = default)
@@ -36,6 +38,7 @@ public abstract class EmbedderClient : IEmbedderClient
         return await CreateAsync(input[0], cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public virtual async Task<IReadOnlyList<IReadOnlyList<float>>> CreateBatchAsync(
         IReadOnlyList<string> input,
         CancellationToken cancellationToken = default)

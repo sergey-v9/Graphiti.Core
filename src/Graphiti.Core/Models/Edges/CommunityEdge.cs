@@ -10,12 +10,14 @@ public sealed class CommunityEdge : Edge
         CancellationToken cancellationToken = default) =>
         driver.GetEdgeByUuidAsync<CommunityEdge>(uuid, cancellationToken);
 
+    /// <summary>Retrieves the community edges with the given UUIDs.</summary>
     public static Task<IReadOnlyList<CommunityEdge>> GetByUuidsAsync(
         IGraphDriver driver,
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
         driver.GetEdgesByUuidsAsync<CommunityEdge>(uuids, cancellationToken);
 
+    /// <summary>Retrieves community edges across the given group partitions, with optional UUID-cursor paging.</summary>
     public static Task<IReadOnlyList<CommunityEdge>> GetByGroupIdsAsync(
         IGraphDriver driver,
         IEnumerable<string> groupIds,

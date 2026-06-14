@@ -74,18 +74,21 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         _hasEpisodeEdgeUuidsBySagaUuid = hasEpisodeEdgeUuidsBySagaUuid;
     }
 
+    /// <inheritdoc />
     public override Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public override Task CloseAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public override IGraphDriver Clone(string database) => new InMemoryGraphDriver(
         database,
         _nodes,
@@ -106,6 +109,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         _communityEdgeUuidsByTargetNodeUuid,
         _hasEpisodeEdgeUuidsBySagaUuid);
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<string>> GetEntityGroupIdsAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -115,6 +119,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<string>> GetCommunityGroupIdsAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -124,6 +129,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task SaveNodeAsync(Node node, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -142,6 +148,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public override Task SaveEdgeAsync(Edge edge, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -160,6 +167,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public override Task DeleteNodeAsync(string uuid, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -188,6 +196,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task DeleteNodesByGroupIdAsync(string groupId, int batchSize = 100, CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
@@ -201,6 +210,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return DeleteNodesByUuidsAsync(uuids, batchSize, cancellationToken);
     }
 
+    /// <inheritdoc />
     public override async Task DeleteNodesByUuidsAsync(IEnumerable<string> uuids, int batchSize = 100, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uuids);
@@ -218,6 +228,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task DeleteEdgeAsync(string uuid, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -229,6 +240,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public override Task DeleteEdgesByUuidsAsync(IEnumerable<string> uuids, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uuids);
@@ -251,6 +263,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public override Task ClearDataAsync(IReadOnlyList<string>? groupIds = null, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -305,6 +318,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public override Task<TNode> GetNodeByUuidAsync<TNode>(string uuid, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -319,6 +333,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         throw new NodeNotFoundException(uuid);
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<TNode>> GetNodesByUuidsAsync<TNode>(
         IEnumerable<string> uuids,
         string? groupId = null,
@@ -349,6 +364,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<TNode>> GetNodesByGroupIdsAsync<TNode>(
         IEnumerable<string> groupIds,
         int? limit = null,
@@ -368,6 +384,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<T> GetEdgeByUuidAsync<T>(string uuid, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -382,6 +399,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         throw new EdgeNotFoundException(uuid);
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(IEnumerable<string> uuids, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uuids);
@@ -407,6 +425,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(
         IEnumerable<string> groupIds,
         int? limit = null,
@@ -426,6 +445,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<EntityEdge>> GetEntityEdgesBetweenNodesAsync(
         string sourceNodeUuid,
         string targetNodeUuid,
@@ -450,6 +470,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<EntityEdge>> GetEntityEdgesByNodeUuidAsync(
         string nodeUuid,
         CancellationToken cancellationToken = default)
@@ -471,6 +492,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<EpisodicNode>> GetEpisodesByEntityNodeUuidAsync(
         string entityNodeUuid,
         CancellationToken cancellationToken = default)
@@ -501,6 +523,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<EpisodicNode>> RetrieveEpisodesAsync(
         DateTime referenceTime,
         int lastN,
@@ -576,6 +599,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<EntityNode>> GetMentionedNodesAsync(
         IReadOnlyList<EpisodicNode> episodes,
         CancellationToken cancellationToken = default)
@@ -619,6 +643,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<CommunityNode>> GetCommunitiesByNodesAsync(
         IReadOnlyList<EntityNode> nodes,
         CancellationToken cancellationToken = default)
@@ -662,6 +687,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<SagaNode?> FindSagaByNameAsync(string name, string groupId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -672,6 +698,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<string?> GetSagaPreviousEpisodeUuidAsync(
         string sagaUuid,
         string currentEpisodeUuid,
@@ -706,6 +733,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public override Task<IReadOnlyList<SagaEpisodeContent>> GetSagaEpisodeContentsAsync(
         string sagaUuid,
         DateTime? since = null,
@@ -783,6 +811,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesFulltextAsync(
         string query,
         SearchFilters searchFilter,
@@ -808,6 +837,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.FromResult<IReadOnlyList<SearchHit<EntityNode>>>(ProjectNodeSearchHits(ranked));
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesByEmbeddingAsync(
         IReadOnlyList<float> searchVector,
         SearchFilters searchFilter,
@@ -836,6 +866,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.FromResult<IReadOnlyList<SearchHit<EntityNode>>>(ProjectNodeSearchHits(ranked));
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesFulltextAsync(
         string query,
         SearchFilters searchFilter,
@@ -863,6 +894,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.FromResult<IReadOnlyList<SearchHit<EntityEdge>>>(ProjectEdgeSearchHits(ranked));
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesByEmbeddingAsync(
         IReadOnlyList<float> searchVector,
         SearchFilters searchFilter,
@@ -898,6 +930,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.FromResult<IReadOnlyList<SearchHit<EntityEdge>>>(ProjectEdgeSearchHits(ranked));
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesBfsAsync(
         IReadOnlyList<string>? originNodeUuids,
         SearchFilters searchFilter,
@@ -928,6 +961,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.FromResult(results);
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesBfsAsync(
         IReadOnlyList<string>? originNodeUuids,
         SearchFilters searchFilter,
@@ -960,6 +994,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.FromResult(results);
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EpisodicNode>>> SearchEpisodesFulltextAsync(
         string query,
         SearchFilters searchFilter,
@@ -984,6 +1019,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.FromResult<IReadOnlyList<SearchHit<EpisodicNode>>>(ProjectNodeSearchHits(ranked));
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<CommunityNode>>> SearchCommunitiesFulltextAsync(
         string query,
         IReadOnlyList<string>? groupIds,
@@ -1006,6 +1042,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.FromResult<IReadOnlyList<SearchHit<CommunityNode>>>(ProjectNodeSearchHits(ranked));
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<CommunityNode>>> SearchCommunitiesByEmbeddingAsync(
         IReadOnlyList<float> searchVector,
         IReadOnlyList<string>? groupIds,
@@ -1031,6 +1068,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.FromResult<IReadOnlyList<SearchHit<CommunityNode>>>(ProjectNodeSearchHits(ranked));
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchRank>> RankNodeDistanceAsync(
         IReadOnlyList<string> nodeUuids,
         string centerNodeUuid,
@@ -1053,6 +1091,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         return Task.FromResult(results);
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchRank>> RankNodeEpisodeMentionsAsync(
         IReadOnlyList<string> nodeUuids,
         float minScore = 0,

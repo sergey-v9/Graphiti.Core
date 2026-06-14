@@ -10,12 +10,14 @@ public sealed class NextEpisodeEdge : Edge
         CancellationToken cancellationToken = default) =>
         driver.GetEdgeByUuidAsync<NextEpisodeEdge>(uuid, cancellationToken);
 
+    /// <summary>Retrieves the NEXT_EPISODE edges with the given UUIDs.</summary>
     public static Task<IReadOnlyList<NextEpisodeEdge>> GetByUuidsAsync(
         IGraphDriver driver,
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
         driver.GetEdgesByUuidsAsync<NextEpisodeEdge>(uuids, cancellationToken);
 
+    /// <summary>Retrieves NEXT_EPISODE edges across the given group partitions, with optional UUID-cursor paging.</summary>
     public static Task<IReadOnlyList<NextEpisodeEdge>> GetByGroupIdsAsync(
         IGraphDriver driver,
         IEnumerable<string> groupIds,

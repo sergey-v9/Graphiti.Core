@@ -8,12 +8,14 @@ public sealed class SagaNodeNamespace
     /// <summary>Creates the namespace bound to a driver.</summary>
     public SagaNodeNamespace(IGraphDriver driver) => _driver = driver;
 
+    /// <summary>Persists the saga node and returns it.</summary>
     public async Task<SagaNode> SaveAsync(SagaNode node, CancellationToken cancellationToken = default)
     {
         await node.SaveAsync(_driver, cancellationToken).ConfigureAwait(false);
         return node;
     }
 
+    /// <summary>Persists many saga nodes in batches.</summary>
     public async Task SaveBulkAsync(
         IEnumerable<SagaNode> nodes,
         int batchSize = 100,
@@ -24,9 +26,11 @@ public sealed class SagaNodeNamespace
             batchSize,
             cancellationToken).ConfigureAwait(false);
 
+    /// <summary>Deletes the saga node.</summary>
     public Task DeleteAsync(SagaNode node, CancellationToken cancellationToken = default) =>
         node.DeleteAsync(_driver, cancellationToken);
 
+    /// <summary>Deletes every saga node in the given group partition, in batches.</summary>
     public Task DeleteByGroupIdAsync(
         string groupId,
         int batchSize = 100,
@@ -37,6 +41,7 @@ public sealed class SagaNodeNamespace
             batchSize,
             cancellationToken);
 
+    /// <summary>Deletes the saga nodes with the given UUIDs.</summary>
     public Task DeleteByUuidsAsync(
         IEnumerable<string> uuids,
         int batchSize = 100,
@@ -47,13 +52,16 @@ public sealed class SagaNodeNamespace
             batchSize,
             cancellationToken);
 
+    /// <summary>Loads a single saga node by UUID.</summary>
     public Task<SagaNode> GetByUuidAsync(string uuid, CancellationToken cancellationToken = default) => SagaNode.GetByUuidAsync(_driver, uuid, cancellationToken);
 
+    /// <summary>Loads the saga nodes with the given UUIDs.</summary>
     public Task<IReadOnlyList<SagaNode>> GetByUuidsAsync(
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
         SagaNode.GetByUuidsAsync(_driver, uuids, cancellationToken);
 
+    /// <summary>Loads saga nodes across the given group partitions, with optional UUID-cursor paging.</summary>
     public Task<IReadOnlyList<SagaNode>> GetByGroupIdsAsync(
         IEnumerable<string> groupIds,
         int? limit = null,

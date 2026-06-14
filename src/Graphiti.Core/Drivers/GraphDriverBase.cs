@@ -43,10 +43,19 @@ public abstract class GraphDriverBase : IGraphDriver
     public virtual Task<IReadOnlyList<string>> GetCommunityGroupIdsAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<string>>(new[] { DefaultGroupId });
 
+    /// <inheritdoc />
     public abstract Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task CloseAsync(CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract IGraphDriver Clone(string database);
+
+    /// <inheritdoc />
     public abstract Task SaveNodeAsync(Node node, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task SaveEdgeAsync(Edge edge, CancellationToken cancellationToken = default);
 
     /// <inheritdoc />
@@ -227,25 +236,66 @@ public abstract class GraphDriverBase : IGraphDriver
         }
     }
 
+    /// <inheritdoc />
     public abstract Task DeleteNodeAsync(string uuid, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task DeleteNodesByGroupIdAsync(string groupId, int batchSize = 100, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task DeleteNodesByUuidsAsync(IEnumerable<string> uuids, int batchSize = 100, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task DeleteEdgeAsync(string uuid, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task DeleteEdgesByUuidsAsync(IEnumerable<string> uuids, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task ClearDataAsync(IReadOnlyList<string>? groupIds = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task<TNode> GetNodeByUuidAsync<TNode>(string uuid, CancellationToken cancellationToken = default) where TNode : Node;
+
+    /// <inheritdoc />
     public abstract Task<IReadOnlyList<TNode>> GetNodesByUuidsAsync<TNode>(IEnumerable<string> uuids, string? groupId = null, CancellationToken cancellationToken = default) where TNode : Node;
+
+    /// <inheritdoc />
     public abstract Task<IReadOnlyList<TNode>> GetNodesByGroupIdsAsync<TNode>(IEnumerable<string> groupIds, int? limit = null, string? uuidCursor = null, bool withEmbeddings = false, CancellationToken cancellationToken = default) where TNode : Node;
+
+    /// <inheritdoc />
     public abstract Task<T> GetEdgeByUuidAsync<T>(string uuid, CancellationToken cancellationToken = default) where T : Edge;
+
+    /// <inheritdoc />
     public abstract Task<IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(IEnumerable<string> uuids, CancellationToken cancellationToken = default) where T : Edge;
+
+    /// <inheritdoc />
     public abstract Task<IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(IEnumerable<string> groupIds, int? limit = null, string? uuidCursor = null, bool withEmbeddings = false, CancellationToken cancellationToken = default) where T : Edge;
+
+    /// <inheritdoc />
     public abstract Task<IReadOnlyList<EntityEdge>> GetEntityEdgesBetweenNodesAsync(string sourceNodeUuid, string targetNodeUuid, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task<IReadOnlyList<EntityEdge>> GetEntityEdgesByNodeUuidAsync(string nodeUuid, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task<IReadOnlyList<EpisodicNode>> GetEpisodesByEntityNodeUuidAsync(string entityNodeUuid, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task<IReadOnlyList<EpisodicNode>> RetrieveEpisodesAsync(DateTime referenceTime, int lastN, IReadOnlyList<string>? groupIds = null, EpisodeType? source = null, string? saga = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task<IReadOnlyList<EntityNode>> GetMentionedNodesAsync(IReadOnlyList<EpisodicNode> episodes, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task<IReadOnlyList<CommunityNode>> GetCommunitiesByNodesAsync(IReadOnlyList<EntityNode> nodes, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task<SagaNode?> FindSagaByNameAsync(string name, string groupId, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task<string?> GetSagaPreviousEpisodeUuidAsync(string sagaUuid, string currentEpisodeUuid, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
     public abstract Task<IReadOnlyList<SagaEpisodeContent>> GetSagaEpisodeContentsAsync(string sagaUuid, DateTime? since = null, int limit = 200, CancellationToken cancellationToken = default);
 }

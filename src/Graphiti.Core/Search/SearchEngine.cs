@@ -588,6 +588,10 @@ public static class SearchEngine
         await WhenAll(firstTask, secondTask).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Runs the edge (fact) portion of a hybrid search: executes the configured retrieval methods,
+    /// then reranks and limits the combined candidates, returning each edge with its rerank score.
+    /// </summary>
     public static async Task<IReadOnlyList<(EntityEdge Item, float Score)>> EdgeSearchAsync(
         IGraphDriver driver,
         ICrossEncoderClient crossEncoder,
@@ -757,6 +761,10 @@ public static class SearchEngine
         return SearchResultComposer.LimitRanked(ranked, limit);
     }
 
+    /// <summary>
+    /// Runs the entity-node portion of a hybrid search: executes the configured retrieval methods,
+    /// then reranks and limits the combined candidates, returning each node with its rerank score.
+    /// </summary>
     public static async Task<IReadOnlyList<(EntityNode Item, float Score)>> NodeSearchAsync(
         IGraphDriver driver,
         ICrossEncoderClient crossEncoder,
@@ -930,6 +938,10 @@ public static class SearchEngine
         return SearchResultComposer.LimitRanked(ranked, limit);
     }
 
+    /// <summary>
+    /// Runs the episode portion of a hybrid search: executes the configured retrieval methods, then
+    /// reranks and limits the combined candidates, returning each episode with its rerank score.
+    /// </summary>
     public static async Task<IReadOnlyList<(EpisodicNode Item, float Score)>> EpisodeSearchAsync(
         IGraphDriver driver,
         ICrossEncoderClient crossEncoder,
@@ -1023,6 +1035,10 @@ public static class SearchEngine
         return SearchResultComposer.LimitRanked(ranked, limit);
     }
 
+    /// <summary>
+    /// Runs the community portion of a hybrid search: executes the configured retrieval methods, then
+    /// reranks and limits the combined candidates, returning each community with its rerank score.
+    /// </summary>
     public static async Task<IReadOnlyList<(CommunityNode Item, float Score)>> CommunitySearchAsync(
         IGraphDriver driver,
         ICrossEncoderClient crossEncoder,

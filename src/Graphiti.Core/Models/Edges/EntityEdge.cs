@@ -52,6 +52,10 @@ public sealed class EntityEdge : Edge
         return FactEmbedding;
     }
 
+    /// <summary>
+    /// Loads <see cref="FactEmbedding"/> from storage, using the driver's bulk embedding-load path
+    /// when available and otherwise re-reading the stored edge.
+    /// </summary>
     public async Task LoadFactEmbeddingAsync(IGraphDriver driver, CancellationToken cancellationToken = default)
     {
         if (driver is IEmbeddingLoadGraphDriver embeddingDriver)
@@ -70,18 +74,24 @@ public sealed class EntityEdge : Edge
         FactEmbedding = EmbeddingVectorValidation.CopyNullableVector(stored.FactEmbedding);
     }
 
+    /// <summary>Loads a single entity edge (fact) by UUID via the driver.</summary>
     public static Task<EntityEdge> GetByUuidAsync(
         IGraphDriver driver,
         string uuid,
         CancellationToken cancellationToken = default) =>
         driver.GetEdgeByUuidAsync<EntityEdge>(uuid, cancellationToken);
 
+    /// <summary>Loads the entity edges (facts) with the given UUIDs via the driver.</summary>
     public static Task<IReadOnlyList<EntityEdge>> GetByUuidsAsync(
         IGraphDriver driver,
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
         driver.GetEdgesByUuidsAsync<EntityEdge>(uuids, cancellationToken);
 
+    /// <summary>
+    /// Loads entity edges (facts) across the given group partitions, with optional UUID-cursor paging
+    /// and optional inclusion of fact embeddings.
+    /// </summary>
     public static Task<IReadOnlyList<EntityEdge>> GetByGroupIdsAsync(
         IGraphDriver driver,
         IEnumerable<string> groupIds,
@@ -91,6 +101,7 @@ public sealed class EntityEdge : Edge
         CancellationToken cancellationToken = default) =>
         driver.GetEdgesByGroupIdsAsync<EntityEdge>(groupIds, limit, uuidCursor, withEmbeddings, cancellationToken);
 
+    /// <summary>Loads the entity edges (facts) that directly connect two nodes.</summary>
     public static Task<IReadOnlyList<EntityEdge>> GetBetweenNodesAsync(
         IGraphDriver driver,
         string sourceNodeUuid,
@@ -98,6 +109,7 @@ public sealed class EntityEdge : Edge
         CancellationToken cancellationToken = default) =>
         driver.GetEntityEdgesBetweenNodesAsync(sourceNodeUuid, targetNodeUuid, cancellationToken);
 
+    /// <summary>Loads all entity edges (facts) incident to the given node.</summary>
     public static Task<IReadOnlyList<EntityEdge>> GetByNodeUuidAsync(
         IGraphDriver driver,
         string nodeUuid,

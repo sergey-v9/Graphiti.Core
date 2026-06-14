@@ -28,6 +28,7 @@ public sealed class HybridCacheLlmResponseCache : ILlmResponseCache
         _tags = tags ?? new[] { "graphiti", "llm" };
     }
 
+    /// <inheritdoc />
     public async Task<JsonObject?> GetAsync(string key, CancellationToken cancellationToken = default)
     {
         var payload = await _cache.GetOrCreateAsync(
@@ -53,6 +54,7 @@ public sealed class HybridCacheLlmResponseCache : ILlmResponseCache
         return null;
     }
 
+    /// <inheritdoc />
     public async Task SetAsync(string key, JsonObject value, CancellationToken cancellationToken = default)
     {
         var payload = LlmResponseCachePayload.Serialize(value);
@@ -64,6 +66,7 @@ public sealed class HybridCacheLlmResponseCache : ILlmResponseCache
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<JsonObject> GetOrCreateAsync(
         string key,
         Func<CancellationToken, Task<JsonObject>> factory,

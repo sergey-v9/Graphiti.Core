@@ -37,6 +37,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         _ownsExecutor = ownsExecutor;
     }
 
+    /// <inheritdoc />
     public override async Task BuildIndicesAndConstraintsAsync(
         bool deleteExisting = false,
         CancellationToken cancellationToken = default)
@@ -81,6 +82,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         }
     }
 
+    /// <inheritdoc />
     public override async Task CloseAsync(CancellationToken cancellationToken = default)
     {
         if (_closed)
@@ -99,6 +101,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         _shared.SchemaLock.Dispose();
     }
 
+    /// <inheritdoc />
     public override IGraphDriver Clone(string database)
     {
         if (!_canClone)
@@ -124,18 +127,21 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         internal bool SchemaBuilt { get; set; }
     }
 
+    /// <inheritdoc />
     public override Task SaveNodeAsync(Node node, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(node);
         return _executor.ExecuteAsync(LadybugStatementBuilder.BuildNodeSave(node), cancellationToken);
     }
 
+    /// <inheritdoc />
     public override Task SaveEdgeAsync(Edge edge, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(edge);
         return _executor.ExecuteAsync(LadybugStatementBuilder.BuildEdgeSave(edge), cancellationToken);
     }
 
+    /// <inheritdoc />
     public override async Task SaveBulkAsync(
         IEnumerable<EpisodicNode> episodicNodes,
         IEnumerable<EpisodicEdge> episodicEdges,
@@ -189,6 +195,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         }
     }
 
+    /// <inheritdoc />
     public override async Task DeleteNodeAsync(string uuid, CancellationToken cancellationToken = default)
     {
         await ExecuteAllAsync(
@@ -205,6 +212,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public override async Task DeleteNodesByGroupIdAsync(
         string groupId,
         int batchSize = 100,
@@ -225,6 +233,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public override async Task DeleteNodesByUuidsAsync(
         IEnumerable<string> uuids,
         int batchSize = 100,
@@ -254,6 +263,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         }
     }
 
+    /// <inheritdoc />
     public override async Task DeleteEdgeAsync(string uuid, CancellationToken cancellationToken = default)
     {
         await _executor.ExecuteAsync(
@@ -273,6 +283,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public override async Task DeleteEdgesByUuidsAsync(
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default)
@@ -301,6 +312,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public override async Task ClearDataAsync(
         IReadOnlyList<string>? groupIds = null,
         CancellationToken cancellationToken = default)
@@ -352,6 +364,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public override async Task<TNode> GetNodeByUuidAsync<TNode>(
         string uuid,
         CancellationToken cancellationToken = default)
@@ -367,6 +380,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return MapNode<TNode>(records[0]);
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<TNode>> GetNodesByUuidsAsync<TNode>(
         IEnumerable<string> uuids,
         string? groupId = null,
@@ -395,6 +409,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return nodes;
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<TNode>> GetNodesByGroupIdsAsync<TNode>(
         IEnumerable<string> groupIds,
         int? limit = null,
@@ -413,6 +428,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return MapNodeRecords<TNode>(records);
     }
 
+    /// <inheritdoc />
     public override async Task<T> GetEdgeByUuidAsync<T>(
         string uuid,
         CancellationToken cancellationToken = default)
@@ -428,6 +444,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return MapEdge<T>(records[0]);
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default)
@@ -445,6 +462,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return MapEdgeRecords<T>(records);
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(
         IEnumerable<string> groupIds,
         int? limit = null,
@@ -501,6 +519,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             static record => LadybugRecordMapper.MapEntityEdge(record).FactEmbedding);
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<EntityEdge>> GetEntityEdgesBetweenNodesAsync(
         string sourceNodeUuid,
         string targetNodeUuid,
@@ -512,6 +531,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return MapRecords(records, LadybugRecordMapper.MapEntityEdge);
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<EntityEdge>> GetEntityEdgesByNodeUuidAsync(
         string nodeUuid,
         CancellationToken cancellationToken = default)
@@ -522,6 +542,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return MapRecords(records, LadybugRecordMapper.MapEntityEdge);
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<EpisodicNode>> GetEpisodesByEntityNodeUuidAsync(
         string entityNodeUuid,
         CancellationToken cancellationToken = default)
@@ -532,6 +553,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return MapRecords(records, LadybugRecordMapper.MapEpisodicNode);
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<EpisodicNode>> RetrieveEpisodesAsync(
         DateTime referenceTime,
         int lastN,
@@ -552,6 +574,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return episodes;
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<EntityNode>> GetMentionedNodesAsync(
         IReadOnlyList<EpisodicNode> episodes,
         CancellationToken cancellationToken = default)
@@ -569,6 +592,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return MapRecords(records, LadybugRecordMapper.MapEntityNode);
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<CommunityNode>> GetCommunitiesByNodesAsync(
         IReadOnlyList<EntityNode> nodes,
         CancellationToken cancellationToken = default)
@@ -586,6 +610,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return MapRecords(records, LadybugRecordMapper.MapCommunityNode);
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesFulltextAsync(
         string query,
         SearchFilters searchFilter,
@@ -594,6 +619,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         CancellationToken cancellationToken = default) =>
         _search.SearchEntityNodesFulltextAsync(query, searchFilter, groupIds, limit, cancellationToken);
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesByEmbeddingAsync(
         IReadOnlyList<float> searchVector,
         SearchFilters searchFilter,
@@ -609,6 +635,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             minScore,
             cancellationToken);
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesFulltextAsync(
         string query,
         SearchFilters searchFilter,
@@ -617,6 +644,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         CancellationToken cancellationToken = default) =>
         _search.SearchEntityEdgesFulltextAsync(query, searchFilter, groupIds, limit, cancellationToken);
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesByEmbeddingAsync(
         IReadOnlyList<float> searchVector,
         SearchFilters searchFilter,
@@ -636,6 +664,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             targetNodeUuid,
             cancellationToken);
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesBfsAsync(
         IReadOnlyList<string>? originNodeUuids,
         SearchFilters searchFilter,
@@ -651,6 +680,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             limit,
             cancellationToken);
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesBfsAsync(
         IReadOnlyList<string>? originNodeUuids,
         SearchFilters searchFilter,
@@ -666,6 +696,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             limit,
             cancellationToken);
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<EpisodicNode>>> SearchEpisodesFulltextAsync(
         string query,
         SearchFilters searchFilter,
@@ -674,6 +705,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         CancellationToken cancellationToken = default) =>
         _search.SearchEpisodesFulltextAsync(query, searchFilter, groupIds, limit, cancellationToken);
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<CommunityNode>>> SearchCommunitiesFulltextAsync(
         string query,
         IReadOnlyList<string>? groupIds,
@@ -681,6 +713,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         CancellationToken cancellationToken = default) =>
         _search.SearchCommunitiesFulltextAsync(query, groupIds, limit, cancellationToken);
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchHit<CommunityNode>>> SearchCommunitiesByEmbeddingAsync(
         IReadOnlyList<float> searchVector,
         IReadOnlyList<string>? groupIds,
@@ -689,6 +722,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         CancellationToken cancellationToken = default) =>
         _search.SearchCommunitiesByEmbeddingAsync(searchVector, groupIds, limit, minScore, cancellationToken);
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchRank>> RankNodeDistanceAsync(
         IReadOnlyList<string> nodeUuids,
         string centerNodeUuid,
@@ -696,12 +730,14 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         CancellationToken cancellationToken = default) =>
         _search.RankNodeDistanceAsync(nodeUuids, centerNodeUuid, minScore, cancellationToken);
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SearchRank>> RankNodeEpisodeMentionsAsync(
         IReadOnlyList<string> nodeUuids,
         float minScore = 0,
         CancellationToken cancellationToken = default) =>
         _search.RankNodeEpisodeMentionsAsync(nodeUuids, minScore, cancellationToken);
 
+    /// <inheritdoc />
     public override async Task<SagaNode?> FindSagaByNameAsync(
         string name,
         string groupId,
@@ -713,6 +749,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return records.Count == 0 ? null : LadybugRecordMapper.MapSagaNode(records[0]);
     }
 
+    /// <inheritdoc />
     public override async Task<string?> GetSagaPreviousEpisodeUuidAsync(
         string sagaUuid,
         string currentEpisodeUuid,
@@ -724,6 +761,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return records.Count == 0 ? null : GetString(records[0], "uuid");
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<SagaEpisodeContent>> GetSagaEpisodeContentsAsync(
         string sagaUuid,
         DateTime? since = null,
@@ -752,10 +790,12 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         return contents;
     }
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<string>> GetEntityGroupIdsAsync(
         CancellationToken cancellationToken = default) =>
         await GetGroupIdsAsync<EntityNode>(cancellationToken).ConfigureAwait(false);
 
+    /// <inheritdoc />
     public override async Task<IReadOnlyList<string>> GetCommunityGroupIdsAsync(
         CancellationToken cancellationToken = default) =>
         await GetGroupIdsAsync<CommunityNode>(cancellationToken).ConfigureAwait(false);
