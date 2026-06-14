@@ -133,6 +133,7 @@ public class PackageReadinessTests
         Assert.Contains("Invoke-DotNetCommandOutput", verifyScript);
         Assert.Contains("\"run\"", verifyScript);
         Assert.Contains("BuildIndicesAndConstraintsAsync", verifyScript);
+        Assert.Contains("new Graphiti.Core.Graphiti(graphDriver: driver)", verifyScript);
         Assert.Contains("-ExpectedOutput \"InMemory\"", verifyScript);
         Assert.Contains("-ExpectedOutput \"LadybugDb\"", verifyScript);
         Assert.Contains("--configfile", verifyScript);

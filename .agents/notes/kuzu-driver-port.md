@@ -62,8 +62,8 @@ identifier; the Ladybug driver references the cross-platform meta packages. Foll
 added package-consumption smoke checks to `Verify-GraphitiCore.ps1`: fresh temp consumers
 restore/build/setup/run `Graphiti.Core` from the packed core output + nuget.org only, and
 `Graphiti.Core.Drivers.Ladybug` from both packed Graphiti outputs + the local Ladybug feed + nuget.org,
-with strict `NuGet.config`, temp `NUGET_PACKAGES`, `--no-cache`, `BuildIndicesAndConstraintsAsync()`,
-and asserted provider output. The remaining Linux risk is runtime validation on a Linux runner, not an
+with strict `NuGet.config`, temp `NUGET_PACKAGES`, `--no-cache`, setup through `Graphiti` with a
+packed LadybugDB driver, and asserted provider output. The remaining Linux risk is runtime validation on a Linux runner, not an
 obvious source-level Windows dependency or a missing Windows package-consumer proof. Follow-up on
 2026-06-14 made persisted Ladybug setup idempotent across reopen: duplicate errors for the four exact
 Graphiti FTS indexes are ignored because LadybugDB's `CREATE_FTS_INDEX` has no `IF NOT EXISTS`/skip flag,

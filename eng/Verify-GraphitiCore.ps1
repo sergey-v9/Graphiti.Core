@@ -240,8 +240,9 @@ Console.WriteLine(graphiti.Driver.Provider);
 using Graphiti.Core.Drivers.Ladybug;
 
 await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
-await driver.BuildIndicesAndConstraintsAsync();
-Console.WriteLine(driver.Provider);
+await using var graphiti = new Graphiti.Core.Graphiti(graphDriver: driver);
+await graphiti.BuildIndicesAndConstraintsAsync();
+Console.WriteLine(graphiti.Driver.Provider);
 '@ `
         -ExpectedOutput "LadybugDb"
 }

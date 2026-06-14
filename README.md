@@ -513,8 +513,9 @@ It runs restore, formatting checks, build, tests, package creation for both `Gra
 fresh temporary `net10.0` console projects with strict `NuGet.config` files (`<clear />`) and isolated
 `NUGET_PACKAGES`: the core consumer restores, builds, runs, and calls
 `BuildIndicesAndConstraintsAsync()` from the packed `Graphiti.Core` output plus nuget.org, while the
-Ladybug consumer does the same from both packed Graphiti outputs plus the local Ladybug feed and
-nuget.org. Use `-SkipPackageSmoke` only when iterating on non-packaging changes. For a quick local
+Ladybug consumer restores from both packed Graphiti outputs plus the local Ladybug feed and runs
+setup through `Graphiti` with a packed LadybugDB driver. Use `-SkipPackageSmoke` only when iterating
+on non-packaging changes. For a quick local
 test-only loop:
 
 ```powershell

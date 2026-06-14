@@ -24,9 +24,9 @@ strict package sources:
   and restores from nuget.org alone; core resolves `LadybugDb`/`Kuzu` via `GraphDriverFactory` (set by
   `AddLadybugDbGraphDriver`) and throws a clear error if the package is absent. README/samples updated.
   The verifier now creates fresh package consumers: core uses only the packed core output + nuget.org;
-  Ladybug uses both packed Graphiti outputs + the local Ladybug feed + nuget.org. Both consumers are
-  restored, built, run through `BuildIndicesAndConstraintsAsync()`, and checked for expected provider
-  output.
+  Ladybug uses both packed Graphiti outputs + the local Ladybug feed + nuget.org and runs setup
+  through `Graphiti` with the packed driver. Both consumers are restored, built, run through
+  `BuildIndicesAndConstraintsAsync()`, and checked for expected provider output.
 - The public-API snapshot now guards BOTH assemblies (`Graphiti.Core` + `Graphiti.Core.Drivers.Ladybug`).
 
 **Remaining (release infra; partly gated on external work):**

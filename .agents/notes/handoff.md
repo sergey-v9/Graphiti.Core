@@ -143,9 +143,10 @@ format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite 
 restore/build/setup/run checks for both packages. The verifier now packs both projects, then creates isolated
 `net10.0` consumers with strict `NuGet.config` files (`<clear />`), temp `NUGET_PACKAGES`, and
 `--no-cache`: the core consumer restores from the packed core output + nuget.org only, while the
-Ladybug consumer restores from both packed Graphiti outputs + the local Ladybug feed + nuget.org. Both
-consumers call `BuildIndicesAndConstraintsAsync()`, then run and assert their provider output
-(`InMemory`, `LadybugDb`). Both csprojs set
+Ladybug consumer restores from both packed Graphiti outputs + the local Ladybug feed + nuget.org and
+embeds the packed LadybugDB driver in `Graphiti`. Both consumers call
+`BuildIndicesAndConstraintsAsync()`, then run and assert their provider output (`InMemory`,
+`LadybugDb`). Both csprojs set
 `IncludeSymbols=true`/`SymbolPackageFormat=snupkg`, and `PackageReadinessTests` guards shared NuGet
 metadata, README packing, symbol settings, SemVer-like same-version alignment, the two-project pack
 loop, and the package-consumer smoke path. `OPENAI_API_KEY` was unset; the three skipped tests were
