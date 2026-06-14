@@ -210,6 +210,11 @@ Edge-expiry parity follow-up, 2026-06-14: the tracked single-resolution-clock di
 edges that only carry extracted/LLM `invalid_at` and have no candidates keep `expired_at = null`,
 matching Python's early return.
 
+Ladybug ranker hygiene follow-up, 2026-06-14: the tracked impossible-row ranker issue was closed.
+`LadybugSearchExecutor` now ignores distance/episode-mention rank rows whose `uuid` was not in the
+requested input set; real per-UUID Cypher already constrains these rows, and the guard keeps mocked or
+backend-anomalous rows from surfacing backend-only UUIDs.
+
 Follow-up checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 959 passed, 3 skipped, 962
 total; format/build/pack clean). Landed since 06-13: the eval harness (`samples/Graphiti.Eval`) built
 to the proposal's graph-building regression design and run live (6/6 no-regression on identical code;

@@ -278,9 +278,6 @@ the impact grows.
   every path reduces to a single episode index `[0]`. If multi-episode extraction is ever wired,
   port `node_operations.py:104-112` / `edge_operations.py:170-181` attribution blocks and reconcile
   the helpers in `EpisodeAttribution.cs`.
-- **Ladybug distance/mention rerankers** dedup input UUIDs and would surface backend-only UUIDs; not
-  reachable through the real per-UUID Cypher (which constrains `n.uuid = $node_uuid`). A test enshrines
-  the divergent shape using impossible foreign rows — test hygiene, not a production defect.
 - **Ladybug `RetrieveEpisodes` returns oldest-first**, matching the documented `retrieve_episodes`
   contract (`graph_operations.py:223`, `graph_data_operations.py` `list(reversed(...))`); Python's
   Kuzu operations-interface path returns newest-first, violating its own contract. C# is the

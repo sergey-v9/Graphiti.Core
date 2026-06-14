@@ -218,10 +218,10 @@ internal sealed class LadybugSearchExecutor
             {
                 if (GetString(record, "uuid") is { Length: > 0 } uuid)
                 {
-                    var score = GetScore(record, defaultScore: 0);
-                    scores[uuid] = scores.TryGetValue(uuid, out var existing)
-                        ? (score, existing.Index)
-                        : (score, int.MaxValue);
+                    if (scores.TryGetValue(uuid, out var existing))
+                    {
+                        scores[uuid] = (GetScore(record, defaultScore: 0), existing.Index);
+                    }
                 }
             }
         }
@@ -255,10 +255,10 @@ internal sealed class LadybugSearchExecutor
             {
                 if (GetString(record, "uuid") is { Length: > 0 } uuid)
                 {
-                    var score = GetScore(record, defaultScore: float.PositiveInfinity);
-                    scores[uuid] = scores.TryGetValue(uuid, out var existing)
-                        ? (score, existing.Index)
-                        : (score, int.MaxValue);
+                    if (scores.TryGetValue(uuid, out var existing))
+                    {
+                        scores[uuid] = (GetScore(record, defaultScore: float.PositiveInfinity), existing.Index);
+                    }
                 }
             }
         }

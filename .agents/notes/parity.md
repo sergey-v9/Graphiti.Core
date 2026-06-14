@@ -70,6 +70,11 @@ candidate in `EdgeMergeHelpers.ResolveEdgeContradictions`, and leaves `expired_a
 brand-new extracted edge with `invalid_at` when Python returns early because no candidates exist.
 Edge candidate `created_at` still comes from the ingestion operation timestamp.
 
+**2026-06-14 Ladybug ranker hygiene:** closed the tracked backend-only rank row issue. Ladybug
+distance and episode-mention rank queries already constrain each per-UUID query to the requested
+`node_uuid`; the executor now also ignores impossible rows whose returned `uuid` is outside the input
+score map, so rank results stay restricted to requested candidates like Python's reranker output.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

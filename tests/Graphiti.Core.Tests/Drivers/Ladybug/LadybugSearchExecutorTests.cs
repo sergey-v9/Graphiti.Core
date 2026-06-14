@@ -285,6 +285,32 @@ public class LadybugSearchExecutorTests
     }
 
     [Fact]
+    public async Task Rankers_IgnoreBackendRowsOutsideRequestedInputs()
+    {
+        var recorder = new RecordingLadybugExecutor();
+        recorder.EnqueueQuery(
+            new Dictionary<string, object?> { ["uuid"] = "near", ["score"] = 1 },
+            new Dictionary<string, object?> { ["uuid"] = "backend-only-distance", ["score"] = 99 });
+        recorder.EnqueueQuery(
+            new Dictionary<string, object?> { ["uuid"] = "node-a", ["score"] = 2 },
+            new Dictionary<string, object?> { ["uuid"] = "backend-only-mentions", ["score"] = 1 });
+        var search = new LadybugSearchExecutor(recorder);
+
+        var distance = await search.RankNodeDistanceAsync(
+            new[] { "near" },
+            "center",
+            minScore: 0);
+        var mentions = await search.RankNodeEpisodeMentionsAsync(
+            new[] { "node-a" },
+            minScore: 0);
+
+        Assert.Equal(new[] { "near" }, distance.Select(rank => rank.Uuid));
+        Assert.Equal(1f, Assert.Single(distance).Score);
+        Assert.Equal(new[] { "node-a" }, mentions.Select(rank => rank.Uuid));
+        Assert.Equal(2f, Assert.Single(mentions).Score);
+    }
+
+    [Fact]
     public async Task Rankers_ApplyInclusiveMinimumScoreToDefaults()
     {
         var recorder = new RecordingLadybugExecutor();
