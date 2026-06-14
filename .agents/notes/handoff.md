@@ -149,21 +149,25 @@ API (all structured schemas accepted; real resolved temporal graph) and the 6-ep
 `Graphiti.Sample.OpenAI` produced a sane graph (rich summaries, correct bi-temporal invalidation,
 relevant reranked search). Re-run with `.\eng\Run-OpenAIProviderValidation.ps1` (auto-loads `.env`).
 
-Plan-05 release-readiness checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 971 passed, 3
-skipped, 974 total). Steps A–E complete: XML docs + a two-assembly public-API snapshot guard
-(`tests/Graphiti.Core.Tests/Api/`, `PublicApiGenerator` — `Graphiti.Core.approved.txt` and
+Plan-05 release-readiness checkpoint, 2026-06-14 (latest direct verification green: build with
+`dotnet build -c Release -clp:ErrorsOnly`; test with `dotnet test -c Release --no-build` green on
+rerun with 968 passed, 3 skipped, 971 total after the known
+`SearchEngineDriverBackedTests.SearchAsync_ExecutesConfiguredScopesConcurrently` flake failed once;
+format with `dotnet format --verify-no-changes --no-restore`). Steps A–E complete plus the
+B2/B3 follow-through: the shippable `Graphiti.Core` and `Graphiti.Core.Drivers.Ladybug` packages now
+generate IntelliSense XML docs; the two-assembly public-API snapshot guard remains in
+`tests/Graphiti.Core.Tests/Api/` (`PublicApiGenerator` — `Graphiti.Core.approved.txt` and
 `Graphiti.Core.Drivers.Ladybug.approved.txt`; regenerate the relevant baseline deliberately on an
 intended API change); a consumer `README.md`/`docs/search.md`; surface hardening; the
 `GraphProvider.LadybugDb`/`AddGraphiti` names (with `Kuzu`/`AddGraphitiCore` `[Obsolete]` aliases;
 `GRPH0001` is locally suppressed only at deliberate Kuzu alias sites, while `GRPH0002` remains in
-`Directory.Build.props` `NoWarn`); the InMemory-default constructor +
-`AddEpisodeOptions`; and the LadybugDB package split — `Graphiti.Core` is LadybugDB-free and restores from
-nuget.org alone, the driver lives in `src/Graphiti.Core.Drivers.Ladybug/`, and core throws a clear error
-if `LadybugDb`/`Kuzu` is selected without `AddLadybugDbGraphDriver()`. Remaining: E.2 (publish the local
-LadybugDB package family — `W:\code\ladybug`), versioning, CI. See `plans/05` and `decisions.md`. GOTCHA
-(still applies): do NOT run multiple worktree agents' `dotnet test` concurrently — the LadybugDB native
-package deadlocks across worktrees (1.5h hang on 06-14; recovered by killing orphaned testhost processes).
-Have worktree agents build/format-only and run the consolidated test centrally.
+`Directory.Build.props` `NoWarn`); the InMemory-default constructor + `AddEpisodeOptions`; the
+LadybugDB package split; and the retired shared Kuzu branches in generic search helpers. Remaining:
+E.2 (publish the local LadybugDB package family — `W:\code\ladybug`), versioning, CI. See `plans/05`
+and `decisions.md`. GOTCHA (still applies): do NOT run multiple worktree agents' `dotnet test`
+concurrently — the LadybugDB native package deadlocks across worktrees (1.5h hang on 06-14; recovered
+by killing orphaned testhost processes). Have worktree agents build/format-only and run the
+consolidated test centrally.
 
 Follow-up checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 959 passed, 3 skipped, 962
 total; format/build/pack clean). Landed since 06-13: the eval harness (`samples/Graphiti.Eval`) built

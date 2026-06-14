@@ -132,6 +132,9 @@ The C# port now treats idiomatic .NET shape as part of the product:
 - `AGENTS.md` and `decisions.md` make idiomatic C# plus behavioral parity the standing port contract.
 - `handoff.md` records the current modular layout and audited areas.
 - `roadmap.md` treats modernization as ongoing hardening, not a future migration phase.
+- `Graphiti.Core` and `Graphiti.Core.Drivers.Ladybug` generate and ship IntelliSense XML
+  documentation files; public XML documentation in those shippable packages is enforced by the
+  Release build.
 - Tests cover parity-sensitive areas such as search ranking/fusion/reranking, text utilities,
   in-memory reference behavior, maintenance, serialization/cache identity, and provider abstractions.
 
@@ -148,7 +151,6 @@ Modernization must not casually change:
 
 ### Follow-Up Decisions
 
-- How much XML documentation should be added before considering the public surface polished.
 - Whether future provider integrations should live in core or outside the core package.
 - Whether any remaining Python compatibility shims should be removed before a stable public release.
 

@@ -9,8 +9,10 @@ test is kept as a drift guard, not a freeze: each step that changes the public s
 
 ## Status — A–E COMPLETE (2026-06-14)
 
-All five steps landed on `main` and verified green (974 tests, format/build/pack clean):
-- **A** — `init` setters, `Options`/`ActivitySource`/`TokenCounter` get-only, 7 port-artifact helpers internalized.
+All five steps landed on `main` and verified green. Latest direct full-suite verification after the
+B2/B3 follow-through is 968 passed, 3 skipped, 971 total, with build and format clean:
+- **A** — `init` setters, `Options`/`ActivitySource`/`TokenCounter` get-only, 7 port-artifact helpers
+  internalized, and shippable package projects generating IntelliSense XML documentation.
 - **B+C** — `GraphProvider.LadybugDb=5` and `AddGraphiti` primary; `Kuzu`/`AddGraphitiCore` `[Obsolete]`
   aliases. `GRPH0001` is locally suppressed only at deliberate Kuzu alias sites; `GRPH0002` remains
   repo-wide until the `AddGraphitiCore` compatibility test coverage is migrated or retired.

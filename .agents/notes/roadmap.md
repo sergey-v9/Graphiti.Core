@@ -91,16 +91,18 @@ removal is a user decision; do not remove without asking.
 
 ## Phase 5 — Release readiness (IN PROGRESS)
 
-Landed 2026-06-14: XML docs across the consumer-facing public surface; a public-API **snapshot test**
+Landed 2026-06-14: XML docs across the consumer-facing public surface, with the shippable packages now
+generating IntelliSense XML documentation; a public-API **snapshot test**
 (`tests/Graphiti.Core.Tests/Api/`, via `PublicApiGenerator`) that fails CI on accidental API drift;
 and a consumer `README.md` + `docs/search.md`. A first benchmark-first perf pass already landed
 (two measured parity-safe wins).
 
 Plan `.agents/plans/05-release-readiness.md` steps **A–E are COMPLETE (2026-06-14)**, integrated and
-green (974 tests): surface hardening (A), `GraphProvider.LadybugDb`/`AddGraphiti` with obsolete aliases
-(B+C), InMemory-default constructor + `AddEpisodeOptions` (D), and the LadybugDB package split (E.1+E.3) —
-`Graphiti.Core` is now LadybugDB-free and restores from nuget.org alone, with the LadybugDB driver in the
-opt-in `Graphiti.Core.Drivers.Ladybug` package. The public-API snapshot guards both assemblies.
+green (latest direct full suite after B2/B3: 968 passed, 3 skipped, 971 total): surface hardening (A),
+`GraphProvider.LadybugDb`/`AddGraphiti` with obsolete aliases (B+C), InMemory-default constructor +
+`AddEpisodeOptions` (D), and the LadybugDB package split (E.1+E.3) — `Graphiti.Core` is now
+LadybugDB-free and restores from nuget.org alone, with the LadybugDB driver in the opt-in
+`Graphiti.Core.Drivers.Ladybug` package. The public-API snapshot guards both assemblies.
 
 Remaining (release infra, partly gated on external work): **E.2** — publish/replace the local LadybugDB
 package family (`W:\code\ladybug` repo work) so `Graphiti.Core.Drivers.Ladybug` restores off-machine;

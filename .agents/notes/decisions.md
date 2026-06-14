@@ -57,8 +57,9 @@ semantics, wire compatibility, or performance/allocation discipline.
 - Root orchestration files stay in `Graphiti.Core`, especially `Graphiti.cs`, `Graphiti.*.cs`
   partials, and `Exceptions.cs`.
 - Prefer one public type per file.
-- XML comments are useful but missing-doc warnings are not enabled; add comments incrementally where
-  they improve the public surface.
+- The two shippable package projects (`Graphiti.Core` and `Graphiti.Core.Drivers.Ladybug`) generate
+  XML documentation files. With warnings treated as errors, missing or broken XML docs on their public
+  surface are build failures; tests/samples do not enable package XML generation.
 
 ## Public API surface (plan 05, 2026-06-14)
 
@@ -86,6 +87,8 @@ no wire/prompt/cache/temporal behavior changed):
   and `ContentChunking.TokenCounter` are get-only (token-counter selection is the DI/`IContentChunker`
   path). `GraphDriverBase`, the `*Namespace` facades, `EpisodeTypeExtensions` (wire-value helpers), and
   the schema/cache-identity DTOs stay public.
+- `Graphiti.Core` and `Graphiti.Core.Drivers.Ladybug` ship IntelliSense XML docs from their public XML
+  comments. Keep docs complete when adding public members to either package.
 - **LadybugDB is a separate package.** `Graphiti.Core` carries only the driver contract (`IGraphDriver`,
   `GraphProvider`, `GraphDriverBase`, `InMemoryGraphDriver`, `Neo4jGraphDriver`) and depends only on
   nuget.org packages — it restores off-machine without the local Ladybug feed. The LadybugDB driver,
