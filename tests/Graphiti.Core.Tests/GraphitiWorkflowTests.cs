@@ -3996,6 +3996,54 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisode_DropsEdgesWhoseEndpointNamesDoNotExactlyMatchExtractedNodes()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: new StaticLlmClient(new JsonObject
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                    new JsonObject { ["name"] = "Bob", ["entity_type"] = "Person" }
+                },
+                ["edges"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["source"] = "Alice",
+                        ["target"] = "Bob",
+                        ["relation_type"] = "CONGRATULATED",
+                        ["fact"] = "Alice congratulated Bob."
+                    },
+                    new JsonObject
+                    {
+                        ["source"] = "alice",
+                        ["target"] = "Bob",
+                        ["relation_type"] = "MENTORED",
+                        ["fact"] = "alice mentored Bob."
+                    }
+                }
+            }));
+
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Alice congratulated Bob. alice mentored Bob.",
+            "message",
+            new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+            groupId: "group");
+
+        var edge = Assert.Single(result.Edges);
+        Assert.Equal("CONGRATULATED", edge.Name);
+        Assert.Equal("Alice congratulated Bob.", edge.Fact);
+
+        var storedEdge = Assert.Single(await EntityEdge.GetByGroupIdsAsync(driver, new[] { "group" }));
+        Assert.Equal(edge.Uuid, storedEdge.Uuid);
+        Assert.Equal("CONGRATULATED", storedEdge.Name);
+    }
+
+    [Fact]
     public async Task AddEpisode_LeavesExpiredAtNullWhenBrandNewExtractedEdgeHasInvalidAt()
     {
         var driver = new InMemoryGraphDriver();

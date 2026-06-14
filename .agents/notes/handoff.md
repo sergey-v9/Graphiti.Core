@@ -135,9 +135,9 @@ added.
 
 Latest checkpoint, 2026-06-14:
 
-`.\eng\Verify-GraphitiCore.ps1` is green after the separate edge-extraction self-edge parity proof:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`985`
-passed, `3` skipped, `988` total), `dotnet pack` for both shippable packages
+`.\eng\Verify-GraphitiCore.ps1` is green after tightening separate edge-extraction endpoint-name
+validation to Python parity: restore, format, warning-clean build including `Graphiti.Sample.OpenAI`,
+full test suite (`986` passed, `3` skipped, `989` total), `dotnet pack` for both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
 restore/build/setup/run checks for both packages. The verifier now packs both projects, then creates isolated
@@ -151,8 +151,10 @@ back, then assert the provider and hit UUID (`InMemory:smoke-edge`, `LadybugDb:s
 metadata, README packing, symbol settings, SemVer-like same-version alignment, the two-project pack
 loop, and the package-consumer smoke path. `GraphitiWorkflowTests` now pins Python
 `extract_edges` self-edge behavior through `AddEpisodeAsync`: an LLM-returned `Alice -> Alice` edge is
-dropped while the same extraction's `Alice -> Bob` edge is returned and persisted. `OPENAI_API_KEY`
-was unset; the three skipped tests were the env-gated `OpenAIProviderIntegrationTests`.
+dropped while the same extraction's `Alice -> Bob` edge is returned and persisted. It also pins
+Python's exact endpoint-name validation: a case-mismatched LLM edge endpoint is skipped even though
+C# node-resolution maps remain case-insensitive for other dedupe paths. `OPENAI_API_KEY` was unset;
+the three skipped tests were the env-gated `OpenAIProviderIntegrationTests`.
 
 Latest checkpoint, 2026-06-13:
 

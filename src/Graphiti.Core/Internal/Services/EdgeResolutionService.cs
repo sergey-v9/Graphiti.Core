@@ -303,8 +303,8 @@ internal sealed class EdgeResolutionService(
         var fallbackEpisode = episodes[0];
         foreach (var extracted in extractedEdges)
         {
-            if (!nodesByExtractedName.TryGetValue(extracted.SourceName, out var sourceNode)
-                || !nodesByExtractedName.TryGetValue(extracted.TargetName, out var targetNode)
+            if (!TryGetNodeByExactExtractedName(nodesByExtractedName, extracted.SourceName, out var sourceNode)
+                || !TryGetNodeByExactExtractedName(nodesByExtractedName, extracted.TargetName, out var targetNode)
                 || (!extracted.AllowSelfEdge && sourceNode.Uuid == targetNode.Uuid)
                 || string.IsNullOrWhiteSpace(extracted.Fact))
             {
@@ -346,6 +346,28 @@ internal sealed class EdgeResolutionService(
         }
 
         return candidates;
+    }
+
+    private static bool TryGetNodeByExactExtractedName(
+        IReadOnlyDictionary<string, EntityNode> nodesByExtractedName,
+        string extractedName,
+        out EntityNode node)
+    {
+        // Python extract_edges builds a plain dict keyed by node.name and validates LLM edge
+        // endpoints through exact string membership before resolving UUIDs. Some C# node-resolution
+        // maps are case-insensitive for other dedupe paths, so enumerate keys here to preserve the
+        // separate edge-extraction validation contract.
+        foreach (var pair in nodesByExtractedName)
+        {
+            if (string.Equals(pair.Key, extractedName, StringComparison.Ordinal))
+            {
+                node = pair.Value;
+                return true;
+            }
+        }
+
+        node = null!;
+        return false;
     }
 
     internal static EntityEdge? FindDuplicateFact(
