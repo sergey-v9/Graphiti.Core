@@ -115,6 +115,11 @@ or have agents build-only and run the consolidated test centrally.
 
 ## Standing direction (unchanged)
 
+- **Tracking upstream Python:** we follow `getzep/graphiti` `origin/main` HEAD (not tagged releases),
+  mirroring `graphiti_core/` only. To pull a new batch, follow the repeatable
+  `.agents/notes/upstream-sync-procedure.md` (delta → classify → incorporate → other-provider
+  adaptation check → verify centrally → adversarial audit → record → advance the local pointer). The
+  current sync point is in `parity.md`'s anchor.
 - LadybugDB is the main provider target; InMemory is the deterministic reference/test driver;
   Neo4j is legacy reference only; FalkorDB/Neptune are enum/wire compatibility surfaces.
 - Search stays custom and parity-tested: RRF, MMR, cross-encoder ordering, node-distance,

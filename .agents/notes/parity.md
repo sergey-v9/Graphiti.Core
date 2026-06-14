@@ -4,13 +4,15 @@ This is the single source of truth for "what is actually ported". Update the aff
 same change that closes or reopens a gap. Do not claim parity from memory — verify against the
 Python file before flipping a status.
 
-**Python baseline:** `graphiti_core/` reconciled through upstream `origin/main` at commit `ff7e29c`
-(2026-06-08, the FalkorDB default-group_id fix #1549). The local parent-repo checkout of
-`graphiti_core/` is at `34f56e6` (0.29.1 version bump over the previous anchor `7514b44`); the five
-commits between `34f56e6` and `ff7e29c` were reviewed in the 2026-06-14 upstream sync below (none
-touched prompts/search/pipeline). When the parent repo pulls newer upstream changes, diff
-`graphiti_core/` against this anchor, add rows or reopen statuses for anything affected, then move the
-anchor.
+**Python baseline:** `graphiti_core/` synced to upstream `origin/main` HEAD `0ed90b7` (we track HEAD,
+not tagged releases). The local parent-repo mirror was advanced to match in parent commit `e36c387`
+(`git checkout origin/main -- graphiti_core`), so the local `graphiti_core/` tree now equals
+`origin/main`. The library tree at `0ed90b7` is identical to `ff7e29c` — every commit after `ff7e29c`
+in the range touches only `mcp_server/`/`server/`/CI/deps, not the library. The five library commits
+since the previous anchor (`34f56e6`) were reviewed + adversarially verified in the 2026-06-14
+upstream sync below (none touched prompts/search/pipeline). **To pull the next batch, follow
+`upstream-sync-procedure.md`**: diff `graphiti_core/` against this anchor, disposition each change,
+verify, then move the anchor to the new `origin/main` HEAD.
 
 **Statuses**
 - `OK` — behavior and (for prompts) instruction text faithfully ported; divergences documented.
