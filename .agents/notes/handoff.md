@@ -204,6 +204,12 @@ Upstream Python check, 2026-06-14: `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch` 
 `0ed90b72505c2a6a4f3ee953939888fb56572944`; there is no `graphiti_core/` delta to port. The helper
 now implements the Step 1 upstream-sync log/stat/name-status check and supports `-FailOnDelta`.
 
+Edge-expiry parity follow-up, 2026-06-14: the tracked single-resolution-clock divergence was closed.
+`EdgeResolutionService` now uses `Graphiti.UtcNow` for non-fast-path resolved-edge expiry, and
+`EdgeMergeHelpers.ResolveEdgeContradictions` calls a clock callback per invalidated candidate. New
+edges that only carry extracted/LLM `invalid_at` and have no candidates keep `expired_at = null`,
+matching Python's early return.
+
 Follow-up checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 959 passed, 3 skipped, 962
 total; format/build/pack clean). Landed since 06-13: the eval harness (`samples/Graphiti.Eval`) built
 to the proposal's graph-building regression design and run live (6/6 no-regression on identical code;

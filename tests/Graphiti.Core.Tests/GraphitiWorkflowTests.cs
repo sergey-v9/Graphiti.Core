@@ -3637,7 +3637,7 @@ public class GraphitiWorkflowTests
         var edge = Assert.Single(result.Edges);
         Assert.Equal(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), edge.ValidAt);
         Assert.Equal(new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), edge.InvalidAt);
-        Assert.Equal(fixedNow.UtcDateTime, edge.ExpiredAt);
+        Assert.Null(edge.ExpiredAt);
         var timestampCall = Assert.Single(llm.Calls, call => call.PromptName == "extract_edges.extract_timestamps");
         Assert.Equal("EdgeTimestampResponse", timestampCall.ResponseModel?.Name);
     }
@@ -3900,7 +3900,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddEpisode_SetsExpiredAtWhenExtractedEdgeHasInvalidAt()
+    public async Task AddEpisode_LeavesExpiredAtNullWhenBrandNewExtractedEdgeHasInvalidAt()
     {
         var driver = new InMemoryGraphDriver();
         var fixedNow = new DateTimeOffset(2026, 2, 3, 4, 5, 6, TimeSpan.Zero);
@@ -3936,7 +3936,7 @@ public class GraphitiWorkflowTests
 
         var edge = Assert.Single(result.Edges);
         Assert.Equal(new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), edge.InvalidAt);
-        Assert.Equal(fixedNow.UtcDateTime, edge.ExpiredAt);
+        Assert.Null(edge.ExpiredAt);
     }
 
     [Fact]

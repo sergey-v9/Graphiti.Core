@@ -8,7 +8,8 @@ internal sealed class EdgeResolutionService(
     GraphitiClients clients,
     ILlmClient llmClient,
     ILogger logger,
-    Func<int>? getMaxDegreeOfParallelism = null)
+    Func<int>? getMaxDegreeOfParallelism = null,
+    Func<DateTime>? utcNow = null)
 {
     public static string NormalizeFact(string fact) => GraphitiHelpers.NormalizeEntityKey(fact);
 
@@ -156,11 +157,6 @@ internal sealed class EdgeResolutionService(
                     candidate.CreatedAt = now;
                 }
 
-                if (candidate.InvalidAt is not null)
-                {
-                    candidate.ExpiredAt ??= now;
-                }
-
                 prepared.Add(candidate);
             }
 
@@ -178,7 +174,6 @@ internal sealed class EdgeResolutionService(
                     candidate,
                     episode,
                     groupId,
-                    now,
                     sharedEdgeMutationLock,
                     existingEdgesOverride,
                     edgeTypes,
@@ -224,7 +219,6 @@ internal sealed class EdgeResolutionService(
         EntityEdge candidate,
         EpisodicNode episode,
         string groupId,
-        DateTime now,
         object sharedEdgeMutationLock,
         IReadOnlyList<EntityEdge>? existingEdgesOverride,
         IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes,
@@ -286,7 +280,6 @@ internal sealed class EdgeResolutionService(
             relatedEdges,
             existingEdges,
             episode,
-            now,
             cancellationToken,
             edgeTypes,
             edgeTypeMap,
@@ -366,11 +359,6 @@ internal sealed class EdgeResolutionService(
                                     episodes,
                                     fallbackEpisode.ValidAt)
             };
-            if (candidate.InvalidAt is not null)
-            {
-                candidate.ExpiredAt = now;
-            }
-
             candidates.Add(candidate);
         }
 
@@ -515,7 +503,6 @@ internal sealed class EdgeResolutionService(
         IReadOnlyList<EntityEdge> relatedEdges,
         IReadOnlyList<EntityEdge> existingEdges,
         EpisodicNode episode,
-        DateTime now,
         CancellationToken cancellationToken,
         IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes = null,
         IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap = null,
@@ -538,7 +525,7 @@ internal sealed class EdgeResolutionService(
                 attributeSchemaCache,
                 clearWhenNoSchema: false,
                 cancellationToken).ConfigureAwait(false);
-            await ExtractEdgeTimestampsAsync(extractedEdge, episode, now, cancellationToken).ConfigureAwait(false);
+            await ExtractEdgeTimestampsAsync(extractedEdge, episode, cancellationToken).ConfigureAwait(false);
             return (extractedEdge, Array.Empty<EntityEdge>());
         }
 
@@ -583,11 +570,6 @@ internal sealed class EdgeResolutionService(
                 : existingEdges[index - offset]);
         }
 
-        if (resolvedEdge.InvalidAt is not null && resolvedEdge.ExpiredAt is null)
-        {
-            resolvedEdge.ExpiredAt = now;
-        }
-
         await ExtractEdgeAttributesAsync(
             resolvedEdge,
             episode,
@@ -600,7 +582,13 @@ internal sealed class EdgeResolutionService(
 
         if (resolvedEdge.Uuid == extractedEdge.Uuid)
         {
-            await ExtractEdgeTimestampsAsync(resolvedEdge, episode, now, cancellationToken).ConfigureAwait(false);
+            await ExtractEdgeTimestampsAsync(resolvedEdge, episode, cancellationToken).ConfigureAwait(false);
+        }
+
+        var resolutionNow = UtcNow();
+        if (resolvedEdge.InvalidAt is not null && resolvedEdge.ExpiredAt is null)
+        {
+            resolvedEdge.ExpiredAt = resolutionNow;
         }
 
         // Expiry of the resolved edge and contradiction handling write invalid_at/expired_at on the
@@ -610,15 +598,15 @@ internal sealed class EdgeResolutionService(
         List<EntityEdge> invalidatedEdges;
         if (sharedEdgeMutationLock is null)
         {
-            ExpireResolvedEdgeIfLaterCandidateExists(resolvedEdge, invalidationCandidates, now);
-            invalidatedEdges = EdgeMergeHelpers.ResolveEdgeContradictions(resolvedEdge, invalidationCandidates, now);
+            ExpireResolvedEdgeIfLaterCandidateExists(resolvedEdge, invalidationCandidates, resolutionNow);
+            invalidatedEdges = EdgeMergeHelpers.ResolveEdgeContradictions(resolvedEdge, invalidationCandidates, UtcNow);
         }
         else
         {
             lock (sharedEdgeMutationLock)
             {
-                ExpireResolvedEdgeIfLaterCandidateExists(resolvedEdge, invalidationCandidates, now);
-                invalidatedEdges = EdgeMergeHelpers.ResolveEdgeContradictions(resolvedEdge, invalidationCandidates, now);
+                ExpireResolvedEdgeIfLaterCandidateExists(resolvedEdge, invalidationCandidates, resolutionNow);
+                invalidatedEdges = EdgeMergeHelpers.ResolveEdgeContradictions(resolvedEdge, invalidationCandidates, UtcNow);
             }
         }
 
@@ -849,7 +837,6 @@ internal sealed class EdgeResolutionService(
     private async Task ExtractEdgeTimestampsAsync(
         EntityEdge edge,
         EpisodicNode episode,
-        DateTime now,
         CancellationToken cancellationToken)
     {
         if (edge.ValidAt is not null || edge.InvalidAt is not null)
@@ -867,16 +854,14 @@ internal sealed class EdgeResolutionService(
 
             edge.ValidAt = ParseOptionalDate(response.ValidAt);
             edge.InvalidAt = ParseOptionalDate(response.InvalidAt);
-            if (edge.InvalidAt is not null && edge.ExpiredAt is null)
-            {
-                edge.ExpiredAt = now;
-            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             GraphitiLog.TimestampExtractionFailed(logger, exception, edge.Uuid);
         }
     }
+
+    private DateTime UtcNow() => utcNow?.Invoke() ?? DateTime.UtcNow;
 
     private static DateTime? ParseOptionalDate(string? value)
     {

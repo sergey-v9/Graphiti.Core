@@ -224,6 +224,11 @@ no wire/prompt/cache/temporal behavior changed):
   Preserve Python's distinction: exact duplicate edge reuse returns before the edge-attribute prompt
   and keeps existing attributes, while non-fast-path resolution may replace or clear attributes
   according to the matched custom edge type.
+- Edge expiry bookkeeping follows Python's resolution-time clock sites: `EdgeResolutionService` uses
+  a fresh `utc_now` callback for non-fast-path resolved-edge expiry, and contradiction invalidation
+  calls that callback per invalidated candidate. A brand-new extracted edge that already has
+  `invalid_at` but has no related/invalidation candidates keeps `expired_at = null`, matching
+  Python's early return from `resolve_extracted_edge`.
 
 ## Deliberate divergences accepted in the 2026-06-13 parity-hardening pass
 
@@ -273,8 +278,6 @@ the impact grows.
   every path reduces to a single episode index `[0]`. If multi-episode extraction is ever wired,
   port `node_operations.py:104-112` / `edge_operations.py:170-181` attribution blocks and reconcile
   the helpers in `EpisodeAttribution.cs`.
-- **A single `now` is shared across a batch's edges** rather than Python's per-edge `utc_now()`;
-  expired_at/invalid_at values are identical within a batch (arguably preferable for determinism).
 - **Ladybug distance/mention rerankers** dedup input UUIDs and would surface backend-only UUIDs; not
   reachable through the real per-UUID Cypher (which constrains `n.uuid = $node_uuid`). A test enshrines
   the divergent shape using impossible foreign rows — test hygiene, not a production defect.

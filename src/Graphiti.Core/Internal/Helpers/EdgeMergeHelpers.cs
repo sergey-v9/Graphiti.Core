@@ -30,7 +30,7 @@ internal static class EdgeMergeHelpers
     internal static List<EntityEdge> ResolveEdgeContradictions(
         EntityEdge resolvedEdge,
         IReadOnlyList<EntityEdge> invalidationCandidates,
-        DateTime now)
+        Func<DateTime> utcNow)
     {
         var invalidatedEdges = new List<EntityEdge>();
         foreach (var edge in invalidationCandidates)
@@ -57,7 +57,7 @@ internal static class EdgeMergeHelpers
             if (edgeValidAt is not null && resolvedValidAt is not null && edgeValidAt < resolvedValidAt)
             {
                 edge.InvalidAt = resolvedEdge.ValidAt;
-                edge.ExpiredAt ??= now;
+                edge.ExpiredAt ??= utcNow();
                 invalidatedEdges.Add(edge);
             }
         }

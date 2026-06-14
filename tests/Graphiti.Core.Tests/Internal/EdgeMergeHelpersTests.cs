@@ -90,4 +90,46 @@ public class EdgeMergeHelpersTests
             edge => Assert.Same(duplicate, edge),
             edge => Assert.Same(second, edge));
     }
+
+    [Fact]
+    public void ResolveEdgeContradictions_UsesFreshExpiryTimePerInvalidatedCandidate()
+    {
+        var expiryTimes = new[]
+        {
+            new DateTime(2026, 4, 1, 12, 0, 1, DateTimeKind.Utc),
+            new DateTime(2026, 4, 1, 12, 0, 2, DateTimeKind.Utc)
+        };
+        var nextTimeIndex = -1;
+        DateTime NextTime()
+        {
+            var index = Interlocked.Increment(ref nextTimeIndex);
+            return expiryTimes[Math.Min(index, expiryTimes.Length - 1)];
+        }
+
+        var resolved = new EntityEdge
+        {
+            ValidAt = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var firstCandidate = new EntityEdge
+        {
+            Uuid = "first",
+            ValidAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var secondCandidate = new EntityEdge
+        {
+            Uuid = "second",
+            ValidAt = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        var invalidated = EdgeMergeHelpers.ResolveEdgeContradictions(
+            resolved,
+            new[] { firstCandidate, secondCandidate },
+            NextTime);
+
+        Assert.Equal(new[] { firstCandidate, secondCandidate }, invalidated);
+        Assert.Equal(resolved.ValidAt, firstCandidate.InvalidAt);
+        Assert.Equal(resolved.ValidAt, secondCandidate.InvalidAt);
+        Assert.Equal(expiryTimes[0], firstCandidate.ExpiredAt);
+        Assert.Equal(expiryTimes[1], secondCandidate.ExpiredAt);
+    }
 }

@@ -285,6 +285,84 @@ public class EdgeResolutionEndpointFetchTests
         Assert.Null(notMatched);
     }
 
+    [Fact]
+    public async Task ResolveEdgeWithLlm_UsesFreshResolutionTimeForEachExpiredEdge()
+    {
+        var driver = new InMemoryGraphDriver();
+        var resolutionTimes = new[]
+        {
+            new DateTime(2026, 4, 1, 12, 0, 1, DateTimeKind.Utc),
+            new DateTime(2026, 4, 1, 12, 0, 2, DateTimeKind.Utc)
+        };
+        var nextTimeIndex = -1;
+        DateTime NextResolutionTime()
+        {
+            var index = Interlocked.Increment(ref nextTimeIndex);
+            return resolutionTimes[Math.Min(index, resolutionTimes.Length - 1)];
+        }
+
+        var llm = new PromptResponseLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["dedupe_edges.resolve_edge"] = new()
+            {
+                ["duplicate_facts"] = new JsonArray(),
+                ["contradicted_facts"] = new JsonArray()
+            }
+        });
+        var service = new EdgeResolutionService(
+            () => driver,
+            new GraphitiClients(driver, llm, new HashEmbedder(2), new IdentityCrossEncoderClient()),
+            llm,
+            NullLogger.Instance,
+            utcNow: NextResolutionTime);
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode-1",
+            Name = "episode",
+            Content = "Alice plans work.",
+            Source = EpisodeType.Message,
+            GroupId = "group",
+            ValidAt = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var existingCandidate = new EntityEdge
+        {
+            Uuid = "candidate",
+            SourceNodeUuid = "alice-uuid",
+            TargetNodeUuid = "acme-uuid",
+            GroupId = "group",
+            Name = "WORKS_AT",
+            Fact = "Alice works at Acme.",
+            ValidAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        var first = BuildWorksAtEdge();
+        first.Uuid = "first";
+        first.Fact = "Alice worked at Acme until February.";
+        first.ValidAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        first.InvalidAt = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var second = BuildWorksAtEdge();
+        second.Uuid = "second";
+        second.Fact = "Alice consulted for Acme until March.";
+        second.ValidAt = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        second.InvalidAt = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var (firstResolved, _) = await service.ResolveEdgeWithLlmAsync(
+            first,
+            Array.Empty<EntityEdge>(),
+            new[] { existingCandidate },
+            episode,
+            CancellationToken.None);
+        var (secondResolved, _) = await service.ResolveEdgeWithLlmAsync(
+            second,
+            Array.Empty<EntityEdge>(),
+            new[] { existingCandidate },
+            episode,
+            CancellationToken.None);
+
+        Assert.Equal(resolutionTimes[0], firstResolved.ExpiredAt);
+        Assert.Equal(resolutionTimes[1], secondResolved.ExpiredAt);
+    }
+
     private sealed class PromptResponseLlmClient(IReadOnlyDictionary<string, JsonObject> responsesByPromptName)
         : ILlmClient
     {

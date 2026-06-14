@@ -64,6 +64,12 @@ A second adversarial review of that work caught and fixed eval-prompt interior t
 over-scoping by group_id, and the eval measuring retrieval-QA instead of graph-building. All
 integrated; verification green (962 tests). Plans 03 and 04 are closed.
 
+**2026-06-14 edge-expiry follow-up:** closed the tracked resolution-clock divergence. C# now uses
+`Graphiti.UtcNow` inside `EdgeResolutionService` for resolved-edge expiry, calls it per invalidated
+candidate in `EdgeMergeHelpers.ResolveEdgeContradictions`, and leaves `expired_at` null for a
+brand-new extracted edge with `invalid_at` when Python returns early because no candidates exist.
+Edge candidate `created_at` still comes from the ingestion operation timestamp.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

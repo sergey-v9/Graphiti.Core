@@ -109,7 +109,8 @@ public sealed partial class Graphiti : IAsyncDisposable
             Clients,
             LlmClient,
             _logger,
-            GetMaxDegreeOfParallelism);
+            GetMaxDegreeOfParallelism,
+            UtcNow);
         Nodes = new NodeNamespace(_rootDriver, Embedder);
         Edges = new EdgeNamespace(_rootDriver, Embedder);
     }

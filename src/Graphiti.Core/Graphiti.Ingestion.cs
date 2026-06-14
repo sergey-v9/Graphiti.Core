@@ -730,7 +730,6 @@ public sealed partial class Graphiti
                     candidates,
                     candidates,
                     extraction.Episode,
-                    now,
                     cancellationToken,
                     edgeTypes: edgeTypes).ConfigureAwait(false);
                 if (!string.Equals(resolvedEdge.Uuid, edge.Uuid, StringComparison.Ordinal))
@@ -962,7 +961,6 @@ public sealed partial class Graphiti
                     relatedEdges,
                     existingEdges,
                     syntheticEpisode,
-                    now,
                     cancellationToken,
                     nodes: new[] { resolvedSource, resolvedTarget }).ConfigureAwait(false);
                 edges.Add(resolvedEdge);
