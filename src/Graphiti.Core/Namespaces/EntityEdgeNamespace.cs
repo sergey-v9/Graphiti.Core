@@ -13,6 +13,10 @@ public sealed class EntityEdgeNamespace
         _embedder = embedder;
     }
 
+    /// <summary>
+    /// Persists the entity edge (fact), generating its fact embedding first if one is not already
+    /// present, and returns the saved edge.
+    /// </summary>
     public async Task<EntityEdge> SaveAsync(EntityEdge edge, CancellationToken cancellationToken = default)
     {
         if (edge.FactEmbedding is null)
@@ -24,6 +28,7 @@ public sealed class EntityEdgeNamespace
         return edge;
     }
 
+    /// <summary>Persists many entity edges (facts) in batches, backfilling missing fact embeddings.</summary>
     public async Task SaveBulkAsync(
         IEnumerable<EntityEdge> edges,
         int batchSize = 100,
@@ -40,22 +45,30 @@ public sealed class EntityEdgeNamespace
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Deletes the entity edge (fact).</summary>
     public Task DeleteAsync(EntityEdge edge, CancellationToken cancellationToken = default) =>
         edge.DeleteAsync(_driver, cancellationToken);
 
+    /// <summary>Deletes the entity edges (facts) with the given UUIDs.</summary>
     public Task DeleteByUuidsAsync(
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
         NamespaceDriverHelpers.DeleteEdgesByUuidsAsync<EntityEdge>(_driver, uuids, cancellationToken);
 
+    /// <summary>Loads a single entity edge (fact) by UUID.</summary>
     public Task<EntityEdge> GetByUuidAsync(string uuid, CancellationToken cancellationToken = default) =>
         EntityEdge.GetByUuidAsync(_driver, uuid, cancellationToken);
 
+    /// <summary>Loads the entity edges (facts) with the given UUIDs.</summary>
     public Task<IReadOnlyList<EntityEdge>> GetByUuidsAsync(
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
         EntityEdge.GetByUuidsAsync(_driver, uuids, cancellationToken);
 
+    /// <summary>
+    /// Loads entity edges (facts) across the given group partitions, with optional UUID-cursor paging
+    /// and optional inclusion of fact embeddings.
+    /// </summary>
     public Task<IReadOnlyList<EntityEdge>> GetByGroupIdsAsync(
         IEnumerable<string> groupIds,
         int? limit = null,
@@ -64,20 +77,24 @@ public sealed class EntityEdgeNamespace
         CancellationToken cancellationToken = default) =>
         EntityEdge.GetByGroupIdsAsync(_driver, groupIds, limit, uuidCursor, withEmbeddings, cancellationToken);
 
+    /// <summary>Loads the entity edges (facts) that directly connect two nodes.</summary>
     public Task<IReadOnlyList<EntityEdge>> GetBetweenNodesAsync(
         string sourceNodeUuid,
         string targetNodeUuid,
         CancellationToken cancellationToken = default) =>
         EntityEdge.GetBetweenNodesAsync(_driver, sourceNodeUuid, targetNodeUuid, cancellationToken);
 
+    /// <summary>Loads all entity edges (facts) incident to the given node.</summary>
     public Task<IReadOnlyList<EntityEdge>> GetByNodeUuidAsync(
         string nodeUuid,
         CancellationToken cancellationToken = default) =>
         EntityEdge.GetByNodeUuidAsync(_driver, nodeUuid, cancellationToken);
 
+    /// <summary>Populates the edge's fact embedding from storage.</summary>
     public Task LoadEmbeddingsAsync(EntityEdge edge, CancellationToken cancellationToken = default) =>
         edge.LoadFactEmbeddingAsync(_driver, cancellationToken);
 
+    /// <summary>Populates fact embeddings for many edges from storage.</summary>
     public Task LoadEmbeddingsBulkAsync(
         IEnumerable<EntityEdge> edges,
         int batchSize = 100,
