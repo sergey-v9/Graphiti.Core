@@ -75,10 +75,10 @@ no wire/prompt/cache/temporal behavior changed):
   `[Obsolete]` alias that still resolves to the LadybugDB driver. The DI method is `AddGraphiti`;
   `AddGraphitiCore` is an `[Obsolete]` alias. `GraphProvider` is not wire/cache-serialized (only an OTel
   tag), so renaming is safe; existing ordinals are pinned. FalkorDb/Neptune stay as wire-compat members.
-- Obsoletions use custom `DiagnosticId`s (`GRPH0001` provider, `GRPH0002` DI method) suppressed repo-wide
-  via `Directory.Build.props` `NoWarn`, so internal compatibility callers stay 0-warning under
-  `TreatWarningsAsErrors` while external package consumers still receive the obsoletion. (Migrating
-  internal callers onto the new names later would let the `NoWarn` be removed.)
+- Obsoletions use custom `DiagnosticId`s (`GRPH0001` provider, `GRPH0002` DI method). `GRPH0001` is
+  suppressed only at deliberate Kuzu compatibility-alias sites, so external package consumers still
+  receive the provider obsoletion. `GRPH0002` remains suppressed repo-wide until the in-repo
+  `AddGraphitiCore` compatibility test coverage is migrated or explicitly retired.
 - The accidental public surface was reduced: `SearchEngine`, `SearchUtilities`,
   `SearchFilterQueryBuilder`, `MaintenanceUtilities`, `StructuredResponseValidator`, and the
   enum-extension helpers are now `internal` (port artifacts; tests reach them via `InternalsVisibleTo`).
@@ -182,13 +182,14 @@ no wire/prompt/cache/temporal behavior changed):
 - Date-filter Cypher uses unique parameter names across OR branches; Python's reset-per-branch
   behavior can collide.
 - Kuzu-compatible full-text query construction matches Python's `fulltext_query` KUZU branch
-  (`search_utils.py:88-92`) exactly: it counts words by splitting on a single space, returns an empty
-  string (no search) when the count exceeds `SearchUtilities.MaxQueryLength` (128), and otherwise
-  returns the query **verbatim** with no whitespace normalization or per-term truncation. (Corrected
-  2026-06-13: an earlier note and the original `LadybugFulltextQuery` wrongly collapsed whitespace and
-  truncated over-limit queries while still searching; Python rejects over-limit queries outright.)
-  Active Ladybug search owns this in `Drivers/Ladybug/LadybugFulltextQuery`; `SearchUtilities` keeps
-  the `GraphProvider.Kuzu` branch for compatibility callers outside the driver.
+  (`search_utils.py:88-92`) exactly inside the active Ladybug driver: it counts words by splitting on
+  a single space, returns an empty string (no search) when the count exceeds
+  `SearchUtilities.MaxQueryLength` (128), and otherwise returns the query **verbatim** with no
+  whitespace normalization or per-term truncation. (Corrected 2026-06-13: an earlier note and the
+  original `LadybugFulltextQuery` wrongly collapsed whitespace and truncated over-limit queries while
+  still searching; Python rejects over-limit queries outright.) The compatibility logic lives in
+  `Drivers/Ladybug/LadybugFulltextQuery`; shared `SearchUtilities` no longer has a
+  `GraphProvider.Kuzu` branch because no configured driver self-reports Kuzu.
 - LadybugDB/Kuzu foundation uses the full C# `SagaNode` model shape for Saga schema/save/get,
   includes entity-edge `reference_time` in save/get/search projections, and returns entity edges
   incident to either endpoint from `GetEntityEdgesByNodeUuidAsync`. This deliberately fixes Python
@@ -313,19 +314,20 @@ strip (#1531) is N/A (no FalkorDB driver).
 - LadybugDB is the primary graph provider target for the C# port. It is the package/backend we will
   invest in; its package refs and driver live in the separate `Graphiti.Core.Drivers.Ladybug` project
   (plan-05 Step E split above), while `Graphiti.Core` carries only the driver contract.
-- The LadybugDB provider should use the LadybugDB NuGet package, which comes from the alternative
-  Kuzu fork. Kuzu remains the Python parity lineage and compatibility vocabulary, but the driver-facing
-  provider name should move to LadybugDB as the port freezes. See `kuzu-driver-port.md`.
+- The LadybugDB provider uses the LadybugDB NuGet package, which comes from the alternative Kuzu fork.
+  Kuzu remains the Python parity lineage and compatibility vocabulary, while the driver-facing provider
+  name is `GraphProvider.LadybugDb`. See `kuzu-driver-port.md`.
 - `GraphProvider.Neo4j` and `GraphProvider.InMemory` may remain in the current provider surface for
   now. Keep existing Neo4j behavior from regressing, but do not plan provider improvements there:
   Neo4j is expected to be removed, and InMemory is a reference/test driver rather than a product
   provider. `GraphProvider.FalkorDb` and `GraphProvider.Neptune` remain enum/helper compatibility
   surfaces and are rejected by default options validation unless a separate provider decision changes
   that. LadybugDB is the provider path to invest in.
-- `GraphProvider.Kuzu` is valid in core DI/options and creates the LadybugDB-backed driver. It honors
-  `GraphitiOptions.Database` for LadybugDB-backed file persistence. Kuzu remains the compatibility
-  enum value until the final driver-facing LadybugDB naming decision is explicit. See
-  `kuzu-driver-port.md` for current runtime coverage.
+- `GraphProvider.Kuzu` is a valid obsolete compatibility alias in core DI/options and, when
+  `AddLadybugDbGraphDriver` is registered, resolves to the LadybugDB-backed driver. The concrete
+  driver reports `GraphProvider.LadybugDb`; file persistence is configured through
+  `LadybugDbOptions.DatabasePath`, with the Python Kuzu `':memory:'` sentinel normalized by the
+  Ladybug driver factory. See `kuzu-driver-port.md` for current runtime coverage.
 - LadybugDB package/backend behavior that appears buggy during driver implementation should be marked
   separately from C# port gaps. Work around proven backend limitations deliberately when useful, but
   keep them visible for later LadybugDB fixes.

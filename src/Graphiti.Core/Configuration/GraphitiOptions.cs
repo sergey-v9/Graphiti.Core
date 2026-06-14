@@ -71,9 +71,11 @@ internal sealed class GraphitiOptionsValidator : IValidateOptions<GraphitiOption
         switch (options.Provider)
         {
             case GraphProvider.InMemory:
-            // LadybugDb is the driver-facing value; Kuzu is the obsolete compatibility alias.
             case GraphProvider.LadybugDb:
+#pragma warning disable GRPH0001
+            // LadybugDb is the driver-facing value; Kuzu is the obsolete compatibility alias.
             case GraphProvider.Kuzu:
+#pragma warning restore GRPH0001
                 break;
             case GraphProvider.Neo4j:
                 if (string.IsNullOrWhiteSpace(options.Uri))

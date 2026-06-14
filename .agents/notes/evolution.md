@@ -181,8 +181,8 @@ into its own package (plan-05 E):
   `GraphProvider.LadybugDb` (or `GraphProvider.Kuzu`) without registering the package throws a clear
   `InvalidOperationException` instructing the caller to call `AddLadybugDbGraphDriver()`.
 - `GraphProvider.LadybugDb` is the driver-facing name; `GraphProvider.Kuzu` is an `[Obsolete]`
-  compatibility alias that resolves to the same LadybugDB-backed driver and honors
-  `GraphitiOptions.Database`.
+  compatibility alias that resolves to the same LadybugDB-backed driver. The concrete driver reports
+  `GraphProvider.LadybugDb`; file persistence is configured through `LadybugDbOptions.DatabasePath`.
 - Neo4j is retained only as existing/reference behavior while present, FalkorDB is not a C# provider
   investment target, and InMemory remains a deterministic reference/test driver.
 
@@ -203,27 +203,26 @@ into its own package (plan-05 E):
   community/saga reads and typed deletes, saga-scoped retrieval and content reads, paged group
   reads, directed endpoint-pair and incident entity-edge reads, `Graphiti.Core.Drivers.Ladybug`
   DI registration via `AddLadybugDbGraphDriver`, `GraphProvider.LadybugDb`/`GraphProvider.Kuzu`
-  resolution, file-backed `DatabasePath` persistence, core `Database` persistence, `':memory:'`
-  sentinel compatibility, and active Ladybug-owned full-text/label-filter construction.
+  resolution, file-backed `DatabasePath` persistence for both provider values, `':memory:'` sentinel
+  compatibility, and active Ladybug-owned full-text/label-filter construction.
 
 ### Boundaries
 
 The LadybugDB milestone must still preserve:
 
 - Python-compatible graph behavior where Kuzu parity is the relevant baseline;
-- clear separation between Graphiti port gaps and LadybugDB package/binding limitations;
-- explicit naming decisions before replacing the current Kuzu compatibility provider value.
+- clear separation between Graphiti port gaps and LadybugDB package/binding limitations.
 
 ### Follow-Up Decisions
 
 - Whether Neo4j removal becomes its own milestone.
-- Whether shared Kuzu compatibility helpers remain indefinitely after the final LadybugDB provider
-  surface is named.
 
 **RESOLVED**
 
 - Final driver-facing naming (decided in plan-05 B): `GraphProvider.LadybugDb` is the driver-facing
   name and `GraphProvider.Kuzu` is the `[Obsolete]` compatibility alias.
+- Shared Kuzu compatibility branches in generic search helpers were retired in plan-05 B2; active
+  Ladybug query/filter syntax lives in the Ladybug driver package.
 
 ## M3: First Real-Provider Validation
 

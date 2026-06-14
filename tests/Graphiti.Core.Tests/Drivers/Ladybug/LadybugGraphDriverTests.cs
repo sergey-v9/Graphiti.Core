@@ -175,7 +175,7 @@ public class LadybugGraphDriverTests
         await driver.CloseAsync();
         await driver.CloseAsync();
 
-        Assert.Equal(GraphProvider.Kuzu, driver.Provider);
+        Assert.Equal(GraphProvider.LadybugDb, driver.Provider);
         Assert.Equal("graphiti", driver.Database);
         Assert.Equal(7, executor.Executed.Count);
         Assert.Equal(LadybugSchema.SchemaQueries, executor.Executed[0].Query);

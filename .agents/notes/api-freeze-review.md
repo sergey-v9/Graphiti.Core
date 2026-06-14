@@ -41,11 +41,12 @@ DTOs are appropriately public, the wire-value enums are intentional. These are p
 
 ## B. Provider naming (product decision — Phase 4)
 
-`GraphProvider.Kuzu` selects the LadybugDB driver — the enum value name does not match the driver.
-Options: add `GraphProvider.LadybugDb` as the primary value and keep `Kuzu` as an `[Obsolete]` alias;
-finish the Kuzu→LadybugDB terminology transition in `Drivers/Ladybug/`. Enum members can't be removed
-post-freeze, so settle the name now. (FalkorDb/Neptune members stay — they're intentional wire-compat
-surfaces per `decisions.md`.)
+**RESOLVED 2026-06-14:** `GraphProvider.LadybugDb` is the driver-facing provider value, and
+`GraphProvider.Kuzu` remains an `[Obsolete]` compatibility alias that resolves through the same
+LadybugDB registration path. The concrete Ladybug driver reports `GraphProvider.LadybugDb`; generic
+search helper Kuzu branches were retired, with active Ladybug query/filter syntax owned by the driver
+package. (FalkorDb/Neptune members stay — they're intentional wire-compat surfaces per
+`decisions.md`.)
 
 ## C. DI method name (product decision)
 

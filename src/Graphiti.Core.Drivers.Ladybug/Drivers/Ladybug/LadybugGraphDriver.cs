@@ -27,7 +27,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         string database,
         bool canClone,
         bool ownsExecutor)
-        : base(GraphProvider.Kuzu, database)
+        : base(GraphProvider.LadybugDb, database)
     {
         ArgumentNullException.ThrowIfNull(shared);
         _shared = shared;

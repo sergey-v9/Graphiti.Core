@@ -15,15 +15,13 @@
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <!--
-      Custom obsoletion diagnostics for the in-progress naming transition:
+      Custom obsoletion diagnostics for compatibility aliases:
         GRPH0001 - GraphProvider.Kuzu (use GraphProvider.LadybugDb).
         GRPH0002 - AddGraphitiCore (use AddGraphiti).
-      In-repo projects intentionally keep referencing the obsolete aliases (the LadybugDB driver
-      reports Kuzu as its provider value, search compatibility branches discriminate on it, and
-      existing tests/samples still call AddGraphitiCore). Suppress these diagnostics repo-wide so the
-      internal compatibility callers stay clean; external consumers of the published Graphiti.Core
-      package do not inherit this and still receive the obsoletion guidance.
+      GRPH0001 is now suppressed only at deliberate compatibility-alias sites. GRPH0002 remains
+      suppressed repo-wide until the in-repo AddGraphitiCore compatibility test coverage is migrated
+      or explicitly retired.
     -->
-    <NoWarn>$(NoWarn);GRPH0001;GRPH0002</NoWarn>
+    <NoWarn>$(NoWarn);GRPH0002</NoWarn>
   </PropertyGroup>
 </Project>

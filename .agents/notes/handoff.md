@@ -107,15 +107,15 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
-vocabulary. `GraphProvider.Kuzu` is a supported core options/DI enum path that creates the
-LadybugDB-backed driver. `AddLadybugDbGraphDriver` remains the explicit host-facing configuration
-helper for `DatabasePath`. The LadybugDB factory accepts both the native empty-string in-memory path
-and Python Kuzu's `':memory:'` sentinel, normalizing the sentinel at the Graphiti boundary.
-Active Ladybug full-text search builds Python Kuzu-style raw whitespace queries inside
-`Drivers/Ladybug/LadybugFulltextQuery`; `SearchUtilities` keeps a separate `GraphProvider.Kuzu`
-branch only for compatibility callers outside the driver.
-Active Ladybug node-label search filters are built by `Drivers/Ladybug/LadybugSearchFilter` so the
-driver no longer asks shared search filtering for `GraphProvider.Kuzu` fragments.
+vocabulary. `GraphProvider.LadybugDb` is the driver-facing provider value; `GraphProvider.Kuzu` is an
+`[Obsolete]` core options/DI alias that resolves to the same LadybugDB-backed driver when
+`AddLadybugDbGraphDriver` is registered. `AddLadybugDbGraphDriver` remains the explicit host-facing
+configuration helper for `DatabasePath`. The LadybugDB factory accepts both the native empty-string
+in-memory path and Python Kuzu's `':memory:'` sentinel, normalizing the sentinel at the Graphiti
+boundary. Active Ladybug full-text search builds Python Kuzu-style raw whitespace queries inside
+`Drivers/Ladybug/LadybugFulltextQuery`, and active Ladybug node-label search filters are built by
+`Drivers/Ladybug/LadybugSearchFilter`; the generic `SearchUtilities` and `CompiledSearchFilter` no
+longer carry separate `GraphProvider.Kuzu` compatibility branches.
 Graphiti now consumes a local repaired LadybugDB package family
 `0.17.0-alpha.2-graphiti.1` from `W:\code\ladybug\tools\csharp_api\artifacts` via
 `NuGet.config`; that binding supports Graphiti's list/array/empty-list/null parameters directly, so
@@ -154,8 +154,9 @@ skipped, 974 total). Steps A–E complete: XML docs + a two-assembly public-API 
 (`tests/Graphiti.Core.Tests/Api/`, `PublicApiGenerator` — `Graphiti.Core.approved.txt` and
 `Graphiti.Core.Drivers.Ladybug.approved.txt`; regenerate the relevant baseline deliberately on an
 intended API change); a consumer `README.md`/`docs/search.md`; surface hardening; the
-`GraphProvider.LadybugDb`/`AddGraphiti` names (with `Kuzu`/`AddGraphitiCore` `[Obsolete]` aliases via the
-GRPH0001/2 `NoWarn` mechanism in `Directory.Build.props`); the InMemory-default constructor +
+`GraphProvider.LadybugDb`/`AddGraphiti` names (with `Kuzu`/`AddGraphitiCore` `[Obsolete]` aliases;
+`GRPH0001` is locally suppressed only at deliberate Kuzu alias sites, while `GRPH0002` remains in
+`Directory.Build.props` `NoWarn`); the InMemory-default constructor +
 `AddEpisodeOptions`; and the LadybugDB package split — `Graphiti.Core` is LadybugDB-free and restores from
 nuget.org alone, the driver lives in `src/Graphiti.Core.Drivers.Ladybug/`, and core throws a clear error
 if `LadybugDb`/`Kuzu` is selected without `AddLadybugDbGraphDriver()`. Remaining: E.2 (publish the local

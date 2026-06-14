@@ -123,8 +123,11 @@ public class GraphitiHelperTests
         // '_' (not the old '\_') after upstream #1549 (ff7e29c): the backslash failed
         // validate_group_id and broke the FalkorDB quickstart. Mirrors get_default_group_id.
         Assert.Equal("_", GraphitiHelpers.GetDefaultGroupId(GraphProvider.FalkorDb));
-        // Kuzu remains the LadybugDB parity/compatibility value; assert defaults for existing enum values.
+        Assert.Equal(string.Empty, GraphitiHelpers.GetDefaultGroupId(GraphProvider.LadybugDb));
+        // Kuzu remains the LadybugDB parity/compatibility alias; assert defaults for existing enum values.
+#pragma warning disable GRPH0001
         Assert.Equal(string.Empty, GraphitiHelpers.GetDefaultGroupId(GraphProvider.Kuzu));
+#pragma warning restore GRPH0001
         Assert.Equal(string.Empty, GraphitiHelpers.GetDefaultGroupId(GraphProvider.Neptune));
         Assert.Equal(string.Empty, GraphitiHelpers.GetDefaultGroupId(GraphProvider.InMemory));
     }

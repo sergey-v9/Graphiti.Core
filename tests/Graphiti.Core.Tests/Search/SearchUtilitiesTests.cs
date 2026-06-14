@@ -425,45 +425,6 @@ public class SearchUtilitiesTests
         Assert.Equal(string.Empty, fulltextQuery);
     }
 
-    // NOTE: Kuzu remains the LadybugDB parity/compatibility value. These tests pin the shared
-    // compatibility utility; the active Ladybug driver path has separate executor coverage.
-    [Fact]
-    public void FulltextQuery_UsesKuzuRawQuerySemantics()
-    {
-        var fulltextQuery = SearchUtilities.FulltextQuery(
-            "Alice+(Bob) group_id:tenant/one",
-            new[] { "tenant" },
-            GraphProvider.Kuzu);
-
-        Assert.Equal("Alice+(Bob) group_id:tenant/one", fulltextQuery);
-    }
-
-    [Fact]
-    public void FulltextQuery_KuzuNormalizesWhitespaceLikePythonSplit()
-    {
-        var fulltextQuery = SearchUtilities.FulltextQuery(
-            "  Alice\tBob\r\nCarol  ",
-            groupIds: null,
-            provider: GraphProvider.Kuzu);
-
-        Assert.Equal("Alice Bob Carol", fulltextQuery);
-    }
-
-    [Fact]
-    public void FulltextQuery_KuzuTruncatesQueriesAtPythonWordLimit()
-    {
-        var longQuery = string.Join(" ", Enumerable.Repeat("term", SearchUtilities.MaxQueryLength + 1));
-
-        var fulltextQuery = SearchUtilities.FulltextQuery(
-            longQuery,
-            groupIds: null,
-            provider: GraphProvider.Kuzu);
-
-        Assert.Equal(
-            string.Join(" ", Enumerable.Repeat("term", SearchUtilities.MaxQueryLength)),
-            fulltextQuery);
-    }
-
     [Fact]
     public void FulltextQuery_ParenthesizesSingleGroupFilter()
     {

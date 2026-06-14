@@ -85,12 +85,13 @@ internal sealed class CompiledSearchFilter
     public (List<string> FilterQueries, Dictionary<string, object?> FilterParams) BuildNodeQuery(
         GraphProvider provider)
     {
+        _ = provider;
         var filterQueries = new List<string>(EstimateNodeQueryCount());
         var filterParams = new Dictionary<string, object?>(
-            EstimateNodeParameterCount(provider),
+            EstimateNodeParameterCount(),
             StringComparer.Ordinal);
 
-        AppendNodeLabelFilter(filterQueries, filterParams, provider, includeTarget: false);
+        AppendNodeLabelFilter(filterQueries, includeTarget: false);
         AppendPropertyFilters(filterQueries, filterParams, _propertyFilters, "node_property", "n");
         return (filterQueries, filterParams);
     }
@@ -98,9 +99,10 @@ internal sealed class CompiledSearchFilter
     public (List<string> FilterQueries, Dictionary<string, object?> FilterParams) BuildEdgeQuery(
         GraphProvider provider)
     {
+        _ = provider;
         var filterQueries = new List<string>(EstimateEdgeQueryCount());
         var filterParams = new Dictionary<string, object?>(
-            EstimateEdgeParameterCount(provider),
+            EstimateEdgeParameterCount(),
             StringComparer.Ordinal);
 
         if (_queryEdgeTypes is { Count: > 0 })
@@ -115,7 +117,7 @@ internal sealed class CompiledSearchFilter
             filterParams["edge_uuids"] = _queryEdgeUuids;
         }
 
-        AppendNodeLabelFilter(filterQueries, filterParams, provider, includeTarget: true);
+        AppendNodeLabelFilter(filterQueries, includeTarget: true);
 
         AppendDateFilters(filterQueries, filterParams, _validAt, "valid_at", "e.valid_at");
         AppendDateFilters(filterQueries, filterParams, _invalidAt, "invalid_at", "e.invalid_at");
@@ -140,19 +142,17 @@ internal sealed class CompiledSearchFilter
         + (_expiredAt is null ? 0 : 1)
         + _propertyFilters.Length;
 
-    private int EstimateNodeParameterCount(GraphProvider provider) =>
-        _propertyFilters.Length * 2
-        + (provider == GraphProvider.Kuzu && _queryNodeLabels is { Count: > 0 } ? 1 : 0);
+    private int EstimateNodeParameterCount() =>
+        _propertyFilters.Length * 2;
 
-    private int EstimateEdgeParameterCount(GraphProvider provider) =>
+    private int EstimateEdgeParameterCount() =>
         _propertyFilters.Length * 2
         + DateFilterCount(_validAt)
         + DateFilterCount(_invalidAt)
         + DateFilterCount(_createdAt)
         + DateFilterCount(_expiredAt)
         + (_queryEdgeTypes is { Count: > 0 } ? 1 : 0)
-        + (_queryEdgeUuids is { Count: > 0 } ? 1 : 0)
-        + (provider == GraphProvider.Kuzu && _queryNodeLabels is { Count: > 0 } ? 1 : 0);
+        + (_queryEdgeUuids is { Count: > 0 } ? 1 : 0);
 
     private static int DateFilterCount(CompiledDateFilter[][]? filters)
     {
@@ -172,8 +172,6 @@ internal sealed class CompiledSearchFilter
 
     private void AppendNodeLabelFilter(
         List<string> filterQueries,
-        Dictionary<string, object?> filterParams,
-        GraphProvider provider,
         bool includeTarget)
     {
         if (_queryNodeLabels is not { Count: > 0 } nodeLabels)
@@ -182,17 +180,6 @@ internal sealed class CompiledSearchFilter
         }
 
         GraphitiHelpers.ValidateNodeLabels(nodeLabels);
-        // NOTE: Active Ladybug query construction owns this syntax in Drivers/Ladybug.
-        // Keep this branch for GraphProvider.Kuzu compatibility callers outside the driver.
-        if (provider == GraphProvider.Kuzu)
-        {
-            filterQueries.Add(includeTarget
-                ? "list_has_all(n.labels, $labels) AND list_has_all(m.labels, $labels)"
-                : "list_has_all(n.labels, $labels)");
-            filterParams["labels"] = nodeLabels;
-            return;
-        }
-
         var labels = JoinLabels(nodeLabels);
         filterQueries.Add(includeTarget
             ? string.Concat("n:", labels, " AND m:", labels)

@@ -37,7 +37,7 @@ public class LadybugPackageRuntimeTests
             "RETURN array_cosine_similarity([1.0, 0.0], [1.0, 0.0]) AS score",
             new Dictionary<string, object?>(StringComparer.Ordinal)));
 
-        Assert.Equal(GraphProvider.Kuzu, driver.Provider);
+        Assert.Equal(GraphProvider.LadybugDb, driver.Provider);
         Assert.Equal("checkout", fetched.Name);
         Assert.Equal("tenant", fetched.GroupId);
         Assert.Equal("summary", fetched.Summary);

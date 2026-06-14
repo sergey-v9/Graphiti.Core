@@ -3,15 +3,15 @@
 LadybugDB is the C# port's main graph-provider target. Kuzu remains the Python parity lineage and
 compatibility vocabulary.
 
-**Update 2026-06-14 (plan 05 B + E):** the driver-facing provider value is now `GraphProvider.LadybugDb`
-(`GraphProvider.Kuzu` is an `[Obsolete]` alias that still resolves to the driver), and the LadybugDB
-driver was extracted into a separate opt-in package `src/Graphiti.Core.Drivers.Ladybug/`. `Graphiti.Core`
-no longer references the LadybugDB packages; the new project owns them and `AddLadybugDbGraphDriver`.
-Some bullets below that say "`Graphiti.Core` owns the LadybugDB package" are superseded by this split —
-the package references and driver implementation now live in `Graphiti.Core.Drivers.Ladybug`. The one
-remaining release blocker is publishing/replacing the local `0.17.0-alpha.2-graphiti.1` package family
-(Step E.2): patch+pack in `W:\code\ladybug\tools\csharp_api`, publish to a real feed (or keep the local
-feed for dev), then point `Graphiti.Core.Drivers.Ladybug` at it.
+**Update 2026-06-14 (plan 05 B + E):** the driver-facing provider value is
+`GraphProvider.LadybugDb`; `GraphProvider.Kuzu` is an `[Obsolete]` compatibility alias that still
+resolves through core DI/options when `AddLadybugDbGraphDriver` is registered. The LadybugDB driver
+was extracted into a separate opt-in package `src/Graphiti.Core.Drivers.Ladybug/`. `Graphiti.Core`
+no longer references the LadybugDB packages; the new project owns them, `AddLadybugDbGraphDriver`,
+driver-owned full-text query construction, and Ladybug label-filter syntax. The one remaining release
+blocker is publishing/replacing the local `0.17.0-alpha.2-graphiti.1` package family (Step E.2):
+patch+pack in `W:\code\ladybug\tools\csharp_api`, publish to a real feed (or keep the local feed for
+dev), then point `Graphiti.Core.Drivers.Ladybug` at it.
 
 ## Native search adoption (deep-dive 2026-06-14)
 
@@ -56,16 +56,17 @@ still pins `0.17.0-alpha.2-graphiti.1` (C API unchanged 0.17.0→0.17.2).
 - `LadybugDbGraphDriverFactory` creates LadybugDB-backed drivers directly from core.
 - `LadybugDbOptions` and `AddLadybugDbGraphDriver` provide host-facing `DatabasePath`
   configuration.
-- `GraphProvider.Kuzu` is a supported core options/DI path and resolves to the LadybugDB-backed
-  driver.
+- `GraphProvider.Kuzu` is an obsolete but supported core options/DI alias that resolves to the
+  LadybugDB-backed driver when the LadybugDB package registration is present; the concrete driver
+  reports `GraphProvider.LadybugDb`.
 - Runtime proof covers the main ingest/search/removal/triplet/bulk/saga/community workflows,
   direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by
   UUID, saga-scoped episode retrieval, saga content filtering/order/limit behavior, saga predecessor
   lookup, paged node/edge group reads, directed endpoint-pair edge reads, incident entity-edge reads,
   group-id enumeration, public namespace community/saga reads and typed deletes, file-backed
-  `DatabasePath` persistence, core `GraphProvider.Kuzu`
-  `Database` persistence, and Python Kuzu `':memory:'` sentinel compatibility. Treat tests as the
-  detailed proof source.
+  `DatabasePath` persistence for both `GraphProvider.LadybugDb` and the obsolete
+  `GraphProvider.Kuzu` alias, and Python Kuzu `':memory:'` sentinel compatibility. Treat tests as
+  the detailed proof source.
 - `LadybugPackageRuntimeTests` exercise the actual LadybugDB package/native path in normal
   verification, including schema creation, direct list/array/empty-list/null parameter binding, FTS loading/search, vector
   search, filters, direct driver bulk-save embedding/relationship persistence, saga-scoped episode
@@ -91,8 +92,8 @@ still pins `0.17.0-alpha.2-graphiti.1` (C API unchanged 0.17.0→0.17.2).
 - LadybugDB is the provider investment target.
 - Implement against Python Kuzu behavior for parity, but prefer LadybugDB naming for the final
   driver-facing product surface.
-- Keep `GraphProvider.Kuzu` as the compatibility provider value until the final naming decision is
-  explicit.
+- Use `GraphProvider.LadybugDb` as the driver-facing provider value. Keep `GraphProvider.Kuzu` only as
+  the `[Obsolete]` compatibility alias for callers that have not renamed yet.
 - Keep Neo4j, FalkorDB, InMemory, and Neptune policy in `decisions.md`; do not repeat it here.
 - If runtime proof exposes behavior that looks like a LadybugDB package or binding bug, mark it
   separately from Graphiti port gaps. Work around proven backend limitations deliberately when useful,
@@ -143,11 +144,11 @@ still pins `0.17.0-alpha.2-graphiti.1` (C API unchanged 0.17.0→0.17.2).
 - `src/Graphiti.Core.Drivers.Ladybug/Configuration/LadybugDbServiceCollectionExtensions.cs`: LadybugDB DI helper.
 - `Configuration/GraphitiServiceCollectionExtensions.cs`: core delegates LadybugDb/Kuzu to the
   Ladybug-package-registered `GraphDriverFactory` and throws if absent.
-- `Search/CompiledSearchFilter.cs`: keeps Kuzu label-query behavior for node and edge filters for
-  non-driver compatibility callers; active Ladybug search uses `Drivers/Ladybug/LadybugSearchFilter`.
-- `Search/SearchUtilities.cs`: keeps the `GraphProvider.Kuzu` full-text branch and
-  `BuildKuzuFulltextQuery` for non-driver compatibility callers; active Ladybug search uses
-  `Drivers/Ladybug/LadybugFulltextQuery`.
+- `Search/CompiledSearchFilter.cs`: uses the shared Neo4j-style label syntax for generic callers;
+  active Ladybug search owns Ladybug/Kuzu label-filter fragments in
+  `Drivers/Ladybug/LadybugSearchFilter`.
+- `Search/SearchUtilities.cs`: no longer has a `GraphProvider.Kuzu` full-text branch because active
+  Ladybug full-text construction lives in `Drivers/Ladybug/LadybugFulltextQuery`.
 - `tests/Graphiti.Core.Tests/Drivers/Ladybug/`: foundation, internal driver, runtime, search
   statement, search executor, and core DI coverage.
 
@@ -161,11 +162,11 @@ still pins `0.17.0-alpha.2-graphiti.1` (C API unchanged 0.17.0→0.17.2).
    runtime tests or solve a CI/platform constraint.
 4. DONE (plan-05 B): the final driver-facing naming is `GraphProvider.LadybugDb`, with
    `GraphProvider.Kuzu` retained as an `[Obsolete]` compatibility alias.
-5. Decide whether shared Kuzu compatibility helpers should remain or be retired after final
-   LadybugDB naming. Active Ladybug full-text query construction now lives in
-   `Drivers/Ladybug/LadybugFulltextQuery`, and active Ladybug label-filter fragments now live in
-   `Drivers/Ladybug/LadybugSearchFilter`; shared Kuzu branches remain for compatibility callers.
-6. Finish the Kuzu-to-LadybugDB terminology transition once the provider is stable.
+5. DONE (plan-05 B2): shared Kuzu compatibility helpers were retired from `SearchUtilities` and
+   `CompiledSearchFilter`; active Ladybug full-text and label-filter behavior lives in the
+   Ladybug driver package.
+6. DONE (plan-05 B2): the Kuzu-to-LadybugDB terminology transition is complete for the C# provider
+   surface. `GraphProvider.Kuzu` remains only as an obsolete compatibility alias.
 7. Update `decisions.md`, `evolution.md`, `handoff.md`, and `roadmap.md` when provider status or
    support level changes.
 

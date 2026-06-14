@@ -11,8 +11,9 @@ test is kept as a drift guard, not a freeze: each step that changes the public s
 
 All five steps landed on `main` and verified green (974 tests, format/build/pack clean):
 - **A** — `init` setters, `Options`/`ActivitySource`/`TokenCounter` get-only, 7 port-artifact helpers internalized.
-- **B+C** — `GraphProvider.LadybugDb=5` and `AddGraphiti` primary; `Kuzu`/`AddGraphitiCore` `[Obsolete]` aliases
-  (GRPH0001/2 `NoWarn` so internal callers stay clean, external consumers warned).
+- **B+C** — `GraphProvider.LadybugDb=5` and `AddGraphiti` primary; `Kuzu`/`AddGraphitiCore` `[Obsolete]`
+  aliases. `GRPH0001` is locally suppressed only at deliberate Kuzu alias sites; `GRPH0002` remains
+  repo-wide until the `AddGraphitiCore` compatibility test coverage is migrated or retired.
 - **D** — constructor defaults to InMemory (precedence: explicit driver > `uri`→Neo4j > InMemory); additive
   `AddEpisodeOptions` overload.
 - **E.1 + E.3** — LadybugDB extracted to `src/Graphiti.Core.Drivers.Ladybug/`; `Graphiti.Core` is LadybugDB-free
@@ -85,7 +86,8 @@ group (e.g. "internalize search helper utilities", "harden TokenUsage/serializer
 
 ## Step B — Provider naming: GraphProvider.LadybugDb (+ Kuzu obsolete alias)
 
-**Goal:** the driver-facing name matches the driver. `GraphProvider.Kuzu` currently selects LadybugDB.
+**Goal:** the driver-facing name matches the driver. `GraphProvider.Kuzu` remains an obsolete alias
+that selects LadybugDB through the same registration path.
 
 - `src/Graphiti.Core/Drivers/GraphProvider.cs` — add `LadybugDb` as the primary member for the
   LadybugDB-backed driver. Keep `Kuzu` as a still-functional `[Obsolete("Use GraphProvider.LadybugDb")]`
@@ -96,9 +98,10 @@ group (e.g. "internalize search helper utilities", "harden TokenUsage/serializer
 - Update DI/options resolution (`Configuration/GraphitiServiceCollectionExtensions.cs`,
   `LadybugDbServiceCollectionExtensions.cs`) and `Drivers/Ladybug/LadybugDbGraphDriverFactory.cs` to accept
   both, preferring `LadybugDb`.
-- Advance the Kuzu→LadybugDB terminology transition in `Drivers/Ladybug/` comments/notes where it doesn't
-  touch wire values; full rename of the `Kuzu`-named full-text/filter compat helpers can stay deferred
-  (they serve non-driver compatibility callers — see `kuzu-driver-port.md`).
+- Advance the Kuzu→LadybugDB terminology transition in comments/notes where it doesn't touch wire
+  values. The concrete Ladybug driver reports `GraphProvider.LadybugDb`; generic
+  `SearchUtilities`/`CompiledSearchFilter` no longer carry `GraphProvider.Kuzu` compatibility branches
+  because active Ladybug query/filter syntax lives in the Ladybug driver package.
 - Update `kuzu-driver-port.md`/`decisions.md` to record `LadybugDb` as the driver-facing name and `Kuzu` as
   the obsolete compatibility alias. Add a test asserting both enum values resolve to a working LadybugDB
   driver. Update README references.

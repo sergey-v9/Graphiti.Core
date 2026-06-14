@@ -319,9 +319,6 @@ internal static partial class SearchUtilities
 
         return provider switch
         {
-            // NOTE: LadybugDB owns active driver query construction; keep this branch for
-            // GraphProvider.Kuzu compatibility callers that still use SearchUtilities directly.
-            GraphProvider.Kuzu => BuildKuzuFulltextQuery(query),
             GraphProvider.FalkorDb => BuildFalkorFulltextQuery(query, groupIds),
             _ => BuildLuceneFulltextQuery(query, groupIds)
         };
@@ -365,12 +362,6 @@ internal static partial class SearchUtilities
         }
 
         return builder.ToString();
-    }
-
-    // NOTE: Preserve Kuzu-parity semantics for compatibility callers outside the Ladybug driver.
-    private static string BuildKuzuFulltextQuery(string query)
-    {
-        return JoinFirstWhitespaceTerms(query, MaxQueryLength);
     }
 
     private static string BuildFalkorFulltextQuery(string query, IReadOnlyList<string>? groupIds)
@@ -448,47 +439,6 @@ internal static partial class SearchUtilities
         }
 
         return count;
-    }
-
-    private static string JoinFirstWhitespaceTerms(string? query, int maxTerms)
-    {
-        if (string.IsNullOrWhiteSpace(query) || maxTerms <= 0)
-        {
-            return string.Empty;
-        }
-
-        var source = query.AsSpan();
-        var builder = new StringBuilder(query.Length);
-        var termCount = 0;
-        var index = 0;
-        while (index < source.Length && termCount < maxTerms)
-        {
-            while (index < source.Length && char.IsWhiteSpace(source[index]))
-            {
-                index++;
-            }
-
-            if (index >= source.Length)
-            {
-                break;
-            }
-
-            var start = index;
-            while (index < source.Length && !char.IsWhiteSpace(source[index]))
-            {
-                index++;
-            }
-
-            if (termCount > 0)
-            {
-                builder.Append(' ');
-            }
-
-            builder.Append(source[start..index]);
-            termCount++;
-        }
-
-        return builder.ToString();
     }
 
     private static string BuildFalkorQueryPart(string sanitizedQuery, out int queryPartSplitCount)

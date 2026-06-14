@@ -37,24 +37,6 @@ public sealed class SearchFilterTests
         Assert.Empty(parameters);
     }
 
-    // NOTE: Kuzu remains the LadybugDB parity/compatibility value. This pins the shared
-    // compatibility utility; the active Ladybug driver path has separate statement coverage.
-    [Fact]
-    public void NodeSearchFilterQueryConstructor_BuildsKuzuLabelQuery()
-    {
-        var labels = new List<string> { "Person", "Company" };
-        var filters = new SearchFilters
-        {
-            NodeLabels = labels
-        };
-
-        var (queries, parameters) =
-            SearchFilterQueryBuilder.NodeSearchFilterQueryConstructor(filters, GraphProvider.Kuzu);
-
-        Assert.Equal(new[] { "list_has_all(n.labels, $labels)" }, queries);
-        Assert.Same(labels, parameters["labels"]);
-    }
-
     [Fact]
     public void NodeSearchFilterQueryConstructor_BuildsPropertyFilters()
     {
@@ -555,26 +537,6 @@ public sealed class SearchFilterTests
         Assert.DoesNotContain("()", queries);
         Assert.DoesNotContain(queries, query => query.Contains(" OR )", StringComparison.Ordinal));
         Assert.DoesNotContain(parameters, parameter => parameter.Key.StartsWith("valid_at", StringComparison.Ordinal));
-    }
-
-    // NOTE: Kuzu remains the LadybugDB parity/compatibility value. This pins the shared
-    // compatibility utility; the active Ladybug driver path has separate statement coverage.
-    [Fact]
-    public void EdgeSearchFilterQueryConstructor_BuildsKuzuNodeLabelQuery()
-    {
-        var labels = new List<string> { "Person", "Company" };
-        var filters = new SearchFilters
-        {
-            NodeLabels = labels
-        };
-
-        var (queries, parameters) =
-            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters, GraphProvider.Kuzu);
-
-        Assert.Equal(
-            new[] { "list_has_all(n.labels, $labels) AND list_has_all(m.labels, $labels)" },
-            queries);
-        Assert.Same(labels, parameters["labels"]);
     }
 
     [Fact]

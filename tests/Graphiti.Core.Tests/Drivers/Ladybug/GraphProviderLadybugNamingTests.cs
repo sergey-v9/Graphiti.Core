@@ -14,6 +14,7 @@ namespace Graphiti.Core.Tests.Drivers.Ladybug;
 /// </summary>
 public class GraphProviderLadybugNamingTests
 {
+#pragma warning disable GRPH0001
     [Theory]
     [InlineData(GraphProvider.LadybugDb)]
     [InlineData(GraphProvider.Kuzu)]
@@ -39,11 +40,12 @@ public class GraphProviderLadybugNamingTests
         var options = scope.ServiceProvider.GetRequiredService<IOptions<GraphitiOptions>>().Value;
         var driver = scope.ServiceProvider.GetRequiredService<IGraphDriver>();
 
-        // The selected enum value drives a LadybugDB-backed driver (the concrete driver reports the
-        // Kuzu compatibility value for both selections by design).
+        // The selected enum value drives a LadybugDB-backed driver, and the concrete driver reports
+        // the driver-facing LadybugDb value for both selections.
         Assert.Equal(provider, options.Provider);
         Assert.IsType<LadybugGraphDriver>(driver);
         Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
+        Assert.Equal(GraphProvider.LadybugDb, driver.Provider);
 
         // Round-trip a node to prove the resolved driver is functional, not just constructed.
         var createdAt = new DateTime(2026, 9, 21, 10, 11, 12, DateTimeKind.Utc);
@@ -68,4 +70,5 @@ public class GraphProviderLadybugNamingTests
         Assert.Equal("tenant", fetched.GroupId);
         Assert.Equal(new[] { "Person", "Entity" }, fetched.Labels);
     }
+#pragma warning restore GRPH0001
 }

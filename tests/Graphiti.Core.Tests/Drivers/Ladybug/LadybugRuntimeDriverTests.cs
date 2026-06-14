@@ -58,7 +58,7 @@ public class LadybugRuntimeDriverTests
         await driver.CloseAsync();
         await driver.CloseAsync();
 
-        Assert.Equal(GraphProvider.Kuzu, driver.Provider);
+        Assert.Equal(GraphProvider.LadybugDb, driver.Provider);
         Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
         Assert.Equal(source.Uuid, fetched.Uuid);
         Assert.Equal(new[] { "Person", "Entity" }, fetched.Labels);
@@ -88,7 +88,7 @@ public class LadybugRuntimeDriverTests
         var fetched = await driver.GetNodeByUuidAsync<EntityNode>(node.Uuid);
 
         Assert.Equal(string.Empty, driver.Database);
-        Assert.Equal(GraphProvider.Kuzu, driver.Provider);
+        Assert.Equal(GraphProvider.LadybugDb, driver.Provider);
         Assert.Equal(node.Uuid, fetched.Uuid);
         Assert.Equal("Memory Sentinel", fetched.Name);
         Assert.Equal("tenant", fetched.GroupId);
@@ -116,7 +116,7 @@ public class LadybugRuntimeDriverTests
             SearchConfigRecipes.CombinedHybridSearchRrf,
             groupIds: ["tenant"]);
 
-        Assert.Equal(GraphProvider.Kuzu, graphiti.Driver.Provider);
+        Assert.Equal(GraphProvider.LadybugDb, graphiti.Driver.Provider);
         Assert.IsAssignableFrom<ISearchGraphDriver>(graphiti.Driver);
         Assert.Equal(2, result.Nodes.Count);
         Assert.Single(result.Edges);
@@ -566,11 +566,12 @@ public class LadybugRuntimeDriverTests
 
         Assert.Equal(GraphProvider.InMemory, options.Provider);
         Assert.NotNull(options.GraphDriverFactory);
-        Assert.Equal(GraphProvider.Kuzu, driver.Provider);
+        Assert.Equal(GraphProvider.LadybugDb, driver.Provider);
         Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
         Assert.Same(driver, graphiti.Driver);
     }
 
+#pragma warning disable GRPH0001
     [Fact]
     public async Task GraphProviderKuzuResolvesLadybugDriverFromCoreOptions()
     {
@@ -596,7 +597,7 @@ public class LadybugRuntimeDriverTests
 
         Assert.Equal(GraphProvider.Kuzu, options.Provider);
         Assert.NotNull(options.GraphDriverFactory);
-        Assert.Equal(GraphProvider.Kuzu, driver.Provider);
+        Assert.Equal(GraphProvider.LadybugDb, driver.Provider);
         Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
     }
 
@@ -660,7 +661,7 @@ public class LadybugRuntimeDriverTests
                         "core-kuzu-persistent-ladybug-node");
                     await secondDriver.CloseAsync();
 
-                    Assert.Equal(GraphProvider.Kuzu, secondDriver.Provider);
+                    Assert.Equal(GraphProvider.LadybugDb, secondDriver.Provider);
                     Assert.Equal("Core Persistent Alice", fetched.Name);
                     Assert.Equal("tenant", fetched.GroupId);
                     Assert.Equal("Persisted through core GraphProvider.Kuzu database path", fetched.Summary);
@@ -684,6 +685,7 @@ public class LadybugRuntimeDriverTests
             }
         }
     }
+#pragma warning restore GRPH0001
 
     [Fact]
     public void ServiceCollectionExtensionRejectsBlankDatabasePath()
@@ -725,7 +727,7 @@ public class LadybugRuntimeDriverTests
         Assert.Equal(string.Empty, ladybugOptions.DatabasePath);
         Assert.Equal(GraphProvider.InMemory, graphitiOptions.Provider);
         Assert.NotNull(graphitiOptions.GraphDriverFactory);
-        Assert.Equal(GraphProvider.Kuzu, driver.Provider);
+        Assert.Equal(GraphProvider.LadybugDb, driver.Provider);
     }
 
     [Fact]
@@ -765,7 +767,7 @@ public class LadybugRuntimeDriverTests
                     var fetched = await secondDriver.GetNodeByUuidAsync<EntityNode>("persistent-ladybug-node");
                     await secondDriver.CloseAsync();
 
-                    Assert.Equal(GraphProvider.Kuzu, secondDriver.Provider);
+                    Assert.Equal(GraphProvider.LadybugDb, secondDriver.Provider);
                     Assert.Equal("Persistent Alice", fetched.Name);
                     Assert.Equal("tenant", fetched.GroupId);
                     Assert.Equal("Persisted through configured LadybugDB path", fetched.Summary);

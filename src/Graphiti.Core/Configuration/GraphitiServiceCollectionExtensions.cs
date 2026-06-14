@@ -242,6 +242,7 @@ public static class GraphitiServiceCollectionExtensions
                 options.User,
                 options.Password,
                 options.Database),
+#pragma warning disable GRPH0001
             // LadybugDb is the driver-facing value; Kuzu is the obsolete compatibility alias. Both
             // are backed by the LadybugDB-backed driver, which now lives in the separate
             // Graphiti.Core.Drivers.Ladybug package. That package's AddLadybugDbGraphDriver()
@@ -249,6 +250,7 @@ public static class GraphitiServiceCollectionExtensions
             // driver because it deliberately does not reference the LadybugDB package.
             GraphProvider.LadybugDb or GraphProvider.Kuzu => throw new InvalidOperationException(
                 "GraphProvider.LadybugDb requires the Graphiti.Core.Drivers.Ladybug package — call AddLadybugDbGraphDriver()."),
+#pragma warning restore GRPH0001
             _ => throw new NotSupportedException($"{options.Provider} is not supported by the C# port yet.")
         };
     }

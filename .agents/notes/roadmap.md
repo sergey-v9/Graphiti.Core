@@ -82,11 +82,12 @@ search returns relevant results; findings are recorded in `parity.md`/`handoff.m
 ## Phase 4 — LadybugDB productization
 
 Existing direction, unchanged: LadybugDB is the provider investment target. Remaining work lives in
-`kuzu-driver-port.md` (final naming decision, conditional native/CI smoke tests, remaining
-Kuzu→LadybugDB terminology transition). Active Ladybug full-text and label-filter behavior now lives
+`kuzu-driver-port.md` (conditional native/CI smoke tests and release packaging). The final provider
+naming decision is complete: `GraphProvider.LadybugDb` is driver-facing, and `GraphProvider.Kuzu` is
+only an `[Obsolete]` compatibility alias. Active Ladybug full-text and label-filter behavior now lives
 inside `Drivers/Ladybug/`; direct package parameter binding is covered through the local repaired
-LadybugDB package family; shared Kuzu branches remain for compatibility callers only. Neo4j removal is
-a user decision; do not remove without asking.
+LadybugDB package family; shared Kuzu branches were retired from the generic search helpers. Neo4j
+removal is a user decision; do not remove without asking.
 
 ## Phase 5 — Release readiness (IN PROGRESS)
 
@@ -132,7 +133,6 @@ or have agents build-only and run the consolidated test centrally.
 
 ## Future decisions to revisit
 
-- Final LadybugDB provider naming beyond the `GraphProvider.Kuzu` compatibility value.
 - Whether to expose external adapters (OpenAI, Azure OpenAI, Qdrant, Semantic Kernel) as separate
   packages.
 - Whether to add a compatibility option defaulting chunking to Python's chars-per-token heuristic.
