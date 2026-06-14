@@ -14,12 +14,14 @@ LadybugDB/Kuzu has its own focused handoff in `.agents/notes/kuzu-driver-port.md
 commit rules, read `.agents/notes/commit-policy.md`.
 
 **Current priority - how to pick work.** Concrete work orders live in `.agents/plans/`; the
-roadmap orders them. Pick the lowest-numbered plan with unchecked items, do exactly one item as a
-slice (implement → verify → commit → check it off and update `parity.md`), then stop or pick the
-next. Do not invent work outside the plans while they have open items: in particular, no
-performance/allocation slices, no doc-tidying-only slices, and no new modernization queues — the
-moratorium in `roadmap.md` applies until Phases 1–3 are done. If every plan item is blocked or
-done, re-read `roadmap.md` for the next phase instead of polishing.
+roadmap orders them. Pick the lowest-numbered plan with unchecked actionable items, do exactly one
+item as a slice (implement → verify → commit → check it off and update `parity.md` when parity state
+changes), then stop or pick the next. Phases 1–3 are complete and plan-05 A–E are complete; the
+remaining release-infrastructure work is mostly decision- or external-feed-gated (Ladybug package
+family publication/replacement, version cadence, and CI). When the open plan items are blocked on
+those decisions, choose work from `roadmap.md`/`handoff.md` that directly strengthens parity,
+packaging verification, upstream sync, or documented current state. Performance work is allowed only
+when it is benchmark-first and parity-safe.
 
 The notes can change outside your session. Re-read relevant notes before finalizing work that touches
 direction, architecture, providers, verification, or roadmap items; if current notes contradict your
@@ -69,8 +71,8 @@ Always:
 - Treat Python `graphiti_core/` in this repo as the behavioral source of truth; keep C# idiomatic
   where behavior and wire compatibility stay intact.
 - Write new code allocation-aware by default (simple loops, pre-sized collections, non-throwing
-  parse paths), but do not rework existing code for allocations: that is paused by the moratorium
-  in `roadmap.md` until the parity phases are done, and resumes benchmark-first in Phase 5.
+  parse paths). Existing-code performance work is allowed in Phase 5 only when benchmark-first,
+  measured before/after, and demonstrably parity-safe.
 - If an iteration keeps repeating the same build/test/format commands, create a small helper script
   and run that instead of manually stepping through the loop. Commit the script when it becomes useful
   workflow, and keep one-off throwaway scripts out of durable source.
@@ -122,7 +124,16 @@ Generated vs hand-written:
 
 Provider/package facts:
 - This is currently a managed `net10.0` library with central package versions in
-  `Directory.Packages.props`. LadybugDB package/native references are part of `Graphiti.Core`.
+  `Directory.Packages.props`.
+- `Graphiti.Core` is LadybugDB-free and restores from nuget.org alone. It carries the graph-driver
+  contract plus InMemory and legacy Neo4j coverage.
+- `Graphiti.Core.Drivers.Ladybug` is the opt-in LadybugDB driver package. It owns the
+  `LadybugDB`/`LadybugDB.Native` package references, `LadybugDbOptions`,
+  `AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory`.
+- `Verify-GraphitiCore.ps1` packs both shippable packages and runs fresh package-consumer smoke
+  builds. A real off-machine Ladybug package release still requires the local LadybugDB package
+  family to be published or replaced; do not bump the pinned LadybugDB version without explicit user
+  approval.
 - Durable provider policy lives in `.agents/notes/decisions.md`; detailed LadybugDB state lives in
   `.agents/notes/kuzu-driver-port.md`.
 
