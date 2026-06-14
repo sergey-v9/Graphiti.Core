@@ -273,9 +273,6 @@ the impact grows.
   every path reduces to a single episode index `[0]`. If multi-episode extraction is ever wired,
   port `node_operations.py:104-112` / `edge_operations.py:170-181` attribution blocks and reconcile
   the helpers in `EpisodeAttribution.cs`.
-- **Edge signature resolution does not DB-fetch missing endpoint nodes** (`edge_operations.py:439-455`),
-  so an edge whose endpoint is absent from the resolved-node set can lose a custom edge type. Only
-  reachable for override-derived/cross-pair endpoints; standard paths carry both endpoints.
 - **A single `now` is shared across a batch's edges** rather than Python's per-edge `utc_now()`;
   expired_at/invalid_at values are identical within a batch (arguably preferable for determinism).
 - **Ladybug distance/mention rerankers** dedup input UUIDs and would surface backend-only UUIDs; not
