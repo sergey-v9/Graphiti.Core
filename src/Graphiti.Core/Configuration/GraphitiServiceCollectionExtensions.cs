@@ -221,7 +221,9 @@ public static class GraphitiServiceCollectionExtensions
                 options.User,
                 options.Password,
                 options.Database),
-            GraphProvider.Kuzu => LadybugDbGraphDriverFactory.Create(options.Database),
+            // LadybugDb is the driver-facing value; Kuzu is the obsolete compatibility alias.
+            // Both resolve to the LadybugDB-backed driver.
+            GraphProvider.LadybugDb or GraphProvider.Kuzu => LadybugDbGraphDriverFactory.Create(options.Database),
             _ => throw new NotSupportedException($"{options.Provider} is not supported by the C# port yet.")
         };
     }
