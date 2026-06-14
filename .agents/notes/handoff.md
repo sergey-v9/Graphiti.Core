@@ -135,9 +135,9 @@ added.
 
 Latest checkpoint, 2026-06-14:
 
-`.\eng\Verify-GraphitiCore.ps1` is green after the attribution reference-time follow-up: restore,
-format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`980` passed,
-`3` skipped, `983` total), `dotnet pack` for both shippable packages
+`.\eng\Verify-GraphitiCore.ps1` is green after the public-surface documentation follow-up: restore,
+format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`981` passed,
+`3` skipped, `984` total), `dotnet pack` for both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
 restore/build/setup/run checks for both packages. The verifier now packs both projects, then creates isolated
@@ -221,6 +221,14 @@ Python's first-raw-episode-index rule. Valid episode UUIDs are still filtered fr
 valid; otherwise it falls back to the primary episode. The remaining latent multi-episode attribution
 difference is node remapping after resolution: C# preserves the narrower resolved-node attribution,
 while Python's current pre-resolution map would default a resolved UUID mismatch to all episodes.
+
+Public-surface audit follow-up, 2026-06-14: a read-only Python-vs-C# audit found no missing core
+`Graphiti` public workflow. It did identify tested but under-documented C# public-workflow
+divergences; these are now recorded in `decisions.md`/`parity.md`: stronger episode removal with
+saga repair, bulk raw-content scrubbing under `storeRawEpisodeContent: false`, explicit/DI drivers
+remaining caller-owned on `CloseAsync`/dispose, and the low-impact triplet exact-duplicate fast path.
+The shipped XML docs for `AddEpisodeBulkAsync` were corrected so they no longer state that C# bulk
+cross-episode invalidation is less aggressive.
 
 Follow-up checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 959 passed, 3 skipped, 962
 total; format/build/pack clean). Landed since 06-13: the eval harness (`samples/Graphiti.Eval`) built

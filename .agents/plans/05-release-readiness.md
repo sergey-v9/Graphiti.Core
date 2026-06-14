@@ -9,9 +9,9 @@ test is kept as a drift guard, not a freeze: each step that changes the public s
 
 ## Status — A–E COMPLETE (2026-06-14)
 
-All five steps landed on `main` and verified green. Latest direct full verification after package
-consumption-smoke follow-through is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14: 974 passed,
-3 skipped, 977 total, with restore/format/build clean, both packages packed as `.nupkg` +
+All five steps landed on `main` and verified green. Latest direct full verification after the
+public-surface documentation follow-up is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14: 981 passed,
+3 skipped, 984 total, with restore/format/build clean, both packages packed as `.nupkg` +
 `.snupkg`, and fresh temp consumers restored/built/run `BuildIndicesAndConstraintsAsync()` from
 strict package sources:
 - **A** — `init` setters, `Options`/`ActivitySource`/`TokenCounter` get-only, 7 port-artifact helpers

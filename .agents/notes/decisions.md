@@ -267,6 +267,24 @@ Other accepted, smaller divergences confirmed in the same pass:
   Python's non-retried `RefusalError`). A textual refusal returned with a normal finish reason cannot
   be distinguished and is retried like any malformed response.
 
+Other accepted public-workflow divergences confirmed in a 2026-06-14 surface audit:
+
+- **Episode removal is stronger than Python.** Python `remove_episode` deletes only entity edges whose
+  first supporting episode is the removed episode and does not repair saga links. C# prunes the removed
+  episode UUID from shared entity edges, deletes only unsupported edges/entities, removes saga
+  membership/adjacency edges, repairs `NEXT_EPISODE` bypasses, and updates saga first/last pointers.
+  This is intentional consistency work, pinned by `RemoveEpisode_PrunesEpisodeFromSharedEntityEdge`
+  and the saga repair tests.
+- **Bulk raw-content scrubbing follows the constructor option.** Python's `store_raw_episode_content`
+  blanking runs through the single-ingest `_process_episode_data` path, so bulk episodes keep content.
+  C# applies `storeRawEpisodeContent: false` to bulk after extraction as well, so stored bulk episodes
+  are scrubbed consistently with single-ingest behavior while extraction still sees the original text.
+- **Explicit/DI graph drivers stay caller-owned.** Python `close()` always closes `self.driver`. C#
+  closes only drivers it constructed itself (default InMemory or URI-created Neo4j); externally supplied
+  or DI-scoped drivers remain owned by their caller/container. This preserves .NET lifetime semantics
+  and is pinned by `Graphiti_DisposeAsync_DoesNotCloseExternalGraphDriver` and
+  `AddGraphiti_DisposesScopedGraphDriverOnce`.
+
 ## Tracked-but-unfixed divergences (low impact / latent; from the 2026-06-13 review)
 
 These were confirmed real but left as-is, with a rationale. Revisit if the relevant path is wired or
@@ -283,6 +301,12 @@ the impact grows.
   attributed subset. The former edge `reference_time` drift is closed: C# now matches Python's
   first-raw-episode-index rule (`[99, 1]` maps the episode UUID to episode 1 but keeps the primary
   episode's reference time).
+- **Triplet exact-duplicate fast path can be broader than Python.** Python `add_triplet` passes
+  between-node edges through `EDGE_HYBRID_SEARCH_RRF` and the duplicate fast path in
+  `resolve_extracted_edge` only scans that reranked/limited related-edge set. C# first checks the full
+  raw between-node edge set for an exact normalized fact duplicate before falling back to LLM
+  resolution. This can reuse an exact duplicate Python would miss if search failed to return it, but
+  the practical impact is low and the C# behavior is defensible.
 - **Ladybug `RetrieveEpisodes` returns oldest-first**, matching the documented `retrieve_episodes`
   contract (`graph_operations.py:223`, `graph_data_operations.py` `list(reversed(...))`); Python's
   Kuzu operations-interface path returns newest-first, violating its own contract. C# is the

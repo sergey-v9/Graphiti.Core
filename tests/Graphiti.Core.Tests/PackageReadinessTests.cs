@@ -145,6 +145,25 @@ public class PackageReadinessTests
         Assert.Contains("NUGET_PACKAGES", verifyScript);
     }
 
+    [Fact]
+    public void GeneratedXmlDocs_DoNotDescribeBulkInvalidationBackwards()
+    {
+        var xmlPath = Path.ChangeExtension(typeof(global::Graphiti.Core.Graphiti).Assembly.Location, ".xml");
+        Assert.True(File.Exists(xmlPath), $"Expected XML documentation at {xmlPath}.");
+
+        var xml = XDocument.Load(xmlPath);
+        var summary = xml
+            .Descendants("member")
+            .Where(element => (string?)element.Attribute("name") is { } name
+                              && name.StartsWith("M:Graphiti.Core.Graphiti.AddEpisodeBulkAsync", StringComparison.Ordinal))
+            .Elements("summary")
+            .Select(element => string.Join(" ", element.Value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)))
+            .Single();
+
+        Assert.Contains("same batch", summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("less aggressively", summary, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static XDocument LoadProject(params string[] paths)
     {
         var csharpRoot = FindCSharpRoot();

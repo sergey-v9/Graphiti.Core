@@ -82,6 +82,15 @@ first raw index is valid; otherwise it falls back to the primary episode. C# now
 first-raw-index rule in `EpisodeAttribution.ReferenceTimeForFirstIndex`, including the `[99, 1]`
 case.
 
+**2026-06-14 public-surface audit:** the Python `Graphiti` public workflows are covered by C# async
+counterparts (`AddEpisodeAsync`, `AddEpisodeBulkAsync`, `SearchAsync`/`SearchAdvancedAsync`,
+`RetrieveEpisodesAsync`, `BuildCommunitiesAsync`, `SummarizeSagaAsync`,
+`GetNodesAndEdgesByEpisodeAsync`, `AddTripletAsync`, `RemoveEpisodeAsync`, `CloseAsync`/dispose). The
+audit found no missing core workflow. It did record three already-tested, accepted C# public-behavior
+divergences in `decisions.md`: stronger episode removal/saga repair, bulk raw-content scrubbing when
+`storeRawEpisodeContent` is false, and caller-owned explicit/DI driver lifecycle. It also recorded the
+low-impact triplet exact-duplicate fast-path difference as tracked.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
@@ -172,9 +181,22 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Combined node+edge extraction path | utils/maintenance/combined_extraction.py | EpisodeGraphExtractor.ExtractCombinedEpisodeGraphAsync | OK | Internal path ported 2026-06-11: single LLM call, orphan dropping, node attribution from facts, self-fact preservation, and batch timestamps. Public `Graphiti` ingestion remains on separate extraction because Python exposes `use_combined_extraction` only as an internal bulk helper flag defaulting to `False`; tests pin that `add_episode` and `add_episode_bulk` do not call the combined prompt by default |
 | Edge attribute extraction during add_episode | edge_operations.resolve_extracted_edge | EdgeResolutionService | OK | Aligned 2026-06-11: structured edge attributes are extracted during edge resolution only. There is no post-resolution ingestion-stage edge attribute pass; exact duplicate reuse skips the prompt and preserves existing attributes, while non-fast-path resolution replaces/clears attributes like Python |
 | Episodic edge building | edge_operations.build_episodic_edges | MaintenanceUtilities | OK | |
-| Bulk ingestion (true batch dedup/resolve) | bulk_utils, graphiti.py:1230+ | Graphiti.Ingestion.cs:195+ | OK + 2 DIVERGENT | Staged extraction, cross-batch node/edge dedupe, final resolution, pointer remapping, per-episode provenance. 2026-06-13 fixes: bulk summaries no longer append edge facts (Python `edges=None`); first-pass node dedup no longer over-widens the candidate pool. Two behaviors KEPT as documented DIVERGENT (see `decisions.md`): cross-episode edge invalidation is more aggressive than Python, and bulk episodes own `episode.EntityEdges` where Python's bulk leaves it empty |
+| Bulk ingestion (true batch dedup/resolve) | bulk_utils, graphiti.py:1230+ | Graphiti.Ingestion.cs:195+ | OK + DIVERGENT | Staged extraction, cross-batch node/edge dedupe, final resolution, pointer remapping, per-episode provenance. 2026-06-13 fixes: bulk summaries no longer append edge facts (Python `edges=None`); first-pass node dedup no longer over-widens the candidate pool. Behaviors KEPT as documented DIVERGENT (see `decisions.md`): cross-episode edge invalidation is more aggressive than Python, bulk episodes own `episode.EntityEdges` where Python's bulk leaves it empty, and `storeRawEpisodeContent: false` also scrubs stored bulk episode content after extraction |
 | Saga association + episode-time watermarks | graphiti.py | SagaService | OK | Watermarks present |
 | Community update on ingest | graphiti.py | CommunityService | OK | Flow parity; community summary/name prompts ported 2026-06-11 |
+
+## Public Graphiti workflows
+
+| Workflow | Python | C# | Status | Notes |
+|---|---|---|---|---|
+| Lifecycle | `close` | `CloseAsync` / `DisposeAsync` | DIVERGENT | C# closes only owned drivers; explicit/DI drivers are caller/container-owned |
+| Episode retrieval | `retrieve_episodes` | `RetrieveEpisodesAsync` | OK | |
+| Communities | `build_communities` | `BuildCommunitiesAsync` | OK | |
+| Basic fact search | `search` | `SearchAsync(query, ...)` | OK | |
+| Advanced graph search | `search_` | `SearchAdvancedAsync` / `SearchAsync(query, SearchConfig, ...)` | OK | Idiomatic C# names; Python-style aliases intentionally not added |
+| Episode contribution lookup | `get_nodes_and_edges_by_episode` | `GetNodesAndEdgesByEpisodeAsync` | OK + DIVERGENT | Bulk episodes own entity-edge UUIDs in C#, so bulk episode contribution lookup is more complete than Python |
+| Triplet ingest | `add_triplet` | `AddTripletAsync` | OK + latent DIVERGENT | C# exact-duplicate fast path scans all between-node edges before LLM resolution; Python scans the reranked/limited related-edge set |
+| Episode removal | `remove_episode` | `RemoveEpisodeAsync` | DIVERGENT | C# prunes shared edge support and repairs saga membership/adjacency; Python only deletes first-supporting edges and the episode |
 
 ## Invented C# behaviors (not in Python)
 
