@@ -89,11 +89,23 @@ inside `Drivers/Ladybug/`; direct package parameter binding is covered through t
 LadybugDB package family; shared Kuzu branches remain for compatibility callers only. Neo4j removal is
 a user decision; do not remove without asking.
 
-## Phase 5 — Release readiness
+## Phase 5 — Release readiness (IN PROGRESS)
 
-API surface review and freeze, XML docs for the public surface, README/samples for external
-consumers, packaging/versioning decision (2.0.0 line), measured performance pass (benchmarks
-first, then optimize hot paths that benchmarks justify), CI story.
+Landed 2026-06-14: XML docs across the consumer-facing public surface; a public-API **snapshot test**
+(`tests/Graphiti.Core.Tests/Api/`, via `PublicApiGenerator`) that fails CI on accidental API drift;
+and a consumer `README.md` + `docs/search.md`. A first benchmark-first perf pass already landed
+(two measured parity-safe wins).
+
+Remaining: the pre-freeze API decisions are catalogued in `.agents/notes/api-freeze-review.md`
+(A: safe internal hardening — recommended; B: provider naming `GraphProvider.Kuzu`→`LadybugDb`;
+C: `AddGraphitiCore`→`AddGraphiti`; D: constructor ergonomics / Neo4j-default; E: split LadybugDB into
+its own package so off-machine `restore` works — the real publish blocker). Then: packaging/versioning
+decision (2.0.0 line), CI story, and publishing/replacing the local LadybugDB package family. The
+"Stable public API release" candidate milestone in `evolution.md` is the target.
+
+NOTE for future parallel batches: do NOT run multiple worktree agents' `dotnet test` concurrently —
+the LadybugDB native package serializes poorly across worktrees and deadlocks. Stagger the test step
+or have agents build-only and run the consolidated test centrally.
 
 ## Standing direction (unchanged)
 

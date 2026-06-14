@@ -140,6 +140,15 @@ API (all structured schemas accepted; real resolved temporal graph) and the 6-ep
 `Graphiti.Sample.OpenAI` produced a sane graph (rich summaries, correct bi-temporal invalidation,
 relevant reranked search). Re-run with `.\eng\Run-OpenAIProviderValidation.ps1` (auto-loads `.env`).
 
+Phase 5 readiness checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 960 passed, 3
+skipped, 963 total). Landed: XML docs across the consumer-facing public surface; a public-API snapshot
+test (`tests/Graphiti.Core.Tests/Api/`, `PublicApiGenerator`) that fails CI on accidental API drift
+(update the `Graphiti.Core.approved.txt` baseline deliberately when the API intentionally changes); and
+a consumer `README.md` + `docs/search.md`. Pre-freeze API decisions are catalogued in
+`.agents/notes/api-freeze-review.md` (not yet applied — they are breaking/product calls). GOTCHA: do
+not run multiple worktree agents' `dotnet test` concurrently — the LadybugDB native package deadlocks
+across worktrees (caused a 1.5h hang on 06-14; recovered by killing orphaned testhost processes).
+
 Follow-up checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 959 passed, 3 skipped, 962
 total; format/build/pack clean). Landed since 06-13: the eval harness (`samples/Graphiti.Eval`) built
 to the proposal's graph-building regression design and run live (6/6 no-regression on identical code;
