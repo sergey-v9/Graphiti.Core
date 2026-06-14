@@ -1162,6 +1162,10 @@ public static partial class SearchUtilities
         }
     }
 
+    /// <summary>
+    /// A reusable scorer that snapshots a query vector once and computes cosine similarity against
+    /// candidate vectors. Obtain an instance from <see cref="CreateCosineSimilarityScorer"/>.
+    /// </summary>
     public sealed class CosineSimilarityScorer
     {
         private readonly float[] _queryVector;
@@ -1180,6 +1184,10 @@ public static partial class SearchUtilities
             _queryNorm = NormOrZero(_queryVector);
         }
 
+        /// <summary>
+        /// Returns the cosine similarity of <paramref name="vector"/> with the query vector, or
+        /// <c>0</c> when either vector is empty.
+        /// </summary>
         public float Score(IReadOnlyList<float>? vector)
         {
             if (_queryNorm <= 0 || vector is null || vector.Count == 0)
