@@ -126,6 +126,13 @@ multi-episode headers, blank-line separators, Python-style `datetime.isoformat()
 local offsets, subsecond precision, and the `unknown` timestamp fallback. Python source remains
 `graphiti_core/utils/text_utils.py::concatenate_episodes`; no production behavior changed.
 
+**2026-06-14 search concurrency test hardening:** stabilized the driver-backed search concurrency
+proof without changing production behavior. `SearchEngineDriverBackedTests` now parks fake driver
+calls at an observable barrier before releasing them, so `SearchAsync` scope fan-out and per-type
+BM25/vector fan-out are proven directly instead of relying on a watchdog cancellation token inside
+the production search path. This keeps the C# proof aligned with Python's `semaphore_gather` search
+fan-out.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

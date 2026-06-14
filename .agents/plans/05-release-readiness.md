@@ -10,7 +10,7 @@ test is kept as a drift guard, not a freeze: each step that changes the public s
 ## Status — A–E COMPLETE (2026-06-14)
 
 All five steps landed on `main` and verified green. Latest direct full verification after the
-episode-concatenation golden hardening is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14: 984 passed,
+search concurrency test hardening is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14: 984 passed,
 3 skipped, 987 total, with restore/format/build clean, both packages packed as `.nupkg` +
 `.snupkg`, and fresh temp consumers restored/built/run `BuildIndicesAndConstraintsAsync()` from
 strict package sources:

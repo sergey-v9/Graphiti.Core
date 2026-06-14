@@ -135,7 +135,7 @@ added.
 
 Latest checkpoint, 2026-06-14:
 
-`.\eng\Verify-GraphitiCore.ps1` is green after the episode-concatenation golden hardening: restore,
+`.\eng\Verify-GraphitiCore.ps1` is green after the search concurrency test hardening: restore,
 format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`984` passed,
 `3` skipped, `987` total), `dotnet pack` for both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
@@ -170,9 +170,10 @@ relevant reranked search). Re-run with `.\eng\Run-OpenAIProviderValidation.ps1` 
 
 Plan-05 release-readiness checkpoint, 2026-06-14 (latest direct verification green: build with
 `dotnet build -c Release -clp:ErrorsOnly`; test with `dotnet test -c Release --no-build` green on
-rerun with 968 passed, 3 skipped, 971 total after the known
-`SearchEngineDriverBackedTests.SearchAsync_ExecutesConfiguredScopesConcurrently` flake failed once;
-format with `dotnet format --verify-no-changes --no-restore`). Steps A–E complete plus the
+rerun with 968 passed, 3 skipped, 971 total; format with
+`dotnet format --verify-no-changes --no-restore`). The former
+`SearchEngineDriverBackedTests.SearchAsync_ExecutesConfiguredScopesConcurrently` timing flake is now
+hardened by a fake-driver barrier that proves concurrent scope startup before releasing calls. Steps A–E complete plus the
 B2/B3 follow-through: the shippable `Graphiti.Core` and `Graphiti.Core.Drivers.Ladybug` packages now
 generate IntelliSense XML docs; the two-assembly public-API snapshot guard remains in
 `tests/Graphiti.Core.Tests/Api/` (`PublicApiGenerator` — `Graphiti.Core.approved.txt` and

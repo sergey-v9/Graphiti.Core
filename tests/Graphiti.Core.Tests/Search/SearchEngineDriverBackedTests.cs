@@ -14,6 +14,7 @@ public class SearchEngineDriverBackedTests
         var driver = new DriverBackedSearchDriver
         {
             ExpectedConcurrentSearchCalls = 4,
+            HoldExpectedConcurrentSearchCalls = true,
             EdgeFulltextHits = { new SearchHit<EntityEdge>(edge, 2) },
             NodeFulltextHits = { new SearchHit<EntityNode>(node, 2) },
             EpisodeFulltextHits = { new SearchHit<EpisodicNode>(episode, 2) },
@@ -24,9 +25,8 @@ public class SearchEngineDriverBackedTests
             new NoOpLlmClient(),
             new HashEmbedder(2),
             new IdentityCrossEncoderClient());
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-        var results = await SearchEngine.SearchAsync(
+        var searchTask = SearchEngine.SearchAsync(
             clients,
             "alpha",
             new[] { "group" },
@@ -50,8 +50,8 @@ public class SearchEngineDriverBackedTests
                     Reranker = CommunityReranker.Rrf
                 }
             },
-            new SearchFilters(),
-            cancellationToken: timeout.Token);
+            new SearchFilters());
+        var results = await CompleteExpectedConcurrentSearchAsync(driver, searchTask);
 
         Assert.Equal(4, driver.MaxConcurrentSearchCalls);
         Assert.Equal("edge", Assert.Single(results.Edges).Uuid);
@@ -165,12 +165,12 @@ public class SearchEngineDriverBackedTests
         var driver = new DriverBackedSearchDriver
         {
             ExpectedConcurrentSearchCalls = 2,
+            HoldExpectedConcurrentSearchCalls = true,
             NodeFulltextHits = { new SearchHit<EntityNode>(textNode, 12) },
             NodeVectorHits = { new SearchHit<EntityNode>(vectorNode, 0.9f) }
         };
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-        var ranked = await SearchEngine.NodeSearchAsync(
+        var searchTask = SearchEngine.NodeSearchAsync(
             driver,
             new IdentityCrossEncoderClient(),
             "alice",
@@ -182,12 +182,11 @@ public class SearchEngineDriverBackedTests
                 Reranker = NodeReranker.Rrf
             },
             filter,
-            limit: 3,
-            cancellationToken: timeout.Token);
+            limit: 3);
+        var ranked = await CompleteExpectedConcurrentSearchAsync(driver, searchTask);
 
         Assert.Equal(1, driver.NodeFulltextCalls);
         Assert.Equal(1, driver.NodeVectorCalls);
-        Assert.True(driver.MaxConcurrentSearchCalls > 1);
         Assert.Equal(0, driver.NodeMaterializationCalls);
         Assert.Equal(new[] { "text", "vector" }, ranked.Select(item => item.Item.Uuid));
         Assert.Equal(new[] { "group" }, driver.LastNodeFulltextGroupIds);
@@ -659,12 +658,12 @@ public class SearchEngineDriverBackedTests
         var driver = new DriverBackedSearchDriver
         {
             ExpectedConcurrentSearchCalls = 2,
+            HoldExpectedConcurrentSearchCalls = true,
             EdgeFulltextHits = { new SearchHit<EntityEdge>(textEdge, 8) },
             EdgeVectorHits = { new SearchHit<EntityEdge>(vectorEdge, 0.8f) }
         };
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-        var ranked = await SearchEngine.EdgeSearchAsync(
+        var searchTask = SearchEngine.EdgeSearchAsync(
             driver,
             new IdentityCrossEncoderClient(),
             "alice",
@@ -676,12 +675,11 @@ public class SearchEngineDriverBackedTests
                 Reranker = EdgeReranker.Rrf
             },
             filter,
-            limit: 3,
-            cancellationToken: timeout.Token);
+            limit: 3);
+        var ranked = await CompleteExpectedConcurrentSearchAsync(driver, searchTask);
 
         Assert.Equal(1, driver.EdgeFulltextCalls);
         Assert.Equal(1, driver.EdgeVectorCalls);
-        Assert.True(driver.MaxConcurrentSearchCalls > 1);
         Assert.Equal(0, driver.EdgeMaterializationCalls);
         Assert.Equal(new[] { "text", "vector" }, ranked.Select(item => item.Item.Uuid));
         Assert.Equal(new[] { "group" }, driver.LastEdgeFulltextGroupIds);
@@ -1076,24 +1074,23 @@ public class SearchEngineDriverBackedTests
         var driver = new DriverBackedSearchDriver
         {
             ExpectedConcurrentSearchCalls = 2,
+            HoldExpectedConcurrentSearchCalls = true,
             CommunityFulltextHits = { new SearchHit<CommunityNode>(textCommunity, 4) },
             CommunityVectorHits = { new SearchHit<CommunityNode>(vectorCommunity, 0.8f) }
         };
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-        var ranked = await SearchEngine.CommunitySearchAsync(
+        var searchTask = SearchEngine.CommunitySearchAsync(
             driver,
             new IdentityCrossEncoderClient(),
             "planning",
             queryVector,
             new[] { "group" },
             new CommunitySearchConfig(),
-            limit: 3,
-            cancellationToken: timeout.Token);
+            limit: 3);
+        var ranked = await CompleteExpectedConcurrentSearchAsync(driver, searchTask);
 
         Assert.Equal(1, driver.CommunityFulltextCalls);
         Assert.Equal(1, driver.CommunityVectorCalls);
-        Assert.True(driver.MaxConcurrentSearchCalls > 1);
         Assert.Equal(0, driver.NodeMaterializationCalls);
         Assert.Equal(new[] { "text", "vector" }, ranked.Select(item => item.Item.Uuid));
         Assert.Equal(6, driver.LastCommunityFulltextLimit);
@@ -1263,6 +1260,37 @@ public class SearchEngineDriverBackedTests
         Assert.Equal(new[] { "community-second", "community-first" }, ranked.Select(item => item.Item.Uuid));
     }
 
+    private static async Task<T> CompleteExpectedConcurrentSearchAsync<T>(
+        DriverBackedSearchDriver driver,
+        Task<T> searchTask)
+    {
+        try
+        {
+            var completed = await Task.WhenAny(driver.ExpectedConcurrentSearchCallsReached, searchTask)
+                .WaitAsync(TimeSpan.FromSeconds(10));
+            if (completed == searchTask)
+            {
+                await searchTask;
+                Assert.Fail(
+                    $"Search completed before {driver.ExpectedConcurrentSearchCalls} concurrent driver calls were active.");
+            }
+
+            await driver.ExpectedConcurrentSearchCallsReached;
+            Assert.Equal(driver.ExpectedConcurrentSearchCalls, driver.MaxConcurrentSearchCalls);
+        }
+        catch
+        {
+            driver.CancelExpectedConcurrentSearchCalls();
+            throw;
+        }
+        finally
+        {
+            driver.ReleaseExpectedConcurrentSearchCalls();
+        }
+
+        return await searchTask.WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
     private sealed class RecordingCrossEncoder : CrossEncoderClient
     {
         public Dictionary<string, float> Scores { get; } = new(StringComparer.Ordinal);
@@ -1331,7 +1359,9 @@ public class SearchEngineDriverBackedTests
         public List<SearchRank> NodeEpisodeMentionRanks { get; } = new();
         public TimeSpan SearchDelay { get; set; }
         public int ExpectedConcurrentSearchCalls { get; set; }
-        public int MaxConcurrentSearchCalls => _maxConcurrentSearchCalls;
+        public bool HoldExpectedConcurrentSearchCalls { get; set; }
+        public Task ExpectedConcurrentSearchCallsReached => _expectedConcurrentSearchCallsReached.Task;
+        public int MaxConcurrentSearchCalls => System.Threading.Volatile.Read(ref _maxConcurrentSearchCalls);
         public bool NodeFulltextCancelsImmediately { get; set; }
         public Exception? NodeFulltextException { get; set; }
         public bool NodeVectorWaitsForCancellation { get; set; }
@@ -1390,6 +1420,8 @@ public class SearchEngineDriverBackedTests
         private int _activeSearchCalls;
         private int _maxConcurrentSearchCalls;
         private readonly TaskCompletionSource _expectedConcurrentSearchCallsReached =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _releaseExpectedConcurrentSearchCalls =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesFulltextAsync(
@@ -1619,6 +1651,23 @@ public class SearchEngineDriverBackedTests
             await _expectedConcurrentSearchCallsReached.Task
                 .WaitAsync(cancellationToken)
                 .ConfigureAwait(false);
+            if (HoldExpectedConcurrentSearchCalls)
+            {
+                await _releaseExpectedConcurrentSearchCalls.Task
+                    .WaitAsync(cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        public void ReleaseExpectedConcurrentSearchCalls()
+        {
+            _releaseExpectedConcurrentSearchCalls.TrySetResult();
+        }
+
+        public void CancelExpectedConcurrentSearchCalls()
+        {
+            _expectedConcurrentSearchCallsReached.TrySetCanceled();
+            _releaseExpectedConcurrentSearchCalls.TrySetCanceled();
         }
 
         private async Task<IReadOnlyList<T>> WaitForSearchCancellationAsync<T>(
