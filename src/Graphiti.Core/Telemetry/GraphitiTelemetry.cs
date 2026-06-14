@@ -12,10 +12,12 @@ public static class GraphitiTelemetry
     /// <summary>The name of the activity source; subscribe to this to collect Graphiti traces.</summary>
     public const string ActivitySourceName = "Graphiti.Core";
 
-    /// <summary>The shared <see cref="ActivitySource"/> emitting Graphiti spans.</summary>
-    public static readonly ActivitySource ActivitySource = new(
+    private static readonly ActivitySource ActivitySourceInstance = new(
         ActivitySourceName,
         typeof(GraphitiTelemetry).Assembly.GetName().Version?.ToString());
+
+    /// <summary>The shared <see cref="ActivitySource"/> emitting Graphiti spans.</summary>
+    public static ActivitySource ActivitySource => ActivitySourceInstance;
 
     internal static Activity? StartActivity(string operation)
     {

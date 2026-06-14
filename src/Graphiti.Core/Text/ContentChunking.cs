@@ -46,7 +46,7 @@ public static partial class ContentChunking
     public static ITokenCounter TokenCounter
     {
         get => ScopedTokenCounter.Value ?? _tokenCounter;
-        set => _tokenCounter = value ?? throw new ArgumentNullException(nameof(value));
+        internal set => _tokenCounter = value ?? throw new ArgumentNullException(nameof(value));
     }
 
     internal static IDisposable UseTokenCounter(ITokenCounter tokenCounter)
