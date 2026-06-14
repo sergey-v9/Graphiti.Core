@@ -5,10 +5,12 @@ using Microsoft.Extensions.Options;
 namespace Graphiti.Core.Tests.Drivers.Ladybug;
 
 /// <summary>
-/// Step B/C release-readiness coverage: the driver-facing <see cref="GraphProvider.LadybugDb"/>
+/// Step B/C/E release-readiness coverage: the driver-facing <see cref="GraphProvider.LadybugDb"/>
 /// value and the obsolete <see cref="GraphProvider.Kuzu"/> alias both resolve to a working
-/// LadybugDB-backed driver through core DI/options, and the primary <c>AddGraphiti</c> registration
-/// method drives that resolution.
+/// LadybugDB-backed driver. After the Step E package split, core DI alone cannot construct the
+/// LadybugDB driver — the LadybugDB driver lives in the separate Graphiti.Core.Drivers.Ladybug
+/// package, so the test also calls <c>AddLadybugDbGraphDriver</c> to register the
+/// <see cref="GraphitiOptions.GraphDriverFactory"/> that core honors for both provider values.
 /// </summary>
 public class GraphProviderLadybugNamingTests
 {
@@ -19,6 +21,12 @@ public class GraphProviderLadybugNamingTests
     {
         var services = new ServiceCollection();
         services.AddGraphiti(options => options.Provider = provider);
+
+        // Post-split: the LadybugDB driver is opt-in. AddLadybugDbGraphDriver (from the
+        // Graphiti.Core.Drivers.Ladybug package) registers the GraphDriverFactory that core uses to
+        // construct the LadybugDB-backed driver for both GraphProvider.LadybugDb and the obsolete
+        // GraphProvider.Kuzu alias.
+        services.AddLadybugDbGraphDriver();
 
         await using var serviceProvider = services.BuildServiceProvider(
             new ServiceProviderOptions

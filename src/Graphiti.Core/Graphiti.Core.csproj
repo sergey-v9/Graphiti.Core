@@ -21,8 +21,6 @@
 
   <ItemGroup>
     <PackageReference Include="JsonSchema.Net" />
-    <PackageReference Include="LadybugDB" />
-    <PackageReference Include="LadybugDB.Native" />
     <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="Microsoft.Extensions.AI" />
     <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
