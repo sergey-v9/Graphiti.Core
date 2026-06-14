@@ -88,4 +88,28 @@ BAD: "Sam and Dana discussed their work preferences. They talked about morning p
 """;
         Assert.Equal(expected, messages[1].Content);
     }
+
+    [Fact]
+    public void BuildSummarizeSaga_RendersWhitespaceExistingSummaryLikePython()
+    {
+        // Python summarize_sagas.py checks `if existing_summary`, so whitespace-only summaries are
+        // still rendered as existing knowledge. Do not use whitespace-trimming truthiness here.
+        var saga = new SagaNode
+        {
+            Name = "launch",
+            GroupId = "group",
+            Summary = "   "
+        };
+        var episodes = new[]
+        {
+            new SagaEpisodeContent("Launch moved to March 15.", null)
+        };
+
+        var messages = SummarizeSagasPrompts.BuildSummarizeSaga(saga, episodes);
+
+        Assert.Contains(
+            "<EXISTING_KNOWLEDGE>\n   \n</EXISTING_KNOWLEDGE>",
+            messages[1].Content,
+            StringComparison.Ordinal);
+    }
 }

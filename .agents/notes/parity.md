@@ -101,6 +101,11 @@ reuse now lives in `ResolveEdgeWithLlmAsync` and scans only the reranked/truncat
 candidate list, while `AddTripletAsync` mirrors Python by deriving `relatedEdges` through
 `EDGE_HYBRID_SEARCH_RRF` before duplicate reuse or LLM resolution.
 
+**2026-06-14 saga prompt truthiness follow-up:** closed a small prompt-rendering drift in
+`summarize_sagas.summarize_saga`. Python renders `<EXISTING_KNOWLEDGE>` whenever
+`existing_summary` is a non-empty string, including whitespace-only strings. C# now uses the same
+non-empty truthiness instead of trimming whitespace before deciding whether to render the section.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
@@ -168,7 +173,7 @@ an internal default-false helper flag; C# pins the same public default.
 | `extract_nodes.extract_entity_summaries_from_episodes` | prompts/extract_nodes.py:613 | EntitySummaryService → Prompts/ExtractNodesPrompts | OK | Ported 2026-06-11; internal `skip_fact_appending`/episode-summary path supported |
 | `summarize_nodes.summarize_pair` | prompts/summarize_nodes.py:54 | CommunityService → Prompts/SummarizeNodesPrompts | OK | Ported 2026-06-11; sends the two source summaries as JSON like Python, deterministic text remains only no-LLM fallback |
 | `summarize_nodes.summary_description` | prompts/summarize_nodes.py:119 | CommunityService → Prompts/SummarizeNodesPrompts | OK | Ported 2026-06-11; golden-text tests pin one-sentence description prompt |
-| `summarize_sagas.summarize_saga` | prompts/summarize_sagas.py | SagaService → Prompts/SummarizeSagasPrompts | OK | Ported to prompt builder 2026-06-11; golden-text tests pin content, including worked examples |
+| `summarize_sagas.summarize_saga` | prompts/summarize_sagas.py | SagaService → Prompts/SummarizeSagasPrompts | OK | Ported to prompt builder 2026-06-11; golden-text tests pin content, including worked examples. 2026-06-14 follow-up aligns existing-summary section truthiness for whitespace-only summaries |
 
 Unused-in-pipeline Python prompts (verify before porting; as of the baseline these have no live
 call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,

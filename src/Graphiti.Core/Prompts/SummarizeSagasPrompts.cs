@@ -12,7 +12,7 @@ internal static class SummarizeSagasPrompts
         IReadOnlyList<SagaEpisodeContent> episodes)
     {
         var episodesText = JoinEpisodeContents(episodes, "\n---\n", "(no messages)");
-        var existingSummarySection = string.IsNullOrWhiteSpace(saga.Summary)
+        var existingSummarySection = string.IsNullOrEmpty(saga.Summary)
             ? string.Empty
             : $"""
 
