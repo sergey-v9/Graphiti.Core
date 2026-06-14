@@ -423,6 +423,62 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddTriplet_EdgeUuidCollisionWithDifferentNodesCreatesNewEdge()
+    {
+        var driver = new EmptyEdgeSearchGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: new StaticLlmClient(new JsonObject()));
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = new EntityNode { Name = "Alice", GroupId = "group", CreatedAt = now };
+        var bob = new EntityNode { Name = "Bob", GroupId = "group", CreatedAt = now };
+        var charlie = new EntityNode { Name = "Charlie", GroupId = "group", CreatedAt = now };
+        await alice.SaveAsync(driver);
+        await bob.SaveAsync(driver);
+        await charlie.SaveAsync(driver);
+
+        var existingEdge = new EntityEdge
+        {
+            Uuid = "edge-1",
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            GroupId = "group",
+            CreatedAt = now,
+            Name = "KNOWS",
+            Fact = "Alice knows Bob"
+        };
+        await existingEdge.SaveAsync(driver);
+
+        var collidingEdge = new EntityEdge
+        {
+            Uuid = existingEdge.Uuid,
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = charlie.Uuid,
+            GroupId = "group",
+            CreatedAt = now.AddMinutes(1),
+            ValidAt = now.AddMinutes(1),
+            Name = "KNOWS",
+            Fact = "Alice knows Charlie"
+        };
+
+        var result = await graphiti.AddTripletAsync(alice, collidingEdge, charlie);
+
+        var edge = Assert.Single(result.Edges);
+        Assert.NotEqual(existingEdge.Uuid, edge.Uuid);
+        Assert.Equal(alice.Uuid, edge.SourceNodeUuid);
+        Assert.Equal(charlie.Uuid, edge.TargetNodeUuid);
+        Assert.Equal("Alice knows Charlie", edge.Fact);
+
+        var originalEdge = await EntityEdge.GetByUuidAsync(driver, existingEdge.Uuid);
+        Assert.Equal(alice.Uuid, originalEdge.SourceNodeUuid);
+        Assert.Equal(bob.Uuid, originalEdge.TargetNodeUuid);
+        Assert.Equal("Alice knows Bob", originalEdge.Fact);
+
+        var storedEdges = await EntityEdge.GetByGroupIdsAsync(driver, new[] { "group" });
+        Assert.Equal(2, storedEdges.Count);
+        Assert.Contains(storedEdges, stored => stored.Uuid == existingEdge.Uuid);
+        Assert.Contains(storedEdges, stored => stored.Uuid == edge.Uuid);
+    }
+
+    [Fact]
     public async Task AddTriplet_LlmDuplicateResolutionReusesExistingEdgeAndAppendsSyntheticEpisode()
     {
         var driver = new InMemoryGraphDriver();

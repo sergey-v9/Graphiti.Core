@@ -101,6 +101,11 @@ reuse now lives in `ResolveEdgeWithLlmAsync` and scans only the reranked/truncat
 candidate list, while `AddTripletAsync` mirrors Python by deriving `relatedEdges` through
 `EDGE_HYBRID_SEARCH_RRF` before duplicate reuse or LLM resolution.
 
+**2026-06-14 triplet UUID-collision proof:** added public workflow coverage for Python
+`add_triplet` edge UUID collision behavior. If the caller submits an `EntityEdge` UUID that already
+exists on a different source/target pair, C# keeps the original edge untouched and assigns a fresh UUID
+to the new edge before saving, matching Python `graphiti.py` and `test_add_triplet.py`.
+
 **2026-06-14 saga prompt truthiness follow-up:** closed a small prompt-rendering drift in
 `summarize_sagas.summarize_saga`. Python renders `<EXISTING_KNOWLEDGE>` whenever
 `existing_summary` is a non-empty string, including whitespace-only strings. C# now uses the same
@@ -250,7 +255,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Basic fact search | `search` | `SearchAsync(query, ...)` | OK | |
 | Advanced graph search | `search_` | `SearchAdvancedAsync` / `SearchAsync(query, SearchConfig, ...)` | OK | Idiomatic C# names; Python-style aliases intentionally not added |
 | Episode contribution lookup | `get_nodes_and_edges_by_episode` | `GetNodesAndEdgesByEpisodeAsync` | OK + DIVERGENT | Bulk episodes own entity-edge UUIDs in C#, so bulk episode contribution lookup is more complete than Python |
-| Triplet ingest | `add_triplet` | `AddTripletAsync` | OK | Exact duplicate reuse scans the reranked/limited related-edge set after `EDGE_HYBRID_SEARCH_RRF`, matching Python |
+| Triplet ingest | `add_triplet` | `AddTripletAsync` | OK | Exact duplicate reuse scans the reranked/limited related-edge set after `EDGE_HYBRID_SEARCH_RRF`, matching Python; edge UUID collisions on different endpoint pairs generate a fresh UUID and preserve the original edge |
 | Episode removal | `remove_episode` | `RemoveEpisodeAsync` | DIVERGENT | C# prunes shared edge support and repairs saga membership/adjacency; Python only deletes first-supporting edges and the episode |
 
 ## Invented C# behaviors (not in Python)
