@@ -692,12 +692,12 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_RegistersModernDefaultsAndAdapters()
+    public async Task AddGraphiti_RegistersModernDefaultsAndAdapters()
     {
         var services = new ServiceCollection();
         services.AddSingleton<IChatClient, FakeChatClient>();
         services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, FakeEmbeddingGenerator>();
-        services.AddGraphitiCore(options => options.EmbeddingDimension = 3);
+        services.AddGraphiti(options => options.EmbeddingDimension = 3);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -709,11 +709,29 @@ public class ModernInfrastructureTests
         Assert.IsType<DefaultContentChunker>(scope.ServiceProvider.GetRequiredService<IContentChunker>());
     }
 
+#pragma warning disable GRPH0002
     [Fact]
-    public async Task AddGraphitiCore_PassesConfiguredDatabaseToInMemoryDriver()
+    public async Task AddGraphitiCore_CompatibilityAliasRegistersGraphitiServices()
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore(options => options.Database = "tenant-db");
+        services.AddGraphitiCore(options => options.Database = "alias-db");
+
+        await using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        var driver = Assert.IsType<InMemoryGraphDriver>(
+            scope.ServiceProvider.GetRequiredService<IGraphDriver>());
+        var graphiti = scope.ServiceProvider.GetRequiredService<Graphiti>();
+
+        Assert.Equal("alias-db", driver.Database);
+        Assert.Same(driver, graphiti.Driver);
+    }
+#pragma warning restore GRPH0002
+
+    [Fact]
+    public async Task AddGraphiti_PassesConfiguredDatabaseToInMemoryDriver()
+    {
+        var services = new ServiceCollection();
+        services.AddGraphiti(options => options.Database = "tenant-db");
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -727,14 +745,14 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_RegistersProviderResiliencePipelines()
+    public async Task AddGraphiti_RegistersProviderResiliencePipelines()
     {
         var chatClient = new FakeChatClient(failuresBeforeSuccess: 1);
         var embeddingGenerator = new FakeEmbeddingGenerator(failuresBeforeSuccess: 1);
         var services = new ServiceCollection();
         services.AddSingleton<IChatClient>(chatClient);
         services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(embeddingGenerator);
-        services.AddGraphitiCore(options => options.EmbeddingDimension = 3);
+        services.AddGraphiti(options => options.EmbeddingDimension = 3);
         services.Configure<GraphitiResilienceOptions>(options =>
         {
             options.MaxRetryAttempts = 1;
@@ -757,7 +775,7 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_BindsResilienceOptionsFromConfiguration()
+    public async Task AddGraphiti_BindsResilienceOptionsFromConfiguration()
     {
         var chatClient = new FakeChatClient(failuresBeforeSuccess: 1);
         var configuration = new ConfigurationManager
@@ -773,7 +791,7 @@ public class ModernInfrastructureTests
         };
         var services = new ServiceCollection();
         services.AddSingleton<IChatClient>(chatClient);
-        services.AddGraphitiCore(configuration, options => options.EmbeddingDimension = 3);
+        services.AddGraphiti(configuration, options => options.EmbeddingDimension = 3);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -794,7 +812,7 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_AppliesConfiguredProviderTimeout()
+    public async Task AddGraphiti_AppliesConfiguredProviderTimeout()
     {
         var chatClient = new ConcurrencyTrackingChatClient(TimeSpan.FromSeconds(5));
         var configuration = new ConfigurationManager
@@ -804,7 +822,7 @@ public class ModernInfrastructureTests
         };
         var services = new ServiceCollection();
         services.AddSingleton<IChatClient>(chatClient);
-        services.AddGraphitiCore(configuration, options => options.EmbeddingDimension = 3);
+        services.AddGraphiti(configuration, options => options.EmbeddingDimension = 3);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -816,7 +834,7 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_BuildsConfiguredProviderRateLimiter()
+    public async Task AddGraphiti_BuildsConfiguredProviderRateLimiter()
     {
         var chatClient = new ConcurrencyTrackingChatClient(TimeSpan.FromMilliseconds(25));
         var configuration = new ConfigurationManager
@@ -828,7 +846,7 @@ public class ModernInfrastructureTests
         };
         var services = new ServiceCollection();
         services.AddSingleton<IChatClient>(chatClient);
-        services.AddGraphitiCore(configuration, options => options.EmbeddingDimension = 3);
+        services.AddGraphiti(configuration, options => options.EmbeddingDimension = 3);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -844,12 +862,12 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_AllowsScopedMicrosoftAiClientsWithValidateScopes()
+    public async Task AddGraphiti_AllowsScopedMicrosoftAiClientsWithValidateScopes()
     {
         var services = new ServiceCollection();
         services.AddScoped<IChatClient, FakeChatClient>();
         services.AddScoped<IEmbeddingGenerator<string, Embedding<float>>, FakeEmbeddingGenerator>();
-        services.AddGraphitiCore(options => options.EmbeddingDimension = 3);
+        services.AddGraphiti(options => options.EmbeddingDimension = 3);
 
         await using var provider = services.BuildServiceProvider(
             new ServiceProviderOptions
@@ -870,13 +888,13 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_PassesRegisteredRateLimiterToAiAdapters()
+    public async Task AddGraphiti_PassesRegisteredRateLimiterToAiAdapters()
     {
         var chatClient = new ConcurrencyTrackingChatClient(TimeSpan.FromMilliseconds(25));
         var services = new ServiceCollection();
         services.AddSingleton<IChatClient>(chatClient);
         services.AddSingleton<RateLimiter>(_ => SingleConcurrencyLimiter(queueLimit: 8));
-        services.AddGraphitiCore(options => options.EmbeddingDimension = 3);
+        services.AddGraphiti(options => options.EmbeddingDimension = 3);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -906,10 +924,10 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_DisposesScopedGraphDriverOnce()
+    public async Task AddGraphiti_DisposesScopedGraphDriverOnce()
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore(options =>
+        services.AddGraphiti(options =>
         {
             options.GraphDriverFactory = _ => new TrackingGraphDriver();
         });
@@ -937,12 +955,12 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_UsesRegisteredTimeProvider()
+    public async Task AddGraphiti_UsesRegisteredTimeProvider()
     {
         var fixedNow = new DateTimeOffset(2026, 2, 3, 4, 5, 6, TimeSpan.Zero);
         var services = new ServiceCollection();
         services.AddSingleton<TimeProvider>(new FixedTimeProvider(fixedNow));
-        services.AddGraphitiCore();
+        services.AddGraphiti();
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -962,12 +980,12 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_UsesRegisteredLogger()
+    public async Task AddGraphiti_UsesRegisteredLogger()
     {
         var logger = new ListLogger<Graphiti>();
         var services = new ServiceCollection();
         services.AddSingleton<ILogger<Graphiti>>(logger);
-        services.AddGraphitiCore();
+        services.AddGraphiti();
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -985,7 +1003,7 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_BindsOptionsFromConfiguration()
+    public async Task AddGraphiti_BindsOptionsFromConfiguration()
     {
         var configuration = new ConfigurationManager
         {
@@ -996,7 +1014,7 @@ public class ModernInfrastructureTests
             ["Database"] = "tenant-a"
         };
         var services = new ServiceCollection();
-        services.AddGraphitiCore(configuration);
+        services.AddGraphiti(configuration);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -1020,7 +1038,7 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_PassesConfiguredDatabaseToNeo4jDriver()
+    public async Task AddGraphiti_PassesConfiguredDatabaseToNeo4jDriver()
     {
         var configuration = new ConfigurationManager
         {
@@ -1031,7 +1049,7 @@ public class ModernInfrastructureTests
             ["Database"] = "tenant-db"
         };
         var services = new ServiceCollection();
-        services.AddGraphitiCore(configuration);
+        services.AddGraphiti(configuration);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -1046,7 +1064,7 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_BindsLlmConfigFromConfiguration()
+    public async Task AddGraphiti_BindsLlmConfigFromConfiguration()
     {
         var configuration = new ConfigurationManager
         {
@@ -1057,7 +1075,7 @@ public class ModernInfrastructureTests
         };
         var services = new ServiceCollection();
         services.AddSingleton<IChatClient, FakeChatClient>();
-        services.AddGraphitiCore(configuration, options => options.EmbeddingDimension = 3);
+        services.AddGraphiti(configuration, options => options.EmbeddingDimension = 3);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -1071,7 +1089,7 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_DiChatClientUsesConfiguredLlmOptions()
+    public async Task AddGraphiti_DiChatClientUsesConfiguredLlmOptions()
     {
         var chatClient = new FakeChatClient();
         var configuration = new ConfigurationManager
@@ -1083,7 +1101,7 @@ public class ModernInfrastructureTests
         };
         var services = new ServiceCollection();
         services.AddSingleton<IChatClient>(chatClient);
-        services.AddGraphitiCore(configuration, options => options.EmbeddingDimension = 3);
+        services.AddGraphiti(configuration, options => options.EmbeddingDimension = 3);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -1100,7 +1118,7 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_BindsEmbeddingConfigFromConfiguration()
+    public async Task AddGraphiti_BindsEmbeddingConfigFromConfiguration()
     {
         var configuration = new ConfigurationManager
         {
@@ -1111,7 +1129,7 @@ public class ModernInfrastructureTests
         };
         var services = new ServiceCollection();
         services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, FakeEmbeddingGenerator>();
-        services.AddGraphitiCore(configuration);
+        services.AddGraphiti(configuration);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -1129,7 +1147,7 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_DiEmbedderUsesConfiguredEmbeddingModel()
+    public async Task AddGraphiti_DiEmbedderUsesConfiguredEmbeddingModel()
     {
         var generator = new FakeEmbeddingGenerator();
         var configuration = new ConfigurationManager
@@ -1139,7 +1157,7 @@ public class ModernInfrastructureTests
         };
         var services = new ServiceCollection();
         services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(generator);
-        services.AddGraphitiCore(configuration);
+        services.AddGraphiti(configuration);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
@@ -1153,7 +1171,7 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public void AddGraphitiCore_BindsContentChunkingOptionsFromConfiguration()
+    public void AddGraphiti_BindsContentChunkingOptionsFromConfiguration()
     {
         var configuration = new ConfigurationManager
         {
@@ -1164,7 +1182,7 @@ public class ModernInfrastructureTests
         };
         var services = new ServiceCollection();
         services.AddSingleton<ITokenCounter, WordTokenCounter>();
-        services.AddGraphitiCore(configuration);
+        services.AddGraphiti(configuration);
 
         using var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<ContentChunkingOptions>>().Value;
@@ -1236,14 +1254,14 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_AllowsConfigurationOverrides()
+    public async Task AddGraphiti_AllowsConfigurationOverrides()
     {
         var configuration = new ConfigurationManager
         {
             ["EmbeddingDimension"] = "3"
         };
         var services = new ServiceCollection();
-        services.AddGraphitiCore(configuration, options => options.EmbeddingDimension = 5);
+        services.AddGraphiti(configuration, options => options.EmbeddingDimension = 5);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();

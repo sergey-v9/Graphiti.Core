@@ -427,10 +427,10 @@ public class LlmClientTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_UsesHybridCacheWithCancellationIsolatedFill()
+    public async Task AddGraphiti_UsesHybridCacheWithCancellationIsolatedFill()
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore();
+        services.AddGraphiti();
         await using var provider = services.BuildServiceProvider();
         var cache = provider.GetRequiredService<ILlmResponseCache>();
 
@@ -439,7 +439,7 @@ public class LlmClientTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_BindsHybridCacheOptionsFromConfiguration()
+    public async Task AddGraphiti_BindsHybridCacheOptionsFromConfiguration()
     {
         var configuration = new ConfigurationManager
         {
@@ -449,7 +449,7 @@ public class LlmClientTests
             ["Cache:LlmResponseTags:1"] = "llm-test"
         };
         var services = new ServiceCollection();
-        services.AddGraphitiCore(configuration);
+        services.AddGraphiti(configuration);
 
         await using var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<GraphitiCacheOptions>>().Value;
@@ -460,7 +460,7 @@ public class LlmClientTests
     }
 
     [Fact]
-    public async Task AddGraphitiCore_AppliesConfiguredHybridCacheExpiration()
+    public async Task AddGraphiti_AppliesConfiguredHybridCacheExpiration()
     {
         var configuration = new ConfigurationManager
         {
@@ -468,7 +468,7 @@ public class LlmClientTests
             ["Cache:LlmResponseLocalCacheExpiration"] = "00:00:00.050"
         };
         var services = new ServiceCollection();
-        services.AddGraphitiCore(configuration);
+        services.AddGraphiti(configuration);
 
         await using var provider = services.BuildServiceProvider();
         var cache = provider.GetRequiredService<ILlmResponseCache>();

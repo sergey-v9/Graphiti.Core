@@ -78,8 +78,8 @@ no wire/prompt/cache/temporal behavior changed):
   tag), so renaming is safe; existing ordinals are pinned. FalkorDb/Neptune stay as wire-compat members.
 - Obsoletions use custom `DiagnosticId`s (`GRPH0001` provider, `GRPH0002` DI method). `GRPH0001` is
   suppressed only at deliberate Kuzu compatibility-alias sites, so external package consumers still
-  receive the provider obsoletion. `GRPH0002` remains suppressed repo-wide until the in-repo
-  `AddGraphitiCore` compatibility test coverage is migrated or explicitly retired.
+  receive the provider obsoletion. `GRPH0002` is also suppressed only at the deliberate
+  `AddGraphitiCore` compatibility-alias test; ordinary in-repo callers use `AddGraphiti`.
 - The accidental public surface was reduced: `SearchEngine`, `SearchUtilities`,
   `SearchFilterQueryBuilder`, `MaintenanceUtilities`, `StructuredResponseValidator`, and the
   enum-extension helpers are now `internal` (port artifacts; tests reach them via `InternalsVisibleTo`).

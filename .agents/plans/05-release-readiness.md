@@ -14,8 +14,7 @@ B2/B3 follow-through is 968 passed, 3 skipped, 971 total, with build and format 
 - **A** — `init` setters, `Options`/`ActivitySource`/`TokenCounter` get-only, 7 port-artifact helpers
   internalized, and shippable package projects generating IntelliSense XML documentation.
 - **B+C** — `GraphProvider.LadybugDb=5` and `AddGraphiti` primary; `Kuzu`/`AddGraphitiCore` `[Obsolete]`
-  aliases. `GRPH0001` is locally suppressed only at deliberate Kuzu alias sites; `GRPH0002` remains
-  repo-wide until the `AddGraphitiCore` compatibility test coverage is migrated or retired.
+  aliases. `GRPH0001` and `GRPH0002` are suppressed only at deliberate compatibility-alias sites.
 - **D** — constructor defaults to InMemory (precedence: explicit driver > `uri`→Neo4j > InMemory); additive
   `AddEpisodeOptions` overload.
 - **E.1 + E.3** — LadybugDB extracted to `src/Graphiti.Core.Drivers.Ladybug/`; `Graphiti.Core` is LadybugDB-free

@@ -548,7 +548,7 @@ public class LadybugRuntimeDriverTests
     public async Task ServiceCollectionExtensionRegistersLadybugDriverThroughGraphDriverFactory()
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore();
+        services.AddGraphiti();
         services.AddLadybugDbGraphDriver();
 
         await using var serviceProvider = services.BuildServiceProvider(
@@ -576,7 +576,7 @@ public class LadybugRuntimeDriverTests
     public async Task GraphProviderKuzuResolvesLadybugDriverFromCoreOptions()
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore(options => options.Provider = GraphProvider.Kuzu);
+        services.AddGraphiti(options => options.Provider = GraphProvider.Kuzu);
 
         // Post-split: the LadybugDB driver is opt-in. AddLadybugDbGraphDriver (from the
         // Graphiti.Core.Drivers.Ladybug package) registers the GraphDriverFactory that core honors for
@@ -605,7 +605,7 @@ public class LadybugRuntimeDriverTests
     public void GraphProviderKuzuWithoutLadybugPackageThrowsClearError()
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore(options => options.Provider = GraphProvider.Kuzu);
+        services.AddGraphiti(options => options.Provider = GraphProvider.Kuzu);
 
         using var serviceProvider = services.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();
@@ -630,7 +630,7 @@ public class LadybugRuntimeDriverTests
         try
         {
             var services = new ServiceCollection();
-            services.AddGraphitiCore(options => options.Provider = GraphProvider.Kuzu);
+            services.AddGraphiti(options => options.Provider = GraphProvider.Kuzu);
             // Post-split the LadybugDB file path is configured through the package's LadybugDbOptions
             // (the Ladybug GraphDriverFactory reads DatabasePath), not GraphitiOptions.Database.
             services.AddLadybugDbGraphDriver(options => options.DatabasePath = databasePath);
@@ -691,7 +691,7 @@ public class LadybugRuntimeDriverTests
     public void ServiceCollectionExtensionRejectsBlankDatabasePath()
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore();
+        services.AddGraphiti();
         services.AddLadybugDbGraphDriver(options => options.DatabasePath = "   ");
 
         using var serviceProvider = services.BuildServiceProvider();
@@ -714,7 +714,7 @@ public class LadybugRuntimeDriverTests
         services.AddLadybugDbGraphDriver(
             configuration,
             options => options.DatabasePath = string.Empty);
-        services.AddGraphitiCore();
+        services.AddGraphiti();
 
         await using var serviceProvider = services.BuildServiceProvider();
         await using var scope = serviceProvider.CreateAsyncScope();
@@ -739,7 +739,7 @@ public class LadybugRuntimeDriverTests
         try
         {
             var services = new ServiceCollection();
-            services.AddGraphitiCore();
+            services.AddGraphiti();
             services.AddLadybugDbGraphDriver(options => options.DatabasePath = databasePath);
 
             await using (var serviceProvider = services.BuildServiceProvider())

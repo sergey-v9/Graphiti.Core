@@ -160,8 +160,8 @@ generate IntelliSense XML docs; the two-assembly public-API snapshot guard remai
 `Graphiti.Core.Drivers.Ladybug.approved.txt`; regenerate the relevant baseline deliberately on an
 intended API change); a consumer `README.md`/`docs/search.md`; surface hardening; the
 `GraphProvider.LadybugDb`/`AddGraphiti` names (with `Kuzu`/`AddGraphitiCore` `[Obsolete]` aliases;
-`GRPH0001` is locally suppressed only at deliberate Kuzu alias sites, while `GRPH0002` remains in
-`Directory.Build.props` `NoWarn`); the InMemory-default constructor + `AddEpisodeOptions`; the
+`GRPH0001` and `GRPH0002` are locally suppressed only at deliberate compatibility-alias sites); the
+InMemory-default constructor + `AddEpisodeOptions`; the
 LadybugDB package split; and the retired shared Kuzu branches in generic search helpers. Remaining:
 E.2 (publish the local LadybugDB package family — `W:\code\ladybug`), versioning, CI. See `plans/05`
 and `decisions.md`. GOTCHA (still applies): do NOT run multiple worktree agents' `dotnet test`

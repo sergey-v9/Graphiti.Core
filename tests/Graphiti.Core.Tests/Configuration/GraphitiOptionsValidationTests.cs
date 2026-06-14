@@ -96,7 +96,7 @@ public class GraphitiOptionsValidationTests
     public async Task GraphDriverFactory_BypassesProviderValidation(GraphProvider provider)
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore(options =>
+        services.AddGraphiti(options =>
         {
             options.Provider = provider;
             options.GraphDriverFactory = _ => new InMemoryGraphDriver();
@@ -122,7 +122,7 @@ public class GraphitiOptionsValidationTests
     private static ServiceProvider BuildProvider(Action<GraphitiOptions> configure)
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore(configure);
+        services.AddGraphiti(configure);
         return services.BuildServiceProvider();
     }
 
@@ -146,7 +146,7 @@ public class GraphitiOptionsValidationTests
         Action<ContentChunkingOptions> configure)
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore();
+        services.AddGraphiti();
         services.Configure(configure);
         using var provider = services.BuildServiceProvider();
 
@@ -172,7 +172,7 @@ public class GraphitiOptionsValidationTests
     public void InvalidLlmConfig_FailWhenResolvingOptions(Action<LlmConfig> configure)
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore();
+        services.AddGraphiti();
         services.Configure(configure);
         using var provider = services.BuildServiceProvider();
 
@@ -194,7 +194,7 @@ public class GraphitiOptionsValidationTests
     public void InvalidEmbeddingConfig_FailWhenResolvingOptions(Action<EmbeddingConfig> configure)
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore();
+        services.AddGraphiti();
         services.Configure(configure);
         using var provider = services.BuildServiceProvider();
 
@@ -215,7 +215,7 @@ public class GraphitiOptionsValidationTests
     public void InvalidCacheOptions_FailWhenResolvingOptions(Action<GraphitiCacheOptions> configure)
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore();
+        services.AddGraphiti();
         services.Configure(configure);
         using var provider = services.BuildServiceProvider();
 
@@ -255,7 +255,7 @@ public class GraphitiOptionsValidationTests
         Action<GraphitiResilienceOptions> configure)
     {
         var services = new ServiceCollection();
-        services.AddGraphitiCore();
+        services.AddGraphiti();
         services.Configure(configure);
         using var provider = services.BuildServiceProvider();
 
