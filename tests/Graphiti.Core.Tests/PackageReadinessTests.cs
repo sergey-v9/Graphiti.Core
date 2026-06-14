@@ -130,6 +130,10 @@ public class PackageReadinessTests
         Assert.Contains("GraphitiCorePackageSmoke", verifyScript);
         Assert.Contains("GraphitiLadybugPackageSmoke", verifyScript);
         Assert.Contains("Graphiti.Core.Drivers.Ladybug", verifyScript);
+        Assert.Contains("Invoke-DotNetCommandOutput", verifyScript);
+        Assert.Contains("\"run\"", verifyScript);
+        Assert.Contains("-ExpectedOutput \"InMemory\"", verifyScript);
+        Assert.Contains("-ExpectedOutput \"LadybugDb\"", verifyScript);
         Assert.Contains("--configfile", verifyScript);
         Assert.Contains("--no-cache", verifyScript);
         Assert.Contains("<clear />", verifyScript);

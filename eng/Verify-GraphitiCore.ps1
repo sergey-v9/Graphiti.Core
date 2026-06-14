@@ -38,6 +38,21 @@ function Invoke-DotNetCommand {
     }
 }
 
+function Invoke-DotNetCommandOutput {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    $output = & dotnet @Arguments 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        $output | Write-Host
+        throw "dotnet $($Arguments -join ' ') failed with exit code $LASTEXITCODE"
+    }
+
+    return $output
+}
+
 function Get-ProjectProperty {
     param(
         [Parameter(Mandatory = $true)]
@@ -123,7 +138,10 @@ function Invoke-PackageConsumerSmoke {
         [hashtable]$PackageSources,
 
         [Parameter(Mandatory = $true)]
-        [string]$ProgramSource
+        [string]$ProgramSource,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedOutput
     )
 
     $smokeRoot = Join-Path ([System.IO.Path]::GetTempPath()) "graphiti-package-smoke-$([Guid]::NewGuid().ToString('N'))"
@@ -164,6 +182,18 @@ function Invoke-PackageConsumerSmoke {
             "--no-restore",
             "--verbosity",
             "minimal")
+        $output = Invoke-DotNetCommandOutput -Arguments @(
+            "run",
+            "--project",
+            $projectPath,
+            "--no-restore",
+            "--no-build",
+            "--verbosity",
+            "minimal")
+        $actualOutput = ($output | Out-String).Trim()
+        if ($actualOutput -ne $ExpectedOutput) {
+            throw "$Name produced '$actualOutput'; expected '$ExpectedOutput'"
+        }
     }
     finally {
         $env:NUGET_PACKAGES = $previousNuGetPackages
@@ -189,9 +219,10 @@ function Invoke-PackageConsumerSmokes {
             "nuget.org" = $nugetSource
         } `
         -ProgramSource @'
-var graphiti = new Graphiti.Core.Graphiti();
+await using var graphiti = new Graphiti.Core.Graphiti();
 Console.WriteLine(graphiti.Driver.Provider);
-'@
+'@ `
+        -ExpectedOutput "InMemory"
 
     Invoke-PackageConsumerSmoke `
         -Name "GraphitiLadybugPackageSmoke" `
@@ -206,9 +237,10 @@ Console.WriteLine(graphiti.Driver.Provider);
         -ProgramSource @'
 using Graphiti.Core.Drivers.Ladybug;
 
-var driver = LadybugDbGraphDriverFactory.CreateInMemory();
+await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
 Console.WriteLine(driver.Provider);
-'@
+'@ `
+        -ExpectedOutput "LadybugDb"
 }
 
 Invoke-VerifyStep "restore" {
