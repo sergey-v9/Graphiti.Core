@@ -26,7 +26,7 @@ public static class GraphitiServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection to add registrations to.</param>
     /// <param name="configure">Optional delegate to configure options.</param>
-    public static IServiceCollection AddGraphitiCore(
+    public static IServiceCollection AddGraphiti(
         this IServiceCollection services,
         Action<GraphitiOptions>? configure = null)
     {
@@ -47,7 +47,7 @@ public static class GraphitiServiceCollectionExtensions
     /// <param name="services">The service collection to add registrations to.</param>
     /// <param name="configuration">Configuration root the options are bound from.</param>
     /// <param name="configure">Optional delegate to override options after binding.</param>
-    public static IServiceCollection AddGraphitiCore(
+    public static IServiceCollection AddGraphiti(
         this IServiceCollection services,
         IConfiguration configuration,
         Action<GraphitiOptions>? configure = null)
@@ -68,6 +68,31 @@ public static class GraphitiServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Obsolete alias for <see cref="AddGraphiti(IServiceCollection, Action{GraphitiOptions}?)"/>.
+    /// </summary>
+    /// <param name="services">The service collection to add registrations to.</param>
+    /// <param name="configure">Optional delegate to configure options.</param>
+    [Obsolete("Use AddGraphiti", DiagnosticId = "GRPH0002")]
+    public static IServiceCollection AddGraphitiCore(
+        this IServiceCollection services,
+        Action<GraphitiOptions>? configure = null) =>
+        services.AddGraphiti(configure);
+
+    /// <summary>
+    /// Obsolete alias for
+    /// <see cref="AddGraphiti(IServiceCollection, IConfiguration, Action{GraphitiOptions}?)"/>.
+    /// </summary>
+    /// <param name="services">The service collection to add registrations to.</param>
+    /// <param name="configuration">Configuration root the options are bound from.</param>
+    /// <param name="configure">Optional delegate to override options after binding.</param>
+    [Obsolete("Use AddGraphiti", DiagnosticId = "GRPH0002")]
+    public static IServiceCollection AddGraphitiCore(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        Action<GraphitiOptions>? configure = null) =>
+        services.AddGraphiti(configuration, configure);
 
     private static void AddGraphitiCoreServices(IServiceCollection services)
     {
