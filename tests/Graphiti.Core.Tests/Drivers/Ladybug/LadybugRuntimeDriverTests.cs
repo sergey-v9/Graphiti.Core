@@ -792,6 +792,55 @@ public class LadybugRuntimeDriverTests
         }
     }
 
+    [Fact]
+    public async Task FileBackedDriverCanRebuildIndicesAfterReopenAndSearch()
+    {
+        var databasePath = Path.Combine(
+            Path.GetTempPath(),
+            "graphiti-ladybugdb-rebuild-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            await using (var firstDriver = LadybugDbGraphDriverFactory.Create(databasePath))
+            {
+                await firstDriver.BuildIndicesAndConstraintsAsync();
+                await firstDriver.SaveNodeAsync(new EntityNode
+                {
+                    Uuid = "reopened-search-node",
+                    Name = "Reopened Search Alice",
+                    GroupId = "tenant",
+                    Labels = ["Person"],
+                    NameEmbedding = [1, 0, 0, 0, 0, 0, 0, 0],
+                    CreatedAt = new DateTime(2026, 9, 21, 10, 11, 12, DateTimeKind.Utc),
+                    Summary = "Persisted before reopening and rebuilding full text indices"
+                });
+            }
+
+            await using (var secondDriver = LadybugDbGraphDriverFactory.Create(databasePath))
+            {
+                await secondDriver.BuildIndicesAndConstraintsAsync();
+                var searchDriver = Assert.IsAssignableFrom<ISearchGraphDriver>(secondDriver);
+                var hits = await searchDriver.SearchEntityNodesFulltextAsync(
+                    "Reopened Alice",
+                    new SearchFilters(),
+                    ["tenant"],
+                    limit: 5);
+
+                Assert.Contains(hits, hit => hit.Item.Uuid == "reopened-search-node");
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(databasePath))
+            {
+                Directory.Delete(databasePath, recursive: true);
+            }
+            else if (File.Exists(databasePath))
+            {
+                File.Delete(databasePath);
+            }
+        }
+    }
+
     private static StaticJsonLlmClient CreateAliceAcmeLlmClient() =>
         new(_ => CreateAliceAcmeResponse());
 

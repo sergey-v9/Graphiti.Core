@@ -71,9 +71,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
                     "LOAD EXTENSION FTS;",
                     new Dictionary<string, object?>(StringComparer.Ordinal)),
                 cancellationToken).ConfigureAwait(false);
-            await ExecuteAllAsync(
-                LadybugSearchStatementBuilder.BuildFulltextIndexStatements(),
-                cancellationToken).ConfigureAwait(false);
+            await ExecuteFulltextIndexStatementsAsync(cancellationToken).ConfigureAwait(false);
             _shared.SchemaBuilt = true;
         }
         finally
@@ -918,6 +916,46 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         typeof(TEdge) == typeof(HasEpisodeEdge) ? (TEdge)(Edge)LadybugRecordMapper.MapHasEpisodeEdge(record) :
         typeof(TEdge) == typeof(NextEpisodeEdge) ? (TEdge)(Edge)LadybugRecordMapper.MapNextEpisodeEdge(record) :
         throw new ArgumentOutOfRangeException(typeof(TEdge).Name);
+
+    private async Task ExecuteFulltextIndexStatementsAsync(CancellationToken cancellationToken)
+    {
+        var statements = LadybugSearchStatementBuilder.BuildFulltextIndexStatements();
+        for (var i = 0; i < statements.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                await _executor.ExecuteAsync(statements[i], cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (IsDuplicateFulltextIndexError(statements[i], exception))
+            {
+                // CREATE_FTS_INDEX has no IF NOT EXISTS/skip flag; public setup remains idempotent.
+            }
+        }
+    }
+
+    private static bool IsDuplicateFulltextIndexError(
+        LadybugStatement statement,
+        Exception exception)
+    {
+        var message = exception.Message;
+        return IsDuplicateFulltextIndexError(statement, message, "Episodic", "episode_content") ||
+            IsDuplicateFulltextIndexError(statement, message, "Entity", "node_name_and_summary") ||
+            IsDuplicateFulltextIndexError(statement, message, "Community", "community_name") ||
+            IsDuplicateFulltextIndexError(statement, message, "RelatesToNode_", "edge_name_and_fact");
+    }
+
+    private static bool IsDuplicateFulltextIndexError(
+        LadybugStatement statement,
+        string message,
+        string tableName,
+        string indexName) =>
+        statement.Query.Contains(
+            $"CREATE_FTS_INDEX('{tableName}', '{indexName}'",
+            StringComparison.Ordinal) &&
+        message.Contains(
+            $"Index {indexName} already exists in table {tableName}.",
+            StringComparison.Ordinal);
 
     private static List<T> MaterializeWithCancellation<T>(
         IEnumerable<T> values,

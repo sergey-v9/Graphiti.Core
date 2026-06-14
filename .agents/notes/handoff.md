@@ -176,7 +176,9 @@ confirmed the nearby `W:\code\ladybug\tools\csharp_api` `0.17.1` artifacts inclu
 list/array/empty-list/null parameter-binding repair, FTS/vector regression coverage, and Unix
 `RTLD_GLOBAL` native-loader work. Graphiti still pins `0.17.0-alpha.2-graphiti.1`; get explicit user
 confirmation before bumping to `0.17.1`. Do not adopt `LadybugDB.Extensions` without a concrete
-Graphiti Core need.
+Graphiti Core need. Follow-up hardening made the known search concurrency proof deterministic and made
+Ladybug file-backed setup idempotent across reopen by ignoring duplicate errors for the four exact
+Graphiti FTS indexes; runtime coverage now proves build-write-close-reopen-build-search.
 
 Follow-up checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 959 passed, 3 skipped, 962
 total; format/build/pack clean). Landed since 06-13: the eval harness (`samples/Graphiti.Eval`) built

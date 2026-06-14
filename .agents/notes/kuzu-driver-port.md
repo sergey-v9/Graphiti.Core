@@ -61,9 +61,10 @@ Graphiti cross-platform audit result: Graphiti itself does not hard-code a `win-
 identifier; the Ladybug driver references the cross-platform meta packages. The remaining Linux and
 off-machine risk is restore/runtime validation, not an obvious source-level Windows dependency:
 `NuGet.config` points at the sibling local feed, and Graphiti has only been run on win-x64 locally.
-Persisted Ladybug DB reopen coverage reads data after reopening, but does not yet prove that rerunning
-`BuildIndicesAndConstraintsAsync` against an existing FTS index is idempotent; the FTS index statements
-do not include `IF NOT EXISTS`.
+Follow-up on 2026-06-14 made persisted Ladybug setup idempotent across reopen: duplicate errors for
+the four exact Graphiti FTS indexes are ignored because LadybugDB's `CREATE_FTS_INDEX` has no
+`IF NOT EXISTS`/skip flag, and `LadybugRuntimeDriverTests.FileBackedDriverCanRebuildIndicesAfterReopenAndSearch`
+proves build-write-close-reopen-build-search on a file-backed database.
 
 Decision point before implementation: do not silently bump Graphiti from
 `0.17.0-alpha.2-graphiti.1` to `0.17.1`. The evidence supports the bump, but user confirmation is
@@ -93,8 +94,8 @@ abstractions without a demonstrated Graphiti Core requirement.
   lookup, paged node/edge group reads, directed endpoint-pair edge reads, incident entity-edge reads,
   group-id enumeration, public namespace community/saga reads and typed deletes, file-backed
   `DatabasePath` persistence for both `GraphProvider.LadybugDb` and the obsolete
-  `GraphProvider.Kuzu` alias, and Python Kuzu `':memory:'` sentinel compatibility. Treat tests as
-  the detailed proof source.
+  `GraphProvider.Kuzu` alias, file-backed index rebuild/search after reopening, and Python Kuzu
+  `':memory:'` sentinel compatibility. Treat tests as the detailed proof source.
 - `LadybugPackageRuntimeTests` exercise the actual LadybugDB package/native path in normal
   verification, including schema creation, direct list/array/empty-list/null parameter binding, FTS loading/search, vector
   search, filters, direct driver bulk-save embedding/relationship persistence, saga-scoped episode

@@ -188,6 +188,23 @@ public class LadybugGraphDriverTests
     }
 
     [Fact]
+    public async Task BuildIndices_IgnoresKnownDuplicateFulltextIndexErrors()
+    {
+        var executor = new RecordingLadybugExecutor
+        {
+            ThrowExistingFulltextIndexErrors = true
+        };
+        var driver = new LadybugGraphDriver(executor, database: "graphiti");
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.BuildIndicesAndConstraintsAsync();
+
+        Assert.Equal(7, executor.Executed.Count);
+        Assert.Contains("CREATE_FTS_INDEX('Episodic'", executor.Executed[3].Query, StringComparison.Ordinal);
+        Assert.Contains("CREATE_FTS_INDEX('RelatesToNode_'", executor.Executed[6].Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SearchSurface_DelegatesToLadybugSearchExecutor()
     {
         var executor = new RecordingLadybugExecutor();
@@ -318,6 +335,8 @@ public class LadybugGraphDriverTests
 
         internal bool Disposed { get; private set; }
 
+        internal bool ThrowExistingFulltextIndexErrors { get; init; }
+
         internal void EnqueueQuery(params IReadOnlyDictionary<string, object?>[] records) =>
             _queryResults.Enqueue(records);
 
@@ -325,6 +344,12 @@ public class LadybugGraphDriverTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             Executed.Add(statement);
+            if (ThrowExistingFulltextIndexErrors &&
+                TryCreateExistingFulltextIndexException(statement, out var exception))
+            {
+                return Task.FromException(exception);
+            }
+
             return Task.CompletedTask;
         }
 
@@ -344,6 +369,42 @@ public class LadybugGraphDriverTests
         {
             Disposed = true;
             return ValueTask.CompletedTask;
+        }
+
+        private static bool TryCreateExistingFulltextIndexException(
+            LadybugStatement statement,
+            out Exception exception)
+        {
+            if (statement.Query.Contains("CREATE_FTS_INDEX('Episodic', 'episode_content'", StringComparison.Ordinal))
+            {
+                exception = new InvalidOperationException(
+                    "Binder exception: Index episode_content already exists in table Episodic.");
+                return true;
+            }
+
+            if (statement.Query.Contains("CREATE_FTS_INDEX('Entity', 'node_name_and_summary'", StringComparison.Ordinal))
+            {
+                exception = new InvalidOperationException(
+                    "Binder exception: Index node_name_and_summary already exists in table Entity.");
+                return true;
+            }
+
+            if (statement.Query.Contains("CREATE_FTS_INDEX('Community', 'community_name'", StringComparison.Ordinal))
+            {
+                exception = new InvalidOperationException(
+                    "Binder exception: Index community_name already exists in table Community.");
+                return true;
+            }
+
+            if (statement.Query.Contains("CREATE_FTS_INDEX('RelatesToNode_', 'edge_name_and_fact'", StringComparison.Ordinal))
+            {
+                exception = new InvalidOperationException(
+                    "Binder exception: Index edge_name_and_fact already exists in table RelatesToNode_.");
+                return true;
+            }
+
+            exception = null!;
+            return false;
         }
     }
 }
