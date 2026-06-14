@@ -378,6 +378,51 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddTriplet_DoesNotReuseRawExactDuplicateMissingFromRelatedSearch()
+    {
+        var driver = new EmptyEdgeSearchGraphDriver();
+        var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["extract_edges.extract_timestamps"] = new()
+        });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = new EntityNode { Name = "Alice", GroupId = "group", CreatedAt = now };
+        var bob = new EntityNode { Name = "Bob", GroupId = "group", CreatedAt = now };
+        await alice.SaveAsync(driver);
+        await bob.SaveAsync(driver);
+        var existingEdge = new EntityEdge
+        {
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            GroupId = "group",
+            CreatedAt = now,
+            Name = "KNOWS",
+            Fact = "Alice knows Bob"
+        };
+        await existingEdge.SaveAsync(driver);
+
+        var duplicateEdge = new EntityEdge
+        {
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = bob.Uuid,
+            GroupId = "group",
+            CreatedAt = now.AddMinutes(1),
+            Name = "KNOWS",
+            Fact = " Alice   knows Bob "
+        };
+
+        var result = await graphiti.AddTripletAsync(alice, duplicateEdge, bob);
+
+        Assert.Equal(duplicateEdge.Uuid, Assert.Single(result.Edges).Uuid);
+        Assert.DoesNotContain("dedupe_edges.resolve_edge", llm.PromptNames);
+        var storedEdges = await EntityEdge.GetByGroupIdsAsync(driver, new[] { "group" });
+        Assert.Equal(2, storedEdges.Count);
+        Assert.Contains(storedEdges, edge => edge.Uuid == existingEdge.Uuid);
+        Assert.Contains(storedEdges, edge => edge.Uuid == duplicateEdge.Uuid);
+    }
+
+    [Fact]
     public async Task AddTriplet_LlmDuplicateResolutionReusesExistingEdgeAndAppendsSyntheticEpisode()
     {
         var driver = new InMemoryGraphDriver();
@@ -4300,6 +4345,236 @@ public class GraphitiWorkflowTests
     }
 
     private sealed record LogEntry(int EventId, LogLevel Level, string Message);
+
+    private sealed class EmptyEdgeSearchGraphDriver : GraphDriverBase, ISearchGraphDriver
+    {
+        private readonly InMemoryGraphDriver _inner;
+
+        public EmptyEdgeSearchGraphDriver() : this(new InMemoryGraphDriver())
+        {
+        }
+
+        private EmptyEdgeSearchGraphDriver(InMemoryGraphDriver inner) : base(GraphProvider.InMemory, inner.Database)
+        {
+            _inner = inner;
+        }
+
+        public override Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, CancellationToken cancellationToken = default) =>
+            _inner.BuildIndicesAndConstraintsAsync(deleteExisting, cancellationToken);
+
+        public override Task CloseAsync(CancellationToken cancellationToken = default) =>
+            _inner.CloseAsync(cancellationToken);
+
+        public override IGraphDriver Clone(string database) =>
+            new EmptyEdgeSearchGraphDriver((InMemoryGraphDriver)_inner.Clone(database));
+
+        public override Task SaveNodeAsync(Node node, CancellationToken cancellationToken = default) =>
+            _inner.SaveNodeAsync(node, cancellationToken);
+
+        public override Task SaveEdgeAsync(Edge edge, CancellationToken cancellationToken = default) =>
+            _inner.SaveEdgeAsync(edge, cancellationToken);
+
+        public override Task DeleteNodeAsync(string uuid, CancellationToken cancellationToken = default) =>
+            _inner.DeleteNodeAsync(uuid, cancellationToken);
+
+        public override Task DeleteNodesByGroupIdAsync(string groupId, int batchSize = 100, CancellationToken cancellationToken = default) =>
+            _inner.DeleteNodesByGroupIdAsync(groupId, batchSize, cancellationToken);
+
+        public override Task DeleteNodesByUuidsAsync(IEnumerable<string> uuids, int batchSize = 100, CancellationToken cancellationToken = default) =>
+            _inner.DeleteNodesByUuidsAsync(uuids, batchSize, cancellationToken);
+
+        public override Task DeleteEdgeAsync(string uuid, CancellationToken cancellationToken = default) =>
+            _inner.DeleteEdgeAsync(uuid, cancellationToken);
+
+        public override Task DeleteEdgesByUuidsAsync(IEnumerable<string> uuids, CancellationToken cancellationToken = default) =>
+            _inner.DeleteEdgesByUuidsAsync(uuids, cancellationToken);
+
+        public override Task ClearDataAsync(IReadOnlyList<string>? groupIds = null, CancellationToken cancellationToken = default) =>
+            _inner.ClearDataAsync(groupIds, cancellationToken);
+
+        public override Task<TNode> GetNodeByUuidAsync<TNode>(string uuid, CancellationToken cancellationToken = default) =>
+            _inner.GetNodeByUuidAsync<TNode>(uuid, cancellationToken);
+
+        public override Task<IReadOnlyList<TNode>> GetNodesByUuidsAsync<TNode>(
+            IEnumerable<string> uuids,
+            string? groupId = null,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetNodesByUuidsAsync<TNode>(uuids, groupId, cancellationToken);
+
+        public override Task<IReadOnlyList<TNode>> GetNodesByGroupIdsAsync<TNode>(
+            IEnumerable<string> groupIds,
+            int? limit = null,
+            string? uuidCursor = null,
+            bool withEmbeddings = false,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetNodesByGroupIdsAsync<TNode>(groupIds, limit, uuidCursor, withEmbeddings, cancellationToken);
+
+        public override Task<T> GetEdgeByUuidAsync<T>(string uuid, CancellationToken cancellationToken = default) =>
+            _inner.GetEdgeByUuidAsync<T>(uuid, cancellationToken);
+
+        public override Task<IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(
+            IEnumerable<string> uuids,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetEdgesByUuidsAsync<T>(uuids, cancellationToken);
+
+        public override Task<IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(
+            IEnumerable<string> groupIds,
+            int? limit = null,
+            string? uuidCursor = null,
+            bool withEmbeddings = false,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetEdgesByGroupIdsAsync<T>(groupIds, limit, uuidCursor, withEmbeddings, cancellationToken);
+
+        public override Task<IReadOnlyList<EntityEdge>> GetEntityEdgesBetweenNodesAsync(
+            string sourceNodeUuid,
+            string targetNodeUuid,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetEntityEdgesBetweenNodesAsync(sourceNodeUuid, targetNodeUuid, cancellationToken);
+
+        public override Task<IReadOnlyList<EntityEdge>> GetEntityEdgesByNodeUuidAsync(
+            string nodeUuid,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetEntityEdgesByNodeUuidAsync(nodeUuid, cancellationToken);
+
+        public override Task<IReadOnlyList<EpisodicNode>> GetEpisodesByEntityNodeUuidAsync(
+            string entityNodeUuid,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetEpisodesByEntityNodeUuidAsync(entityNodeUuid, cancellationToken);
+
+        public override Task<IReadOnlyList<EpisodicNode>> RetrieveEpisodesAsync(
+            DateTime referenceTime,
+            int lastN,
+            IReadOnlyList<string>? groupIds = null,
+            EpisodeType? source = null,
+            string? saga = null,
+            CancellationToken cancellationToken = default) =>
+            _inner.RetrieveEpisodesAsync(referenceTime, lastN, groupIds, source, saga, cancellationToken);
+
+        public override Task<IReadOnlyList<EntityNode>> GetMentionedNodesAsync(
+            IReadOnlyList<EpisodicNode> episodes,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetMentionedNodesAsync(episodes, cancellationToken);
+
+        public override Task<IReadOnlyList<CommunityNode>> GetCommunitiesByNodesAsync(
+            IReadOnlyList<EntityNode> nodes,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetCommunitiesByNodesAsync(nodes, cancellationToken);
+
+        public override Task<SagaNode?> FindSagaByNameAsync(
+            string name,
+            string groupId,
+            CancellationToken cancellationToken = default) =>
+            _inner.FindSagaByNameAsync(name, groupId, cancellationToken);
+
+        public override Task<string?> GetSagaPreviousEpisodeUuidAsync(
+            string sagaUuid,
+            string currentEpisodeUuid,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetSagaPreviousEpisodeUuidAsync(sagaUuid, currentEpisodeUuid, cancellationToken);
+
+        public override Task<IReadOnlyList<SagaEpisodeContent>> GetSagaEpisodeContentsAsync(
+            string sagaUuid,
+            DateTime? since = null,
+            int limit = 200,
+            CancellationToken cancellationToken = default) =>
+            _inner.GetSagaEpisodeContentsAsync(sagaUuid, since, limit, cancellationToken);
+
+        public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesFulltextAsync(
+            string query,
+            SearchFilters searchFilter,
+            IReadOnlyList<string>? groupIds,
+            int limit,
+            CancellationToken cancellationToken = default) =>
+            _inner.SearchEntityNodesFulltextAsync(query, searchFilter, groupIds, limit, cancellationToken);
+
+        public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesByEmbeddingAsync(
+            IReadOnlyList<float> searchVector,
+            SearchFilters searchFilter,
+            IReadOnlyList<string>? groupIds,
+            int limit,
+            float minScore,
+            CancellationToken cancellationToken = default) =>
+            _inner.SearchEntityNodesByEmbeddingAsync(searchVector, searchFilter, groupIds, limit, minScore, cancellationToken);
+
+        public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesFulltextAsync(
+            string query,
+            SearchFilters searchFilter,
+            IReadOnlyList<string>? groupIds,
+            int limit,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult<IReadOnlyList<SearchHit<EntityEdge>>>(Array.Empty<SearchHit<EntityEdge>>());
+        }
+
+        public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesByEmbeddingAsync(
+            IReadOnlyList<float> searchVector,
+            SearchFilters searchFilter,
+            IReadOnlyList<string>? groupIds,
+            int limit,
+            float minScore,
+            string? sourceNodeUuid = null,
+            string? targetNodeUuid = null,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult<IReadOnlyList<SearchHit<EntityEdge>>>(Array.Empty<SearchHit<EntityEdge>>());
+        }
+
+        public Task<IReadOnlyList<SearchHit<EntityNode>>> SearchEntityNodesBfsAsync(
+            IReadOnlyList<string>? originNodeUuids,
+            SearchFilters searchFilter,
+            int maxDepth,
+            IReadOnlyList<string>? groupIds,
+            int limit,
+            CancellationToken cancellationToken = default) =>
+            _inner.SearchEntityNodesBfsAsync(originNodeUuids, searchFilter, maxDepth, groupIds, limit, cancellationToken);
+
+        public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesBfsAsync(
+            IReadOnlyList<string>? originNodeUuids,
+            SearchFilters searchFilter,
+            int maxDepth,
+            IReadOnlyList<string>? groupIds,
+            int limit,
+            CancellationToken cancellationToken = default) =>
+            _inner.SearchEntityEdgesBfsAsync(originNodeUuids, searchFilter, maxDepth, groupIds, limit, cancellationToken);
+
+        public Task<IReadOnlyList<SearchHit<EpisodicNode>>> SearchEpisodesFulltextAsync(
+            string query,
+            SearchFilters searchFilter,
+            IReadOnlyList<string>? groupIds,
+            int limit,
+            CancellationToken cancellationToken = default) =>
+            _inner.SearchEpisodesFulltextAsync(query, searchFilter, groupIds, limit, cancellationToken);
+
+        public Task<IReadOnlyList<SearchHit<CommunityNode>>> SearchCommunitiesFulltextAsync(
+            string query,
+            IReadOnlyList<string>? groupIds,
+            int limit,
+            CancellationToken cancellationToken = default) =>
+            _inner.SearchCommunitiesFulltextAsync(query, groupIds, limit, cancellationToken);
+
+        public Task<IReadOnlyList<SearchHit<CommunityNode>>> SearchCommunitiesByEmbeddingAsync(
+            IReadOnlyList<float> searchVector,
+            IReadOnlyList<string>? groupIds,
+            int limit,
+            float minScore,
+            CancellationToken cancellationToken = default) =>
+            _inner.SearchCommunitiesByEmbeddingAsync(searchVector, groupIds, limit, minScore, cancellationToken);
+
+        public Task<IReadOnlyList<SearchRank>> RankNodeDistanceAsync(
+            IReadOnlyList<string> nodeUuids,
+            string centerNodeUuid,
+            float minScore = 0,
+            CancellationToken cancellationToken = default) =>
+            _inner.RankNodeDistanceAsync(nodeUuids, centerNodeUuid, minScore, cancellationToken);
+
+        public Task<IReadOnlyList<SearchRank>> RankNodeEpisodeMentionsAsync(
+            IReadOnlyList<string> nodeUuids,
+            float minScore = 0,
+            CancellationToken cancellationToken = default) =>
+            _inner.RankNodeEpisodeMentionsAsync(nodeUuids, minScore, cancellationToken);
+    }
 
     private static async Task SaveEpisodeRemovalFixtureAsync(
         IGraphDriver driver,

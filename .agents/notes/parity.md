@@ -88,8 +88,13 @@ counterparts (`AddEpisodeAsync`, `AddEpisodeBulkAsync`, `SearchAsync`/`SearchAdv
 `GetNodesAndEdgesByEpisodeAsync`, `AddTripletAsync`, `RemoveEpisodeAsync`, `CloseAsync`/dispose). The
 audit found no missing core workflow. It did record three already-tested, accepted C# public-behavior
 divergences in `decisions.md`: stronger episode removal/saga repair, bulk raw-content scrubbing when
-`storeRawEpisodeContent` is false, and caller-owned explicit/DI driver lifecycle. It also recorded the
-low-impact triplet exact-duplicate fast-path difference as tracked.
+`storeRawEpisodeContent` is false, and caller-owned explicit/DI driver lifecycle.
+
+**2026-06-14 triplet duplicate follow-up:** closed the tracked triplet exact-duplicate drift. C# no
+longer scans the raw full between-node edge set before duplicate-candidate search. Exact duplicate
+reuse now lives in `ResolveEdgeWithLlmAsync` and scans only the reranked/truncated `relatedEdges`
+candidate list, while `AddTripletAsync` mirrors Python by deriving `relatedEdges` through
+`EDGE_HYBRID_SEARCH_RRF` before duplicate reuse or LLM resolution.
 
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
@@ -195,7 +200,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Basic fact search | `search` | `SearchAsync(query, ...)` | OK | |
 | Advanced graph search | `search_` | `SearchAdvancedAsync` / `SearchAsync(query, SearchConfig, ...)` | OK | Idiomatic C# names; Python-style aliases intentionally not added |
 | Episode contribution lookup | `get_nodes_and_edges_by_episode` | `GetNodesAndEdgesByEpisodeAsync` | OK + DIVERGENT | Bulk episodes own entity-edge UUIDs in C#, so bulk episode contribution lookup is more complete than Python |
-| Triplet ingest | `add_triplet` | `AddTripletAsync` | OK + latent DIVERGENT | C# exact-duplicate fast path scans all between-node edges before LLM resolution; Python scans the reranked/limited related-edge set |
+| Triplet ingest | `add_triplet` | `AddTripletAsync` | OK | Exact duplicate reuse scans the reranked/limited related-edge set after `EDGE_HYBRID_SEARCH_RRF`, matching Python |
 | Episode removal | `remove_episode` | `RemoveEpisodeAsync` | DIVERGENT | C# prunes shared edge support and repairs saga membership/adjacency; Python only deletes first-supporting edges and the episode |
 
 ## Invented C# behaviors (not in Python)

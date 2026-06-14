@@ -327,6 +327,45 @@ public class EdgeResolutionEndpointFetchTests
     }
 
     [Fact]
+    public async Task ResolveEdgeWithLlm_ExactDuplicateFastPathScansRelatedEdgesBeforePrompt()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new PromptResponseLlmClient(new Dictionary<string, JsonObject>());
+        var service = new EdgeResolutionService(
+            () => driver,
+            new GraphitiClients(driver, llm, new HashEmbedder(2), new IdentityCrossEncoderClient()),
+            llm,
+            NullLogger.Instance);
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode-1",
+            Name = "episode",
+            Content = "Alice works at Acme.",
+            Source = EpisodeType.Message,
+            GroupId = "group",
+            ValidAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc)
+        };
+        var existing = BuildWorksAtEdge();
+        existing.Uuid = "existing-edge";
+        existing.Fact = "Alice knows Acme.";
+        var extracted = BuildWorksAtEdge();
+        extracted.Uuid = "new-edge";
+        extracted.Fact = " Alice   knows Acme. ";
+
+        var (resolved, invalidated) = await service.ResolveEdgeWithLlmAsync(
+            extracted,
+            new[] { existing },
+            Array.Empty<EntityEdge>(),
+            episode,
+            CancellationToken.None);
+
+        Assert.Equal(existing.Uuid, resolved.Uuid);
+        Assert.Empty(invalidated);
+        Assert.Contains(episode.Uuid, existing.Episodes);
+        Assert.DoesNotContain("dedupe_edges.resolve_edge", llm.PromptNames);
+    }
+
+    [Fact]
     public async Task ResolveEdgeWithLlm_UsesFreshResolutionTimeForEachExpiredEdge()
     {
         var driver = new InMemoryGraphDriver();

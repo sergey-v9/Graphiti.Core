@@ -224,6 +224,10 @@ no wire/prompt/cache/temporal behavior changed):
   Preserve Python's distinction: exact duplicate edge reuse returns before the edge-attribute prompt
   and keeps existing attributes, while non-fast-path resolution may replace or clear attributes
   according to the matched custom edge type.
+- Exact duplicate edge reuse scans only reranked duplicate candidates, matching Python's
+  `resolve_extracted_edge` placement. `ResolveEdgeWithLlmAsync` owns the fast path over
+  `relatedEdges`, and `AddTripletAsync` first reranks raw between-node edges through
+  `EDGE_HYBRID_SEARCH_RRF` before duplicate reuse or LLM resolution.
 - Edge expiry bookkeeping follows Python's resolution-time clock sites: `EdgeResolutionService` uses
   a fresh `utc_now` callback for non-fast-path resolved-edge expiry, and contradiction invalidation
   calls that callback per invalidated candidate. A brand-new extracted edge that already has
@@ -301,12 +305,6 @@ the impact grows.
   attributed subset. The former edge `reference_time` drift is closed: C# now matches Python's
   first-raw-episode-index rule (`[99, 1]` maps the episode UUID to episode 1 but keeps the primary
   episode's reference time).
-- **Triplet exact-duplicate fast path can be broader than Python.** Python `add_triplet` passes
-  between-node edges through `EDGE_HYBRID_SEARCH_RRF` and the duplicate fast path in
-  `resolve_extracted_edge` only scans that reranked/limited related-edge set. C# first checks the full
-  raw between-node edge set for an exact normalized fact duplicate before falling back to LLM
-  resolution. This can reuse an exact duplicate Python would miss if search failed to return it, but
-  the practical impact is low and the C# behavior is defensible.
 - **Ladybug `RetrieveEpisodes` returns oldest-first**, matching the documented `retrieve_episodes`
   contract (`graph_operations.py:223`, `graph_data_operations.py` `list(reversed(...))`); Python's
   Kuzu operations-interface path returns newest-first, violating its own contract. C# is the

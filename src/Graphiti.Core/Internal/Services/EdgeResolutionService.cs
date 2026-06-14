@@ -228,7 +228,6 @@ internal sealed class EdgeResolutionService(
         CancellationToken cancellationToken)
     {
         var driver = driverAccessor();
-        var normalizedFact = NormalizeFact(candidate.Fact);
 
         var betweenNodesEdges = await driver.GetEntityEdgesBetweenNodesAsync(
             candidate.SourceNodeUuid,
@@ -240,22 +239,6 @@ internal sealed class EdgeResolutionService(
             betweenNodesEdges,
             existingEdgesOverride,
             edge => edge.SourceNodeUuid == candidate.SourceNodeUuid && edge.TargetNodeUuid == candidate.TargetNodeUuid);
-
-        // Keep the exact-match scan over the full between-nodes superset for verbatim
-        // duplicate detection (Python fast path, edge_operations.py:684-695 operates on the
-        // reranked related_edges, but the full superset here is a safe extension that never
-        // mislabels a non-duplicate).
-        var duplicate = FindDuplicateFact(betweenNodesEdges, normalizedFact);
-        if (duplicate is not null)
-        {
-            // Python resolve_extracted_edge fast path (edge_operations.py:692-694) appends
-            // only episode.uuid to the matched existing edge. The edge is shared across
-            // candidates, so guard the append under the gather lock.
-            RunSharedEdgeMutation(
-                sharedEdgeMutationLock,
-                () => EdgeMergeHelpers.AddEpisodeIfMissing(duplicate, episode.Uuid));
-            return new EdgeResolveOutcome(candidate.Uuid, duplicate, Array.Empty<EntityEdge>(), IsNew: false);
-        }
 
         // Python edge_operations.py:392-405 re-searches the valid_edges via
         // EDGE_HYBRID_SEARCH_RRF (SearchFilters(edge_uuids=[...]), default limit 10,
@@ -365,11 +348,27 @@ internal sealed class EdgeResolutionService(
         return candidates;
     }
 
-    internal static EntityEdge? FindDuplicateFact(IReadOnlyList<EntityEdge> relatedEdges, string normalizedFact)
+    internal static EntityEdge? FindDuplicateFact(
+        IReadOnlyList<EntityEdge> relatedEdges,
+        string normalizedFact,
+        string? sourceNodeUuid = null,
+        string? targetNodeUuid = null)
     {
         for (var i = 0; i < relatedEdges.Count; i++)
         {
             var edge = relatedEdges[i];
+            if (sourceNodeUuid is not null
+                && !string.Equals(edge.SourceNodeUuid, sourceNodeUuid, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (targetNodeUuid is not null
+                && !string.Equals(edge.TargetNodeUuid, targetNodeUuid, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             if (NormalizeFact(edge.Fact) == normalizedFact)
             {
                 return edge;
@@ -527,6 +526,21 @@ internal sealed class EdgeResolutionService(
                 cancellationToken).ConfigureAwait(false);
             await ExtractEdgeTimestampsAsync(extractedEdge, episode, cancellationToken).ConfigureAwait(false);
             return (extractedEdge, Array.Empty<EntityEdge>());
+        }
+
+        // Python resolve_extracted_edge fast-paths exact duplicate facts only after the
+        // duplicate-candidate search, scanning the reranked/truncated related_edges set.
+        var duplicate = FindDuplicateFact(
+            relatedEdges,
+            NormalizeFact(extractedEdge.Fact),
+            extractedEdge.SourceNodeUuid,
+            extractedEdge.TargetNodeUuid);
+        if (duplicate is not null)
+        {
+            RunSharedEdgeMutation(
+                sharedEdgeMutationLock,
+                () => EdgeMergeHelpers.AddEpisodeIfMissing(duplicate, episode.Uuid));
+            return (duplicate, Array.Empty<EntityEdge>());
         }
 
         var response = await llmClient.GenerateResponseAsync(

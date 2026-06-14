@@ -927,46 +927,44 @@ public sealed partial class Graphiti
             {
             }
 
-            var relatedEdges = await Driver.GetEntityEdgesBetweenNodesAsync(
+            var betweenNodesEdges = await Driver.GetEntityEdgesBetweenNodesAsync(
                 edge.SourceNodeUuid,
                 edge.TargetNodeUuid,
                 cancellationToken).ConfigureAwait(false);
-            var normalizedFact = EdgeResolutionService.NormalizeFact(edge.Fact);
-            var duplicate = EdgeResolutionService.FindDuplicateFact(relatedEdges, normalizedFact);
+
+            var relatedEdges = await _edgeResolutionService.GetEdgeDuplicateCandidatesAsync(
+                edge,
+                edge.GroupId,
+                betweenNodesEdges,
+                null,
+                cancellationToken).ConfigureAwait(false);
+
             var edges = new List<EntityEdge>();
-            if (duplicate is not null)
+            var existingEdges = await _edgeResolutionService.GetEdgeInvalidationCandidatesAsync(
+                edge,
+                edge.GroupId,
+                relatedEdges,
+                null,
+                cancellationToken).ConfigureAwait(false);
+            var syntheticEpisode = new EpisodicNode
             {
-                edge = duplicate;
-                edges.Add(edge);
-            }
-            else
-            {
-                var existingEdges = await _edgeResolutionService.GetEdgeInvalidationCandidatesAsync(
-                    edge,
-                    edge.GroupId,
-                    relatedEdges,
-                    null,
-                    cancellationToken).ConfigureAwait(false);
-                var syntheticEpisode = new EpisodicNode
-                {
-                    Name = string.Empty,
-                    Source = EpisodeType.Text,
-                    SourceDescription = string.Empty,
-                    Content = string.Empty,
-                    GroupId = edge.GroupId,
-                    CreatedAt = now,
-                    ValidAt = edge.ValidAt ?? now
-                };
-                var (resolvedEdge, invalidatedEdges) = await _edgeResolutionService.ResolveEdgeWithLlmAsync(
-                    edge,
-                    relatedEdges,
-                    existingEdges,
-                    syntheticEpisode,
-                    cancellationToken,
-                    nodes: new[] { resolvedSource, resolvedTarget }).ConfigureAwait(false);
-                edges.Add(resolvedEdge);
-                edges.AddRange(invalidatedEdges);
-            }
+                Name = string.Empty,
+                Source = EpisodeType.Text,
+                SourceDescription = string.Empty,
+                Content = string.Empty,
+                GroupId = edge.GroupId,
+                CreatedAt = now,
+                ValidAt = edge.ValidAt ?? now
+            };
+            var (resolvedEdge, invalidatedEdges) = await _edgeResolutionService.ResolveEdgeWithLlmAsync(
+                edge,
+                relatedEdges,
+                existingEdges,
+                syntheticEpisode,
+                cancellationToken,
+                nodes: new[] { resolvedSource, resolvedTarget }).ConfigureAwait(false);
+            edges.Add(resolvedEdge);
+            edges.AddRange(invalidatedEdges);
 
             await SaveBulkWithTelemetryAsync(
                 "add_triplet.graph",

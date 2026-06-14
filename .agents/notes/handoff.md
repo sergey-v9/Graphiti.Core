@@ -135,9 +135,9 @@ added.
 
 Latest checkpoint, 2026-06-14:
 
-`.\eng\Verify-GraphitiCore.ps1` is green after the public-surface documentation follow-up: restore,
-format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`981` passed,
-`3` skipped, `984` total), `dotnet pack` for both shippable packages
+`.\eng\Verify-GraphitiCore.ps1` is green after the triplet duplicate parity follow-up: restore,
+format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`983` passed,
+`3` skipped, `986` total), `dotnet pack` for both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
 restore/build/setup/run checks for both packages. The verifier now packs both projects, then creates isolated
@@ -226,9 +226,14 @@ Public-surface audit follow-up, 2026-06-14: a read-only Python-vs-C# audit found
 `Graphiti` public workflow. It did identify tested but under-documented C# public-workflow
 divergences; these are now recorded in `decisions.md`/`parity.md`: stronger episode removal with
 saga repair, bulk raw-content scrubbing under `storeRawEpisodeContent: false`, explicit/DI drivers
-remaining caller-owned on `CloseAsync`/dispose, and the low-impact triplet exact-duplicate fast path.
+remaining caller-owned on `CloseAsync`/dispose.
 The shipped XML docs for `AddEpisodeBulkAsync` were corrected so they no longer state that C# bulk
 cross-episode invalidation is less aggressive.
+
+Triplet duplicate parity follow-up, 2026-06-14: the tracked exact-duplicate fast-path drift was
+closed. `AddTripletAsync` now reranks raw between-node edges through `EDGE_HYBRID_SEARCH_RRF` before
+resolution, and `ResolveEdgeWithLlmAsync` owns the exact duplicate fast path over only the reranked
+`relatedEdges` set, matching Python `add_triplet`/`resolve_extracted_edge`.
 
 Follow-up checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 959 passed, 3 skipped, 962
 total; format/build/pack clean). Landed since 06-13: the eval harness (`samples/Graphiti.Eval`) built
