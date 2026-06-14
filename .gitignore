@@ -3,6 +3,9 @@ obj/
 artifacts/
 # Graphiti.Eval graph-building baseline/candidate result artifacts (regression eval output).
 eval-artifacts/
+# Public API snapshot candidate written on a failing PublicApiSnapshotTests run (review, then promote
+# over the committed *.approved.txt baseline if the API change is intentional).
+*.received.txt
 BenchmarkDotNet.Artifacts/
 .vs/
 .agents/skills/

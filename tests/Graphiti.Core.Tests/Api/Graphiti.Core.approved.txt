@@ -1,0 +1,1392 @@
+namespace Graphiti.Core.Configuration
+{
+    public sealed class EmbeddingConfig
+    {
+        public EmbeddingConfig() { }
+        public int? BatchConcurrency { get; set; }
+        public int? BatchSize { get; set; }
+        public int? EmbeddingDimension { get; set; }
+        public string? ModelId { get; set; }
+    }
+    public sealed class GraphitiCacheOptions
+    {
+        public GraphitiCacheOptions() { }
+        public System.TimeSpan? LlmResponseExpiration { get; set; }
+        public System.TimeSpan? LlmResponseLocalCacheExpiration { get; set; }
+        public string[] LlmResponseTags { get; set; }
+    }
+    public sealed class GraphitiOptions
+    {
+        public GraphitiOptions() { }
+        public string Database { get; set; }
+        public int EmbeddingDimension { get; set; }
+        public System.Func<System.IServiceProvider, Graphiti.Core.Drivers.IGraphDriver>? GraphDriverFactory { get; set; }
+        public int? MaxCoroutines { get; set; }
+        public string? Password { get; set; }
+        public Graphiti.Core.Drivers.GraphProvider Provider { get; set; }
+        public bool StoreRawEpisodeContent { get; set; }
+        public System.TimeProvider? TimeProvider { get; set; }
+        public string? Uri { get; set; }
+        public string? User { get; set; }
+    }
+    public sealed class GraphitiResilienceOptions
+    {
+        public GraphitiResilienceOptions() { }
+        public System.TimeSpan AttemptTimeout { get; set; }
+        public int MaxRetryAttempts { get; set; }
+        public System.TimeSpan? MaxRetryDelay { get; set; }
+        public int? ProviderConcurrencyLimit { get; set; }
+        public int ProviderQueueLimit { get; set; }
+        public System.Threading.RateLimiting.QueueProcessingOrder ProviderQueueProcessingOrder { get; set; }
+        public System.TimeSpan RetryDelay { get; set; }
+        public bool UseJitter { get; set; }
+    }
+    public static class GraphitiServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddGraphitiCore(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Graphiti.Core.Configuration.GraphitiOptions>? configure = null) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddGraphitiCore(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration, System.Action<Graphiti.Core.Configuration.GraphitiOptions>? configure = null) { }
+    }
+    public sealed class LadybugDbOptions
+    {
+        public LadybugDbOptions() { }
+        public string DatabasePath { get; set; }
+    }
+    public static class LadybugDbServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddLadybugDbGraphDriver(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Graphiti.Core.Configuration.LadybugDbOptions>? configure = null) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddLadybugDbGraphDriver(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration, System.Action<Graphiti.Core.Configuration.LadybugDbOptions>? configure = null) { }
+    }
+}
+namespace Graphiti.Core.CrossEncoder
+{
+    public abstract class CrossEncoderClient : Graphiti.Core.CrossEncoder.ICrossEncoderClient
+    {
+        protected CrossEncoderClient() { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Passage",
+                "Score"})]
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<string, float>>> RankAsync(string query, System.Collections.Generic.IReadOnlyList<string> passages, System.Threading.CancellationToken cancellationToken = default);
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.CrossEncoder.CrossEncoderRank>> RankIndexedAsync(string query, System.Collections.Generic.IReadOnlyList<string> passages, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public readonly struct CrossEncoderRank : System.IEquatable<Graphiti.Core.CrossEncoder.CrossEncoderRank>
+    {
+        public CrossEncoderRank(int Index, string Passage, float Score) { }
+        public int Index { get; init; }
+        public string Passage { get; init; }
+        public float Score { get; init; }
+    }
+    public interface ICrossEncoderClient
+    {
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Passage",
+                "Score"})]
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<string, float>>> RankAsync(string query, System.Collections.Generic.IReadOnlyList<string> passages, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.CrossEncoder.CrossEncoderRank>> RankIndexedAsync(string query, System.Collections.Generic.IReadOnlyList<string> passages, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class IdentityCrossEncoderClient : Graphiti.Core.CrossEncoder.CrossEncoderClient
+    {
+        public IdentityCrossEncoderClient() { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Passage",
+                "Score"})]
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<string, float>>> RankAsync(string query, System.Collections.Generic.IReadOnlyList<string> passages, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.CrossEncoder.CrossEncoderRank>> RankIndexedAsync(string query, System.Collections.Generic.IReadOnlyList<string> passages, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class MicrosoftExtensionsAICrossEncoderClient : Graphiti.Core.CrossEncoder.CrossEncoderClient
+    {
+        public const string DefaultModel = "gpt-4.1-nano";
+        public MicrosoftExtensionsAICrossEncoderClient(Microsoft.Extensions.AI.IChatClient chatClient, Graphiti.Core.LlmClients.LlmConfig? config = null, Polly.ResiliencePipeline<Microsoft.Extensions.AI.ChatResponse>? pipeline = null, System.Threading.RateLimiting.RateLimiter? rateLimiter = null, int maxConcurrency = 20) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Passage",
+                "Score"})]
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<string, float>>> RankAsync(string query, System.Collections.Generic.IReadOnlyList<string> passages, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.CrossEncoder.CrossEncoderRank>> RankIndexedAsync(string query, System.Collections.Generic.IReadOnlyList<string> passages, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace Graphiti.Core.Drivers
+{
+    public abstract class GraphDriverBase : Graphiti.Core.Drivers.IGraphDriver, System.IAsyncDisposable
+    {
+        protected GraphDriverBase(Graphiti.Core.Drivers.GraphProvider provider, string database = "") { }
+        protected virtual int BulkSaveConcurrency { get; }
+        public string Database { get; protected set; }
+        public string DefaultGroupId { get; protected set; }
+        public Graphiti.Core.Drivers.GraphProvider Provider { get; }
+        public abstract System.Threading.Tasks.Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task ClearDataAsync(System.Collections.Generic.IReadOnlyList<string>? groupIds = null, System.Threading.CancellationToken cancellationToken = default);
+        public abstract Graphiti.Core.Drivers.IGraphDriver Clone(string database);
+        public abstract System.Threading.Tasks.Task CloseAsync(System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task DeleteEdgeAsync(string uuid, System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task DeleteEdgesByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task DeleteNodeAsync(string uuid, System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task DeleteNodesByGroupIdAsync(string groupId, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task DeleteNodesByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default);
+        public virtual System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public abstract System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.SagaNode?> FindSagaByNameAsync(string name, string groupId, System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.CommunityNode>> GetCommunitiesByNodesAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode> nodes, System.Threading.CancellationToken cancellationToken = default);
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> GetCommunityGroupIdsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public abstract System.Threading.Tasks.Task<T> GetEdgeByUuidAsync<T>(string uuid, System.Threading.CancellationToken cancellationToken = default)
+            where T : Graphiti.Core.Models.Edges.Edge;
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, bool withEmbeddings = false, System.Threading.CancellationToken cancellationToken = default)
+            where T : Graphiti.Core.Models.Edges.Edge;
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default)
+            where T : Graphiti.Core.Models.Edges.Edge;
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetEntityEdgesBetweenNodesAsync(string sourceNodeUuid, string targetNodeUuid, System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetEntityEdgesByNodeUuidAsync(string nodeUuid, System.Threading.CancellationToken cancellationToken = default);
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> GetEntityGroupIdsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> GetEpisodesByEntityNodeUuidAsync(string entityNodeUuid, System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode>> GetMentionedNodesAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode> episodes, System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task<TNode> GetNodeByUuidAsync<TNode>(string uuid, System.Threading.CancellationToken cancellationToken = default)
+            where TNode : Graphiti.Core.Models.Nodes.Node;
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<TNode>> GetNodesByGroupIdsAsync<TNode>(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, bool withEmbeddings = false, System.Threading.CancellationToken cancellationToken = default)
+            where TNode : Graphiti.Core.Models.Nodes.Node;
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<TNode>> GetNodesByUuidsAsync<TNode>(System.Collections.Generic.IEnumerable<string> uuids, string? groupId = null, System.Threading.CancellationToken cancellationToken = default)
+            where TNode : Graphiti.Core.Models.Nodes.Node;
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Drivers.SagaEpisodeContent>> GetSagaEpisodeContentsAsync(string sagaUuid, System.DateTime? since = default, int limit = 200, System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task<string?> GetSagaPreviousEpisodeUuidAsync(string sagaUuid, string currentEpisodeUuid, System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> RetrieveEpisodesAsync(System.DateTime referenceTime, int lastN, System.Collections.Generic.IReadOnlyList<string>? groupIds = null, Graphiti.Core.Models.EpisodeType? source = default, string? saga = null, System.Threading.CancellationToken cancellationToken = default);
+        public virtual System.Threading.Tasks.Task SaveBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Nodes.EpisodicNode> episodicNodes, System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Edges.EpisodicEdge> episodicEdges, System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Nodes.EntityNode> entityNodes, System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Edges.EntityEdge> entityEdges, Graphiti.Core.Embedding.IEmbedderClient embedder, System.Threading.CancellationToken cancellationToken = default) { }
+        public abstract System.Threading.Tasks.Task SaveEdgeAsync(Graphiti.Core.Models.Edges.Edge edge, System.Threading.CancellationToken cancellationToken = default);
+        public abstract System.Threading.Tasks.Task SaveNodeAsync(Graphiti.Core.Models.Nodes.Node node, System.Threading.CancellationToken cancellationToken = default);
+        protected static System.Threading.Tasks.Task EnsureEntityEdgeEmbeddingsAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge> edges, Graphiti.Core.Embedding.IEmbedderClient embedder, System.Threading.CancellationToken cancellationToken = default) { }
+        protected static System.Threading.Tasks.Task EnsureEntityNodeEmbeddingsAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode> nodes, Graphiti.Core.Embedding.IEmbedderClient embedder, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public enum GraphProvider
+    {
+        Neo4j = 0,
+        FalkorDb = 1,
+        Kuzu = 2,
+        Neptune = 3,
+        InMemory = 4,
+    }
+    public interface IGraphDriver : System.IAsyncDisposable
+    {
+        string Database { get; }
+        string DefaultGroupId { get; }
+        Graphiti.Core.Drivers.GraphProvider Provider { get; }
+        System.Threading.Tasks.Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task ClearDataAsync(System.Collections.Generic.IReadOnlyList<string>? groupIds = null, System.Threading.CancellationToken cancellationToken = default);
+        Graphiti.Core.Drivers.IGraphDriver Clone(string database);
+        System.Threading.Tasks.Task CloseAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task DeleteEdgeAsync(string uuid, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task DeleteEdgesByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task DeleteNodeAsync(string uuid, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task DeleteNodesByGroupIdAsync(string groupId, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task DeleteNodesByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.SagaNode?> FindSagaByNameAsync(string name, string groupId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.CommunityNode>> GetCommunitiesByNodesAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode> nodes, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<T> GetEdgeByUuidAsync<T>(string uuid, System.Threading.CancellationToken cancellationToken = default)
+            where T : Graphiti.Core.Models.Edges.Edge;
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, bool withEmbeddings = false, System.Threading.CancellationToken cancellationToken = default)
+            where T : Graphiti.Core.Models.Edges.Edge;
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default)
+            where T : Graphiti.Core.Models.Edges.Edge;
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetEntityEdgesBetweenNodesAsync(string sourceNodeUuid, string targetNodeUuid, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetEntityEdgesByNodeUuidAsync(string nodeUuid, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> GetEpisodesByEntityNodeUuidAsync(string entityNodeUuid, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode>> GetMentionedNodesAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode> episodes, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<TNode> GetNodeByUuidAsync<TNode>(string uuid, System.Threading.CancellationToken cancellationToken = default)
+            where TNode : Graphiti.Core.Models.Nodes.Node;
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<TNode>> GetNodesByGroupIdsAsync<TNode>(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, bool withEmbeddings = false, System.Threading.CancellationToken cancellationToken = default)
+            where TNode : Graphiti.Core.Models.Nodes.Node;
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<TNode>> GetNodesByUuidsAsync<TNode>(System.Collections.Generic.IEnumerable<string> uuids, string? groupId = null, System.Threading.CancellationToken cancellationToken = default)
+            where TNode : Graphiti.Core.Models.Nodes.Node;
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Drivers.SagaEpisodeContent>> GetSagaEpisodeContentsAsync(string sagaUuid, System.DateTime? since = default, int limit = 200, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<string?> GetSagaPreviousEpisodeUuidAsync(string sagaUuid, string currentEpisodeUuid, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> RetrieveEpisodesAsync(System.DateTime referenceTime, int lastN, System.Collections.Generic.IReadOnlyList<string>? groupIds = null, Graphiti.Core.Models.EpisodeType? source = default, string? saga = null, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task SaveBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Nodes.EpisodicNode> episodicNodes, System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Edges.EpisodicEdge> episodicEdges, System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Nodes.EntityNode> entityNodes, System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Edges.EntityEdge> entityEdges, Graphiti.Core.Embedding.IEmbedderClient embedder, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task SaveEdgeAsync(Graphiti.Core.Models.Edges.Edge edge, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task SaveNodeAsync(Graphiti.Core.Models.Nodes.Node node, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class InMemoryGraphDriver : Graphiti.Core.Drivers.GraphDriverBase, Graphiti.Core.Search.ISearchGraphDriver
+    {
+        public InMemoryGraphDriver(string database = "") { }
+        public override System.Threading.Tasks.Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task ClearDataAsync(System.Collections.Generic.IReadOnlyList<string>? groupIds = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public override Graphiti.Core.Drivers.IGraphDriver Clone(string database) { }
+        public override System.Threading.Tasks.Task CloseAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task DeleteEdgeAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task DeleteEdgesByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task DeleteNodeAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task DeleteNodesByGroupIdAsync(string groupId, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task DeleteNodesByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.SagaNode?> FindSagaByNameAsync(string name, string groupId, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.CommunityNode>> GetCommunitiesByNodesAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode> nodes, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> GetCommunityGroupIdsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<T> GetEdgeByUuidAsync<T>(string uuid, System.Threading.CancellationToken cancellationToken = default)
+            where T : Graphiti.Core.Models.Edges.Edge { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, bool withEmbeddings = false, System.Threading.CancellationToken cancellationToken = default)
+            where T : Graphiti.Core.Models.Edges.Edge { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default)
+            where T : Graphiti.Core.Models.Edges.Edge { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetEntityEdgesBetweenNodesAsync(string sourceNodeUuid, string targetNodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetEntityEdgesByNodeUuidAsync(string nodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> GetEntityGroupIdsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> GetEpisodesByEntityNodeUuidAsync(string entityNodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode>> GetMentionedNodesAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode> episodes, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<TNode> GetNodeByUuidAsync<TNode>(string uuid, System.Threading.CancellationToken cancellationToken = default)
+            where TNode : Graphiti.Core.Models.Nodes.Node { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<TNode>> GetNodesByGroupIdsAsync<TNode>(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, bool withEmbeddings = false, System.Threading.CancellationToken cancellationToken = default)
+            where TNode : Graphiti.Core.Models.Nodes.Node { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<TNode>> GetNodesByUuidsAsync<TNode>(System.Collections.Generic.IEnumerable<string> uuids, string? groupId = null, System.Threading.CancellationToken cancellationToken = default)
+            where TNode : Graphiti.Core.Models.Nodes.Node { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Drivers.SagaEpisodeContent>> GetSagaEpisodeContentsAsync(string sagaUuid, System.DateTime? since = default, int limit = 200, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<string?> GetSagaPreviousEpisodeUuidAsync(string sagaUuid, string currentEpisodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchRank>> RankNodeDistanceAsync(System.Collections.Generic.IReadOnlyList<string> nodeUuids, string centerNodeUuid, float minScore = 0, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchRank>> RankNodeEpisodeMentionsAsync(System.Collections.Generic.IReadOnlyList<string> nodeUuids, float minScore = 0, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> RetrieveEpisodesAsync(System.DateTime referenceTime, int lastN, System.Collections.Generic.IReadOnlyList<string>? groupIds = null, Graphiti.Core.Models.EpisodeType? source = default, string? saga = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task SaveEdgeAsync(Graphiti.Core.Models.Edges.Edge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task SaveNodeAsync(Graphiti.Core.Models.Nodes.Node node, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.CommunityNode>>> SearchCommunitiesByEmbeddingAsync(System.Collections.Generic.IReadOnlyList<float> searchVector, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, float minScore, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.CommunityNode>>> SearchCommunitiesFulltextAsync(string query, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Edges.EntityEdge>>> SearchEntityEdgesBfsAsync(System.Collections.Generic.IReadOnlyList<string>? originNodeUuids, Graphiti.Core.Search.SearchFilters searchFilter, int maxDepth, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Edges.EntityEdge>>> SearchEntityEdgesByEmbeddingAsync(System.Collections.Generic.IReadOnlyList<float> searchVector, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, float minScore, string? sourceNodeUuid = null, string? targetNodeUuid = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Edges.EntityEdge>>> SearchEntityEdgesFulltextAsync(string query, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.EntityNode>>> SearchEntityNodesBfsAsync(System.Collections.Generic.IReadOnlyList<string>? originNodeUuids, Graphiti.Core.Search.SearchFilters searchFilter, int maxDepth, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.EntityNode>>> SearchEntityNodesByEmbeddingAsync(System.Collections.Generic.IReadOnlyList<float> searchVector, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, float minScore, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.EntityNode>>> SearchEntityNodesFulltextAsync(string query, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.EpisodicNode>>> SearchEpisodesFulltextAsync(string query, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class Neo4jGraphDriver : Graphiti.Core.Drivers.GraphDriverBase, Graphiti.Core.Search.ISearchGraphDriver
+    {
+        public Neo4jGraphDriver(string uri, string? user = null, string? password = null, string database = "") { }
+        public string? Password { get; }
+        public string Uri { get; }
+        public string? User { get; }
+        public override System.Threading.Tasks.Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task ClearDataAsync(System.Collections.Generic.IReadOnlyList<string>? groupIds = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public override Graphiti.Core.Drivers.IGraphDriver Clone(string database) { }
+        public override System.Threading.Tasks.Task CloseAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task DeleteEdgeAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task DeleteEdgesByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task DeleteNodeAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task DeleteNodesByGroupIdAsync(string groupId, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task DeleteNodesByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.SagaNode?> FindSagaByNameAsync(string name, string groupId, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.CommunityNode>> GetCommunitiesByNodesAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode> nodes, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> GetCommunityGroupIdsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<T> GetEdgeByUuidAsync<T>(string uuid, System.Threading.CancellationToken cancellationToken = default)
+            where T : Graphiti.Core.Models.Edges.Edge { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, bool withEmbeddings = false, System.Threading.CancellationToken cancellationToken = default)
+            where T : Graphiti.Core.Models.Edges.Edge { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default)
+            where T : Graphiti.Core.Models.Edges.Edge { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetEntityEdgesBetweenNodesAsync(string sourceNodeUuid, string targetNodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetEntityEdgesByNodeUuidAsync(string nodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> GetEntityGroupIdsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> GetEpisodesByEntityNodeUuidAsync(string entityNodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode>> GetMentionedNodesAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode> episodes, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<TNode> GetNodeByUuidAsync<TNode>(string uuid, System.Threading.CancellationToken cancellationToken = default)
+            where TNode : Graphiti.Core.Models.Nodes.Node { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<TNode>> GetNodesByGroupIdsAsync<TNode>(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, bool withEmbeddings = false, System.Threading.CancellationToken cancellationToken = default)
+            where TNode : Graphiti.Core.Models.Nodes.Node { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<TNode>> GetNodesByUuidsAsync<TNode>(System.Collections.Generic.IEnumerable<string> uuids, string? groupId = null, System.Threading.CancellationToken cancellationToken = default)
+            where TNode : Graphiti.Core.Models.Nodes.Node { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Drivers.SagaEpisodeContent>> GetSagaEpisodeContentsAsync(string sagaUuid, System.DateTime? since = default, int limit = 200, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<string?> GetSagaPreviousEpisodeUuidAsync(string sagaUuid, string currentEpisodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchRank>> RankNodeDistanceAsync(System.Collections.Generic.IReadOnlyList<string> nodeUuids, string centerNodeUuid, float minScore = 0, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchRank>> RankNodeEpisodeMentionsAsync(System.Collections.Generic.IReadOnlyList<string> nodeUuids, float minScore = 0, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> RetrieveEpisodesAsync(System.DateTime referenceTime, int lastN, System.Collections.Generic.IReadOnlyList<string>? groupIds = null, Graphiti.Core.Models.EpisodeType? source = default, string? saga = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task SaveBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Nodes.EpisodicNode> episodicNodes, System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Edges.EpisodicEdge> episodicEdges, System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Nodes.EntityNode> entityNodes, System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Edges.EntityEdge> entityEdges, Graphiti.Core.Embedding.IEmbedderClient embedder, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task SaveEdgeAsync(Graphiti.Core.Models.Edges.Edge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task SaveNodeAsync(Graphiti.Core.Models.Nodes.Node node, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.CommunityNode>>> SearchCommunitiesByEmbeddingAsync(System.Collections.Generic.IReadOnlyList<float> searchVector, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, float minScore, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.CommunityNode>>> SearchCommunitiesFulltextAsync(string query, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Edges.EntityEdge>>> SearchEntityEdgesBfsAsync(System.Collections.Generic.IReadOnlyList<string>? originNodeUuids, Graphiti.Core.Search.SearchFilters searchFilter, int maxDepth, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Edges.EntityEdge>>> SearchEntityEdgesByEmbeddingAsync(System.Collections.Generic.IReadOnlyList<float> searchVector, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, float minScore, string? sourceNodeUuid = null, string? targetNodeUuid = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Edges.EntityEdge>>> SearchEntityEdgesFulltextAsync(string query, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.EntityNode>>> SearchEntityNodesBfsAsync(System.Collections.Generic.IReadOnlyList<string>? originNodeUuids, Graphiti.Core.Search.SearchFilters searchFilter, int maxDepth, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.EntityNode>>> SearchEntityNodesByEmbeddingAsync(System.Collections.Generic.IReadOnlyList<float> searchVector, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, float minScore, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.EntityNode>>> SearchEntityNodesFulltextAsync(string query, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.EpisodicNode>>> SearchEpisodesFulltextAsync(string query, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SagaEpisodeContent : System.IEquatable<Graphiti.Core.Drivers.SagaEpisodeContent>
+    {
+        public SagaEpisodeContent(string Content, System.DateTime? ValidAt) { }
+        public string Content { get; init; }
+        public System.DateTime? ValidAt { get; init; }
+    }
+}
+namespace Graphiti.Core.Drivers.Ladybug
+{
+    public static class LadybugDbGraphDriverFactory
+    {
+        public static Graphiti.Core.Drivers.IGraphDriver Create(string databasePath) { }
+        public static Graphiti.Core.Drivers.IGraphDriver CreateInMemory() { }
+    }
+}
+namespace Graphiti.Core
+{
+    public sealed class EdgeNotFoundException : Graphiti.Core.GraphitiException
+    {
+        public EdgeNotFoundException(string uuid) { }
+    }
+    public sealed class EdgesNotFoundException : Graphiti.Core.GraphitiException
+    {
+        public EdgesNotFoundException(System.Collections.Generic.IEnumerable<string> uuids) { }
+    }
+    public sealed class EntityTypeValidationException : Graphiti.Core.GraphitiException
+    {
+        public EntityTypeValidationException(string entityType, string attribute) { }
+    }
+    public sealed class Graphiti : System.IAsyncDisposable
+    {
+        public Graphiti(string? uri = null, string? user = null, string? password = null, Graphiti.Core.LlmClients.ILlmClient? llmClient = null, Graphiti.Core.Embedding.IEmbedderClient? embedder = null, Graphiti.Core.CrossEncoder.ICrossEncoderClient? crossEncoder = null, bool storeRawEpisodeContent = true, Graphiti.Core.Drivers.IGraphDriver? graphDriver = null, int? maxCoroutines = default, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Logging.ILogger<Graphiti.Core.Graphiti>? logger = null, string database = "") { }
+        public Graphiti.Core.Models.Results.GraphitiClients Clients { get; }
+        public Graphiti.Core.CrossEncoder.ICrossEncoderClient CrossEncoder { get; }
+        public Graphiti.Core.Drivers.IGraphDriver Driver { get; }
+        public Graphiti.Core.Namespaces.EdgeNamespace Edges { get; }
+        public Graphiti.Core.Embedding.IEmbedderClient Embedder { get; }
+        public Graphiti.Core.LlmClients.ILlmClient LlmClient { get; }
+        public Graphiti.Core.Namespaces.NodeNamespace Nodes { get; }
+        public Graphiti.Core.LlmClients.TokenUsageTracker TokenTracker { get; }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Results.AddEpisodeResults> AddEpisodeAsync(
+                    string name,
+                    string episodeBody,
+                    string sourceDescription,
+                    System.DateTime referenceTime,
+                    Graphiti.Core.Models.EpisodeType source = 0,
+                    string? groupId = null,
+                    string? uuid = null,
+                    bool updateCommunities = false,
+                    System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityTypeDefinition>? entityTypes = null,
+                    System.Collections.Generic.IReadOnlyList<string>? excludedEntityTypes = null,
+                    System.Collections.Generic.IReadOnlyList<string>? previousEpisodeUuids = null,
+                    System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityTypeDefinition>? edgeTypes = null,
+                    [System.Runtime.CompilerServices.TupleElementNames(new string?[]?[] {
+                            "SourceType",
+                            "TargetType"})] System.Collections.Generic.IReadOnlyDictionary<System.ValueTuple<string, string>, System.Collections.Generic.IReadOnlyList<string>>? edgeTypeMap = null,
+                    string? customExtractionInstructions = null,
+                    object? saga = null,
+                    string? sagaPreviousEpisodeUuid = null,
+                    System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Results.AddBulkEpisodeResults> AddEpisodeBulkAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Results.RawEpisode> bulkEpisodes, string? groupId = null, System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityTypeDefinition>? entityTypes = null, System.Collections.Generic.IReadOnlyList<string>? excludedEntityTypes = null, System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityTypeDefinition>? edgeTypes = null, [System.Runtime.CompilerServices.TupleElementNames(new string?[]?[] {
+                "SourceType",
+                "TargetType"})] System.Collections.Generic.IReadOnlyDictionary<System.ValueTuple<string, string>, System.Collections.Generic.IReadOnlyList<string>>? edgeTypeMap = null, string? customExtractionInstructions = null, object? saga = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Results.AddTripletResults> AddTripletAsync(Graphiti.Core.Models.Nodes.EntityNode sourceNode, Graphiti.Core.Models.Edges.EntityEdge edge, Graphiti.Core.Models.Nodes.EntityNode targetNode, System.Threading.CancellationToken cancellationToken = default) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string?[]?[] {
+                "Communities",
+                "CommunityEdges"})]
+        public System.Threading.Tasks.Task<System.ValueTuple<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.CommunityNode>, System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.CommunityEdge>>> BuildCommunitiesAsync(System.Collections.Generic.IReadOnlyList<string>? groupIds = null, Graphiti.Core.Drivers.IGraphDriver? driver = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task CloseAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Search.SearchResults> GetNodesAndEdgesByEpisodeAsync(System.Collections.Generic.IReadOnlyList<string> episodeUuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RemoveEpisodeAsync(string episodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> RetrieveEpisodesAsync(System.DateTime referenceTime, int lastN = 3, System.Collections.Generic.IReadOnlyList<string>? groupIds = null, Graphiti.Core.Models.EpisodeType? source = default, Graphiti.Core.Drivers.IGraphDriver? driver = null, string? saga = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Search.SearchResults> SearchAdvancedAsync(string query, Graphiti.Core.Search.SearchConfig? config = null, System.Collections.Generic.IReadOnlyList<string>? groupIds = null, string? centerNodeUuid = null, System.Collections.Generic.IReadOnlyList<string>? bfsOriginNodeUuids = null, Graphiti.Core.Search.SearchFilters? searchFilter = null, System.Collections.Generic.IReadOnlyList<float>? queryVector = null, Graphiti.Core.Drivers.IGraphDriver? driver = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> SearchAsync(string query, string? centerNodeUuid = null, System.Collections.Generic.IReadOnlyList<string>? groupIds = null, int numResults = 10, Graphiti.Core.Search.SearchFilters? searchFilter = null, Graphiti.Core.Drivers.IGraphDriver? driver = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Search.SearchResults> SearchAsync(string query, Graphiti.Core.Search.SearchConfig config, System.Collections.Generic.IReadOnlyList<string>? groupIds = null, string? centerNodeUuid = null, System.Collections.Generic.IReadOnlyList<string>? bfsOriginNodeUuids = null, Graphiti.Core.Search.SearchFilters? searchFilter = null, System.Collections.Generic.IReadOnlyList<float>? queryVector = null, Graphiti.Core.Drivers.IGraphDriver? driver = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.SagaNode> SummarizeSagaAsync(string sagaId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public class GraphitiException : System.Exception
+    {
+        public GraphitiException(string message) { }
+    }
+    public sealed class GroupIdValidationException : Graphiti.Core.GraphitiException
+    {
+        public GroupIdValidationException(string groupId) { }
+    }
+    public sealed class GroupsEdgesNotFoundException : Graphiti.Core.GraphitiException
+    {
+        public GroupsEdgesNotFoundException(System.Collections.Generic.IEnumerable<string> groupIds) { }
+    }
+    public sealed class GroupsNodesNotFoundException : Graphiti.Core.GraphitiException
+    {
+        public GroupsNodesNotFoundException(System.Collections.Generic.IEnumerable<string> groupIds) { }
+    }
+    public sealed class NodeLabelValidationException : Graphiti.Core.GraphitiException
+    {
+        public NodeLabelValidationException(System.Collections.Generic.IEnumerable<string> nodeLabels) { }
+    }
+    public sealed class NodeNotFoundException : Graphiti.Core.GraphitiException
+    {
+        public NodeNotFoundException(string uuid) { }
+    }
+    public sealed class SearchRerankerException : Graphiti.Core.GraphitiException
+    {
+        public SearchRerankerException(string message) { }
+    }
+}
+namespace Graphiti.Core.Embedding
+{
+    public abstract class EmbedderClient : Graphiti.Core.Embedding.IEmbedderClient
+    {
+        protected EmbedderClient(Graphiti.Core.Embedding.EmbedderConfig? config = null) { }
+        public Graphiti.Core.Embedding.EmbedderConfig Config { get; }
+        public int EmbeddingDimension { get; }
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<float>> CreateAsync(System.Collections.Generic.IReadOnlyList<string> input, System.Threading.CancellationToken cancellationToken = default) { }
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<float>> CreateAsync(string input, System.Threading.CancellationToken cancellationToken = default);
+        public virtual System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<float>>> CreateBatchAsync(System.Collections.Generic.IReadOnlyList<string> input, System.Threading.CancellationToken cancellationToken = default) { }
+        protected static void SetEmbeddingActivityTags(System.Diagnostics.Activity? activity, int embeddingDimension, int inputCount, string? modelId = null) { }
+    }
+    public sealed class EmbedderConfig
+    {
+        public const int DefaultBatchConcurrency = 8;
+        public const int DefaultBatchSize = 128;
+        public EmbedderConfig(int? embeddingDimension = default, int? batchConcurrency = default, int? batchSize = default) { }
+        public int BatchConcurrency { get; }
+        public int BatchSize { get; }
+        public int EmbeddingDimension { get; }
+    }
+    public sealed class HashEmbedder : Graphiti.Core.Embedding.EmbedderClient
+    {
+        public HashEmbedder(int embeddingDimension = 1024) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<float>> CreateAsync(string input, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public interface IEmbedderClient
+    {
+        int EmbeddingDimension { get; }
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<float>> CreateAsync(System.Collections.Generic.IReadOnlyList<string> input, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<float>> CreateAsync(string input, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<float>>> CreateBatchAsync(System.Collections.Generic.IReadOnlyList<string> input, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class MicrosoftExtensionsAIEmbedderClient : Graphiti.Core.Embedding.EmbedderClient
+    {
+        public MicrosoftExtensionsAIEmbedderClient(Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>> embeddingGenerator, int embeddingDimension, string? modelId = null, Polly.ResiliencePipeline<Microsoft.Extensions.AI.GeneratedEmbeddings<Microsoft.Extensions.AI.Embedding<float>>>? pipeline = null, System.Threading.RateLimiting.RateLimiter? rateLimiter = null, int? batchSize = default, int? batchConcurrency = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<float>> CreateAsync(string input, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<float>>> CreateBatchAsync(System.Collections.Generic.IReadOnlyList<string> input, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace Graphiti.Core.LlmClients
+{
+    public sealed class HybridCacheLlmResponseCache : Graphiti.Core.LlmClients.ILlmResponseCache
+    {
+        public HybridCacheLlmResponseCache(Microsoft.Extensions.Caching.Hybrid.HybridCache cache, Microsoft.Extensions.Caching.Hybrid.HybridCacheEntryOptions? entryOptions = null, System.Collections.Generic.IReadOnlyList<string>? tags = null) { }
+        public System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject?> GetAsync(string key, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject> GetOrCreateAsync(string key, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject>> factory, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SetAsync(string key, System.Text.Json.Nodes.JsonObject value, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public interface ILlmClient
+    {
+        Graphiti.Core.LlmClients.TokenUsageTracker TokenTracker { get; }
+        System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject> GenerateResponseAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.LlmClients.Message> messages, System.Type? responseModel = null, Graphiti.Core.LlmClients.StructuredResponseSchema? responseSchema = null, int? maxTokens = default, Graphiti.Core.LlmClients.ModelSize modelSize = 1, string? groupId = null, string? promptName = null, bool attributeExtraction = false, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ILlmResponseCache
+    {
+        System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject?> GetAsync(string key, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject> GetOrCreateAsync(string key, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject>> factory, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task SetAsync(string key, System.Text.Json.Nodes.JsonObject value, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public abstract class LlmClient : Graphiti.Core.LlmClients.ILlmClient, System.IDisposable
+    {
+        protected LlmClient(Graphiti.Core.LlmClients.LlmConfig? config = null, Graphiti.Core.LlmClients.ILlmResponseCache? cache = null) { }
+        protected LlmClient(Graphiti.Core.LlmClients.LlmConfig? config = null, bool cache = false, string cacheDirectory = "./llm_cache") { }
+        public Graphiti.Core.LlmClients.ILlmResponseCache? Cache { get; }
+        public bool CacheEnabled { get; }
+        public Graphiti.Core.LlmClients.LlmConfig Config { get; }
+        public int MaxTokens { get; }
+        public string Model { get; }
+        public string? SmallModel { get; }
+        public double Temperature { get; }
+        public Graphiti.Core.LlmClients.TokenUsageTracker TokenTracker { get; }
+        public void Dispose() { }
+        public System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject> GenerateResponseAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.LlmClients.Message> messages, System.Type? responseModel = null, Graphiti.Core.LlmClients.StructuredResponseSchema? responseSchema = null, int? maxTokens = default, Graphiti.Core.LlmClients.ModelSize modelSize = 1, string? groupId = null, string? promptName = null, bool attributeExtraction = false, System.Threading.CancellationToken cancellationToken = default) { }
+        protected abstract System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject> GenerateResponseCoreAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.LlmClients.Message> messages, System.Type? responseModel, Graphiti.Core.LlmClients.StructuredResponseSchema? responseSchema, int maxTokens, Graphiti.Core.LlmClients.ModelSize modelSize, string? promptName, System.Threading.CancellationToken cancellationToken);
+        protected string GetCacheKey(System.Collections.Generic.IReadOnlyList<Graphiti.Core.LlmClients.Message> messages, System.Type? responseModel, Graphiti.Core.LlmClients.StructuredResponseSchema? responseSchema, int maxTokens, Graphiti.Core.LlmClients.ModelSize modelSize, string? promptName) { }
+        protected static string CleanInput(string input) { }
+        public static string GetExtractionLanguageInstruction(string? groupId = null) { }
+        protected static System.Collections.Generic.IReadOnlyList<Graphiti.Core.LlmClients.Message> PrepareMessages(System.Collections.Generic.IReadOnlyList<Graphiti.Core.LlmClients.Message> messages, System.Type? responseModel, Graphiti.Core.LlmClients.StructuredResponseSchema? responseSchema, string? groupId, bool attributeExtraction) { }
+    }
+    public sealed class LlmConfig
+    {
+        public LlmConfig() { }
+        public string? ApiKey { get; set; }
+        public string? BaseUrl { get; set; }
+        public int MaxTokens { get; set; }
+        public string Model { get; set; }
+        public string? SmallModel { get; set; }
+        public double Temperature { get; set; }
+    }
+    public sealed class LlmRefusalException : System.Exception
+    {
+        public LlmRefusalException(string message) { }
+        public LlmRefusalException(string message, System.Exception innerException) { }
+    }
+    public sealed class MemoryLlmResponseCache : Graphiti.Core.LlmClients.ILlmResponseCache, System.IDisposable
+    {
+        public MemoryLlmResponseCache(Microsoft.Extensions.Caching.Memory.IMemoryCache? cache = null, System.TimeSpan? expiration = default) { }
+        public void Dispose() { }
+        public System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject?> GetAsync(string key, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject> GetOrCreateAsync(string key, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject>> factory, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SetAsync(string key, System.Text.Json.Nodes.JsonObject value, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class Message : System.IEquatable<Graphiti.Core.LlmClients.Message>
+    {
+        public Message(string Role, string Content) { }
+        public string Content { get; init; }
+        public string Role { get; init; }
+    }
+    public sealed class MicrosoftExtensionsAIChatClient : Graphiti.Core.LlmClients.LlmClient
+    {
+        public MicrosoftExtensionsAIChatClient(Microsoft.Extensions.AI.IChatClient chatClient, Graphiti.Core.LlmClients.LlmConfig? config = null, Graphiti.Core.LlmClients.ILlmResponseCache? cache = null, Polly.ResiliencePipeline<Microsoft.Extensions.AI.ChatResponse>? pipeline = null, System.Threading.RateLimiting.RateLimiter? rateLimiter = null) { }
+        protected override System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject> GenerateResponseCoreAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.LlmClients.Message> messages, System.Type? responseModel, Graphiti.Core.LlmClients.StructuredResponseSchema? responseSchema, int maxTokens, Graphiti.Core.LlmClients.ModelSize modelSize, string? promptName, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public enum ModelSize
+    {
+        Small = 0,
+        Medium = 1,
+    }
+    public sealed class NoOpLlmClient : Graphiti.Core.LlmClients.ILlmClient
+    {
+        public NoOpLlmClient() { }
+        public Graphiti.Core.LlmClients.TokenUsageTracker TokenTracker { get; }
+        public System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject> GenerateResponseAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.LlmClients.Message> messages, System.Type? responseModel = null, Graphiti.Core.LlmClients.StructuredResponseSchema? responseSchema = null, int? maxTokens = default, Graphiti.Core.LlmClients.ModelSize modelSize = 1, string? groupId = null, string? promptName = null, bool attributeExtraction = false, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class PromptTokenUsage : Graphiti.Core.LlmClients.TokenUsage
+    {
+        public PromptTokenUsage() { }
+        public double AvgInputTokens { get; }
+        public double AvgOutputTokens { get; }
+        public long CallCount { get; init; }
+        public string PromptName { get; init; }
+    }
+    public sealed class SqliteLlmResponseCache : Graphiti.Core.LlmClients.ILlmResponseCache, System.IDisposable
+    {
+        public SqliteLlmResponseCache(string directory) { }
+        public void Dispose() { }
+        public System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject?> GetAsync(string key, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject> GetOrCreateAsync(string key, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject>> factory, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SetAsync(string key, System.Text.Json.Nodes.JsonObject value, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class StaticJsonLlmClient : Graphiti.Core.LlmClients.LlmClient
+    {
+        public StaticJsonLlmClient(System.Func<System.Collections.Generic.IReadOnlyList<Graphiti.Core.LlmClients.Message>, System.Text.Json.Nodes.JsonObject>? factory = null) { }
+        protected override System.Threading.Tasks.Task<System.Text.Json.Nodes.JsonObject> GenerateResponseCoreAsync(System.Collections.Generic.IReadOnlyList<Graphiti.Core.LlmClients.Message> messages, System.Type? responseModel, Graphiti.Core.LlmClients.StructuredResponseSchema? responseSchema, int maxTokens, Graphiti.Core.LlmClients.ModelSize modelSize, string? promptName, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class StructuredResponseSchema
+    {
+        public StructuredResponseSchema(string name, System.Text.Json.JsonElement schemaElement, string? description = null) { }
+        public StructuredResponseSchema(string name, System.Text.Json.Nodes.JsonObject schema, string? description = null) { }
+        public string Description { get; }
+        public string Fingerprint { get; }
+        public string Name { get; }
+        public System.Text.Json.JsonElement SchemaElement { get; }
+    }
+    public static class StructuredResponseValidator
+    {
+        public static void Validate(System.Text.Json.Nodes.JsonObject response, Graphiti.Core.LlmClients.StructuredResponseSchema responseSchema) { }
+        public static void Validate(System.Text.Json.Nodes.JsonObject response, System.Type responseModel) { }
+    }
+    public class TokenUsage
+    {
+        public TokenUsage() { }
+        public long InputTokens { get; set; }
+        public long OutputTokens { get; set; }
+        public long TotalTokens { get; }
+    }
+    public sealed class TokenUsageTracker
+    {
+        public TokenUsageTracker() { }
+        public System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.LlmClients.PromptTokenUsage> Usage { get; }
+        public void AddUsage(string promptName, long inputTokens, long outputTokens) { }
+        public Graphiti.Core.LlmClients.TokenUsage GetTotalUsage() { }
+        public void Reset() { }
+    }
+}
+namespace Graphiti.Core.Models.Edges
+{
+    public sealed class CommunityEdge : Graphiti.Core.Models.Edges.Edge
+    {
+        public CommunityEdge() { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.CommunityEdge>> GetByGroupIdsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.CommunityEdge> GetByUuidAsync(Graphiti.Core.Drivers.IGraphDriver driver, string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.CommunityEdge>> GetByUuidsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public abstract class Edge : System.IEquatable<Graphiti.Core.Models.Edges.Edge>
+    {
+        protected Edge() { }
+        public System.DateTime CreatedAt { get; set; }
+        public string GroupId { get; set; }
+        public string SourceNodeUuid { get; set; }
+        public string TargetNodeUuid { get; set; }
+        public string Uuid { get; set; }
+        public System.Threading.Tasks.Task DeleteAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Threading.CancellationToken cancellationToken = default) { }
+        public bool Equals(Graphiti.Core.Models.Edges.Edge? other) { }
+        public override bool Equals(object? obj) { }
+        public override int GetHashCode() { }
+        public System.Threading.Tasks.Task SaveAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task DeleteByUuidsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class EntityEdge : Graphiti.Core.Models.Edges.Edge
+    {
+        public EntityEdge() { }
+        public System.Collections.Generic.Dictionary<string, object?> Attributes { get; set; }
+        public System.Collections.Generic.List<string> Episodes { get; set; }
+        public System.DateTime? ExpiredAt { get; set; }
+        public string Fact { get; set; }
+        public System.Collections.Generic.List<float>? FactEmbedding { get; set; }
+        public System.DateTime? InvalidAt { get; set; }
+        public string Name { get; set; }
+        public System.DateTime? ReferenceTime { get; set; }
+        public System.DateTime? ValidAt { get; set; }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<float>> GenerateEmbeddingAsync(Graphiti.Core.Embedding.IEmbedderClient embedder, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task LoadFactEmbeddingAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetBetweenNodesAsync(Graphiti.Core.Drivers.IGraphDriver driver, string sourceNodeUuid, string targetNodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetByGroupIdsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, bool withEmbeddings = false, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetByNodeUuidAsync(Graphiti.Core.Drivers.IGraphDriver driver, string nodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.EntityEdge> GetByUuidAsync(Graphiti.Core.Drivers.IGraphDriver driver, string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetByUuidsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class EpisodicEdge : Graphiti.Core.Models.Edges.Edge
+    {
+        public EpisodicEdge() { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EpisodicEdge>> GetByGroupIdsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.EpisodicEdge> GetByUuidAsync(Graphiti.Core.Drivers.IGraphDriver driver, string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EpisodicEdge>> GetByUuidsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class HasEpisodeEdge : Graphiti.Core.Models.Edges.Edge
+    {
+        public HasEpisodeEdge() { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.HasEpisodeEdge>> GetByGroupIdsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.HasEpisodeEdge> GetByUuidAsync(Graphiti.Core.Drivers.IGraphDriver driver, string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.HasEpisodeEdge>> GetByUuidsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class NextEpisodeEdge : Graphiti.Core.Models.Edges.Edge
+    {
+        public NextEpisodeEdge() { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.NextEpisodeEdge>> GetByGroupIdsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.NextEpisodeEdge> GetByUuidAsync(Graphiti.Core.Drivers.IGraphDriver driver, string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.NextEpisodeEdge>> GetByUuidsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace Graphiti.Core.Models
+{
+    public sealed class EntityAttributeDefinition
+    {
+        public EntityAttributeDefinition(string? description = null, string? type = null) { }
+        public string Description { get; }
+        public string Type { get; }
+    }
+    public sealed class EntityTypeDefinition
+    {
+        public EntityTypeDefinition(string name, string? description = null, System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityAttributeDefinition>? attributes = null) { }
+        public System.Collections.Frozen.FrozenDictionary<string, Graphiti.Core.Models.EntityAttributeDefinition> Attributes { get; }
+        public string Description { get; }
+        public string Name { get; }
+    }
+    public enum EpisodeType
+    {
+        Message = 0,
+        Json = 1,
+        Text = 2,
+        FactTriple = 3,
+    }
+    public static class EpisodeTypeExtensions
+    {
+        public static Graphiti.Core.Models.EpisodeType FromWireValue(string source) { }
+        public static string ToWireValue(this Graphiti.Core.Models.EpisodeType source) { }
+        public static bool TryFromWireValue(string? source, out Graphiti.Core.Models.EpisodeType episodeType) { }
+    }
+}
+namespace Graphiti.Core.Models.Nodes
+{
+    public sealed class CommunityNode : Graphiti.Core.Models.Nodes.Node
+    {
+        public CommunityNode() { }
+        public System.Collections.Generic.List<float>? NameEmbedding { get; set; }
+        public string Summary { get; set; }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<float>> GenerateNameEmbeddingAsync(Graphiti.Core.Embedding.IEmbedderClient embedder, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task LoadNameEmbeddingAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.CommunityNode>> GetByGroupIdsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.CommunityNode> GetByUuidAsync(Graphiti.Core.Drivers.IGraphDriver driver, string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.CommunityNode>> GetByUuidsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class EntityNode : Graphiti.Core.Models.Nodes.Node
+    {
+        public EntityNode() { }
+        public System.Collections.Generic.Dictionary<string, object?> Attributes { get; set; }
+        public System.Collections.Generic.List<float>? NameEmbedding { get; set; }
+        public string Summary { get; set; }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<float>> GenerateNameEmbeddingAsync(Graphiti.Core.Embedding.IEmbedderClient embedder, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task LoadNameEmbeddingAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode>> GetByGroupIdsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, bool withEmbeddings = false, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.EntityNode> GetByUuidAsync(Graphiti.Core.Drivers.IGraphDriver driver, string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode>> GetByUuidsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> uuids, string? groupId = null, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class EpisodicNode : Graphiti.Core.Models.Nodes.Node
+    {
+        public EpisodicNode() { }
+        public string Content { get; set; }
+        public System.Collections.Generic.List<string> EntityEdges { get; set; }
+        public System.Collections.Generic.Dictionary<string, object?>? EpisodeMetadata { get; set; }
+        public Graphiti.Core.Models.EpisodeType Source { get; set; }
+        public string SourceDescription { get; set; }
+        public System.DateTime ValidAt { get; set; }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> GetByEntityNodeUuidAsync(Graphiti.Core.Drivers.IGraphDriver driver, string entityNodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> GetByGroupIdsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.EpisodicNode> GetByUuidAsync(Graphiti.Core.Drivers.IGraphDriver driver, string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> GetByUuidsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public abstract class Node : System.IEquatable<Graphiti.Core.Models.Nodes.Node>
+    {
+        protected Node() { }
+        public System.DateTime CreatedAt { get; set; }
+        public string GroupId { get; set; }
+        public System.Collections.Generic.List<string> Labels { get; set; }
+        public string Name { get; set; }
+        public string Uuid { get; set; }
+        public System.Threading.Tasks.Task DeleteAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Threading.CancellationToken cancellationToken = default) { }
+        public bool Equals(Graphiti.Core.Models.Nodes.Node? other) { }
+        public override bool Equals(object? obj) { }
+        public override int GetHashCode() { }
+        public System.Threading.Tasks.Task SaveAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task DeleteByGroupIdAsync(Graphiti.Core.Drivers.IGraphDriver driver, string groupId, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task DeleteByUuidsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> uuids, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SagaNode : Graphiti.Core.Models.Nodes.Node
+    {
+        public SagaNode() { }
+        public string? FirstEpisodeUuid { get; set; }
+        public string? LastEpisodeUuid { get; set; }
+        public System.DateTime? LastSummarizedAt { get; set; }
+        public System.DateTime? LastSummarizedEpisodeValidAt { get; set; }
+        public string Summary { get; set; }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.SagaNode>> GetByGroupIdsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.SagaNode> GetByUuidAsync(Graphiti.Core.Drivers.IGraphDriver driver, string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.SagaNode>> GetByUuidsAsync(Graphiti.Core.Drivers.IGraphDriver driver, System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace Graphiti.Core.Models.Results
+{
+    public sealed class AddBulkEpisodeResults
+    {
+        public AddBulkEpisodeResults() { }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Nodes.CommunityNode> Communities { get; set; }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Edges.CommunityEdge> CommunityEdges { get; set; }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Edges.EntityEdge> Edges { get; set; }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Nodes.EpisodicNode> Episodes { get; set; }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Edges.EpisodicEdge> EpisodicEdges { get; set; }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Nodes.EntityNode> Nodes { get; set; }
+    }
+    public sealed class AddEpisodeResults
+    {
+        public AddEpisodeResults() { }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Nodes.CommunityNode> Communities { get; set; }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Edges.CommunityEdge> CommunityEdges { get; set; }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Edges.EntityEdge> Edges { get; set; }
+        public Graphiti.Core.Models.Nodes.EpisodicNode Episode { get; set; }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Edges.EpisodicEdge> EpisodicEdges { get; set; }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Nodes.EntityNode> Nodes { get; set; }
+    }
+    public sealed class AddTripletResults
+    {
+        public AddTripletResults() { }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Edges.EntityEdge> Edges { get; set; }
+        public System.Collections.Generic.List<Graphiti.Core.Models.Nodes.EntityNode> Nodes { get; set; }
+    }
+    public sealed class GraphitiClients
+    {
+        public GraphitiClients(Graphiti.Core.Drivers.IGraphDriver driver, Graphiti.Core.LlmClients.ILlmClient llmClient, Graphiti.Core.Embedding.IEmbedderClient embedder, Graphiti.Core.CrossEncoder.ICrossEncoderClient crossEncoder) { }
+        public Graphiti.Core.CrossEncoder.ICrossEncoderClient CrossEncoder { get; }
+        public Graphiti.Core.Drivers.IGraphDriver Driver { get; }
+        public Graphiti.Core.Embedding.IEmbedderClient Embedder { get; }
+        public Graphiti.Core.LlmClients.ILlmClient LlmClient { get; }
+    }
+    public sealed class RawEpisode
+    {
+        public RawEpisode() { }
+        public string Content { get; set; }
+        public string Name { get; set; }
+        public System.DateTime ReferenceTime { get; set; }
+        public Graphiti.Core.Models.EpisodeType Source { get; set; }
+        public string SourceDescription { get; set; }
+        public string? Uuid { get; set; }
+    }
+}
+namespace Graphiti.Core.Namespaces
+{
+    public sealed class CommunityEdgeNamespace
+    {
+        public CommunityEdgeNamespace(Graphiti.Core.Drivers.IGraphDriver driver) { }
+        public System.Threading.Tasks.Task DeleteAsync(Graphiti.Core.Models.Edges.CommunityEdge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.CommunityEdge>> GetByGroupIdsAsync(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.CommunityEdge> GetByUuidAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.CommunityEdge>> GetByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.CommunityEdge> SaveAsync(Graphiti.Core.Models.Edges.CommunityEdge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SaveBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Edges.CommunityEdge> edges, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class CommunityNodeNamespace
+    {
+        public CommunityNodeNamespace(Graphiti.Core.Drivers.IGraphDriver driver, Graphiti.Core.Embedding.IEmbedderClient embedder) { }
+        public System.Threading.Tasks.Task DeleteAsync(Graphiti.Core.Models.Nodes.CommunityNode node, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByGroupIdAsync(string groupId, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.CommunityNode>> GetByGroupIdsAsync(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.CommunityNode> GetByUuidAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.CommunityNode>> GetByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task LoadNameEmbeddingAsync(Graphiti.Core.Models.Nodes.CommunityNode node, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.CommunityNode> SaveAsync(Graphiti.Core.Models.Nodes.CommunityNode node, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SaveBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Nodes.CommunityNode> nodes, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class EdgeNamespace
+    {
+        public EdgeNamespace(Graphiti.Core.Drivers.IGraphDriver driver, Graphiti.Core.Embedding.IEmbedderClient embedder) { }
+        public Graphiti.Core.Namespaces.CommunityEdgeNamespace Community { get; }
+        public Graphiti.Core.Namespaces.EntityEdgeNamespace Entity { get; }
+        public Graphiti.Core.Namespaces.EpisodicEdgeNamespace Episode { get; }
+        public Graphiti.Core.Namespaces.EpisodicEdgeNamespace Episodic { get; }
+        public Graphiti.Core.Namespaces.HasEpisodeEdgeNamespace HasEpisode { get; }
+        public Graphiti.Core.Namespaces.NextEpisodeEdgeNamespace NextEpisode { get; }
+    }
+    public sealed class EntityEdgeNamespace
+    {
+        public EntityEdgeNamespace(Graphiti.Core.Drivers.IGraphDriver driver, Graphiti.Core.Embedding.IEmbedderClient embedder) { }
+        public System.Threading.Tasks.Task DeleteAsync(Graphiti.Core.Models.Edges.EntityEdge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetBetweenNodesAsync(string sourceNodeUuid, string targetNodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetByGroupIdsAsync(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, bool withEmbeddings = false, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetByNodeUuidAsync(string nodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.EntityEdge> GetByUuidAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge>> GetByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task LoadEmbeddingsAsync(Graphiti.Core.Models.Edges.EntityEdge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task LoadEmbeddingsBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Edges.EntityEdge> edges, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.EntityEdge> SaveAsync(Graphiti.Core.Models.Edges.EntityEdge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SaveBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Edges.EntityEdge> edges, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class EntityNodeNamespace
+    {
+        public EntityNodeNamespace(Graphiti.Core.Drivers.IGraphDriver driver, Graphiti.Core.Embedding.IEmbedderClient embedder) { }
+        public System.Threading.Tasks.Task DeleteAsync(Graphiti.Core.Models.Nodes.EntityNode node, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByGroupIdAsync(string groupId, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode>> GetByGroupIdsAsync(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, bool withEmbeddings = false, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.EntityNode> GetByUuidAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode>> GetByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task LoadEmbeddingsAsync(Graphiti.Core.Models.Nodes.EntityNode node, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task LoadEmbeddingsBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Nodes.EntityNode> nodes, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.EntityNode> SaveAsync(Graphiti.Core.Models.Nodes.EntityNode node, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SaveBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Nodes.EntityNode> nodes, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class EpisodicEdgeNamespace
+    {
+        public EpisodicEdgeNamespace(Graphiti.Core.Drivers.IGraphDriver driver) { }
+        public System.Threading.Tasks.Task DeleteAsync(Graphiti.Core.Models.Edges.EpisodicEdge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EpisodicEdge>> GetByGroupIdsAsync(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.EpisodicEdge> GetByUuidAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EpisodicEdge>> GetByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.EpisodicEdge> SaveAsync(Graphiti.Core.Models.Edges.EpisodicEdge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SaveBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Edges.EpisodicEdge> edges, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class EpisodicNodeNamespace
+    {
+        public EpisodicNodeNamespace(Graphiti.Core.Drivers.IGraphDriver driver) { }
+        public System.Threading.Tasks.Task DeleteAsync(Graphiti.Core.Models.Nodes.EpisodicNode node, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByGroupIdAsync(string groupId, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> GetByEntityNodeUuidAsync(string entityNodeUuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> GetByGroupIdsAsync(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.EpisodicNode> GetByUuidAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> GetByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EpisodicNode>> RetrieveEpisodesAsync(System.DateTime referenceTime, int lastN = 3, System.Collections.Generic.IReadOnlyList<string>? groupIds = null, Graphiti.Core.Models.EpisodeType? source = default, string? saga = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.EpisodicNode> SaveAsync(Graphiti.Core.Models.Nodes.EpisodicNode node, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SaveBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Nodes.EpisodicNode> nodes, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class HasEpisodeEdgeNamespace
+    {
+        public HasEpisodeEdgeNamespace(Graphiti.Core.Drivers.IGraphDriver driver) { }
+        public System.Threading.Tasks.Task DeleteAsync(Graphiti.Core.Models.Edges.HasEpisodeEdge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.HasEpisodeEdge>> GetByGroupIdsAsync(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.HasEpisodeEdge> GetByUuidAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.HasEpisodeEdge>> GetByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.HasEpisodeEdge> SaveAsync(Graphiti.Core.Models.Edges.HasEpisodeEdge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SaveBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Edges.HasEpisodeEdge> edges, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class NextEpisodeEdgeNamespace
+    {
+        public NextEpisodeEdgeNamespace(Graphiti.Core.Drivers.IGraphDriver driver) { }
+        public System.Threading.Tasks.Task DeleteAsync(Graphiti.Core.Models.Edges.NextEpisodeEdge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.NextEpisodeEdge>> GetByGroupIdsAsync(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.NextEpisodeEdge> GetByUuidAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.NextEpisodeEdge>> GetByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Edges.NextEpisodeEdge> SaveAsync(Graphiti.Core.Models.Edges.NextEpisodeEdge edge, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SaveBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Edges.NextEpisodeEdge> edges, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class NodeNamespace
+    {
+        public NodeNamespace(Graphiti.Core.Drivers.IGraphDriver driver, Graphiti.Core.Embedding.IEmbedderClient embedder) { }
+        public Graphiti.Core.Namespaces.CommunityNodeNamespace Community { get; }
+        public Graphiti.Core.Namespaces.EntityNodeNamespace Entity { get; }
+        public Graphiti.Core.Namespaces.EpisodicNodeNamespace Episode { get; }
+        public Graphiti.Core.Namespaces.EpisodicNodeNamespace Episodic { get; }
+        public Graphiti.Core.Namespaces.SagaNodeNamespace Saga { get; }
+    }
+    public sealed class SagaNodeNamespace
+    {
+        public SagaNodeNamespace(Graphiti.Core.Drivers.IGraphDriver driver) { }
+        public System.Threading.Tasks.Task DeleteAsync(Graphiti.Core.Models.Nodes.SagaNode node, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByGroupIdAsync(string groupId, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.SagaNode>> GetByGroupIdsAsync(System.Collections.Generic.IEnumerable<string> groupIds, int? limit = default, string? uuidCursor = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.SagaNode> GetByUuidAsync(string uuid, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.SagaNode>> GetByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<Graphiti.Core.Models.Nodes.SagaNode> SaveAsync(Graphiti.Core.Models.Nodes.SagaNode node, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SaveBulkAsync(System.Collections.Generic.IEnumerable<Graphiti.Core.Models.Nodes.SagaNode> nodes, int batchSize = 100, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace Graphiti.Core.Search
+{
+    public enum CommunityReranker
+    {
+        Rrf = 0,
+        Mmr = 1,
+        CrossEncoder = 2,
+    }
+    public sealed class CommunitySearchConfig
+    {
+        public CommunitySearchConfig() { }
+        [System.Text.Json.Serialization.JsonPropertyName("bfs_max_depth")]
+        public int BfsMaxDepth { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("mmr_lambda")]
+        public double MmrLambda { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("reranker")]
+        public Graphiti.Core.Search.CommunityReranker Reranker { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("search_methods")]
+        public System.Collections.Generic.List<Graphiti.Core.Search.CommunitySearchMethod> SearchMethods { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("sim_min_score")]
+        public double SimMinScore { get; set; }
+    }
+    public enum CommunitySearchMethod
+    {
+        CosineSimilarity = 0,
+        Bm25 = 1,
+    }
+    public enum ComparisonOperator
+    {
+        Equals = 0,
+        NotEquals = 1,
+        GreaterThan = 2,
+        LessThan = 3,
+        GreaterThanEqual = 4,
+        LessThanEqual = 5,
+        IsNull = 6,
+        IsNotNull = 7,
+    }
+    public static class ComparisonOperatorExtensions
+    {
+        public static string ToWireValue(this Graphiti.Core.Search.ComparisonOperator source) { }
+    }
+    public sealed class DateFilter
+    {
+        public DateFilter() { }
+        public DateFilter(Graphiti.Core.Search.ComparisonOperator comparisonOperator, System.DateTime? date = default) { }
+        [System.Text.Json.Serialization.JsonPropertyName("comparison_operator")]
+        public Graphiti.Core.Search.ComparisonOperator ComparisonOperator { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("date")]
+        public System.DateTime? Date { get; set; }
+    }
+    public enum EdgeReranker
+    {
+        Rrf = 0,
+        NodeDistance = 1,
+        EpisodeMentions = 2,
+        Mmr = 3,
+        CrossEncoder = 4,
+    }
+    public sealed class EdgeSearchConfig
+    {
+        public EdgeSearchConfig() { }
+        [System.Text.Json.Serialization.JsonPropertyName("bfs_max_depth")]
+        public int BfsMaxDepth { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("mmr_lambda")]
+        public double MmrLambda { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("reranker")]
+        public Graphiti.Core.Search.EdgeReranker Reranker { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("search_methods")]
+        public System.Collections.Generic.List<Graphiti.Core.Search.EdgeSearchMethod> SearchMethods { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("sim_min_score")]
+        public double SimMinScore { get; set; }
+    }
+    public enum EdgeSearchMethod
+    {
+        CosineSimilarity = 0,
+        Bm25 = 1,
+        Bfs = 2,
+    }
+    public enum EpisodeReranker
+    {
+        Rrf = 0,
+        CrossEncoder = 1,
+    }
+    public sealed class EpisodeSearchConfig
+    {
+        public EpisodeSearchConfig() { }
+        [System.Text.Json.Serialization.JsonPropertyName("bfs_max_depth")]
+        public int BfsMaxDepth { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("mmr_lambda")]
+        public double MmrLambda { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("reranker")]
+        public Graphiti.Core.Search.EpisodeReranker Reranker { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("search_methods")]
+        public System.Collections.Generic.List<Graphiti.Core.Search.EpisodeSearchMethod> SearchMethods { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("sim_min_score")]
+        public double SimMinScore { get; set; }
+    }
+    public enum EpisodeSearchMethod
+    {
+        Bm25 = 0,
+    }
+    public interface ISearchGraphDriver
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchRank>> RankNodeDistanceAsync(System.Collections.Generic.IReadOnlyList<string> nodeUuids, string centerNodeUuid, float minScore = 0, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchRank>> RankNodeEpisodeMentionsAsync(System.Collections.Generic.IReadOnlyList<string> nodeUuids, float minScore = 0, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.CommunityNode>>> SearchCommunitiesByEmbeddingAsync(System.Collections.Generic.IReadOnlyList<float> searchVector, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, float minScore, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.CommunityNode>>> SearchCommunitiesFulltextAsync(string query, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Edges.EntityEdge>>> SearchEntityEdgesBfsAsync(System.Collections.Generic.IReadOnlyList<string>? originNodeUuids, Graphiti.Core.Search.SearchFilters searchFilter, int maxDepth, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Edges.EntityEdge>>> SearchEntityEdgesByEmbeddingAsync(System.Collections.Generic.IReadOnlyList<float> searchVector, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, float minScore, string? sourceNodeUuid = null, string? targetNodeUuid = null, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Edges.EntityEdge>>> SearchEntityEdgesFulltextAsync(string query, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.EntityNode>>> SearchEntityNodesBfsAsync(System.Collections.Generic.IReadOnlyList<string>? originNodeUuids, Graphiti.Core.Search.SearchFilters searchFilter, int maxDepth, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.EntityNode>>> SearchEntityNodesByEmbeddingAsync(System.Collections.Generic.IReadOnlyList<float> searchVector, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, float minScore, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.EntityNode>>> SearchEntityNodesFulltextAsync(string query, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Graphiti.Core.Search.SearchHit<Graphiti.Core.Models.Nodes.EpisodicNode>>> SearchEpisodesFulltextAsync(string query, Graphiti.Core.Search.SearchFilters searchFilter, System.Collections.Generic.IReadOnlyList<string>? groupIds, int limit, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public static class MaintenanceUtilities
+    {
+        public const int EpisodeWindowLength = 3;
+        public static System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.CommunityEdge> BuildCommunityEdges(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode> entityNodes, Graphiti.Core.Models.Nodes.CommunityNode communityNode, System.DateTime createdAt) { }
+        public static System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EpisodicEdge> BuildEpisodicEdges(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode> entityNodes, System.Collections.Generic.IReadOnlyList<string> episodeUuids, System.DateTime createdAt, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IReadOnlyList<int>>? nodeEpisodeIndexMap = null) { }
+        public static System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EpisodicEdge> BuildEpisodicEdges(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode> entityNodes, string episodeUuid, System.DateTime createdAt, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IReadOnlyList<int>>? nodeEpisodeIndexMap = null) { }
+        public static System.Threading.Tasks.Task CreateEntityEdgeEmbeddingsAsync(Graphiti.Core.Embedding.IEmbedderClient embedder, System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Edges.EntityEdge> edges, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task CreateEntityNodeEmbeddingsAsync(Graphiti.Core.Embedding.IEmbedderClient embedder, System.Collections.Generic.IReadOnlyList<Graphiti.Core.Models.Nodes.EntityNode> nodes, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Collections.Generic.IReadOnlyList<T> ResolveEdgePointers<T>(System.Collections.Generic.IReadOnlyList<T> edges, System.Collections.Generic.IReadOnlyDictionary<string, string> uuidMap)
+            where T : Graphiti.Core.Models.Edges.Edge { }
+    }
+    public enum NodeReranker
+    {
+        Rrf = 0,
+        NodeDistance = 1,
+        EpisodeMentions = 2,
+        Mmr = 3,
+        CrossEncoder = 4,
+    }
+    public sealed class NodeSearchConfig
+    {
+        public NodeSearchConfig() { }
+        [System.Text.Json.Serialization.JsonPropertyName("bfs_max_depth")]
+        public int BfsMaxDepth { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("mmr_lambda")]
+        public double MmrLambda { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("reranker")]
+        public Graphiti.Core.Search.NodeReranker Reranker { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("search_methods")]
+        public System.Collections.Generic.List<Graphiti.Core.Search.NodeSearchMethod> SearchMethods { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("sim_min_score")]
+        public double SimMinScore { get; set; }
+    }
+    public enum NodeSearchMethod
+    {
+        CosineSimilarity = 0,
+        Bm25 = 1,
+        Bfs = 2,
+    }
+    public sealed class PropertyFilter
+    {
+        public PropertyFilter() { }
+        public PropertyFilter(string propertyName, Graphiti.Core.Search.ComparisonOperator comparisonOperator, object? propertyValue = null) { }
+        [System.Text.Json.Serialization.JsonPropertyName("comparison_operator")]
+        public Graphiti.Core.Search.ComparisonOperator ComparisonOperator { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("property_name")]
+        public string PropertyName { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(Graphiti.Core.Search.PropertyFilterValueJsonConverter))]
+        [System.Text.Json.Serialization.JsonPropertyName("property_value")]
+        public object? PropertyValue { get; set; }
+    }
+    public sealed class SearchConfig
+    {
+        public SearchConfig() { }
+        [System.Text.Json.Serialization.JsonPropertyName("community_config")]
+        public Graphiti.Core.Search.CommunitySearchConfig? CommunityConfig { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("edge_config")]
+        public Graphiti.Core.Search.EdgeSearchConfig? EdgeConfig { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("episode_config")]
+        public Graphiti.Core.Search.EpisodeSearchConfig? EpisodeConfig { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("limit")]
+        public int Limit { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("node_config")]
+        public Graphiti.Core.Search.NodeSearchConfig? NodeConfig { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("reranker_min_score")]
+        public double RerankerMinScore { get; set; }
+    }
+    public static class SearchConfigRecipes
+    {
+        public static Graphiti.Core.Search.SearchConfig CombinedHybridSearchCrossEncoder { get; }
+        public static Graphiti.Core.Search.SearchConfig CombinedHybridSearchMmr { get; }
+        public static Graphiti.Core.Search.SearchConfig CombinedHybridSearchRrf { get; }
+        public static Graphiti.Core.Search.SearchConfig CommunityHybridSearchCrossEncoder { get; }
+        public static Graphiti.Core.Search.SearchConfig CommunityHybridSearchMmr { get; }
+        public static Graphiti.Core.Search.SearchConfig CommunityHybridSearchRrf { get; }
+        public static Graphiti.Core.Search.SearchConfig EdgeHybridSearchCrossEncoder { get; }
+        public static Graphiti.Core.Search.SearchConfig EdgeHybridSearchEpisodeMentions { get; }
+        public static Graphiti.Core.Search.SearchConfig EdgeHybridSearchMmr { get; }
+        public static Graphiti.Core.Search.SearchConfig EdgeHybridSearchNodeDistance { get; }
+        public static Graphiti.Core.Search.SearchConfig EdgeHybridSearchRrf { get; }
+        public static Graphiti.Core.Search.SearchConfig NodeHybridSearchCrossEncoder { get; }
+        public static Graphiti.Core.Search.SearchConfig NodeHybridSearchEpisodeMentions { get; }
+        public static Graphiti.Core.Search.SearchConfig NodeHybridSearchMmr { get; }
+        public static Graphiti.Core.Search.SearchConfig NodeHybridSearchNodeDistance { get; }
+        public static Graphiti.Core.Search.SearchConfig NodeHybridSearchRrf { get; }
+    }
+    public static class SearchConfiguration
+    {
+        public const double DefaultMinScore = 0.6D;
+        public const double DefaultMmrLambda = 0.5D;
+        public const int DefaultSearchLimit = 10;
+        public const int MaxSearchDepth = 3;
+    }
+    public static class SearchConfigurationEnumExtensions
+    {
+        public static string ToWireValue(this Graphiti.Core.Search.CommunityReranker source) { }
+        public static string ToWireValue(this Graphiti.Core.Search.CommunitySearchMethod source) { }
+        public static string ToWireValue(this Graphiti.Core.Search.EdgeReranker source) { }
+        public static string ToWireValue(this Graphiti.Core.Search.EdgeSearchMethod source) { }
+        public static string ToWireValue(this Graphiti.Core.Search.EpisodeReranker source) { }
+        public static string ToWireValue(this Graphiti.Core.Search.EpisodeSearchMethod source) { }
+        public static string ToWireValue(this Graphiti.Core.Search.NodeReranker source) { }
+        public static string ToWireValue(this Graphiti.Core.Search.NodeSearchMethod source) { }
+    }
+    public static class SearchEngine
+    {
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Item",
+                "Score"})]
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<Graphiti.Core.Models.Nodes.CommunityNode, float>>> CommunitySearchAsync(Graphiti.Core.Drivers.IGraphDriver driver, Graphiti.Core.CrossEncoder.ICrossEncoderClient crossEncoder, string query, System.Collections.Generic.IReadOnlyList<float>? queryVector, System.Collections.Generic.IReadOnlyList<string>? groupIds, Graphiti.Core.Search.CommunitySearchConfig config, int limit, double rerankerMinScore = 0, System.Threading.CancellationToken cancellationToken = default) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Item",
+                "Score"})]
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<Graphiti.Core.Models.Edges.EntityEdge, float>>> EdgeSearchAsync(Graphiti.Core.Drivers.IGraphDriver driver, Graphiti.Core.CrossEncoder.ICrossEncoderClient crossEncoder, string query, System.Collections.Generic.IReadOnlyList<float>? queryVector, System.Collections.Generic.IReadOnlyList<string>? groupIds, Graphiti.Core.Search.EdgeSearchConfig config, Graphiti.Core.Search.SearchFilters searchFilter, int limit, double rerankerMinScore = 0, string? centerNodeUuid = null, System.Collections.Generic.IReadOnlyList<string>? bfsOriginNodeUuids = null, System.Threading.CancellationToken cancellationToken = default) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Item",
+                "Score"})]
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<Graphiti.Core.Models.Nodes.EpisodicNode, float>>> EpisodeSearchAsync(Graphiti.Core.Drivers.IGraphDriver driver, Graphiti.Core.CrossEncoder.ICrossEncoderClient crossEncoder, string query, System.Collections.Generic.IReadOnlyList<string>? groupIds, Graphiti.Core.Search.EpisodeSearchConfig config, int limit, double rerankerMinScore = 0, Graphiti.Core.Search.SearchFilters? searchFilter = null, System.Threading.CancellationToken cancellationToken = default) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Item",
+                "Score"})]
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.ValueTuple<Graphiti.Core.Models.Nodes.EntityNode, float>>> NodeSearchAsync(Graphiti.Core.Drivers.IGraphDriver driver, Graphiti.Core.CrossEncoder.ICrossEncoderClient crossEncoder, string query, System.Collections.Generic.IReadOnlyList<float>? queryVector, System.Collections.Generic.IReadOnlyList<string>? groupIds, Graphiti.Core.Search.NodeSearchConfig config, Graphiti.Core.Search.SearchFilters searchFilter, int limit, double rerankerMinScore = 0, string? centerNodeUuid = null, System.Collections.Generic.IReadOnlyList<string>? bfsOriginNodeUuids = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public static System.Threading.Tasks.Task<Graphiti.Core.Search.SearchResults> SearchAsync(Graphiti.Core.Models.Results.GraphitiClients clients, string query, System.Collections.Generic.IReadOnlyList<string>? groupIds, Graphiti.Core.Search.SearchConfig config, Graphiti.Core.Search.SearchFilters searchFilter, string? centerNodeUuid = null, System.Collections.Generic.IReadOnlyList<string>? bfsOriginNodeUuids = null, System.Collections.Generic.IReadOnlyList<float>? queryVector = null, Graphiti.Core.Drivers.IGraphDriver? driver = null, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class SearchFilterQueryBuilder
+    {
+        public static string CypherToOpenSearchOperator(Graphiti.Core.Search.ComparisonOperator op) { }
+        public static string DateFilterQueryConstructor(string valueName, string paramName, Graphiti.Core.Search.ComparisonOperator comparisonOperator) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "FilterQueries",
+                "FilterParams"})]
+        public static System.ValueTuple<System.Collections.Generic.List<string>, System.Collections.Generic.Dictionary<string, object?>> EdgeSearchFilterQueryConstructor(Graphiti.Core.Search.SearchFilters filters, Graphiti.Core.Drivers.GraphProvider provider) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "FilterQueries",
+                "FilterParams"})]
+        public static System.ValueTuple<System.Collections.Generic.List<string>, System.Collections.Generic.Dictionary<string, object?>> NodeSearchFilterQueryConstructor(Graphiti.Core.Search.SearchFilters filters, Graphiti.Core.Drivers.GraphProvider provider) { }
+    }
+    public sealed class SearchFilters
+    {
+        public SearchFilters() { }
+        [System.Text.Json.Serialization.JsonPropertyName("created_at")]
+        public System.Collections.Generic.List<System.Collections.Generic.List<Graphiti.Core.Search.DateFilter>>? CreatedAt { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("edge_types")]
+        public System.Collections.Generic.List<string>? EdgeTypes { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("edge_uuids")]
+        public System.Collections.Generic.List<string>? EdgeUuids { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("expired_at")]
+        public System.Collections.Generic.List<System.Collections.Generic.List<Graphiti.Core.Search.DateFilter>>? ExpiredAt { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("invalid_at")]
+        public System.Collections.Generic.List<System.Collections.Generic.List<Graphiti.Core.Search.DateFilter>>? InvalidAt { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("node_labels")]
+        public System.Collections.Generic.List<string>? NodeLabels { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("property_filters")]
+        public System.Collections.Generic.List<Graphiti.Core.Search.PropertyFilter>? PropertyFilters { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("valid_at")]
+        public System.Collections.Generic.List<System.Collections.Generic.List<Graphiti.Core.Search.DateFilter>>? ValidAt { get; set; }
+    }
+    public readonly struct SearchHit<T> : System.IEquatable<Graphiti.Core.Search.SearchHit<T>>
+    {
+        public SearchHit(T Item, float Score) { }
+        public T Item { get; init; }
+        public float Score { get; init; }
+    }
+    public readonly struct SearchRank : System.IEquatable<Graphiti.Core.Search.SearchRank>
+    {
+        public SearchRank(string Uuid, float Score) { }
+        public float Score { get; init; }
+        public string Uuid { get; init; }
+    }
+    public sealed class SearchResults
+    {
+        public SearchResults() { }
+        [System.Text.Json.Serialization.JsonPropertyName("communities")]
+        public System.Collections.Generic.List<Graphiti.Core.Models.Nodes.CommunityNode> Communities { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("community_reranker_scores")]
+        public System.Collections.Generic.List<double> CommunityRerankerScores { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("edge_reranker_scores")]
+        public System.Collections.Generic.List<double> EdgeRerankerScores { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("edges")]
+        public System.Collections.Generic.List<Graphiti.Core.Models.Edges.EntityEdge> Edges { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("episode_reranker_scores")]
+        public System.Collections.Generic.List<double> EpisodeRerankerScores { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("episodes")]
+        public System.Collections.Generic.List<Graphiti.Core.Models.Nodes.EpisodicNode> Episodes { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("node_reranker_scores")]
+        public System.Collections.Generic.List<double> NodeRerankerScores { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("nodes")]
+        public System.Collections.Generic.List<Graphiti.Core.Models.Nodes.EntityNode> Nodes { get; set; }
+        public static Graphiti.Core.Search.SearchResults Merge(System.Collections.Generic.IEnumerable<Graphiti.Core.Search.SearchResults>? resultsList) { }
+    }
+    public static class SearchUtilities
+    {
+        public const float DefaultMinScore = 0.6F;
+        public const float DefaultMmrLambda = 0.5F;
+        public const int MaxQueryLength = 128;
+        public const int MaxSearchDepth = 3;
+        public const int RelevantSchemaLimit = 10;
+        public static float CalculateCosineSimilarity(System.Collections.Generic.IReadOnlyList<float>? vector1, System.Collections.Generic.IReadOnlyList<float>? vector2) { }
+        public static Graphiti.Core.Search.SearchUtilities.CosineSimilarityScorer CreateCosineSimilarityScorer(System.Collections.Generic.IReadOnlyList<float>? queryVector) { }
+        public static Graphiti.Core.Search.TextScorer CreateTextScorer(string query) { }
+        public static System.Collections.Generic.IReadOnlyList<T> DeduplicateByUuid<T>(System.Collections.Generic.IEnumerable<T> items)
+            where T :  class { }
+        public static string FulltextQuery(string query, System.Collections.Generic.IReadOnlyList<string>? groupIds, Graphiti.Core.Drivers.IGraphDriver driver) { }
+        public static System.Collections.Generic.IReadOnlyList<T> MaximalMarginalRelevance<T>(System.Collections.Generic.IReadOnlyList<T> candidates, System.Collections.Generic.IReadOnlyList<float> queryVector, System.Func<T, System.Collections.Generic.IReadOnlyList<float>?> vectorSelector, int limit, float lambda = 0.5, float minScore = -2) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Item",
+                "Score"})]
+        public static System.Collections.Generic.IReadOnlyList<System.ValueTuple<T, float>> MaximalMarginalRelevanceWithScores<T>(System.Collections.Generic.IReadOnlyList<T> candidates, System.Collections.Generic.IReadOnlyList<float> queryVector, System.Func<T, System.Collections.Generic.IReadOnlyList<float>?> vectorSelector, int limit, float lambda = 0.5, float minScore = -2) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Item",
+                "Score"})]
+        public static System.Collections.Generic.IReadOnlyList<System.ValueTuple<T, float>> ReciprocalRankFusion<T>(System.Collections.Generic.IEnumerable<System.Collections.Generic.IReadOnlyList<T>> rankedLists, System.Func<T, string> keySelector, int limit, int rankConstant = 1, float minScore = 0) { }
+        public static float TextScore(string query, string text) { }
+        public sealed class CosineSimilarityScorer
+        {
+            public float Score(System.Collections.Generic.IReadOnlyList<float>? vector) { }
+        }
+    }
+    public sealed class TextScorer
+    {
+        public float Score(string text) { }
+    }
+}
+namespace Graphiti.Core.Serialization
+{
+    public static class GraphitiJsonSerializer
+    {
+        public static readonly System.Text.Json.JsonSerializerOptions Options;
+    }
+}
+namespace Graphiti.Core.Telemetry
+{
+    public static class GraphitiTelemetry
+    {
+        public const string ActivitySourceName = "Graphiti.Core";
+        public static readonly System.Diagnostics.ActivitySource ActivitySource;
+    }
+}
+namespace Graphiti.Core.Text
+{
+    public static class ContentChunking
+    {
+        public const int CharsPerToken = 4;
+        public const double DefaultChunkDensityThreshold = 0.15D;
+        public const int DefaultChunkMinTokens = 1000;
+        public const int DefaultChunkOverlapTokens = 200;
+        public const int DefaultChunkTokenSize = 3000;
+        public const int MaxCombinationsToEvaluate = 1000;
+        public static Graphiti.Core.Text.ITokenCounter TokenCounter { get; set; }
+        public static System.Collections.Generic.IReadOnlyList<string> ChunkJsonContent(string content, int? chunkSizeTokens = default, int? overlapTokens = default) { }
+        public static System.Collections.Generic.IReadOnlyList<string> ChunkMessageContent(string content, int? chunkSizeTokens = default, int? overlapTokens = default) { }
+        public static System.Collections.Generic.IReadOnlyList<string> ChunkTextContent(string content, int? chunkSizeTokens = default, int? overlapTokens = default) { }
+        public static int CountJsonKeys(string json, int maxDepth = 2) { }
+        public static int CountJsonKeys(System.Text.Json.JsonElement data, int maxDepth = 2, int currentDepth = 0) { }
+        public static int EstimateTokens(string? text) { }
+        public static System.Collections.Generic.IReadOnlyList<Graphiti.Core.Text.CoveringChunk<T>> GenerateCoveringChunks<T>(System.Collections.Generic.IReadOnlyList<T> items, int k) { }
+        public static bool JsonLikelyDense(string? content, int tokens, double? densityThreshold = default) { }
+        public static bool ShouldChunk(string? content, Graphiti.Core.Models.EpisodeType episodeType, int? minTokens = default, double? densityThreshold = default) { }
+        public static bool TextLikelyDense(string? content, int tokens, double? densityThreshold = default) { }
+    }
+    public sealed class ContentChunkingOptions
+    {
+        public ContentChunkingOptions() { }
+        public double ChunkDensityThreshold { get; set; }
+        public int ChunkMinTokens { get; set; }
+        public int ChunkOverlapTokens { get; set; }
+        public int ChunkTokenSize { get; set; }
+    }
+    public sealed class CoveringChunk<T> : System.IEquatable<Graphiti.Core.Text.CoveringChunk<T>>
+    {
+        public CoveringChunk(System.Collections.Generic.IReadOnlyList<T> Items, System.Collections.Generic.IReadOnlyList<int> Indices) { }
+        public System.Collections.Generic.IReadOnlyList<int> Indices { get; init; }
+        public System.Collections.Generic.IReadOnlyList<T> Items { get; init; }
+    }
+    public sealed class DefaultContentChunker : Graphiti.Core.Text.IContentChunker
+    {
+        public DefaultContentChunker(Graphiti.Core.Text.ITokenCounter tokenCounter, Microsoft.Extensions.Options.IOptions<Graphiti.Core.Text.ContentChunkingOptions>? options = null) { }
+        public System.Collections.Generic.IReadOnlyList<string> ChunkJsonContent(string content, int? chunkSizeTokens = default, int? overlapTokens = default) { }
+        public System.Collections.Generic.IReadOnlyList<string> ChunkMessageContent(string content, int? chunkSizeTokens = default, int? overlapTokens = default) { }
+        public System.Collections.Generic.IReadOnlyList<string> ChunkTextContent(string content, int? chunkSizeTokens = default, int? overlapTokens = default) { }
+        public int EstimateTokens(string? text) { }
+        public System.Collections.Generic.IReadOnlyList<Graphiti.Core.Text.CoveringChunk<T>> GenerateCoveringChunks<T>(System.Collections.Generic.IReadOnlyList<T> items, int k) { }
+        public bool ShouldChunk(string? content, Graphiti.Core.Models.EpisodeType episodeType, int? minTokens = default, double? densityThreshold = default) { }
+    }
+    public static class GraphitiHelpers
+    {
+        public const double ChunkDensityThreshold = 0.15D;
+        public const int ChunkMinTokens = 1000;
+        public const int ChunkOverlapTokens = 200;
+        public const int ChunkTokenSize = 3000;
+        public static System.DateTime DefaultTimestamp { get; }
+        public static System.DateTime EnsureUtc(System.DateTime value) { }
+        public static string GetDefaultGroupId(Graphiti.Core.Drivers.GraphProvider provider) { }
+        public static string LuceneSanitize(string query) { }
+        public static string NewUuid() { }
+        public static string NormalizeEntityKey(string text) { }
+        public static float[] NormalizeL2(System.Collections.Generic.IEnumerable<float> embedding) { }
+        public static System.DateTime? ParseDbDate(object? input) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>> SemaphoreGatherAsync<T>(System.Collections.Generic.IEnumerable<System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>>> operations, int? maxConcurrency = default, System.Threading.CancellationToken cancellationToken = default) { }
+        [System.Obsolete("Use TimeProvider.GetUtcNow() in workflows or GraphitiHelpers.DefaultTimestamp for" +
+            " deterministic missing values.")]
+        public static System.DateTime UtcNow() { }
+        public static void ValidateEntityTypes(System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityTypeDefinition>? entityTypes) { }
+        public static void ValidateExcludedEntityTypes(System.Collections.Generic.IEnumerable<string>? excludedEntityTypes, System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityTypeDefinition>? entityTypes) { }
+        public static void ValidateGroupId(string? groupId) { }
+        public static void ValidateGroupIds(System.Collections.Generic.IEnumerable<string>? groupIds) { }
+        public static void ValidateNodeLabels(System.Collections.Generic.IEnumerable<string>? nodeLabels) { }
+    }
+    public sealed class HeuristicTokenCounter : Graphiti.Core.Text.ITokenCounter
+    {
+        public HeuristicTokenCounter(int charsPerToken = 4) { }
+        public int CharsPerToken { get; }
+        public int CountTokens(string? text) { }
+    }
+    public interface IContentChunker
+    {
+        System.Collections.Generic.IReadOnlyList<string> ChunkJsonContent(string content, int? chunkSizeTokens = default, int? overlapTokens = default);
+        System.Collections.Generic.IReadOnlyList<string> ChunkMessageContent(string content, int? chunkSizeTokens = default, int? overlapTokens = default);
+        System.Collections.Generic.IReadOnlyList<string> ChunkTextContent(string content, int? chunkSizeTokens = default, int? overlapTokens = default);
+        int EstimateTokens(string? text);
+        System.Collections.Generic.IReadOnlyList<Graphiti.Core.Text.CoveringChunk<T>> GenerateCoveringChunks<T>(System.Collections.Generic.IReadOnlyList<T> items, int k);
+        bool ShouldChunk(string? content, Graphiti.Core.Models.EpisodeType episodeType, int? minTokens = default, double? densityThreshold = default);
+    }
+    public interface ITokenCounter
+    {
+        int CountTokens(string? text);
+    }
+    public static class TextUtilities
+    {
+        public const int MaxSummaryChars = 1000;
+        public static string ConcatenateEpisodes(System.Collections.Generic.IReadOnlyList<Graphiti.Core.Drivers.SagaEpisodeContent> episodes) { }
+        public static string ConcatenateEpisodes([System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Content",
+                "ValidAt"})] System.Collections.Generic.IReadOnlyList<System.ValueTuple<string, System.DateTime?>> episodes) { }
+        public static string? TruncateAtSentence(string? text, int maxChars) { }
+    }
+    public sealed class TiktokenTokenCounter : Graphiti.Core.Text.ITokenCounter
+    {
+        public TiktokenTokenCounter(Microsoft.ML.Tokenizers.Tokenizer tokenizer) { }
+        public TiktokenTokenCounter(string model = "gpt-4o") { }
+        public int CountTokens(string? text) { }
+        public bool TryGetIndexByTokenCount(System.ReadOnlySpan<char> text, int maxTokens, out int index) { }
+        public bool TryGetIndexByTokenCountFromEnd(System.ReadOnlySpan<char> text, int maxTokens, out int index) { }
+        public static Graphiti.Core.Text.ITokenCounter CreateDefault(string model = "gpt-4o") { }
+    }
+}
