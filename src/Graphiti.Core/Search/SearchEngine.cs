@@ -9,7 +9,7 @@ namespace Graphiti.Core.Search;
 /// returns a combined <see cref="SearchResults"/>. This is the shared implementation behind the
 /// <see cref="Graphiti"/> search methods.
 /// </summary>
-public static class SearchEngine
+internal static class SearchEngine
 {
     /// <summary>
     /// Executes a hybrid search described by <paramref name="config"/> against the graph.

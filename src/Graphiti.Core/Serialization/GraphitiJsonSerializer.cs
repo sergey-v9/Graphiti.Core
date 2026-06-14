@@ -11,8 +11,10 @@ namespace Graphiti.Core.Serialization;
 /// </summary>
 public static class GraphitiJsonSerializer
 {
+    private static readonly JsonSerializerOptions OptionsInstance = CreateOptions();
+
     /// <summary>The shared, read-only serializer options used for all Graphiti JSON.</summary>
-    public static readonly JsonSerializerOptions Options = CreateOptions();
+    public static JsonSerializerOptions Options => OptionsInstance;
 
     private static JsonSerializerOptions CreateOptions()
     {

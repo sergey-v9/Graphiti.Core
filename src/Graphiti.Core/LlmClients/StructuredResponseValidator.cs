@@ -13,7 +13,7 @@ namespace Graphiti.Core.LlmClients;
 /// cached) or a runtime <see cref="StructuredResponseSchema"/>, and builds the provider response-format
 /// hints that ask the model to emit conforming JSON.
 /// </summary>
-public static class StructuredResponseValidator
+internal static class StructuredResponseValidator
 {
     private static readonly ConcurrentDictionary<Type, ResponseSchemaContract> Contracts = new();
 

@@ -4,7 +4,7 @@ namespace Graphiti.Core.Search;
 /// Builds backend query fragments and parameters from <see cref="SearchFilters"/> for node and edge
 /// searches, and maps comparison operators to provider-specific operator strings.
 /// </summary>
-public static class SearchFilterQueryBuilder
+internal static class SearchFilterQueryBuilder
 {
     /// <summary>Maps a comparison operator to its OpenSearch range-operator keyword.</summary>
     public static string CypherToOpenSearchOperator(ComparisonOperator op) =>

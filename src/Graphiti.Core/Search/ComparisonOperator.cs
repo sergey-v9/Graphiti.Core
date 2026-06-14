@@ -29,7 +29,7 @@ public enum ComparisonOperator
 }
 
 /// <summary>Conversions for <see cref="ComparisonOperator"/> to query operator strings.</summary>
-public static class ComparisonOperatorExtensions
+internal static class ComparisonOperatorExtensions
 {
     /// <summary>Returns the query operator string for the comparison operator.</summary>
     public static string ToWireValue(this ComparisonOperator source) =>

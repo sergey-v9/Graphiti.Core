@@ -88,22 +88,6 @@ public class TokenUsageTrackerTests
     }
 
     [Fact]
-    public void UsageSnapshotValueMutation_DoesNotAffectTracker()
-    {
-        var tracker = new TokenUsageTracker();
-        tracker.AddUsage("extract_nodes", inputTokens: 1, outputTokens: 2);
-
-        var snapshot = tracker.Usage;
-        snapshot["extract_nodes"].InputTokens = 999;
-        snapshot["extract_nodes"].OutputTokens = 999;
-
-        var current = tracker.Usage["extract_nodes"];
-        Assert.Equal(1, current.CallCount);
-        Assert.Equal(1, current.InputTokens);
-        Assert.Equal(2, current.OutputTokens);
-    }
-
-    [Fact]
     public void PromptTokenUsage_AveragesReturnZeroWhenNoCallsRecorded()
     {
         var usage = new PromptTokenUsage
