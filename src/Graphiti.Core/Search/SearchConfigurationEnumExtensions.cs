@@ -4,7 +4,7 @@ namespace Graphiti.Core.Search;
 /// Conversions from the search method/reranker enums to the Python-compatible string wire values
 /// used when serializing search configuration.
 /// </summary>
-public static class SearchConfigurationEnumExtensions
+internal static class SearchConfigurationEnumExtensions
 {
     /// <summary>Returns the Python-compatible wire string for the edge search method.</summary>
     public static string ToWireValue(this EdgeSearchMethod source) =>

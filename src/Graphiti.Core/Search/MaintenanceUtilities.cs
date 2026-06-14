@@ -5,7 +5,7 @@ namespace Graphiti.Core.Search;
 /// extracted entities back to their episodes/communities, generating embeddings for new nodes and
 /// edges, and resolving edge endpoint pointers after node deduplication.
 /// </summary>
-public static class MaintenanceUtilities
+internal static class MaintenanceUtilities
 {
     /// <summary>Number of preceding episodes included as context when processing an episode.</summary>
     public const int EpisodeWindowLength = 3;

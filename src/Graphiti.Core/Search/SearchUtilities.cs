@@ -12,7 +12,7 @@ namespace Graphiti.Core.Search;
 /// reranking primitives (RRF, MMR, score combination), tokenization, and full-text query construction
 /// and sanitization for the various graph backends.
 /// </summary>
-public static partial class SearchUtilities
+internal static partial class SearchUtilities
 {
     /// <summary>Default maximum number of schema-relevant items considered during search.</summary>
     public const int RelevantSchemaLimit = 10;
