@@ -10,10 +10,10 @@ test is kept as a drift guard, not a freeze: each step that changes the public s
 ## Status — A–E COMPLETE (2026-06-14)
 
 All five steps landed on `main` and verified green. Latest direct full verification after the
-search concurrency test hardening is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14: 984 passed,
+package-consumer workflow smoke hardening is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14: 984 passed,
 3 skipped, 987 total, with restore/format/build clean, both packages packed as `.nupkg` +
-`.snupkg`, and fresh temp consumers restored/built/run `BuildIndicesAndConstraintsAsync()` from
-strict package sources:
+`.snupkg`, and fresh temp consumers restored/built/run setup plus a public triplet/search workflow
+from strict package sources:
 - **A** — `init` setters, `Options`/`ActivitySource`/`TokenCounter` get-only, 7 port-artifact helpers
   internalized, and shippable package projects generating IntelliSense XML documentation.
 - **B+C** — `GraphProvider.LadybugDb=5` and `AddGraphiti` primary; `Kuzu`/`AddGraphitiCore` `[Obsolete]`
@@ -26,7 +26,8 @@ strict package sources:
   The verifier now creates fresh package consumers: core uses only the packed core output + nuget.org;
   Ladybug uses both packed Graphiti outputs + the local Ladybug feed + nuget.org and runs setup
   through `Graphiti` with the packed driver. Both consumers are restored, built, run through
-  `BuildIndicesAndConstraintsAsync()`, and checked for expected provider output.
+  `BuildIndicesAndConstraintsAsync()`, `AddTripletAsync`, and `SearchAsync`, then checked for the
+  expected provider plus inserted hit UUID.
 - The public-API snapshot now guards BOTH assemblies (`Graphiti.Core` + `Graphiti.Core.Drivers.Ladybug`).
 
 **Remaining (release infra; partly gated on external work):**

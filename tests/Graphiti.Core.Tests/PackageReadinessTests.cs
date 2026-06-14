@@ -133,9 +133,12 @@ public class PackageReadinessTests
         Assert.Contains("Invoke-DotNetCommandOutput", verifyScript);
         Assert.Contains("\"run\"", verifyScript);
         Assert.Contains("BuildIndicesAndConstraintsAsync", verifyScript);
+        Assert.Contains("AddTripletAsync", verifyScript);
+        Assert.Contains("SearchAsync(\"Alice works on Atlas\"", verifyScript);
+        Assert.Contains("smoke-edge", verifyScript);
         Assert.Contains("new Graphiti.Core.Graphiti(graphDriver: driver)", verifyScript);
-        Assert.Contains("-ExpectedOutput \"InMemory\"", verifyScript);
-        Assert.Contains("-ExpectedOutput \"LadybugDb\"", verifyScript);
+        Assert.Contains("-ExpectedOutput \"InMemory:smoke-edge\"", verifyScript);
+        Assert.Contains("-ExpectedOutput \"LadybugDb:smoke-edge\"", verifyScript);
         Assert.Contains("--configfile", verifyScript);
         Assert.Contains("--no-cache", verifyScript);
         Assert.Contains("<clear />", verifyScript);

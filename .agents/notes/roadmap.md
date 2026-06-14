@@ -98,10 +98,10 @@ and a consumer `README.md` + `docs/search.md`. A first benchmark-first perf pass
 (two measured parity-safe wins).
 
 Plan `.agents/plans/05-release-readiness.md` steps **A–E are COMPLETE (2026-06-14)**, integrated and
-green (latest `.\eng\Verify-GraphitiCore.ps1` after search concurrency test hardening:
+green (latest `.\eng\Verify-GraphitiCore.ps1` after package-consumer workflow smoke hardening:
 984 passed, 3 skipped, 987 total; both shippable
-packages pack as `.nupkg` + `.snupkg`, then fresh temp package consumers restore/build/setup/run,
-including a Ladybug smoke that embeds the packed driver in `Graphiti`):
+packages pack as `.nupkg` + `.snupkg`, then fresh temp package consumers restore/build, run setup,
+add a triplet, and search it back, including a Ladybug smoke that embeds the packed driver in `Graphiti`):
 surface
 hardening (A), `GraphProvider.LadybugDb`/`AddGraphiti` with obsolete aliases (B+C), InMemory-default
 constructor + `AddEpisodeOptions` (D), and the LadybugDB package split (E.1+E.3) — `Graphiti.Core` is

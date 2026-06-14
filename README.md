@@ -512,10 +512,10 @@ It runs restore, formatting checks, build, tests, package creation for both `Gra
 `Graphiti.Core.Drivers.Ladybug`, and a package-consumption smoke check. The smoke check creates
 fresh temporary `net10.0` console projects with strict `NuGet.config` files (`<clear />`) and isolated
 `NUGET_PACKAGES`: the core consumer restores, builds, runs, and calls
-`BuildIndicesAndConstraintsAsync()` from the packed `Graphiti.Core` output plus nuget.org, while the
-Ladybug consumer restores from both packed Graphiti outputs plus the local Ladybug feed and runs
-setup through `Graphiti` with a packed LadybugDB driver. Use `-SkipPackageSmoke` only when iterating
-on non-packaging changes. For a quick local
+`BuildIndicesAndConstraintsAsync()`, adds a public triplet, and searches it back from the packed
+`Graphiti.Core` output plus nuget.org, while the Ladybug consumer restores from both packed Graphiti
+outputs plus the local Ladybug feed and runs the same workflow through `Graphiti` with a packed
+LadybugDB driver. Use `-SkipPackageSmoke` only when iterating on non-packaging changes. For a quick local
 test-only loop:
 
 ```powershell

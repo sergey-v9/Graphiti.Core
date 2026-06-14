@@ -135,7 +135,7 @@ added.
 
 Latest checkpoint, 2026-06-14:
 
-`.\eng\Verify-GraphitiCore.ps1` is green after the search concurrency test hardening: restore,
+`.\eng\Verify-GraphitiCore.ps1` is green after the package-consumer workflow smoke hardening: restore,
 format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`984` passed,
 `3` skipped, `987` total), `dotnet pack` for both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
@@ -145,8 +145,8 @@ restore/build/setup/run checks for both packages. The verifier now packs both pr
 `--no-cache`: the core consumer restores from the packed core output + nuget.org only, while the
 Ladybug consumer restores from both packed Graphiti outputs + the local Ladybug feed + nuget.org and
 embeds the packed LadybugDB driver in `Graphiti`. Both consumers call
-`BuildIndicesAndConstraintsAsync()`, then run and assert their provider output (`InMemory`,
-`LadybugDb`). Both csprojs set
+`BuildIndicesAndConstraintsAsync()`, add a triplet through the public API, search the inserted fact
+back, then assert the provider and hit UUID (`InMemory:smoke-edge`, `LadybugDb:smoke-edge`). Both csprojs set
 `IncludeSymbols=true`/`SymbolPackageFormat=snupkg`, and `PackageReadinessTests` guards shared NuGet
 metadata, README packing, symbol settings, SemVer-like same-version alignment, the two-project pack
 loop, and the package-consumer smoke path. `OPENAI_API_KEY` was unset; the three skipped tests were

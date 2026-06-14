@@ -220,11 +220,26 @@ function Invoke-PackageConsumerSmokes {
             "nuget.org" = $nugetSource
         } `
         -ProgramSource @'
+using Graphiti.Core.Models.Edges;
+using Graphiti.Core.Models.Nodes;
+
 await using var graphiti = new Graphiti.Core.Graphiti();
 await graphiti.BuildIndicesAndConstraintsAsync();
-Console.WriteLine(graphiti.Driver.Provider);
+await graphiti.AddTripletAsync(
+    new EntityNode { Uuid = "smoke-alice", Name = "Alice", GroupId = "smoke" },
+    new EntityEdge
+    {
+        Uuid = "smoke-edge",
+        Name = "WORKS_ON",
+        Fact = "Alice works on Atlas",
+        GroupId = "smoke",
+        ValidAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+    },
+    new EntityNode { Uuid = "smoke-atlas", Name = "Atlas", GroupId = "smoke" });
+var hits = await graphiti.SearchAsync("Alice works on Atlas", groupIds: new[] { "smoke" }, numResults: 1);
+Console.WriteLine($"{graphiti.Driver.Provider}:{hits.Single().Uuid}");
 '@ `
-        -ExpectedOutput "InMemory"
+        -ExpectedOutput "InMemory:smoke-edge"
 
     Invoke-PackageConsumerSmoke `
         -Name "GraphitiLadybugPackageSmoke" `
@@ -238,13 +253,27 @@ Console.WriteLine(graphiti.Driver.Provider);
         } `
         -ProgramSource @'
 using Graphiti.Core.Drivers.Ladybug;
+using Graphiti.Core.Models.Edges;
+using Graphiti.Core.Models.Nodes;
 
 await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
 await using var graphiti = new Graphiti.Core.Graphiti(graphDriver: driver);
 await graphiti.BuildIndicesAndConstraintsAsync();
-Console.WriteLine(graphiti.Driver.Provider);
+await graphiti.AddTripletAsync(
+    new EntityNode { Uuid = "smoke-alice", Name = "Alice", GroupId = "smoke" },
+    new EntityEdge
+    {
+        Uuid = "smoke-edge",
+        Name = "WORKS_ON",
+        Fact = "Alice works on Atlas",
+        GroupId = "smoke",
+        ValidAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+    },
+    new EntityNode { Uuid = "smoke-atlas", Name = "Atlas", GroupId = "smoke" });
+var hits = await graphiti.SearchAsync("Alice works on Atlas", groupIds: new[] { "smoke" }, numResults: 1);
+Console.WriteLine($"{graphiti.Driver.Provider}:{hits.Single().Uuid}");
 '@ `
-        -ExpectedOutput "LadybugDb"
+        -ExpectedOutput "LadybugDb:smoke-edge"
 }
 
 Invoke-VerifyStep "restore" {
