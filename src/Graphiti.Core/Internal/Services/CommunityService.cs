@@ -254,26 +254,19 @@ internal sealed class CommunityService(
         CancellationToken cancellationToken)
     {
         var deterministicSummary = DeterministicCommunityText.BuildCommunitySummary(new[] { left, right });
-        try
-        {
-            var response = await llmClient.GenerateTypedResponseAsync<Graphiti.CommunitySummaryResponse>(
-                SummarizeNodesPrompts.BuildSummarizePair(left, right),
-                promptName: "summarize_nodes.summarize_pair",
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+        var response = await llmClient.GenerateTypedResponseAsync<Graphiti.CommunitySummaryResponse>(
+            SummarizeNodesPrompts.BuildSummarizePair(left, right),
+            promptName: "summarize_nodes.summarize_pair",
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            if (response.Summary is { Length: > 0 } summary)
-            {
-                return TextUtilities.TruncateAtSentence(summary, TextUtilities.MaxSummaryChars) ?? summary;
-            }
-
-            return ShouldUseDeterministicLlmFallback()
-                ? deterministicSummary
-                : throw new InvalidOperationException("LLM did not return a community summary.");
-        }
-        catch (NotImplementedException)
+        if (response.Summary is { Length: > 0 } summary)
         {
-            return deterministicSummary;
+            return TextUtilities.TruncateAtSentence(summary, TextUtilities.MaxSummaryChars) ?? summary;
         }
+
+        return ShouldUseDeterministicLlmFallback()
+            ? deterministicSummary
+            : throw new InvalidOperationException("LLM did not return a community summary.");
     }
 
     private async Task<string> GenerateCommunityNameAsync(
@@ -285,26 +278,19 @@ internal sealed class CommunityService(
         var deterministicName = string.IsNullOrWhiteSpace(fallbackName)
             ? DeterministicCommunityText.BuildCommunityName(cluster)
             : fallbackName;
-        try
-        {
-            var response = await llmClient.GenerateTypedResponseAsync<Graphiti.CommunityNameResponse>(
-                SummarizeNodesPrompts.BuildSummaryDescription(summary),
-                promptName: "summarize_nodes.summary_description",
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+        var response = await llmClient.GenerateTypedResponseAsync<Graphiti.CommunityNameResponse>(
+            SummarizeNodesPrompts.BuildSummaryDescription(summary),
+            promptName: "summarize_nodes.summary_description",
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            if (response.Description is { Length: > 0 } name)
-            {
-                return name;
-            }
-
-            return ShouldUseDeterministicLlmFallback()
-                ? deterministicName
-                : throw new InvalidOperationException("LLM did not return a community name.");
-        }
-        catch (NotImplementedException)
+        if (response.Description is { Length: > 0 } name)
         {
-            return deterministicName;
+            return name;
         }
+
+        return ShouldUseDeterministicLlmFallback()
+            ? deterministicName
+            : throw new InvalidOperationException("LLM did not return a community name.");
     }
 
     private bool ShouldUseDeterministicLlmFallback() => llmClient is NoOpLlmClient;

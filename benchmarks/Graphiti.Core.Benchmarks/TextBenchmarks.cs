@@ -13,7 +13,7 @@ public class TextBenchmarks
     private string _document = null!;
     private string _summarySource = null!;
     private ITokenCounter _tiktoken = null!;
-    private ITokenCounter _heuristic = null!;
+    private HeuristicTokenCounter _heuristic = null!;
     private int _documentTokenEstimate;
 
     [Params(2000)]

@@ -76,6 +76,15 @@ public abstract class EmbedderClient : IEmbedderClient
         }
     }
 
+    /// <summary>
+    /// Stamps OpenTelemetry gen_ai/embedding tags onto the supplied <see cref="System.Diagnostics.Activity"/>.
+    /// Sets <c>gen_ai.operation.name</c>, <c>gen_ai.request.model</c>, <c>graphiti.embedding.dimension</c>,
+    /// and <c>graphiti.embedding.input_count</c>. No-op when <paramref name="activity"/> is null.
+    /// </summary>
+    /// <param name="activity">The activity to tag, or null when tracing is disabled.</param>
+    /// <param name="embeddingDimension">The dimensionality of the produced embedding vectors.</param>
+    /// <param name="inputCount">The number of inputs in the embedding request.</param>
+    /// <param name="modelId">The embedding model identifier, or null when unknown.</param>
     protected static void SetEmbeddingActivityTags(
         System.Diagnostics.Activity? activity,
         int embeddingDimension,

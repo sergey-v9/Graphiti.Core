@@ -28,22 +28,15 @@ internal sealed class SagaService(
             }
 
             var maxValidAt = MaxValidAt(episodesData);
-            try
-            {
-                var response = await llmClient.GenerateTypedResponseAsync<Graphiti.SagaSummaryResponse>(
-                    SummarizeSagasPrompts.BuildSummarizeSaga(saga, episodesData),
-                    promptName: "summarize_sagas.summarize_saga",
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            var response = await llmClient.GenerateTypedResponseAsync<Graphiti.SagaSummaryResponse>(
+                SummarizeSagasPrompts.BuildSummarizeSaga(saga, episodesData),
+                promptName: "summarize_sagas.summarize_saga",
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                saga.Summary = HardTruncateSummary(
-                    string.IsNullOrWhiteSpace(response.Summary)
-                        ? BuildFallbackSummary(episodesData)
-                        : response.Summary);
-            }
-            catch (NotImplementedException)
-            {
-                saga.Summary = HardTruncateSummary(BuildFallbackSummary(episodesData));
-            }
+            saga.Summary = HardTruncateSummary(
+                string.IsNullOrWhiteSpace(response.Summary)
+                    ? BuildFallbackSummary(episodesData)
+                    : response.Summary);
 
             saga.LastSummarizedAt = UtcNow();
             if (maxValidAt is not null

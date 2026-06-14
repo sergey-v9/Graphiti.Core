@@ -1182,10 +1182,6 @@ namespace Graphiti.Core.Search
         public System.Collections.Generic.List<Graphiti.Core.Models.Nodes.EntityNode> Nodes { get; set; }
         public static Graphiti.Core.Search.SearchResults Merge(System.Collections.Generic.IEnumerable<Graphiti.Core.Search.SearchResults>? resultsList) { }
     }
-    public sealed class TextScorer
-    {
-        public float Score(string text) { }
-    }
 }
 namespace Graphiti.Core.Serialization
 {

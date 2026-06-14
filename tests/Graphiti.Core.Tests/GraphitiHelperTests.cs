@@ -130,6 +130,23 @@ public class GraphitiHelperTests
     }
 
     [Fact]
+    public void GetDefaultGroupId_AlwaysProducesValidatorSafeValue()
+    {
+        // Pins the cross-method composition invariant the #1549 fix established: every provider's
+        // default group id must survive ValidateGroupId. The old '\_' FalkorDB default failed the
+        // validator (backslashes are rejected), so this loop guards every enum value against a
+        // regression of that latent self-inconsistency.
+        foreach (var provider in Enum.GetValues<GraphProvider>())
+        {
+            var defaultGroupId = GraphitiHelpers.GetDefaultGroupId(provider);
+
+            var exception = Record.Exception(() => GraphitiHelpers.ValidateGroupId(defaultGroupId));
+
+            Assert.Null(exception);
+        }
+    }
+
+    [Fact]
     public void ValidateGroupId_MatchesPythonSafeIdentifierRules()
     {
         GraphitiHelpers.ValidateGroupId(null);

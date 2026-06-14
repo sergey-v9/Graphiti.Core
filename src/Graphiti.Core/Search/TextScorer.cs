@@ -6,7 +6,7 @@ namespace Graphiti.Core.Search;
 /// A lightweight term-overlap scorer built from a query. Tokenizes text and scores it by the fraction
 /// of overlapping terms with the query, used as a cheap relevance heuristic in fallback search paths.
 /// </summary>
-public sealed class TextScorer
+internal sealed class TextScorer
 {
     private readonly FrozenSet<string> _queryTerms;
 
