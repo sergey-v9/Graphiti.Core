@@ -135,9 +135,9 @@ added.
 
 Latest checkpoint, 2026-06-14:
 
-`.\eng\Verify-GraphitiCore.ps1` is green after the package-consumer workflow smoke hardening: restore,
-format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`984` passed,
-`3` skipped, `987` total), `dotnet pack` for both shippable packages
+`.\eng\Verify-GraphitiCore.ps1` is green after the separate edge-extraction self-edge parity proof:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`985`
+passed, `3` skipped, `988` total), `dotnet pack` for both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
 restore/build/setup/run checks for both packages. The verifier now packs both projects, then creates isolated
@@ -149,8 +149,10 @@ embeds the packed LadybugDB driver in `Graphiti`. Both consumers call
 back, then assert the provider and hit UUID (`InMemory:smoke-edge`, `LadybugDb:smoke-edge`). Both csprojs set
 `IncludeSymbols=true`/`SymbolPackageFormat=snupkg`, and `PackageReadinessTests` guards shared NuGet
 metadata, README packing, symbol settings, SemVer-like same-version alignment, the two-project pack
-loop, and the package-consumer smoke path. `OPENAI_API_KEY` was unset; the three skipped tests were
-the env-gated `OpenAIProviderIntegrationTests`.
+loop, and the package-consumer smoke path. `GraphitiWorkflowTests` now pins Python
+`extract_edges` self-edge behavior through `AddEpisodeAsync`: an LLM-returned `Alice -> Alice` edge is
+dropped while the same extraction's `Alice -> Bob` edge is returned and persisted. `OPENAI_API_KEY`
+was unset; the three skipped tests were the env-gated `OpenAIProviderIntegrationTests`.
 
 Latest checkpoint, 2026-06-13:
 

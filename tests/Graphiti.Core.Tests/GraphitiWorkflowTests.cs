@@ -3945,6 +3945,57 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisode_DropsSelfEdgesFromSeparateEdgeExtraction()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: new StaticLlmClient(new JsonObject
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                    new JsonObject { ["name"] = "Bob", ["entity_type"] = "Person" }
+                },
+                ["edges"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["source"] = "Alice",
+                        ["target"] = "Bob",
+                        ["relation_type"] = "CONGRATULATED",
+                        ["fact"] = "Alice congratulated Bob.",
+                        ["valid_at"] = "2026-01-01T00:00:00Z"
+                    },
+                    new JsonObject
+                    {
+                        ["source"] = "Alice",
+                        ["target"] = "Alice",
+                        ["relation_type"] = "FEELS_HAPPY",
+                        ["fact"] = "Alice feels happy.",
+                        ["valid_at"] = "2026-01-01T00:00:00Z"
+                    }
+                }
+            }));
+
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Alice congratulated Bob. Alice feels happy.",
+            "message",
+            new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+            groupId: "group");
+
+        var edge = Assert.Single(result.Edges);
+        Assert.Equal("CONGRATULATED", edge.Name);
+        Assert.NotEqual(edge.SourceNodeUuid, edge.TargetNodeUuid);
+
+        var storedEdge = Assert.Single(await EntityEdge.GetByGroupIdsAsync(driver, new[] { "group" }));
+        Assert.Equal(edge.Uuid, storedEdge.Uuid);
+        Assert.Equal("CONGRATULATED", storedEdge.Name);
+        Assert.NotEqual(storedEdge.SourceNodeUuid, storedEdge.TargetNodeUuid);
+    }
+
+    [Fact]
     public async Task AddEpisode_LeavesExpiredAtNullWhenBrandNewExtractedEdgeHasInvalidAt()
     {
         var driver = new InMemoryGraphDriver();

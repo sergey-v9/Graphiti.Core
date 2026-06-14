@@ -133,6 +133,12 @@ BM25/vector fan-out are proven directly instead of relying on a watchdog cancell
 the production search path. This keeps the C# proof aligned with Python's `semaphore_gather` search
 fan-out.
 
+**2026-06-14 separate edge-extraction self-edge proof:** added a public workflow parity test for
+Python `edge_operations.extract_edges` self-edge filtering. `AddEpisodeAsync` now has provider-free
+coverage showing an LLM-returned `Alice -> Alice` fact is dropped after names resolve to the same
+node UUID, while the same extraction's `Alice -> Bob` fact is returned and persisted. No production
+behavior changed; the existing C# guard lives in `EdgeResolutionService.BuildExtractedEdgeCandidates`.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
@@ -217,7 +223,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Node resolution: deterministic + embedding + LLM dedup | node_operations.resolve_extracted_nodes | NodeResolutionService | OK | Prompt ported 2026-06-11; deterministic, embedding, and LLM dedupe stages covered |
 | Entity attribute extraction | node_operations.extract_attributes_from_nodes | AttributeExtractionService | OK | Overlay merge and anti-hallucination prompt ported 2026-06-11 |
 | Entity summary generation (batch, fact-appending) | node_operations.py:833-1000 | EntitySummaryService | OK | Ported 2026-06-11; appends short new edge facts, batches 30-node LLM flights, supports internal filter/episode-prompt hooks, truncates LLM summaries |
-| Edge extraction (LLM) | edge_operations.extract_edges | EpisodeGraphExtractor | OK | Prompts ported 2026-06-11 |
+| Edge extraction (LLM) | edge_operations.extract_edges | EpisodeGraphExtractor + EdgeResolutionService | OK | Prompts ported 2026-06-11; public `AddEpisodeAsync` coverage pins Python's separate-extraction self-edge drop after source/target names resolve to the same node UUID |
 | Edge resolution: dedup fast-path, timestamps, contradictions | edge_operations.resolve_extracted_edge | EdgeResolutionService | OK | Prompt text ported 2026-06-11; broad candidate search remains tracked separately below |
 | Broad invalidation-candidate search | edge_operations.py:407-418 | EdgeResolutionService | OK | Verified 2026-06-11; unfiltered edge hybrid search supplies invalidation candidates beyond the node pair, with regression coverage for invalidating an edge on a different target node |
 | Combined node+edge extraction path | utils/maintenance/combined_extraction.py | EpisodeGraphExtractor.ExtractCombinedEpisodeGraphAsync | OK | Internal path ported 2026-06-11: single LLM call, orphan dropping, node attribution from facts, self-fact preservation, and batch timestamps. Public `Graphiti` ingestion remains on separate extraction because Python exposes `use_combined_extraction` only as an internal bulk helper flag defaulting to `False`; tests pin that `add_episode` and `add_episode_bulk` do not call the combined prompt by default |
