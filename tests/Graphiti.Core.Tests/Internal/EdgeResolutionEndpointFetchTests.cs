@@ -47,6 +47,47 @@ public class EdgeResolutionEndpointFetchTests
         });
 
     [Fact]
+    public void BuildExtractedEdgeCandidates_UsesFirstRawEpisodeIndexForReferenceTime()
+    {
+        var primaryReference = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var secondaryReference = new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc);
+        var now = new DateTime(2026, 1, 3, 12, 0, 0, DateTimeKind.Utc);
+        var episodes = new[]
+        {
+            new EpisodicNode { Uuid = "episode-0", ValidAt = primaryReference },
+            new EpisodicNode { Uuid = "episode-1", ValidAt = secondaryReference }
+        };
+        var nodesByExtractedName = new Dictionary<string, EntityNode>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Alice"] = new EntityNode { Uuid = "alice-uuid", Name = "Alice", GroupId = "group" },
+            ["Acme"] = new EntityNode { Uuid = "acme-uuid", Name = "Acme", GroupId = "group" }
+        };
+
+        var candidates = EdgeResolutionService.BuildExtractedEdgeCandidates(
+            new[]
+            {
+                new Graphiti.ExtractedEdge(
+                    "Alice",
+                    "Acme",
+                    "WORKS_AT",
+                    "Alice works at Acme.",
+                    validAt: null,
+                    invalidAt: null,
+                    episodeIndices: new[] { 99, 1 })
+            },
+            nodesByExtractedName,
+            episodes,
+            "group",
+            now,
+            out var skippedEdges);
+
+        var edge = Assert.Single(candidates);
+        Assert.Equal(0, skippedEdges);
+        Assert.Equal(new[] { "episode-1" }, edge.Episodes);
+        Assert.Equal(primaryReference, edge.ReferenceTime);
+    }
+
+    [Fact]
     public async Task ResolveEntityEdges_FetchesMissingEndpointNode_PreservingCustomEdgeType()
     {
         var driver = new InMemoryGraphDriver();

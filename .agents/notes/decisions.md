@@ -272,12 +272,17 @@ Other accepted, smaller divergences confirmed in the same pass:
 These were confirmed real but left as-is, with a rationale. Revisit if the relevant path is wired or
 the impact grows.
 
-- **Multi-episode attribution internals** diverge from Python in several latent ways (reference-time
-  first-valid vs first-element, resolved-vs-extracted index-map remap, dropped-duplicate episode
-  merging). Unreachable today: both Python and C# extract exactly one episode per extraction call, so
-  every path reduces to a single episode index `[0]`. If multi-episode extraction is ever wired,
-  port `node_operations.py:104-112` / `edge_operations.py:170-181` attribution blocks and reconcile
-  the helpers in `EpisodeAttribution.cs`.
+- **Multi-episode node attribution after resolution** still has a latent Python/C# difference.
+  Unreachable today: both Python and C# extract exactly one episode per public extraction call, so
+  every public path reduces to a single episode index `[0]`. If multi-episode extraction is ever
+  wired, decide whether to preserve C#'s defensive remap/merge behavior or copy Python's current
+  pre-resolution map behavior exactly. Python passes the extracted-node UUID attribution map into
+  `build_episodic_edges`; when a multi-episode extracted node resolves to a different UUID, that map
+  no longer matches and the node defaults to every episode. C# remaps and merges attribution through
+  the resolved canonical node in `EpisodeAttribution.RemapNodeIndexMap`, so it preserves the narrower
+  attributed subset. The former edge `reference_time` drift is closed: C# now matches Python's
+  first-raw-episode-index rule (`[99, 1]` maps the episode UUID to episode 1 but keeps the primary
+  episode's reference time).
 - **Ladybug `RetrieveEpisodes` returns oldest-first**, matching the documented `retrieve_episodes`
   contract (`graph_operations.py:223`, `graph_data_operations.py` `list(reversed(...))`); Python's
   Kuzu operations-interface path returns newest-first, violating its own contract. C# is the

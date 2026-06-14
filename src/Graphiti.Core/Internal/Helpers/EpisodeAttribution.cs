@@ -45,23 +45,20 @@ internal static class EpisodeAttribution
         return episodeUuids;
     }
 
-    internal static DateTime ReferenceTimeForFirstValidIndex(
+    internal static DateTime ReferenceTimeForFirstIndex(
         IReadOnlyList<int>? episodeIndices,
         IReadOnlyList<EpisodicNode> episodes,
         DateTime fallback)
     {
-        if (episodeIndices is null)
+        if (episodeIndices is null || episodeIndices.Count == 0)
         {
             return fallback;
         }
 
-        for (var i = 0; i < episodeIndices.Count; i++)
+        var index = episodeIndices[0];
+        if ((uint)index < (uint)episodes.Count)
         {
-            var index = episodeIndices[i];
-            if ((uint)index < (uint)episodes.Count)
-            {
-                return episodes[index].ValidAt;
-            }
+            return episodes[index].ValidAt;
         }
 
         return fallback;

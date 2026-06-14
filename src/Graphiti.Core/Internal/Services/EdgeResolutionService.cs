@@ -354,7 +354,7 @@ internal sealed class EdgeResolutionService(
                 ValidAt = extracted.ValidAt,
                 InvalidAt = extracted.InvalidAt,
                 ReferenceTime = extracted.ReferenceTime
-                                ?? EpisodeAttribution.ReferenceTimeForFirstValidIndex(
+                                ?? EpisodeAttribution.ReferenceTimeForFirstIndex(
                                     extracted.EpisodeIndices,
                                     episodes,
                                     fallbackEpisode.ValidAt)

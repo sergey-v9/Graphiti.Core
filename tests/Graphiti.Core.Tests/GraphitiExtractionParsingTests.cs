@@ -280,6 +280,31 @@ public class GraphitiExtractionParsingTests
     }
 
     [Fact]
+    public void EpisodeAttribution_ReferenceTimeUsesFirstRawIndexLikePython()
+    {
+        var fallback = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var second = new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc);
+        var episodes = new[]
+        {
+            new EpisodicNode { Uuid = "episode-0", ValidAt = fallback },
+            new EpisodicNode { Uuid = "episode-1", ValidAt = second }
+        };
+
+        Assert.Equal(
+            second,
+            EpisodeAttribution.ReferenceTimeForFirstIndex(new[] { 1, 0 }, episodes, fallback));
+        Assert.Equal(
+            fallback,
+            EpisodeAttribution.ReferenceTimeForFirstIndex(new[] { 99, 1 }, episodes, fallback));
+        Assert.Equal(
+            fallback,
+            EpisodeAttribution.ReferenceTimeForFirstIndex(Array.Empty<int>(), episodes, fallback));
+        Assert.Equal(
+            fallback,
+            EpisodeAttribution.ReferenceTimeForFirstIndex(null, episodes, fallback));
+    }
+
+    [Fact]
     public void EpisodeAttribution_RemapsExtractedNodeIndicesToResolvedNodes()
     {
         var singleRemap = EpisodeAttribution.RemapNodeIndexMap(

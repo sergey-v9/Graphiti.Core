@@ -330,7 +330,7 @@ internal sealed class EpisodeGraphExtractor(
                 validAt: null,
                 invalidAt: null,
                 episodeIndices,
-                EpisodeAttribution.ReferenceTimeForFirstValidIndex(
+                EpisodeAttribution.ReferenceTimeForFirstIndex(
                     raw.EpisodeIndices,
                     episodes,
                     episodes[0].ValidAt),

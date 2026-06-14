@@ -75,6 +75,13 @@ distance and episode-mention rank queries already constrain each per-UUID query 
 `node_uuid`; the executor now also ignores impossible rows whose returned `uuid` is outside the input
 score map, so rank results stay restricted to requested candidates like Python's reranker output.
 
+**2026-06-14 attribution reference-time follow-up:** closed the tracked edge `reference_time` drift
+inside the latent multi-episode attribution helpers. Python maps valid `episode_indices` to episode
+UUIDs by filtering valid entries, but chooses `reference_time` only from the first raw index when that
+first raw index is valid; otherwise it falls back to the primary episode. C# now uses the same
+first-raw-index rule in `EpisodeAttribution.ReferenceTimeForFirstIndex`, including the `[99, 1]`
+case.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
@@ -155,7 +162,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 |---|---|---|---|---|
 | Episode bookkeeping, previous-episode window | graphiti.py | Graphiti.Ingestion.cs | OK | |
 | Node extraction (LLM) | node_operations.extract_nodes | EpisodeGraphExtractor | OK | Prompts ported 2026-06-11 |
-| Multi-episode node/fact attribution | node_operations.py:103-112, 283-306; edge_operations.py:170-180, 290-313 | EpisodeGraphExtractor → EpisodeAttribution → MaintenanceUtilities.BuildEpisodicEdges / EdgeResolutionService | OK | C# parses `episode_indices` for extracted nodes and facts, remaps node attribution through resolution before building episodic edges, and maps fact attribution to edge `Episodes`/`ReferenceTime`; true bulk dedupe/resolve semantics remain tracked in the bulk ingestion row |
+| Multi-episode node/fact attribution | node_operations.py:103-112, 283-306; edge_operations.py:170-180, 290-313 | EpisodeGraphExtractor → EpisodeAttribution → MaintenanceUtilities.BuildEpisodicEdges / EdgeResolutionService | OK + latent DIVERGENT | C# parses `episode_indices` for extracted nodes and facts, maps fact attribution to edge `Episodes`/`ReferenceTime` using Python's first-raw-index `reference_time` rule, and remaps node attribution through resolution before building episodic edges. The remap preserves narrower attribution when a multi-episode extracted node resolves to a different UUID; Python would currently default that resolved node to all episodes because its attribution map is still keyed by extracted UUIDs. Public ingestion still extracts one episode per call, so the remap difference is latent. True bulk dedupe/resolve semantics remain tracked in the bulk ingestion row |
 | Node resolution: deterministic + embedding + LLM dedup | node_operations.resolve_extracted_nodes | NodeResolutionService | OK | Prompt ported 2026-06-11; deterministic, embedding, and LLM dedupe stages covered |
 | Entity attribute extraction | node_operations.extract_attributes_from_nodes | AttributeExtractionService | OK | Overlay merge and anti-hallucination prompt ported 2026-06-11 |
 | Entity summary generation (batch, fact-appending) | node_operations.py:833-1000 | EntitySummaryService | OK | Ported 2026-06-11; appends short new edge facts, batches 30-node LLM flights, supports internal filter/episode-prompt hooks, truncates LLM summaries |

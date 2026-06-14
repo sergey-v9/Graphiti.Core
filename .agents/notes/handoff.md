@@ -135,9 +135,9 @@ added.
 
 Latest checkpoint, 2026-06-14:
 
-`.\eng\Verify-GraphitiCore.ps1` is green after package consumption-smoke follow-through: restore,
-format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`974` passed,
-`3` skipped, `977` total), `dotnet pack` for both shippable packages
+`.\eng\Verify-GraphitiCore.ps1` is green after the attribution reference-time follow-up: restore,
+format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`980` passed,
+`3` skipped, `983` total), `dotnet pack` for both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
 restore/build/setup/run checks for both packages. The verifier now packs both projects, then creates isolated
@@ -214,6 +214,13 @@ Ladybug ranker hygiene follow-up, 2026-06-14: the tracked impossible-row ranker 
 `LadybugSearchExecutor` now ignores distance/episode-mention rank rows whose `uuid` was not in the
 requested input set; real per-UUID Cypher already constrains these rows, and the guard keeps mocked or
 backend-anomalous rows from surfacing backend-only UUIDs.
+
+Attribution reference-time follow-up, 2026-06-14: the latent edge `reference_time` helper now matches
+Python's first-raw-episode-index rule. Valid episode UUIDs are still filtered from all valid
+`episode_indices`, but `reference_time` comes only from the first raw index when that first index is
+valid; otherwise it falls back to the primary episode. The remaining latent multi-episode attribution
+difference is node remapping after resolution: C# preserves the narrower resolved-node attribution,
+while Python's current pre-resolution map would default a resolved UUID mismatch to all episodes.
 
 Follow-up checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 959 passed, 3 skipped, 962
 total; format/build/pack clean). Landed since 06-13: the eval harness (`samples/Graphiti.Eval`) built
