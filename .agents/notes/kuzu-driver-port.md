@@ -13,6 +13,37 @@ remaining release blocker is publishing/replacing the local `0.17.0-alpha.2-grap
 (Step E.2): patch+pack in `W:\code\ladybug\tools\csharp_api`, publish to a real feed (or keep the local
 feed for dev), then point `Graphiti.Core.Drivers.Ladybug` at it.
 
+## Native search adoption (deep-dive 2026-06-14)
+
+Question posed: "what else can we take from the Ladybug provider — maybe vector search and text
+search — if it aligns with the Python authors' intent." Verified answer: **already taken, and already
+faithful.** Python's design intent is *search pushed down into the DB, rank in-app*
+(`graphiti_core/graph_queries.py`: every backend computes cosine inline via
+`get_vector_cosine_func_query` and runs native fulltext via `get_nodes_query`; RRF/MMR/cross-encoder
+are the only in-app steps). The C# Ladybug driver already does exactly this — native
+`array_cosine_similarity` over `FLOAT[]` columns and native `QUERY_FTS_INDEX` (BM25), a near-verbatim
+port of Python's Kuzu branch (`LadybugSearchStatementBuilder.cs`, `LadybugFulltextQuery.cs`). Only the
+**InMemory reference driver** computes cosine/BM25 in managed code (`TensorPrimitives` +
+`Bm25TextScorer`), by design.
+
+Net-new lever, NOT adopted: LadybugDB's **HNSW vector index** (`CREATE_VECTOR_INDEX` /
+`QUERY_VECTOR_INDEX`, `vector` extension). Python uses **no** ANN index on any backend
+(`get_range_indices` is `[]` for KUZU; cosine is always inline/full-scan), so adopting HNSW would be a
+C#-only enhancement *beyond* Python. It trades exact→approximate (ANN recall/determinism cost) and
+only pays off at large scale. Decision: **do not adopt now.** If ever taken, gate it behind an opt-in
+flag with exact full-scan cosine as the default, justified by a BenchmarkDotNet before/after (perf
+tier, post-moratorium, evidence-driven). FTS tuning (BM25 k/b, tokenizer/stemmer/stopwords) is
+deliberately left at engine defaults — tuning would DIVERGE from Python parity.
+
+Bindings feedback left for the binding agent at
+`W:\code\ladybug\tools\csharp_api\GRAPHITI_SEARCH_EXTENSIONS_FEEDBACK.md` (uncommitted; their repo):
+(1) their P0/WS-F Linux extension-symbol-visibility fix is on Graphiti's critical path — please verify
+a full `fts` (and ideally `vector`) `CREATE/QUERY` round-trip on linux-x64, since Graphiti is only
+validated on win-x64 today; (2) optional WS-C first-class `FLOAT[N]` array binding would let us drop
+the inline `CAST($search_vector AS FLOAT[dim])`. The local binding has since advanced to `0.17.1` with
+a `LadybugDB.Extensions` package and the P0–P3 `feature/parity-extensions-2026-06` initiative; Graphiti
+still pins `0.17.0-alpha.2-graphiti.1` (C API unchanged 0.17.0→0.17.2).
+
 ## Current Status
 
 - The LadybugDB package and native references are owned by the `Graphiti.Core.Drivers.Ladybug` project
