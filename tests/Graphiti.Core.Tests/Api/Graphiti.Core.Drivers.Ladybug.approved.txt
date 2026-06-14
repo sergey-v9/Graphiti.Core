@@ -1,0 +1,21 @@
+namespace Graphiti.Core.Configuration
+{
+    public sealed class LadybugDbOptions
+    {
+        public LadybugDbOptions() { }
+        public string DatabasePath { get; set; }
+    }
+    public static class LadybugDbServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddLadybugDbGraphDriver(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Graphiti.Core.Configuration.LadybugDbOptions>? configure = null) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddLadybugDbGraphDriver(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration, System.Action<Graphiti.Core.Configuration.LadybugDbOptions>? configure = null) { }
+    }
+}
+namespace Graphiti.Core.Drivers.Ladybug
+{
+    public static class LadybugDbGraphDriverFactory
+    {
+        public static Graphiti.Core.Drivers.IGraphDriver Create(string databasePath) { }
+        public static Graphiti.Core.Drivers.IGraphDriver CreateInMemory() { }
+    }
+}

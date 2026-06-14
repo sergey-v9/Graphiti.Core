@@ -1,33 +1,40 @@
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using PublicApiGenerator;
 
 namespace Graphiti.Core.Tests.Api;
 
 /// <summary>
-/// Locks the public API surface of the <c>Graphiti.Core</c> assembly against accidental drift.
+/// Locks the public API surface of the shipped assemblies (<c>Graphiti.Core</c> and
+/// <c>Graphiti.Core.Drivers.Ladybug</c>) against accidental drift.
 ///
 /// <para>
-/// The test reflects over the shipped assembly with <see cref="ApiGenerator"/> and compares the
-/// generated signature dump against a committed baseline fixture
-/// (<c>Api/Graphiti.Core.approved.txt</c>). The dump is signatures only — XML documentation is not
-/// included — so this snapshot composes with documentation work without conflict.
+/// Each test reflects over an assembly with <see cref="ApiGenerator"/> and compares the generated
+/// signature dump against a committed baseline fixture (<c>Api/&lt;assembly&gt;.approved.txt</c>). The
+/// dump is signatures only — XML documentation is not included — so this snapshot composes with
+/// documentation work without conflict.
 /// </para>
 ///
 /// <para>
 /// When the public API changes on purpose, the test fails and writes the freshly generated surface
-/// next to the baseline as <c>Api/Graphiti.Core.received.txt</c>. Review the diff, and if the change
-/// is intended, overwrite the baseline with the received file (or copy the received contents over the
-/// approved file) and commit that as a deliberate, reviewable edit. An unintended change is caught the
-/// same way but should be reverted in source instead.
+/// next to the baseline as <c>Api/&lt;assembly&gt;.received.txt</c>. Review the diff, and if the change
+/// is intended, overwrite the baseline with the received contents and commit that as a deliberate,
+/// reviewable edit. An unintended change is caught the same way but should be reverted in source.
 /// </para>
 /// </summary>
 public class PublicApiSnapshotTests
 {
-    private const string ApprovedFileName = "Graphiti.Core.approved.txt";
-    private const string ReceivedFileName = "Graphiti.Core.received.txt";
+    [Fact]
+    public void GraphitiCore_PublicApi_MatchesApprovedBaseline()
+        => AssertPublicApiMatches(typeof(Graphiti).Assembly, "Graphiti.Core");
 
     [Fact]
-    public void PublicApi_MatchesApprovedBaseline()
+    public void GraphitiCoreDriversLadybug_PublicApi_MatchesApprovedBaseline()
+        => AssertPublicApiMatches(
+            typeof(global::Graphiti.Core.Configuration.LadybugDbOptions).Assembly,
+            "Graphiti.Core.Drivers.Ladybug");
+
+    private static void AssertPublicApiMatches(Assembly assembly, string baselineName)
     {
         var options = new ApiGeneratorOptions
         {
@@ -36,12 +43,11 @@ public class PublicApiSnapshotTests
             IncludeAssemblyAttributes = false,
         };
 
-        var actualApi = typeof(Graphiti).Assembly.GeneratePublicApi(options);
-        actualApi = Normalize(actualApi);
+        var actualApi = Normalize(assembly.GeneratePublicApi(options));
 
         var apiDirectory = GetApiDirectory();
-        var approvedPath = Path.Combine(apiDirectory, ApprovedFileName);
-        var receivedPath = Path.Combine(apiDirectory, ReceivedFileName);
+        var approvedPath = Path.Combine(apiDirectory, baselineName + ".approved.txt");
+        var receivedPath = Path.Combine(apiDirectory, baselineName + ".received.txt");
 
         if (!File.Exists(approvedPath))
         {
@@ -58,7 +64,7 @@ public class PublicApiSnapshotTests
         {
             File.WriteAllText(receivedPath, actualApi);
             Assert.Fail(
-                "The public API surface of Graphiti.Core has changed and no longer matches the " +
+                $"The public API surface of {baselineName} has changed and no longer matches the " +
                 $"approved baseline ('{approvedPath}').\n" +
                 "If this change is INTENTIONAL, review the diff and update the baseline by copying " +
                 $"the generated surface ('{receivedPath}') over the approved file, then commit it as a " +

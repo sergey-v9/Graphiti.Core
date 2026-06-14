@@ -7,7 +7,7 @@
     <Authors>Zep Software, Inc.; Graphiti Contributors</Authors>
     <Company>Zep Software, Inc.</Company>
     <Description>C# core library for building and querying temporal context graphs for AI agents.</Description>
-    <PackageTags>graphiti;knowledge-graph;temporal-graph;ai-agents;retrieval;neo4j;ladybugdb;kuzu</PackageTags>
+    <PackageTags>graphiti;knowledge-graph;temporal-graph;ai-agents;retrieval;neo4j</PackageTags>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/getzep/graphiti</PackageProjectUrl>
     <RepositoryUrl>https://github.com/getzep/graphiti</RepositoryUrl>
