@@ -281,6 +281,29 @@ the impact grows.
   the response (required Pydantic field). Reachable only if a provider returns an edge with valid
   endpoints but no relation type; left lenient for now.
 
+## Deliberate divergences from the 2026-06-14 upstream sync
+
+The 5 `graphiti_core` commits added upstream between anchor `34f56e6` and `origin/main` `ff7e29c`
+were reviewed (full per-commit disposition in `parity.md`). Two are deliberate divergences:
+
+- **Default LLM model stays `gpt-4.1-mini`** (upstream #1551 moved Python's default to `gpt-5.5` with
+  reasoning effort `'none'`). C# does **not** follow. Reasoning-effort and temperature-omission for
+  reasoning models are not Graphiti's concern in the C# architecture — they live in the consumer's
+  `Microsoft.Extensions.AI` chat client. Defaulting to `gpt-5.5` without C# emitting
+  `reasoning_effort:'none'` would let the API apply its *medium* default reasoning (expensive/slow) —
+  the opposite of Python's intent. `gpt-4.1-mini` is a supported non-reasoning model and the safe,
+  cheap default. Consumers wanting `gpt-5.5` should configure reasoning off on their M.E.AI client.
+- **Kuzu is NOT deprecated** (upstream #1548 deprecated the Kuzu backend because the *upstream Kuzu
+  project* is unmaintained). The C# port's primary provider is **LadybugDB**, a maintained
+  Kuzu-lineage engine we build/repair locally; the deprecation rationale does not apply. No
+  `DeprecationWarning`/`[Obsolete]` on the Ladybug driver. (`GraphProvider.Kuzu` is an `[Obsolete]`
+  alias of `LadybugDb` for an unrelated naming reason — plan 05 B.)
+
+The other three: the FalkorDB default-`group_id` fix (#1549) was adopted (one-char
+`GetDefaultGroupId` change); the generic-client structured-output rework (#1537) is N/A (M.E.AI is the
+sole adapter) with its empty-response-is-retryable bit already matched by C#; the FalkorDB nul-byte
+strip (#1531) is N/A (no FalkorDB driver).
+
 ## Provider Status
 
 - LadybugDB is the primary graph provider target for the C# port and is owned by `Graphiti.Core`.

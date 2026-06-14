@@ -120,7 +120,9 @@ public class GraphitiHelperTests
     public void GetDefaultGroupId_MatchesPythonProviderDefaults()
     {
         Assert.Equal(string.Empty, GraphitiHelpers.GetDefaultGroupId(GraphProvider.Neo4j));
-        Assert.Equal(@"\_", GraphitiHelpers.GetDefaultGroupId(GraphProvider.FalkorDb));
+        // '_' (not the old '\_') after upstream #1549 (ff7e29c): the backslash failed
+        // validate_group_id and broke the FalkorDB quickstart. Mirrors get_default_group_id.
+        Assert.Equal("_", GraphitiHelpers.GetDefaultGroupId(GraphProvider.FalkorDb));
         // Kuzu remains the LadybugDB parity/compatibility value; assert defaults for existing enum values.
         Assert.Equal(string.Empty, GraphitiHelpers.GetDefaultGroupId(GraphProvider.Kuzu));
         Assert.Equal(string.Empty, GraphitiHelpers.GetDefaultGroupId(GraphProvider.Neptune));

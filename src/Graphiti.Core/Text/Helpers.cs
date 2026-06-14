@@ -138,7 +138,12 @@ public static partial class GraphitiHelpers
 
     /// <summary>Returns the provider-specific default group id (FalkorDB needs a non-empty value).</summary>
     public static string GetDefaultGroupId(GraphProvider provider) =>
-        provider == GraphProvider.FalkorDb ? @"\_" : string.Empty;
+        // FalkorDB's default group id is '_' (a clean, validator-safe value). Mirrors
+        // graphiti_core/helpers.py get_default_group_id after upstream #1549 (ff7e29c): the old
+        // '\_' failed validate_group_id (backslashes are rejected) and broke the FalkorDB
+        // quickstart out of the box. '_' passes ValidateGroupId below, removing that latent
+        // self-inconsistency here too.
+        provider == GraphProvider.FalkorDb ? "_" : string.Empty;
 
     /// <summary>
     /// Validates a group id (alphanumerics, dashes, underscores). Null/empty is allowed (no-op);

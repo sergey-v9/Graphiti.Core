@@ -4,10 +4,13 @@ This is the single source of truth for "what is actually ported". Update the aff
 same change that closes or reopens a gap. Do not claim parity from memory — verify against the
 Python file before flipping a status.
 
-**Python baseline:** `graphiti_core/` in the parent repo at commit `7514b44` (2026-05-20,
-"Forward-port: attribute-hallucination guards, combined-extraction precision, saga episode-time
-watermarks"). When the parent repo pulls newer upstream changes, diff `graphiti_core/` against this
-baseline, add rows or reopen statuses for anything affected, then move the anchor.
+**Python baseline:** `graphiti_core/` reconciled through upstream `origin/main` at commit `ff7e29c`
+(2026-06-08, the FalkorDB default-group_id fix #1549). The local parent-repo checkout of
+`graphiti_core/` is at `34f56e6` (0.29.1 version bump over the previous anchor `7514b44`); the five
+commits between `34f56e6` and `ff7e29c` were reviewed in the 2026-06-14 upstream sync below (none
+touched prompts/search/pipeline). When the parent repo pulls newer upstream changes, diff
+`graphiti_core/` against this anchor, add rows or reopen statuses for anything affected, then move the
+anchor.
 
 **Statuses**
 - `OK` — behavior and (for prompts) instruction text faithfully ported; divergences documented.
@@ -53,6 +56,42 @@ DB fetch; dropped the fabricated `RELATES_TO` default; cross-encoder golden + sm
 A second adversarial review of that work caught and fixed eval-prompt interior trailing spaces, F3
 over-scoping by group_id, and the eval measuring retrieval-QA instead of graph-building. All
 integrated; verification green (962 tests). Plans 03 and 04 are closed.
+
+## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `ff7e29c`)
+
+Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
+`prompts/`, `search/`, `nodes.py`, `edges.py`, or the ingestion/utils pipeline** — the
+parity-critical layers are unchanged upstream, so no prompt/pipeline rows move. Per-commit
+disposition:
+
+- **`ff7e29c` fix(falkordb) default group_id `\_`→`_` (#1549) — ADOPTED.** C#
+  `GraphitiHelpers.GetDefaultGroupId(FalkorDb)` returned `@"\_"`, which fails C#'s own
+  `ValidateGroupId` (backslashes rejected) — the same latent bug upstream fixed. Changed to `"_"`
+  (`Text/Helpers.cs`, test `GraphitiHelperTests.cs`). The RediSearch fulltext-escaping half is N/A
+  (C# has no FalkorDB driver). FalkorDB stays enum/wire-compat only.
+- **`f723545` feat(llm) default model `gpt-5.5` + model-tied reasoning effort (#1551) — DIVERGENT
+  (deliberate).** C# keeps `LlmConfig.Model = "gpt-4.1-mini"`. Reasoning-effort/temperature-omission
+  are not modeled in C# — they belong to the consumer's `Microsoft.Extensions.AI` chat client, not
+  Graphiti. Copying the `gpt-5.5` default verbatim would be *harmful*: gpt-5.5 is a reasoning model,
+  and without C# sending `reasoning_effort:'none'` the M.E.AI/OpenAI path would apply the API's
+  *medium* default reasoning — the expensive/slow behavior Python specifically engineered around.
+  `DEFAULT_SMALL_MODEL` (`gpt-4.1-nano`) is unchanged upstream and already matches
+  (`CrossEncoder` DefaultModel). Recorded in `decisions.md`.
+- **`c537ed4` fix(llm) generic client json_schema/json_object + EmptyResponseError retryable (#1537)
+  — N/A + already-aligned.** No C# `OpenAIGenericClient` (M.E.AI is the single adapter for all
+  providers); json_schema-vs-json_object/response_format/markdown-fence handling are M.E.AI concerns.
+  The portable bit — treat an empty response as a retryable failure — C# already does:
+  `MicrosoftExtensionsAIChatClient.ParseJsonResponse` throws on empty/whitespace and routes through
+  `LlmClient.GenerateValidatedResponseWithRetryAsync`.
+- **`57778eb` deprecate(kuzu) (#1548) — REJECTED (deliberate).** Upstream deprecates Kuzu because the
+  *upstream Kuzu project* is unmaintained. The C# port's primary provider is **LadybugDB**, a
+  maintained Kuzu-lineage engine we build/repair locally — so the deprecation rationale does not
+  apply to us. No `DeprecationWarning`, no `[Obsolete]` on the Ladybug driver. (`GraphProvider.Kuzu`
+  remains an `[Obsolete]` alias of `LadybugDb` for a *different*, naming reason — see plan 05 B.)
+- **`ecb521d` fix(falkor) strip nul bytes from parameters (#1531) — N/A.** No FalkorDB driver in C#.
+
+Net code change from this sync: the single one-character FalkorDB group_id fix. The parity-critical
+layers needed nothing.
 
 ## Prompts (LLM instruction text)
 
