@@ -40,6 +40,7 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
         }.ToString();
     }
 
+    /// <inheritdoc />
     public async Task<JsonObject?> GetAsync(string key, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -59,6 +60,7 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
         return null;
     }
 
+    /// <inheritdoc />
     public async Task SetAsync(string key, JsonObject value, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -66,6 +68,7 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
         await SetPayloadAsync(key, payload, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<JsonObject> GetOrCreateAsync(
         string key,
         Func<CancellationToken, Task<JsonObject>> factory,
@@ -197,6 +200,7 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
         command.Parameters.AddWithValue("$key", key);
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
+    /// <summary>Releases resources held by the cache.</summary>
     public void Dispose()
     {
         if (_disposed)
