@@ -190,9 +190,10 @@ function Invoke-PackageConsumerSmoke {
             "--no-build",
             "--verbosity",
             "minimal")
-        $actualOutput = ($output | Out-String).Trim()
+        $actualLines = @($output | ForEach-Object { "$_" } | Where-Object { $_.Trim().Length -gt 0 })
+        $actualOutput = if ($actualLines.Count -eq 0) { "" } else { $actualLines[-1].Trim() }
         if ($actualOutput -ne $ExpectedOutput) {
-            throw "$Name produced '$actualOutput'; expected '$ExpectedOutput'"
+            throw "$Name produced final output '$actualOutput'; expected '$ExpectedOutput'"
         }
     }
     finally {
@@ -220,6 +221,7 @@ function Invoke-PackageConsumerSmokes {
         } `
         -ProgramSource @'
 await using var graphiti = new Graphiti.Core.Graphiti();
+await graphiti.BuildIndicesAndConstraintsAsync();
 Console.WriteLine(graphiti.Driver.Provider);
 '@ `
         -ExpectedOutput "InMemory"
@@ -238,6 +240,7 @@ Console.WriteLine(graphiti.Driver.Provider);
 using Graphiti.Core.Drivers.Ladybug;
 
 await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
+await driver.BuildIndicesAndConstraintsAsync();
 Console.WriteLine(driver.Provider);
 '@ `
         -ExpectedOutput "LadybugDb"

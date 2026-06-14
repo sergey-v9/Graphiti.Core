@@ -62,7 +62,7 @@ semantics, wire compatibility, or performance/allocation discipline.
   broken XML docs on their public surface are build failures; tests/samples do not enable package XML
   generation. `PackageReadinessTests` guards shared NuGet metadata, README packing, symbol settings,
   same-version alignment, the two-project `Verify-GraphitiCore.ps1` pack loop, and the strict package
-  consumer restore/build/run smoke path.
+  consumer restore/build/setup/run smoke path.
 
 ## Public API surface (plan 05, 2026-06-14)
 

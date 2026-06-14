@@ -12,7 +12,8 @@ test is kept as a drift guard, not a freeze: each step that changes the public s
 All five steps landed on `main` and verified green. Latest direct full verification after package
 consumption-smoke follow-through is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14: 974 passed,
 3 skipped, 977 total, with restore/format/build clean, both packages packed as `.nupkg` +
-`.snupkg`, and fresh temp consumers restored/built/run from strict package sources:
+`.snupkg`, and fresh temp consumers restored/built/run `BuildIndicesAndConstraintsAsync()` from
+strict package sources:
 - **A** — `init` setters, `Options`/`ActivitySource`/`TokenCounter` get-only, 7 port-artifact helpers
   internalized, and shippable package projects generating IntelliSense XML documentation.
 - **B+C** — `GraphProvider.LadybugDb=5` and `AddGraphiti` primary; `Kuzu`/`AddGraphitiCore` `[Obsolete]`
@@ -24,7 +25,8 @@ consumption-smoke follow-through is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-1
   `AddLadybugDbGraphDriver`) and throws a clear error if the package is absent. README/samples updated.
   The verifier now creates fresh package consumers: core uses only the packed core output + nuget.org;
   Ladybug uses both packed Graphiti outputs + the local Ladybug feed + nuget.org. Both consumers are
-  restored, built, and run with expected provider output.
+  restored, built, run through `BuildIndicesAndConstraintsAsync()`, and checked for expected provider
+  output.
 - The public-API snapshot now guards BOTH assemblies (`Graphiti.Core` + `Graphiti.Core.Drivers.Ladybug`).
 
 **Remaining (release infra; partly gated on external work):**
@@ -185,7 +187,7 @@ full Verify green; both packages `pack`. This is a milestone (`evolution.md`:
 
 - **Versioning:** confirm the `2.0.0` line (the namespace migration is already documented as 2.0.0). Decide
   alpha→beta→rc cadence. Package metadata (authors, license=Apache-2.0, repo URL, README as
-  `PackageReadmeFile`, XML docs, `.snupkg` symbols, and fresh package-consumer restore/build/run
+  `PackageReadmeFile`, XML docs, `.snupkg` symbols, and fresh package-consumer restore/build/setup/run
   checks) is
   already set and covered by `PackageReadinessTests` plus `Verify-GraphitiCore.ps1`.
 - **CI:** a build/format/test/pack pipeline (GitHub Actions or equivalent). Encode the native-package
