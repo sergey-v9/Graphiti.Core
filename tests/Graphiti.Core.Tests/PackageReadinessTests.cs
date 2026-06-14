@@ -120,6 +120,25 @@ public class PackageReadinessTests
         Assert.Contains("dotnet pack $packageProject", verifyScript);
     }
 
+    [Fact]
+    public void VerifyScript_BuildsFreshPackageConsumersWithStrictNuGetSources()
+    {
+        var csharpRoot = FindCSharpRoot();
+        var verifyScript = File.ReadAllText(Path.Combine(csharpRoot, "eng", "Verify-GraphitiCore.ps1"));
+
+        Assert.Contains("package consumer smoke", verifyScript);
+        Assert.Contains("GraphitiCorePackageSmoke", verifyScript);
+        Assert.Contains("GraphitiLadybugPackageSmoke", verifyScript);
+        Assert.Contains("Graphiti.Core.Drivers.Ladybug", verifyScript);
+        Assert.Contains("--configfile", verifyScript);
+        Assert.Contains("--no-cache", verifyScript);
+        Assert.Contains("<clear />", verifyScript);
+        Assert.Contains("graphiti-core-pack", verifyScript);
+        Assert.Contains("graphiti-ladybug-pack", verifyScript);
+        Assert.Contains("ladybug-local", verifyScript);
+        Assert.Contains("NUGET_PACKAGES", verifyScript);
+    }
+
     private static XDocument LoadProject(params string[] paths)
     {
         var csharpRoot = FindCSharpRoot();

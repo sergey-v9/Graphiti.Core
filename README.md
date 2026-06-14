@@ -508,8 +508,13 @@ full verifier from the `csharp` folder:
 .\eng\Verify-GraphitiCore.ps1
 ```
 
-It runs restore, formatting checks, build, tests, and package creation for both `Graphiti.Core` and
-`Graphiti.Core.Drivers.Ladybug`. For a quick local test-only loop:
+It runs restore, formatting checks, build, tests, package creation for both `Graphiti.Core` and
+`Graphiti.Core.Drivers.Ladybug`, and a package-consumption smoke check. The smoke check creates
+fresh temporary `net10.0` console projects with strict `NuGet.config` files (`<clear />`) and isolated
+`NUGET_PACKAGES`: the core consumer restores from the packed `Graphiti.Core` output plus nuget.org,
+while the Ladybug consumer restores from both packed Graphiti outputs plus the local Ladybug feed and
+nuget.org. Use `-SkipPackageSmoke` only when iterating on non-packaging changes. For a quick local
+test-only loop:
 
 ```powershell
 dotnet test Graphiti.Core.CSharp.slnx

@@ -135,15 +135,19 @@ added.
 
 Latest checkpoint, 2026-06-14:
 
-`.\eng\Verify-GraphitiCore.ps1` is green after package release-readiness follow-through: restore,
-format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`973` passed,
-`3` skipped, `976` total), and `dotnet pack` for both shippable packages:
-`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
-`Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`. The verifier now packs both
-projects, both csprojs set `IncludeSymbols=true`/`SymbolPackageFormat=snupkg`, and
-`PackageReadinessTests` guards shared NuGet metadata, README packing, symbol settings, SemVer-like
-same-version alignment, and the two-project pack loop. `OPENAI_API_KEY` was unset; the three skipped
-tests were the env-gated `OpenAIProviderIntegrationTests`.
+`.\eng\Verify-GraphitiCore.ps1` is green after package consumption-smoke follow-through: restore,
+format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`974` passed,
+`3` skipped, `977` total), `dotnet pack` for both shippable packages
+(`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
+`Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer builds for
+both packages. The verifier now packs both projects, then creates isolated `net10.0` consumers with
+strict `NuGet.config` files (`<clear />`), temp `NUGET_PACKAGES`, and `--no-cache`: the core consumer
+restores from the packed core output + nuget.org only, while the Ladybug consumer restores from both
+packed Graphiti outputs + the local Ladybug feed + nuget.org. Both csprojs set
+`IncludeSymbols=true`/`SymbolPackageFormat=snupkg`, and `PackageReadinessTests` guards shared NuGet
+metadata, README packing, symbol settings, SemVer-like same-version alignment, the two-project pack
+loop, and the package-consumer smoke path. `OPENAI_API_KEY` was unset; the three skipped tests were
+the env-gated `OpenAIProviderIntegrationTests`.
 
 Latest checkpoint, 2026-06-13:
 
@@ -311,6 +315,9 @@ dotnet test Graphiti.Core.CSharp.slnx --no-build --verbosity minimal
 dotnet pack src\Graphiti.Core\Graphiti.Core.csproj --configuration Release --no-restore --verbosity minimal
 dotnet pack src\Graphiti.Core.Drivers.Ladybug\Graphiti.Core.Drivers.Ladybug.csproj --configuration Release --no-restore --verbosity minimal
 ```
+
+The package-consumption smoke is part of normal `.\eng\Verify-GraphitiCore.ps1`; use
+`-SkipPackageSmoke` only for non-packaging iteration.
 
 If a slice repeatedly needs the same focused tests plus broader build/test/format checks, create a
 small helper script and run that sequence through the script. Commit the helper only when it is useful

@@ -10,9 +10,9 @@ test is kept as a drift guard, not a freeze: each step that changes the public s
 ## Status — A–E COMPLETE (2026-06-14)
 
 All five steps landed on `main` and verified green. Latest direct full verification after package
-metadata/symbols follow-through is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14: 973 passed,
-3 skipped, 976 total, with restore/format/build clean and both packages packed as `.nupkg` +
-`.snupkg`:
+consumption-smoke follow-through is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14: 974 passed,
+3 skipped, 977 total, with restore/format/build clean, both packages packed as `.nupkg` +
+`.snupkg`, and fresh temp consumers restored/built from strict package sources:
 - **A** — `init` setters, `Options`/`ActivitySource`/`TokenCounter` get-only, 7 port-artifact helpers
   internalized, and shippable package projects generating IntelliSense XML documentation.
 - **B+C** — `GraphProvider.LadybugDb=5` and `AddGraphiti` primary; `Kuzu`/`AddGraphitiCore` `[Obsolete]`
@@ -22,6 +22,8 @@ metadata/symbols follow-through is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14
 - **E.1 + E.3** — LadybugDB extracted to `src/Graphiti.Core.Drivers.Ladybug/`; `Graphiti.Core` is LadybugDB-free
   and restores from nuget.org alone; core resolves `LadybugDb`/`Kuzu` via `GraphDriverFactory` (set by
   `AddLadybugDbGraphDriver`) and throws a clear error if the package is absent. README/samples updated.
+  The verifier now creates fresh package consumers: core uses only the packed core output + nuget.org;
+  Ladybug uses both packed Graphiti outputs + the local Ladybug feed + nuget.org.
 - The public-API snapshot now guards BOTH assemblies (`Graphiti.Core` + `Graphiti.Core.Drivers.Ladybug`).
 
 **Remaining (release infra; partly gated on external work):**
@@ -34,10 +36,10 @@ metadata/symbols follow-through is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14
   get explicit user confirmation before replacing the `0.17.0-alpha.2-graphiti.1` pin. `Graphiti.Core` +
   samples are already off-machine-restorable.
 - **Versioning** (confirm 2.0.0 line / alpha→beta cadence) and **CI**. NuGet metadata, README packing,
-  XML docs, and symbol package generation are now present and guarded for both shippable packages. CI
-  for the full suite is itself gated on E.2 (the native Ladybug tests need the package); a
-  `Graphiti.Core`-only CI lane (build/format/pack + non-Ladybug tests) could run now. Remember the
-  parallel-`dotnet test` deadlock.
+  XML docs, symbol package generation, and package-consumption smoke checks are now present and guarded
+  for both shippable packages. CI for the full suite is itself gated on E.2 (the native Ladybug tests
+  need the package); a `Graphiti.Core`-only CI lane (build/format/pack + non-Ladybug tests) could run
+  now. Remember the parallel-`dotnet test` deadlock.
 
 ## Standing constraints (apply to every step)
 
@@ -181,8 +183,8 @@ builds/tests with it; full Verify green; both packages `pack`. This is a milesto
 
 - **Versioning:** confirm the `2.0.0` line (the namespace migration is already documented as 2.0.0). Decide
   alpha→beta→rc cadence. Package metadata (authors, license=Apache-2.0, repo URL, README as
-  `PackageReadmeFile`, XML docs, and `.snupkg` symbols) is already set and covered by
-  `PackageReadinessTests`.
+  `PackageReadmeFile`, XML docs, `.snupkg` symbols, and fresh package-consumer restores/builds) is
+  already set and covered by `PackageReadinessTests` plus `Verify-GraphitiCore.ps1`.
 - **CI:** a build/format/test/pack pipeline (GitHub Actions or equivalent). Encode the native-package
   test-concurrency gotcha (single-threaded or serialized Ladybug tests). Gate the key-dependent OpenAI
   integration tests behind a secret (skip by default).

@@ -58,13 +58,16 @@ mirror Graphiti's `QUERY_FTS_INDEX(... $query, TOP := $limit)` and inline
 `dlopen(RTLD_NOW | RTLD_GLOBAL)` on Unix-like systems and rethrows undefined-symbol failures.
 
 Graphiti cross-platform audit result: Graphiti itself does not hard-code a `win-x64` package or runtime
-identifier; the Ladybug driver references the cross-platform meta packages. The remaining Linux and
-off-machine risk is restore/runtime validation, not an obvious source-level Windows dependency:
-`NuGet.config` points at the sibling local feed, and Graphiti has only been run on win-x64 locally.
-Follow-up on 2026-06-14 made persisted Ladybug setup idempotent across reopen: duplicate errors for
-the four exact Graphiti FTS indexes are ignored because LadybugDB's `CREATE_FTS_INDEX` has no
-`IF NOT EXISTS`/skip flag, and `LadybugRuntimeDriverTests.FileBackedDriverCanRebuildIndicesAfterReopenAndSearch`
-proves build-write-close-reopen-build-search on a file-backed database.
+identifier; the Ladybug driver references the cross-platform meta packages. Follow-up on 2026-06-14
+added package-consumption smoke checks to `Verify-GraphitiCore.ps1`: fresh temp consumers restore/build
+`Graphiti.Core` from the packed core output + nuget.org only, and `Graphiti.Core.Drivers.Ladybug` from
+both packed Graphiti outputs + the local Ladybug feed + nuget.org, with strict `NuGet.config`, temp
+`NUGET_PACKAGES`, and `--no-cache`. The remaining Linux risk is runtime validation on a Linux runner,
+not an obvious source-level Windows dependency or a missing Windows package-consumer proof. Follow-up on
+2026-06-14 made persisted Ladybug setup idempotent across reopen: duplicate errors for the four exact
+Graphiti FTS indexes are ignored because LadybugDB's `CREATE_FTS_INDEX` has no `IF NOT EXISTS`/skip flag,
+and `LadybugRuntimeDriverTests.FileBackedDriverCanRebuildIndicesAfterReopenAndSearch` proves
+build-write-close-reopen-build-search on a file-backed database.
 
 Decision point before implementation: do not silently bump Graphiti from
 `0.17.0-alpha.2-graphiti.1` to `0.17.1`. The evidence supports the bump, but user confirmation is
