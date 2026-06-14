@@ -59,6 +59,7 @@ public sealed class EntityNode : Node
         CancellationToken cancellationToken = default) =>
         driver.GetNodeByUuidAsync<EntityNode>(uuid, cancellationToken);
 
+    /// <summary>Retrieves the entity nodes with the given UUIDs, optionally scoped to a group partition.</summary>
     public static Task<IReadOnlyList<EntityNode>> GetByUuidsAsync(
         IGraphDriver driver,
         IEnumerable<string> uuids,
@@ -66,6 +67,10 @@ public sealed class EntityNode : Node
         CancellationToken cancellationToken = default) =>
         driver.GetNodesByUuidsAsync<EntityNode>(uuids, groupId, cancellationToken);
 
+    /// <summary>
+    /// Retrieves entity nodes across the given group partitions, with optional UUID-cursor paging and
+    /// optional inclusion of name embeddings.
+    /// </summary>
     public static Task<IReadOnlyList<EntityNode>> GetByGroupIdsAsync(
         IGraphDriver driver,
         IEnumerable<string> groupIds,

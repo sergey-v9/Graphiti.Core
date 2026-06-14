@@ -21,18 +21,21 @@ public sealed class SagaNode : Node
     /// <summary>Event time of the last episode included in the current summary.</summary>
     public DateTime? LastSummarizedEpisodeValidAt { get; set; }
 
+    /// <summary>Retrieves a single saga node by UUID.</summary>
     public static Task<SagaNode> GetByUuidAsync(
         IGraphDriver driver,
         string uuid,
         CancellationToken cancellationToken = default) =>
         driver.GetNodeByUuidAsync<SagaNode>(uuid, cancellationToken);
 
+    /// <summary>Retrieves the saga nodes with the given UUIDs.</summary>
     public static Task<IReadOnlyList<SagaNode>> GetByUuidsAsync(
         IGraphDriver driver,
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
         driver.GetNodesByUuidsAsync<SagaNode>(uuids, cancellationToken: cancellationToken);
 
+    /// <summary>Retrieves saga nodes across the given group partitions, with optional UUID-cursor paging.</summary>
     public static Task<IReadOnlyList<SagaNode>> GetByGroupIdsAsync(
         IGraphDriver driver,
         IEnumerable<string> groupIds,

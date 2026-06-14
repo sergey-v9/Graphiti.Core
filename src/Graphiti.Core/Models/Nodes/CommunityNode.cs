@@ -12,6 +12,10 @@ public sealed class CommunityNode : Node
     /// <summary>Aggregated summary describing the community's members.</summary>
     public string Summary { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Generates and stores the <see cref="NameEmbedding"/> from the community name using the supplied
+    /// embedder, validating the returned vector dimension.
+    /// </summary>
     public async Task<IReadOnlyList<float>> GenerateNameEmbeddingAsync(
         IEmbedderClient embedder,
         CancellationToken cancellationToken = default)
@@ -25,24 +29,28 @@ public sealed class CommunityNode : Node
         return NameEmbedding;
     }
 
+    /// <summary>Loads the persisted <see cref="NameEmbedding"/> for this community from the graph.</summary>
     public async Task LoadNameEmbeddingAsync(IGraphDriver driver, CancellationToken cancellationToken = default)
     {
         var stored = await GetByUuidAsync(driver, Uuid, cancellationToken).ConfigureAwait(false);
         NameEmbedding = EmbeddingVectorValidation.CopyNullableVector(stored.NameEmbedding);
     }
 
+    /// <summary>Retrieves a single community node by UUID.</summary>
     public static Task<CommunityNode> GetByUuidAsync(
         IGraphDriver driver,
         string uuid,
         CancellationToken cancellationToken = default) =>
         driver.GetNodeByUuidAsync<CommunityNode>(uuid, cancellationToken);
 
+    /// <summary>Retrieves the community nodes with the given UUIDs.</summary>
     public static Task<IReadOnlyList<CommunityNode>> GetByUuidsAsync(
         IGraphDriver driver,
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
         driver.GetNodesByUuidsAsync<CommunityNode>(uuids, cancellationToken: cancellationToken);
 
+    /// <summary>Retrieves community nodes across the given group partitions, with optional UUID-cursor paging.</summary>
     public static Task<IReadOnlyList<CommunityNode>> GetByGroupIdsAsync(
         IGraphDriver driver,
         IEnumerable<string> groupIds,

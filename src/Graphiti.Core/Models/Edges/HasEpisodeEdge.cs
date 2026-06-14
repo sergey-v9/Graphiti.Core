@@ -10,12 +10,14 @@ public sealed class HasEpisodeEdge : Edge
         CancellationToken cancellationToken = default) =>
         driver.GetEdgeByUuidAsync<HasEpisodeEdge>(uuid, cancellationToken);
 
+    /// <summary>Retrieves the HAS_EPISODE edges with the given UUIDs.</summary>
     public static Task<IReadOnlyList<HasEpisodeEdge>> GetByUuidsAsync(
         IGraphDriver driver,
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
         driver.GetEdgesByUuidsAsync<HasEpisodeEdge>(uuids, cancellationToken);
 
+    /// <summary>Retrieves HAS_EPISODE edges across the given group partitions, with optional UUID-cursor paging.</summary>
     public static Task<IReadOnlyList<HasEpisodeEdge>> GetByGroupIdsAsync(
         IGraphDriver driver,
         IEnumerable<string> groupIds,
