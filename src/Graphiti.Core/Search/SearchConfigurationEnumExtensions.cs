@@ -16,6 +16,7 @@ public static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
+    /// <summary>Returns the Python-compatible wire string for the node search method.</summary>
     public static string ToWireValue(this NodeSearchMethod source) =>
         source switch
         {
@@ -25,6 +26,7 @@ public static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
+    /// <summary>Returns the Python-compatible wire string for the episode search method.</summary>
     public static string ToWireValue(this EpisodeSearchMethod source) =>
         source switch
         {
@@ -32,6 +34,7 @@ public static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
+    /// <summary>Returns the Python-compatible wire string for the community search method.</summary>
     public static string ToWireValue(this CommunitySearchMethod source) =>
         source switch
         {
@@ -40,6 +43,7 @@ public static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
+    /// <summary>Returns the Python-compatible wire string for the edge reranker.</summary>
     public static string ToWireValue(this EdgeReranker source) =>
         source switch
         {
@@ -51,6 +55,7 @@ public static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
+    /// <summary>Returns the Python-compatible wire string for the node reranker.</summary>
     public static string ToWireValue(this NodeReranker source) =>
         source switch
         {
@@ -62,6 +67,7 @@ public static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
+    /// <summary>Returns the Python-compatible wire string for the episode reranker.</summary>
     public static string ToWireValue(this EpisodeReranker source) =>
         source switch
         {
@@ -70,6 +76,7 @@ public static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
+    /// <summary>Returns the Python-compatible wire string for the community reranker.</summary>
     public static string ToWireValue(this CommunityReranker source) =>
         source switch
         {
