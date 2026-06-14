@@ -120,6 +120,12 @@ end-to-end include `dedupe_nodes.nodes` first-non-`Entity` type-description fall
 `summarize_sagas.summarize_saga` rendering whitespace-only existing knowledge. A follow-up scan found
 no remaining `Assert.Contains`/`StartsWith`/`EndsWith` prompt assertions.
 
+**2026-06-14 episode-concatenation golden hardening:** strengthened
+`TextUtilities.ConcatenateEpisodes` tests from fragment assertions to full-string equality for
+multi-episode headers, blank-line separators, Python-style `datetime.isoformat()` timestamp shapes,
+local offsets, subsecond precision, and the `unknown` timestamp fallback. Python source remains
+`graphiti_core/utils/text_utils.py::concatenate_episodes`; no production behavior changed.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

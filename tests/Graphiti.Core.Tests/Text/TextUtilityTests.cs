@@ -92,9 +92,11 @@ public class TextUtilityTests
 
         var result = TextUtilities.ConcatenateEpisodes(episodes);
 
-        Assert.Contains("[Episode 0] (timestamp: 2025-01-01T10:00:00+00:00)\nFirst", result);
-        Assert.Contains("[Episode 1] (timestamp: 2025-01-01T10:05:00+00:00)\nSecond", result);
-        Assert.Contains("[Episode 2] (timestamp: 2025-01-01T10:10:00+00:00)\nThird", result);
+        Assert.Equal(
+            "[Episode 0] (timestamp: 2025-01-01T10:00:00+00:00)\nFirst\n\n" +
+            "[Episode 1] (timestamp: 2025-01-01T10:05:00+00:00)\nSecond\n\n" +
+            "[Episode 2] (timestamp: 2025-01-01T10:10:00+00:00)\nThird",
+            result);
     }
 
     [Fact]
@@ -120,11 +122,12 @@ public class TextUtilityTests
         var result = TextUtilities.ConcatenateEpisodes(episodes);
         var localOffset = FormatExpectedOffset(TimeZoneInfo.Local.GetUtcOffset(localTimestamp));
 
-        Assert.Contains("[Episode 0] (timestamp: 2025-01-01T10:00:00.123456)\nNaive", result);
-        Assert.DoesNotContain("2025-01-01T10:00:00.123456+00:00", result);
-        Assert.Contains("[Episode 1] (timestamp: 2025-01-01T10:05:00.000001+00:00)\nUtc", result);
-        Assert.Contains($"[Episode 2] (timestamp: 2025-01-01T10:10:00{localOffset})\nLocal", result);
-        Assert.Contains("[Episode 3] (timestamp: 2025-01-01T10:15:00.0000001+00:00)\nTick", result);
+        Assert.Equal(
+            "[Episode 0] (timestamp: 2025-01-01T10:00:00.123456)\nNaive\n\n" +
+            "[Episode 1] (timestamp: 2025-01-01T10:05:00.000001+00:00)\nUtc\n\n" +
+            $"[Episode 2] (timestamp: 2025-01-01T10:10:00{localOffset})\nLocal\n\n" +
+            "[Episode 3] (timestamp: 2025-01-01T10:15:00.0000001+00:00)\nTick",
+            result);
     }
 
     [Fact]
@@ -149,8 +152,10 @@ public class TextUtilityTests
 
         var result = TextUtilities.ConcatenateEpisodes(episodes);
 
-        Assert.Contains("(timestamp: 2025-01-01T10:00:00+00:00)", result);
-        Assert.Contains("(timestamp: unknown)", result);
+        Assert.Equal(
+            "[Episode 0] (timestamp: 2025-01-01T10:00:00+00:00)\nA\n\n" +
+            "[Episode 1] (timestamp: unknown)\nB",
+            result);
     }
 
     [Fact]
