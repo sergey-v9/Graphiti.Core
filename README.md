@@ -133,15 +133,18 @@ public Graphiti(
     IEmbedderClient? embedder = null,    // defaults to a deterministic hash embedder
     ICrossEncoderClient? crossEncoder = null, // defaults to an identity reranker
     bool storeRawEpisodeContent = true,
-    IGraphDriver? graphDriver = null,    // when omitted, a Neo4j driver is built from `uri`
+    IGraphDriver? graphDriver = null,    // see driver selection below
     int? maxCoroutines = null,           // optional cap on concurrent operations
     TimeProvider? timeProvider = null,
     ILogger<Graphiti>? logger = null,
     string database = "");
 ```
 
-Either pass an explicit `graphDriver` (recommended) **or** a `uri` (which builds a default Neo4j
-driver); passing neither throws.
+Driver selection by precedence: an explicit `graphDriver` is used as-is (recommended); otherwise a
+non-null `uri` builds a Neo4j driver; otherwise it **defaults to an in-memory `InMemoryGraphDriver`**.
+So `new Graphiti()` and `new Graphiti(llmClient: x, embedder: y)` work out of the box on the
+deterministic reference driver — pass `graphDriver:` (LadybugDB/InMemory) or `uri:` (Neo4j) for a
+specific backend.
 
 ## Using a real provider (OpenAI)
 
@@ -239,9 +242,9 @@ services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ =>
         .AsIEmbeddingGenerator(1536));
 
 // Graphiti itself:
-services.AddGraphitiCore(options =>
+services.AddGraphiti(options =>
 {
-    options.Provider = GraphProvider.InMemory;   // or .Kuzu (LadybugDB) / .Neo4j
+    options.Provider = GraphProvider.InMemory;   // or .LadybugDb / .Neo4j
     options.EmbeddingDimension = 1536;
     options.MaxCoroutines = 4;
 });
@@ -252,12 +255,14 @@ services.AddLadybugDbGraphDriver(o => o.DatabasePath = "graphiti.db");
 
 Then resolve `Graphiti` from the provider (it is registered as a scoped service).
 
-`AddGraphitiCore` also has an overload that binds from `IConfiguration` — it reads the `Llm`,
+`AddGraphiti` also has an overload that binds from `IConfiguration` — it reads the `Llm`,
 `Embedding`, `ContentChunking`, `Cache`, and `Resilience` sections in addition to `GraphitiOptions`:
 
 ```csharp
-services.AddGraphitiCore(configuration);
+services.AddGraphiti(configuration);
 ```
+
+(`AddGraphitiCore` remains as an `[Obsolete]` alias of `AddGraphiti`.)
 
 Key option types (all under `Graphiti.Core.Configuration` / `Graphiti.Core.LlmClients`):
 
@@ -282,12 +287,12 @@ A graph driver implements `IGraphDriver` (`Graphiti.Core.Drivers`). Backends are
 | Driver | `GraphProvider` | Status | Notes |
 |---|---|---|---|
 | **InMemory** | `InMemory` | Deterministic reference/test driver | `new InMemoryGraphDriver(database)`. In-process, fully featured (persistence + search), ideal for tests, samples, and ephemeral graphs. Used by both samples. |
-| **LadybugDB** | `Kuzu` | Primary provider target | The C# port's investment backend (a Kuzu-lineage embedded graph DB). Build via `LadybugDbGraphDriverFactory.Create(databasePath)` / `.CreateInMemory()`, or wire through DI with `AddLadybugDbGraphDriver`. See the [local-package caveat](#ladybugdb-local-package-caveat). |
+| **LadybugDB** | `LadybugDb` | Primary provider target | The C# port's investment backend (a Kuzu-lineage embedded graph DB). Build via `LadybugDbGraphDriverFactory.Create(databasePath)` / `.CreateInMemory()`, or wire through DI with `AddLadybugDbGraphDriver`. See the [local-package caveat](#ladybugdb-local-package-caveat). |
 | **Neo4j** | `Neo4j` | Legacy reference | `new Neo4jGraphDriver(uri, user, password, database)` (also built automatically if you pass a `uri` to the `Graphiti` constructor). Kept working as reference coverage; not the investment target. |
 | FalkorDB / Neptune | `FalkorDb` / `Neptune` | Compatibility surface only | Present on the `GraphProvider` enum for wire compatibility with Python; **not** implemented as configured C# providers. |
 
-The `GraphProvider.Kuzu` value is the Python-parity compatibility name; in the C# port it is backed by
-LadybugDB.
+The driver-facing provider value is `GraphProvider.LadybugDb`. `GraphProvider.Kuzu` remains as an
+`[Obsolete]` alias (the Python-parity compatibility name) that still resolves to the LadybugDB driver.
 
 ### LadybugDB persistence
 

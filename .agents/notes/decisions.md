@@ -60,6 +60,33 @@ semantics, wire compatibility, or performance/allocation discipline.
 - XML comments are useful but missing-doc warnings are not enabled; add comments incrementally where
   they improve the public surface.
 
+## Public API surface (plan 05, 2026-06-14)
+
+The public surface is guarded by a snapshot test (`tests/Graphiti.Core.Tests/Api/`, via
+`PublicApiGenerator`); any change fails CI and must regenerate `Graphiti.Core.approved.txt`
+deliberately. Standing decisions from the plan-05 batch-1 cleanup (alpha-stage breaking changes;
+no wire/prompt/cache/temporal behavior changed):
+
+- `Graphiti` constructor driver selection precedence: explicit `graphDriver` > non-null `uri`
+  (builds Neo4j) > **InMemory default**. It no longer throws when both are omitted, so `new Graphiti()`
+  backs onto the deterministic reference driver. `AddEpisodeAsync(AddEpisodeOptions, ct)` is an additive
+  overload over the 15-parameter positional one (which is unchanged).
+- Driver-facing provider value is `GraphProvider.LadybugDb` (new ordinal `5`); `GraphProvider.Kuzu` is an
+  `[Obsolete]` alias that still resolves to the LadybugDB driver. The DI method is `AddGraphiti`;
+  `AddGraphitiCore` is an `[Obsolete]` alias. `GraphProvider` is not wire/cache-serialized (only an OTel
+  tag), so renaming is safe; existing ordinals are pinned. FalkorDb/Neptune stay as wire-compat members.
+- Obsoletions use custom `DiagnosticId`s (`GRPH0001` provider, `GRPH0002` DI method) suppressed repo-wide
+  via `Directory.Build.props` `NoWarn`, so internal compatibility callers stay 0-warning under
+  `TreatWarningsAsErrors` while external package consumers still receive the obsoletion. (Migrating
+  internal callers onto the new names later would let the `NoWarn` be removed.)
+- The accidental public surface was reduced: `SearchEngine`, `SearchUtilities`,
+  `SearchFilterQueryBuilder`, `MaintenanceUtilities`, `StructuredResponseValidator`, and the
+  enum-extension helpers are now `internal` (port artifacts; tests reach them via `InternalsVisibleTo`).
+  `TokenUsage` setters are `init`; `GraphitiJsonSerializer.Options`, `GraphitiTelemetry.ActivitySource`,
+  and `ContentChunking.TokenCounter` are get-only (token-counter selection is the DI/`IContentChunker`
+  path). `GraphDriverBase`, the `*Namespace` facades, `EpisodeTypeExtensions` (wire-value helpers), and
+  the schema/cache-identity DTOs stay public.
+
 ## Library Boundaries
 
 - `Graphiti` should remain the main public orchestrator.
