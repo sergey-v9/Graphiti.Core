@@ -136,11 +136,13 @@ still pins `0.17.0-alpha.2-graphiti.1` (C API unchanged 0.17.0→0.17.2).
 ## Existing Touchpoints
 
 - `Drivers/GraphProvider.cs`: keeps `GraphProvider.Kuzu` as compatibility vocabulary.
-- `Drivers/Ladybug/`: schema, statement, record mapper, driver, concrete executor, search
-  full-text query helper, search-filter adapter, statements, search executor, and driver factory.
-- `Configuration/LadybugDbOptions.cs`: host-facing LadybugDB driver options.
-- `Configuration/LadybugDbServiceCollectionExtensions.cs`: LadybugDB DI helper.
-- `Configuration/GraphitiServiceCollectionExtensions.cs`: core `GraphProvider.Kuzu` driver creation.
+- `src/Graphiti.Core.Drivers.Ladybug/Drivers/Ladybug/`: schema, statement, record mapper, driver,
+  concrete executor, search full-text query helper, search-filter adapter, statements, search
+  executor, and driver factory.
+- `src/Graphiti.Core.Drivers.Ladybug/Configuration/LadybugDbOptions.cs`: host-facing LadybugDB driver options.
+- `src/Graphiti.Core.Drivers.Ladybug/Configuration/LadybugDbServiceCollectionExtensions.cs`: LadybugDB DI helper.
+- `Configuration/GraphitiServiceCollectionExtensions.cs`: core delegates LadybugDb/Kuzu to the
+  Ladybug-package-registered `GraphDriverFactory` and throws if absent.
 - `Search/CompiledSearchFilter.cs`: keeps Kuzu label-query behavior for node and edge filters for
   non-driver compatibility callers; active Ladybug search uses `Drivers/Ladybug/LadybugSearchFilter`.
 - `Search/SearchUtilities.cs`: keeps the `GraphProvider.Kuzu` full-text branch and
@@ -157,7 +159,8 @@ still pins `0.17.0-alpha.2-graphiti.1` (C API unchanged 0.17.0→0.17.2).
    speculative options.
 3. Add native-gated integration smoke tests only if they provide coverage beyond the current package
    runtime tests or solve a CI/platform constraint.
-4. Decide the final driver-facing naming beyond the current `GraphProvider.Kuzu` compatibility value.
+4. DONE (plan-05 B): the final driver-facing naming is `GraphProvider.LadybugDb`, with
+   `GraphProvider.Kuzu` retained as an `[Obsolete]` compatibility alias.
 5. Decide whether shared Kuzu compatibility helpers should remain or be retired after final
    LadybugDB naming. Active Ladybug full-text query construction now lives in
    `Drivers/Ladybug/LadybugFulltextQuery`, and active Ladybug label-filter fragments now live in

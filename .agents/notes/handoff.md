@@ -21,9 +21,12 @@ not duplicate its proof matrix here.
 - `Graphiti.cs` and `Graphiti.*.cs`: public orchestrator, lifecycle, ingestion, search, removal,
   saga, community, infrastructure, and extraction parsing partials.
 - `Models/`: node, edge, result DTO, entity type, entity attribute, and episode type models.
-- `Drivers/`: `IGraphDriver`, base driver, deterministic in-memory reference driver, Neo4j driver,
-  LadybugDB driver/factory/executor, statement builders, record mappers, session/executor helpers,
-  provider enum, and saga episode content.
+- `Drivers/` (in `Graphiti.Core`): only the driver contract/base (`IGraphDriver`, base driver),
+  the deterministic in-memory reference driver, the Neo4j (legacy) driver and its statement
+  builders/record mappers/session/executor helpers, the provider enum, and saga episode content.
+- `Graphiti.Core.Drivers.Ladybug` (separate project): owns the LadybugDB driver/factory/executor,
+  statement builders, search statement/filter, record mapper, schema, and `LadybugDbOptions` +
+  `AddLadybugDbGraphDriver`.
 - `Namespaces/`: node and edge namespace facades over drivers.
 - `Search/`: search configs/results, hybrid search engine, rerankers, filter builders/matchers,
   fallback graph materialization, search-result composition, and search-driver retrieval adapter.
@@ -31,8 +34,7 @@ not duplicate its proof matrix here.
 - `Text/`: chunking, token counting, text helpers, and Graphiti helper functions.
 - `LlmClients/`, `Embedding/`, `CrossEncoder/`: provider abstractions, Microsoft.Extensions.AI
   adapters, deterministic/test implementations, cache/usage helpers, and rerankers.
-- `Configuration/`: options, validators, DI registration, LadybugDB driver options, cache/resilience
-  settings.
+- `Configuration/`: options, validators, DI registration, cache/resilience settings.
 - `Telemetry/`: `ActivitySource` spans and source-generated logging.
 - `Serialization/`: System.Text.Json serializer and source-generated context.
 - `Internal/`: helper/services for extraction context, attribute merging, edge merging, type
@@ -41,7 +43,7 @@ not duplicate its proof matrix here.
 
 ## Current State
 
-Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the full matrix):
+Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the full matrix):
 
 - **Solid and verified:** project/infrastructure shape (net10.0, analyzers, packaging), drivers
   (InMemory reference, LadybugDB runtime proof, Neo4j legacy), search ranking/fusion/reranking,
@@ -76,18 +78,25 @@ Reassessed 2026-06-11 against Python baseline `7514b44` (see `parity.md` for the
   ingestion-stage edge attribute pass, and custom edge attributes are extracted inside edge
   resolution. Exact duplicate edge reuse skips the edge-attribute prompt and preserves existing
   structured attributes like Python.
-- **Never exercised live:** any real LLM/embedding/reranker provider, end to end.
-  `samples/Graphiti.Sample.OpenAI` now provides a runnable OpenAI host and
-  `OpenAIProviderIntegrationTests` provides env-gated provider tests. The sample is
-  compile/no-key-path verified, uses `MicrosoftExtensionsAICrossEncoderClient` for real reranking,
-  and the tests skip cleanly without `OPENAI_API_KEY`, but no provider call has been executed. The
-  deterministic suite cannot see prompt or schema-acceptance problems (plan 03). The optional eval
-  harness proposal is drafted in `.agents/notes/eval-harness-proposal.md`; implementation needs
-  explicit user approval.
-- Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phase 2
-  is complete; Phase 3 real-provider validation is the next active plan item, but it is blocked on a
-  real `OPENAI_API_KEY` for the live run. Performance/allocation rework is on moratorium
-  (`roadmap.md`).
+- **Phase 3 real-provider validation: PASSED (2026-06-13).** Real LLM/embedding/reranker providers
+  have been exercised end to end. With `OPENAI_API_KEY` supplied locally via gitignored `.env`, both
+  `OpenAIProviderIntegrationTests` passed against the real OpenAI API (all structured schemas
+  accepted; real resolved temporal graph) and the 6-episode `Graphiti.Sample.OpenAI` produced a sane
+  graph (rich summaries, correct bi-temporal invalidation, relevant reranked search).
+  `samples/Graphiti.Sample.OpenAI` is the runnable OpenAI host; `OpenAIProviderIntegrationTests` are
+  the env-gated provider tests (skip cleanly without the key); the sample uses
+  `MicrosoftExtensionsAICrossEncoderClient` for real reranking. Re-run with
+  `.\eng\Run-OpenAIProviderValidation.ps1` (auto-loads `.env`). See the Verification checkpoints below.
+- **Eval harness: BUILT and run live (2026-06-14).** The harness from
+  `.agents/notes/eval-harness-proposal.md` was implemented as `samples/Graphiti.Eval` to the
+  proposal's graph-building regression design and run live (6/6 no-regression on identical code; QA
+  mode 3/7 honest, distractor correctly fails).
+- **Phases 1–3 are DONE.** The performance/allocation moratorium is LIFTED; further performance work
+  is evidence-driven (benchmark-first) only (`roadmap.md`).
+- Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
+  1–3 are complete; the remaining active work is plan-05 release infrastructure — E.2 (publish the
+  local LadybugDB package family from `W:\code\ladybug`) and versioning. CI is intentionally out of
+  scope. Performance work is benchmark-first and no longer on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
   internal services and helpers. Search boundaries: `SearchEngine` orchestrates,
   `SearchRetrievalRunner` retrieves, `SearchResultComposer` shapes results. Prompt builders live

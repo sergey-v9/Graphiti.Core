@@ -59,7 +59,7 @@ A second adversarial review of that work caught and fixed eval-prompt interior t
 over-scoping by group_id, and the eval measuring retrieval-QA instead of graph-building. All
 integrated; verification green (962 tests). Plans 03 and 04 are closed.
 
-## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `ff7e29c`)
+## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
 `prompts/`, `search/`, `nodes.py`, `edges.py`, or the ingestion/utils pipeline** — the

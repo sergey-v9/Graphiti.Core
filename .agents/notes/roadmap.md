@@ -66,15 +66,14 @@ validation-failure re-prompting, and edge attribute extraction alignment are com
 ingestion intentionally stays on separate extraction because Python's public `Graphiti` API does
 not expose the internal default-false combined helper flag.
 
-## Phase 3 — Real-provider validation (ACCEPTANCE GATE MET 2026-06-13; eval harness optional)
+## Phase 3 — Real-provider validation (COMPLETE 2026-06-14; acceptance gate met 2026-06-13, eval harness run live)
 
 Prove the library end-to-end with a real LLM + embedder. Work order:
 `.agents/plans/03-provider-validation.md`. A sample OpenAI host, env-gated OpenAI integration
-tests, and an opt-in M.E.AI cross-encoder now exist, but the port still has not been run
-successfully against a real LLM/embedding/reranking provider. A port of an LLM-driven library that
-has never talked to an LLM is unverified by definition; this phase is the acceptance test for
-Phases 1–2. The optional eval harness has a proposal in
-`.agents/notes/eval-harness-proposal.md`, but implementation requires explicit user approval.
+tests, and an opt-in M.E.AI cross-encoder exist, and the port has been run successfully against a
+real LLM/embedding/reranking provider. This phase is the acceptance test for Phases 1–2. The eval
+harness (proposal in `.agents/notes/eval-harness-proposal.md`) was approved, built
+(`samples/Graphiti.Eval`), and run live 2026-06-14.
 
 Done when: an env-gated integration test (or sample app run) ingests episodes through a real
 provider, produces a graph whose entities/edges/summaries are sane on manual inspection, and hybrid

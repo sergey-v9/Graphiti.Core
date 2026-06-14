@@ -1,12 +1,17 @@
 # Pre-freeze public API review (2026-06-14)
 
+> **IMPLEMENTED / superseded.** All of plan 05 A–E landed; this audit is historical and kept for
+> rationale only. Do **not** re-implement the items below — the decisions and final shapes are
+> recorded in `decisions.md` ("Public API surface (plan 05)") and plan 05. Read this note as a
+> record of *why*, not a to-do list.
+
 Phase 5 readiness produced three things on `main`: XML docs across the consumer-facing surface, a
 **public-API snapshot test** (`tests/Graphiti.Core.Tests/Api/PublicApiSnapshotTests.cs` +
 `Graphiti.Core.approved.txt`, via `PublicApiGenerator`) that fails CI on any accidental surface
 change, and a consumer `README.md` + `docs/search.md`. This note records the API-audit findings from
-that pass so the freeze decisions are tracked. **None of the changes below are applied yet** — they
-are breaking public-API/product decisions awaiting a deliberate call. When applying any of them,
-regenerate the snapshot baseline (the test prints how) in the same commit.
+that pass so the freeze decisions are tracked. The changes below were **breaking public-API/product
+decisions** at the time of writing; they have since been resolved and applied (see plan 05 /
+`decisions.md`), with the snapshot baseline regenerated alongside.
 
 Source: the `ws/j-api-audit` audit + ergonomics observations from writing the README (`ws/k-readme`).
 The surface is broadly disciplined — `Internal*` namespaces are fully internal, schema/cache-identity

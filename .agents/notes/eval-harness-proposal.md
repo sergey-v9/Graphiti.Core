@@ -1,7 +1,12 @@
 # Eval Harness Proposal
 
-This is the buy-in proposal for Plan 03 item 4. Do not build this harness until the user approves
-the scope.
+> **ACCEPTED / IMPLEMENTED (2026-06-14).** The harness was built to this proposal's graph-building
+> design as `samples/Graphiti.Eval` (`Program.cs`), and the four `eval.py` prompts shipped as the
+> `internal static EvalPrompts` class in `src/Graphiti.Core/Prompts/EvalPrompts.cs`. It was run live
+> on 2026-06-14 (see `parity.md` eval row). This document is retained as the design record; the
+> "Open Decisions" below are resolved (see that section).
+
+This was the buy-in proposal for Plan 03 item 4.
 
 ## Python Source Of Truth
 
@@ -65,14 +70,20 @@ Build a separate sample/tool project, not core library code:
 - Findings from the first live run are recorded in `parity.md` / `handoff.md` and turned into
   follow-up plan items only when they are Graphiti port issues rather than provider variance.
 
-## Open Decisions
+## Open Decisions (resolved)
+
+These were resolved when the harness was built (see `parity.md` eval row); recorded here for history:
 
 - Project location: `samples/` keeps it user-facing; `tools/` keeps it clearly non-library and
-  non-sample.
-- Dataset policy: tiny checked-in fixture only, or documented local path to LongMemEval.
+  non-sample. **Resolved: `samples/Graphiti.Eval`.**
+- Dataset policy: tiny checked-in fixture only, or documented local path to LongMemEval. **Resolved:
+  tiny self-contained in-code fixture (no external dataset vendored).**
 - Baseline policy: compare C# current-vs-current first for repeatability, or compare Python-exported
-  baseline JSON to C# candidate for stronger parity evidence.
+  baseline JSON to C# candidate for stronger parity evidence. **Resolved: graph-building judges
+  candidate per-episode `AddEpisodeResults` against a persisted baseline artifact (C# current-vs-
+  current) via `eval_add_episode_results`.**
 - Backend policy: start with `InMemoryGraphDriver`; add LadybugDB after Phase 4 provider
   productization work resumes. Strict Python parity uses Neo4j, but C# provider direction should be
-  decided explicitly rather than inherited accidentally.
-- Scoring threshold: report-only initially, or fail below an approved quality floor.
+  decided explicitly rather than inherited accidentally. **Resolved: started on `InMemoryGraphDriver`.**
+- Scoring threshold: report-only initially, or fail below an approved quality floor. **Resolved:
+  report-only (the live 2026-06-14 run reports scores; exits non-zero only on harness failure).**

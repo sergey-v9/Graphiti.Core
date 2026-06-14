@@ -127,7 +127,8 @@ no wire/prompt/cache/temporal behavior changed):
   does this. The M.E.AI cross-encoder uses a structured boolean+confidence response because generic
   M.E.AI does not expose OpenAI top-logprob controls needed for Python's exact reranker scoring.
 - Use official provider SDKs behind adapters where possible. LadybugDB is the core graph-provider
-  investment target and its package/native references are owned by `Graphiti.Core`.
+  investment target; its package/native references and driver are owned by the separate
+  `Graphiti.Core.Drivers.Ladybug` project (see plan-05 Step E split above), not `Graphiti.Core`.
 - Use `HybridCache` for LLM response caching and preserve cache-key semantics for parity-sensitive
   structured calls.
 - Keep LLM cache storage as `JsonObject` payloads serialized with `GraphitiJsonSerializer.Options`
@@ -277,9 +278,12 @@ the impact grows.
   contract (`graph_operations.py:223`, `graph_data_operations.py` `list(reversed(...))`); Python's
   Kuzu operations-interface path returns newest-first, violating its own contract. C# is the
   defensible choice; do not "fix" it toward newest-first.
-- **Combined-edge parsing defaults a missing `relation_type` to `"RELATES_TO"`** where Python rejects
-  the response (required Pydantic field). Reachable only if a provider returns an edge with valid
-  endpoints but no relation type; left lenient for now.
+- **Combined-edge parsing skips edges with a missing `relation_type`** (closed/aligned with Python).
+  `Graphiti.ExtractionParsing.cs` reads `relation_type` (or the C#-lenient `name` alias) and only emits
+  an `ExtractedEdge` when source, target, and relation are all non-blank; it never fabricates a
+  `"RELATES_TO"` relation, matching Python's rejection of the required Pydantic field
+  (`extract_edges.py`/`extract_nodes_and_edges.py`) and the no-fabrication parity contract. Resolution
+  of the kept edges then proceeds through `EdgeResolutionService.cs`.
 
 ## Deliberate divergences from the 2026-06-14 upstream sync
 
@@ -306,8 +310,9 @@ strip (#1531) is N/A (no FalkorDB driver).
 
 ## Provider Status
 
-- LadybugDB is the primary graph provider target for the C# port and is owned by `Graphiti.Core`.
-  It is the package/backend we will invest in.
+- LadybugDB is the primary graph provider target for the C# port. It is the package/backend we will
+  invest in; its package refs and driver live in the separate `Graphiti.Core.Drivers.Ladybug` project
+  (plan-05 Step E split above), while `Graphiti.Core` carries only the driver contract.
 - The LadybugDB provider should use the LadybugDB NuGet package, which comes from the alternative
   Kuzu fork. Kuzu remains the Python parity lineage and compatibility vocabulary, but the driver-facing
   provider name should move to LadybugDB as the port freezes. See `kuzu-driver-port.md`.
