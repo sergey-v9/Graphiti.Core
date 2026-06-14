@@ -37,6 +37,14 @@ git log --oneline <ANCHOR>..origin/main -- graphiti_core    # library commits in
 git diff --stat <ANCHOR>..origin/main -- graphiti_core      # AUTHORITATIVE completeness check
 ```
 
+The same check is executable from `W:\code\graphiti\csharp`:
+
+```
+.\eng\Check-PythonUpstreamDelta.ps1 -Fetch
+```
+
+Use `-FailOnDelta` when a no-library-delta check should fail automation.
+
 The `git diff --stat … -- graphiti_core` is the source of truth for "what library code changed":
 it is the NET file set regardless of how many commits touched it. If every file/hunk in that net
 diff is explained by the commits you review, coverage is complete. (Most commits in the full

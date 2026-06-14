@@ -199,6 +199,11 @@ Graphiti Core need. Follow-up hardening made the known search concurrency proof 
 Ladybug file-backed setup idempotent across reopen by ignoring duplicate errors for the four exact
 Graphiti FTS indexes; runtime coverage now proves build-write-close-reopen-build-search.
 
+Upstream Python check, 2026-06-14: `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch` confirmed
+`origin/main` still equals the recorded parity anchor
+`0ed90b72505c2a6a4f3ee953939888fb56572944`; there is no `graphiti_core/` delta to port. The helper
+now implements the Step 1 upstream-sync log/stat/name-status check and supports `-FailOnDelta`.
+
 Follow-up checkpoint, 2026-06-14 (`.\eng\Verify-GraphitiCore.ps1` green: 959 passed, 3 skipped, 962
 total; format/build/pack clean). Landed since 06-13: the eval harness (`samples/Graphiti.Eval`) built
 to the proposal's graph-building regression design and run live (6/6 no-regression on identical code;
