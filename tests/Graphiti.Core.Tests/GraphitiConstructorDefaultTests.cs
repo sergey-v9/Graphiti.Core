@@ -68,4 +68,40 @@ public class GraphitiConstructorDefaultTests
         Assert.IsType<Neo4jGraphDriver>(graphiti.Driver);
         Assert.Equal(GraphProvider.Neo4j, graphiti.Driver.Provider);
     }
+
+    [Fact]
+    public async Task AddEpisodeAsync_OptionsOverload_DelegatesToParameterListOverload()
+    {
+        await using var graphiti = new Graphiti();
+        var referenceTime = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
+        var result = await graphiti.AddEpisodeAsync(
+            new AddEpisodeOptions
+            {
+                Name = "conversation",
+                EpisodeBody = "Alice likes Bob",
+                SourceDescription = "message",
+                ReferenceTime = referenceTime,
+                GroupId = "group"
+            });
+
+        Assert.Equal("conversation", result.Episode.Name);
+        Assert.Equal("group", result.Episode.GroupId);
+        Assert.Equal(EpisodeType.Message, result.Episode.Source);
+
+        var episodes = await graphiti.RetrieveEpisodesAsync(
+            referenceTime.AddMinutes(1),
+            groupIds: new[] { "group" });
+
+        Assert.Equal(result.Episode.Uuid, Assert.Single(episodes).Uuid);
+    }
+
+    [Fact]
+    public async Task AddEpisodeAsync_NullOptions_Throws()
+    {
+        await using var graphiti = new Graphiti();
+
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => graphiti.AddEpisodeAsync((AddEpisodeOptions)null!));
+    }
 }
