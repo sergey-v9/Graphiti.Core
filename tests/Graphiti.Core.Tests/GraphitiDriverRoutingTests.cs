@@ -50,6 +50,114 @@ public class GraphitiDriverRoutingTests
         Assert.Equal("tenant", result.Episode.GroupId);
     }
 
+    [Fact]
+    public async Task RetrieveEpisodes_UsesProvidedDriverOverride()
+    {
+        var rootDriver = new InMemoryGraphDriver();
+        var overrideDriver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: rootDriver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var rootEpisode = Episode("root-episode", "root", now);
+        var overrideEpisode = Episode("override-episode", "override", now);
+        await rootDriver.SaveNodeAsync(rootEpisode);
+        await overrideDriver.SaveNodeAsync(overrideEpisode);
+
+        var episodes = await graphiti.RetrieveEpisodesAsync(
+            now.AddMinutes(1),
+            lastN: 1,
+            groupIds: new[] { "group" },
+            driver: overrideDriver);
+
+        Assert.Equal(overrideEpisode.Uuid, Assert.Single(episodes).Uuid);
+    }
+
+    [Fact]
+    public async Task BuildCommunities_UsesProvidedDriverOverride()
+    {
+        var rootDriver = new InMemoryGraphDriver();
+        var overrideDriver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: rootDriver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var rootAlice = Entity("Root Alice", "root-alice", now);
+        var rootBob = Entity("Root Bob", "root-bob", now);
+        var overrideAlice = Entity("Override Alice", "override-alice", now);
+        var overrideBob = Entity("Override Bob", "override-bob", now);
+        var rootCommunity = Community("root-community", now);
+        var overrideCommunity = Community("override-community", now);
+        await rootDriver.SaveNodeAsync(rootAlice);
+        await rootDriver.SaveNodeAsync(rootBob);
+        await rootDriver.SaveNodeAsync(rootCommunity);
+        await rootDriver.SaveEdgeAsync(Relates("root-edge", rootAlice, rootBob, now));
+        await overrideDriver.SaveNodeAsync(overrideAlice);
+        await overrideDriver.SaveNodeAsync(overrideBob);
+        await overrideDriver.SaveNodeAsync(overrideCommunity);
+        await overrideDriver.SaveEdgeAsync(Relates("override-edge", overrideAlice, overrideBob, now));
+
+        var (communities, communityEdges) = await graphiti.BuildCommunitiesAsync(
+            new[] { "group" },
+            driver: overrideDriver);
+
+        var community = Assert.Single(communities);
+        Assert.Equal(2, communityEdges.Count);
+        Assert.All(communityEdges, edge => Assert.Equal(community.Uuid, edge.SourceNodeUuid));
+        Assert.Contains(communityEdges, edge => edge.TargetNodeUuid == overrideAlice.Uuid);
+        Assert.Contains(communityEdges, edge => edge.TargetNodeUuid == overrideBob.Uuid);
+        Assert.DoesNotContain(communities, stored => stored.Uuid == overrideCommunity.Uuid);
+        Assert.Equal(
+            community.Uuid,
+            Assert.Single(await CommunityNode.GetByGroupIdsAsync(overrideDriver, new[] { "group" })).Uuid);
+        Assert.Equal(
+            rootCommunity.Uuid,
+            Assert.Single(await CommunityNode.GetByGroupIdsAsync(rootDriver, new[] { "group" })).Uuid);
+    }
+
+    private static EpisodicNode Episode(string uuid, string name, DateTime validAt) =>
+        new()
+        {
+            Uuid = uuid,
+            Name = name,
+            GroupId = "group",
+            Source = EpisodeType.Message,
+            SourceDescription = "message",
+            Content = name,
+            CreatedAt = validAt,
+            ValidAt = validAt
+        };
+
+    private static EntityNode Entity(string name, string uuid, DateTime createdAt) =>
+        new()
+        {
+            Uuid = uuid,
+            Name = name,
+            GroupId = "group",
+            Labels = { "Entity" },
+            CreatedAt = createdAt,
+            Summary = $"{name} summary"
+        };
+
+    private static CommunityNode Community(string uuid, DateTime createdAt) =>
+        new()
+        {
+            Uuid = uuid,
+            Name = uuid,
+            GroupId = "group",
+            Labels = { "Community" },
+            CreatedAt = createdAt,
+            Summary = $"{uuid} summary"
+        };
+
+    private static EntityEdge Relates(string uuid, EntityNode source, EntityNode target, DateTime createdAt) =>
+        new()
+        {
+            Uuid = uuid,
+            Name = "RELATES_TO",
+            GroupId = "group",
+            SourceNodeUuid = source.Uuid,
+            TargetNodeUuid = target.Uuid,
+            CreatedAt = createdAt,
+            Fact = $"{source.Name} relates to {target.Name}."
+        };
+
     private sealed class RecordingCloneGraphDriver : GraphDriverBase
     {
         private readonly InMemoryGraphDriver _inner;

@@ -141,9 +141,9 @@ Latest checkpoint, 2026-06-16:
 (`.github/workflows/core-only.yml`): strict nuget.org-only restore with a temp package cache, core
 format/build/pack, and the core-only test slice with `GraphitiCoreOnlyTests=true` (`905` passed,
 `0` skipped). `.\eng\Verify-GraphitiCore.ps1` is also green after the normal Ladybug-inclusive path
-and public search driver-override proof:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`992`
-passed, `3` skipped, `995` total), `dotnet pack` for
+and public driver-override proofs:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`994`
+passed, `3` skipped, `997` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -174,6 +174,10 @@ the automatic recent-episode context window.
 `GraphitiSearchAsync_UsesProvidedDriverOverrideForBasicAndAdvanced` pins Python `search`/`search_`
 `driver` override forwarding by proving basic and advanced public searches read from the supplied
 override driver rather than the instance root driver.
+`RetrieveEpisodes_UsesProvidedDriverOverride` and `BuildCommunities_UsesProvidedDriverOverride` pin
+Python `retrieve_episodes` / `build_communities` `driver` override forwarding: retrieval reads from
+the supplied driver, and community rebuild removes stale communities plus saves replacements on that
+driver while leaving the instance root driver's communities untouched.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 

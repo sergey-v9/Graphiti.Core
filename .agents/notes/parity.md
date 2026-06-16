@@ -162,6 +162,12 @@ Python `Graphiti.search` / `Graphiti.search_` `driver` override forwarding. C# n
 test showing both basic `SearchAsync` and advanced `SearchAdvancedAsync` read from the supplied
 override driver rather than the `Graphiti` instance's root driver.
 
+**2026-06-16 public read/community driver-override proof:** added provider-free public workflow
+coverage for Python `Graphiti.retrieve_episodes` and `Graphiti.build_communities` optional `driver`
+forwarding. C# now proves episode retrieval reads from the override driver, and community rebuild
+removes stale communities plus saves replacement communities on the override driver while leaving the
+instance root driver's communities untouched.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
