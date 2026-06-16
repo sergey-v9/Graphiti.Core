@@ -56,6 +56,20 @@ When `config` is omitted, `SearchAdvancedAsync` uses `SearchConfigRecipes.Combin
 Returns the entities and facts attributed to the given episodes as a `SearchResults` — useful for
 inspecting what a specific episode contributed (no ranking involved).
 
+## Context formatting
+
+`SearchHelpers` exposes the Python `graphiti_core.search.search_helpers` conveniences for callers
+that pass search output directly to an LLM:
+
+- `FormatEdgeDateRange(EntityEdge)` returns `date unknown - present` when both temporal endpoints are
+  missing, otherwise formats the edge's `ValidAt` / `InvalidAt` window with Python-style labels.
+- `SearchResultsToContextString(SearchResults)` renders the `<FACTS>`, `<ENTITIES>`, `<EPISODES>`,
+  and `<COMMUNITIES>` sections used by Python's `search_results_to_context_string`.
+
+The context JSON uses Graphiti Core's canonical compact prompt JSON serializer; that intentionally
+matches the C# prompt stack's compact-output decision while preserving Python's field names and null
+date labels (`None` for missing `valid_at`, `Present` for missing `invalid_at`).
+
 ## `SearchConfig`
 
 `SearchConfig` (`src/Graphiti.Core/Search/SearchConfig.cs`) turns on each result type by supplying the

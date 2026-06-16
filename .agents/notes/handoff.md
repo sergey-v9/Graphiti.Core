@@ -143,9 +143,10 @@ format/build/pack, and the core-only test slice with `GraphitiCoreOnlyTests=true
 `0` skipped). `.\eng\Verify-GraphitiCore.ps1` is also green after the normal Ladybug-inclusive path,
 public driver-override proofs, saga empty-summary parity proof, and episode contribution fan-out
 proof, edge/episode cross-encoder candidate-window parity, community vector-search parity, temporal-filter
-grouping documentation, community blank-summary reduction parity, and empty edge-filter-list parity:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1000`
-passed, `3` skipped, `1003` total), `dotnet pack` for
+grouping documentation, community blank-summary reduction parity, empty edge-filter-list parity, and
+search-helper context formatting parity:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1003`
+passed, `3` skipped, `1006` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -208,18 +209,21 @@ payload instead of being filtered before reduction.
 `EdgeTypes` and `EdgeUuids`: an explicitly empty edge type/UUID list emits an active predicate and
 matches no edges, including through the Ladybug package runtime, while empty node labels remain a
 documented pending bug-compatibility decision.
+`FormatEdgeDateRange_UsesPythonFallbackLabels`,
+`FormatEdgeDateRange_RendersInvariantPythonLikeDateTimes`, and
+`SearchResultsToContextString_RendersPythonSearchHelperSections` pin the public C# counterpart to
+Python `graphiti_core.search.search_helpers`: `SearchHelpers` now exposes edge date-range formatting
+and a sectioned `SearchResults` context formatter for direct LLM prompt use.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
-Open WS-2 audit candidates not yet disposed: Python search helper functions `format_edge_date_range`
-/ `search_results_to_context_string` are not exposed in C# and would require a public-API decision;
-empty `NodeLabels` and empty temporal filter branches still need a deliberate bug-compatibility
-decision because Python emits malformed/backend-dependent fragments for those shapes; saga-scoped
-retrieval with `groupIds: null` differs across C# providers and from Python's grouped saga query;
-namespace edge reads return empty lists where Python model helpers raise not-found exceptions;
-`ParseDbDate`, excluded entity-type key/name handling, blank Lucene full-text queries, and content
-chunking zero-overlap/JSON spacing have candidate divergences that need either alignment or explicit
-documentation.
+Open WS-2 audit candidates not yet disposed: empty `NodeLabels` and empty temporal filter branches
+still need a deliberate bug-compatibility decision because Python emits malformed/backend-dependent
+fragments for those shapes; saga-scoped retrieval with `groupIds: null` differs across C# providers
+and from Python's grouped saga query; namespace edge reads return empty lists where Python model
+helpers raise not-found exceptions; `ParseDbDate`, excluded entity-type key/name handling, blank
+Lucene full-text queries, and content chunking zero-overlap/JSON spacing have candidate divergences
+that need either alignment or explicit documentation.
 
 Latest checkpoint, 2026-06-13:
 

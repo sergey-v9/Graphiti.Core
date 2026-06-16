@@ -1151,6 +1151,11 @@ namespace Graphiti.Core.Search
         [System.Text.Json.Serialization.JsonPropertyName("valid_at")]
         public System.Collections.Generic.List<System.Collections.Generic.List<Graphiti.Core.Search.DateFilter>>? ValidAt { get; set; }
     }
+    public static class SearchHelpers
+    {
+        public static string FormatEdgeDateRange(Graphiti.Core.Models.Edges.EntityEdge edge) { }
+        public static string SearchResultsToContextString(Graphiti.Core.Search.SearchResults searchResults) { }
+    }
     public readonly struct SearchHit<T> : System.IEquatable<Graphiti.Core.Search.SearchHit<T>>
     {
         public SearchHit(T Item, float Score) { }
