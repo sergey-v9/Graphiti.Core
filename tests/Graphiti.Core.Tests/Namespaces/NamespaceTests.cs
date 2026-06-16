@@ -29,7 +29,8 @@ public class NamespaceTests
             Name = "Alice",
             GroupId = "group",
             Labels = new List<string> { "Person" },
-            CreatedAt = createdAt
+            CreatedAt = createdAt,
+            NameEmbedding = new List<float> { 1f, 0f, 0f, 0f, 0f, 0f, 0f, 0f }
         };
         var bob = new EntityNode
         {
@@ -37,7 +38,8 @@ public class NamespaceTests
             Name = "Bob",
             GroupId = "other",
             Labels = new List<string> { "Person" },
-            CreatedAt = createdAt
+            CreatedAt = createdAt,
+            NameEmbedding = new List<float> { 0f, 1f, 0f, 0f, 0f, 0f, 0f, 0f }
         };
 
         await graphiti.Nodes.Entity.SaveBulkAsync(new[] { alice, bob });
@@ -63,6 +65,111 @@ public class NamespaceTests
         await Assert.ThrowsAsync<NodeNotFoundException>(() => graphiti.Nodes.Entity.GetByUuidAsync(alice.Uuid));
         Assert.Equal(episode.Uuid, (await graphiti.Nodes.Episode.GetByUuidAsync(episode.Uuid)).Uuid);
         Assert.Equal(bob.Uuid, (await graphiti.Nodes.Entity.GetByUuidAsync(bob.Uuid)).Uuid);
+    }
+
+    [Fact]
+    public async Task EmbeddingNamespaces_SaveRegeneratesPrefilledEmbeddings()
+    {
+        var expected = new[] { 0.25f, 0.75f };
+        var graphiti = new Graphiti(
+            graphDriver: new InMemoryGraphDriver(),
+            embedder: new FixedBatchEmbedder(2, new[] { (IReadOnlyList<float>)expected }));
+        var entity = new EntityNode
+        {
+            Uuid = "entity",
+            Name = "Alice",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 9f, 9f }
+        };
+        var community = new CommunityNode
+        {
+            Uuid = "community",
+            Name = "Community",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 8f, 8f }
+        };
+        var edge = new EntityEdge
+        {
+            Uuid = "edge",
+            SourceNodeUuid = "entity",
+            TargetNodeUuid = "other",
+            GroupId = "group",
+            Name = "KNOWS",
+            Fact = "Alice knows Bob.",
+            FactEmbedding = new List<float> { 7f, 7f }
+        };
+
+        await graphiti.Nodes.Entity.SaveAsync(entity);
+        await graphiti.Nodes.Community.SaveAsync(community);
+        await graphiti.Edges.Entity.SaveAsync(edge);
+
+        Assert.Equal(expected, entity.NameEmbedding);
+        Assert.Equal(expected, community.NameEmbedding);
+        Assert.Equal(expected, edge.FactEmbedding);
+    }
+
+    [Fact]
+    public async Task EmbeddingNamespaces_SaveBulkPreservesSuppliedEmbeddingsWithoutCallingEmbedder()
+    {
+        var graphiti = new Graphiti(
+            graphDriver: new InMemoryGraphDriver(),
+            embedder: new ThrowingEmbedder(2));
+        var entityWithEmbedding = new EntityNode
+        {
+            Uuid = "entity-with",
+            Name = "Alice",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 1f, 0f }
+        };
+        var entityMissingEmbedding = new EntityNode
+        {
+            Uuid = "entity-missing",
+            Name = "Bob",
+            GroupId = "group"
+        };
+        var communityWithEmbedding = new CommunityNode
+        {
+            Uuid = "community-with",
+            Name = "Community A",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 0f, 1f }
+        };
+        var communityMissingEmbedding = new CommunityNode
+        {
+            Uuid = "community-missing",
+            Name = "Community B",
+            GroupId = "group"
+        };
+        var edgeWithEmbedding = new EntityEdge
+        {
+            Uuid = "edge-with",
+            SourceNodeUuid = entityWithEmbedding.Uuid,
+            TargetNodeUuid = entityMissingEmbedding.Uuid,
+            GroupId = "group",
+            Name = "KNOWS",
+            Fact = "Alice knows Bob.",
+            FactEmbedding = new List<float> { 0.5f, 0.5f }
+        };
+        var edgeMissingEmbedding = new EntityEdge
+        {
+            Uuid = "edge-missing",
+            SourceNodeUuid = entityMissingEmbedding.Uuid,
+            TargetNodeUuid = entityWithEmbedding.Uuid,
+            GroupId = "group",
+            Name = "KNOWS",
+            Fact = "Bob knows Alice."
+        };
+
+        await graphiti.Nodes.Entity.SaveBulkAsync(new[] { entityWithEmbedding, entityMissingEmbedding });
+        await graphiti.Nodes.Community.SaveBulkAsync(new[] { communityWithEmbedding, communityMissingEmbedding });
+        await graphiti.Edges.Entity.SaveBulkAsync(new[] { edgeWithEmbedding, edgeMissingEmbedding });
+
+        Assert.Equal(new List<float> { 1f, 0f }, (await graphiti.Nodes.Entity.GetByUuidAsync(entityWithEmbedding.Uuid)).NameEmbedding);
+        Assert.Null((await graphiti.Nodes.Entity.GetByUuidAsync(entityMissingEmbedding.Uuid)).NameEmbedding);
+        Assert.Equal(new List<float> { 0f, 1f }, (await graphiti.Nodes.Community.GetByUuidAsync(communityWithEmbedding.Uuid)).NameEmbedding);
+        Assert.Null((await graphiti.Nodes.Community.GetByUuidAsync(communityMissingEmbedding.Uuid)).NameEmbedding);
+        Assert.Equal(new List<float> { 0.5f, 0.5f }, (await graphiti.Edges.Entity.GetByUuidAsync(edgeWithEmbedding.Uuid)).FactEmbedding);
+        Assert.Null((await graphiti.Edges.Entity.GetByUuidAsync(edgeMissingEmbedding.Uuid)).FactEmbedding);
     }
 
     [Fact]
@@ -161,7 +268,7 @@ public class NamespaceTests
     }
 
     [Fact]
-    public async Task EntityNamespaces_SaveBulkHonorsBatchSize()
+    public async Task EntityNamespaces_SaveBulkUsesPerItemBatchesWithoutEmbeddingBackfill()
     {
         var driver = new DelayedNamespaceSaveDriver();
         var graphiti = new Graphiti(graphDriver: driver, embedder: new HashEmbedder(4));
@@ -188,10 +295,13 @@ public class NamespaceTests
         await graphiti.Nodes.Entity.SaveBulkAsync(nodes, batchSize: 2);
         await graphiti.Edges.Entity.SaveBulkAsync(edges, batchSize: 2);
 
-        Assert.Equal(new[] { 2, 2, 1 }, driver.EntityNodeBulkBatchSizes);
-        Assert.Equal(new[] { 2, 2, 1 }, driver.EntityEdgeBulkBatchSizes);
-        Assert.All(nodes, node => Assert.NotNull(node.NameEmbedding));
-        Assert.All(edges, edge => Assert.NotNull(edge.FactEmbedding));
+        Assert.Equal(nodes.Count, driver.SavedNodeCount);
+        Assert.Equal(edges.Count, driver.SavedEdgeCount);
+        Assert.Equal(2, driver.MaxConcurrentSaves);
+        Assert.Empty(driver.EntityNodeBulkBatchSizes);
+        Assert.Empty(driver.EntityEdgeBulkBatchSizes);
+        Assert.All(nodes, node => Assert.Null(node.NameEmbedding));
+        Assert.All(edges, edge => Assert.Null(edge.FactEmbedding));
     }
 
     [Fact]
@@ -289,7 +399,8 @@ public class NamespaceTests
             TargetNodeUuid = bob.Uuid,
             GroupId = "group",
             Name = "KNOWS",
-            Fact = "Alice knows Bob."
+            Fact = "Alice knows Bob.",
+            FactEmbedding = new List<float> { 1f, 0f, 0f, 0f, 0f, 0f, 0f, 0f }
         };
         var worksWith = new EntityEdge
         {
@@ -298,7 +409,8 @@ public class NamespaceTests
             TargetNodeUuid = alice.Uuid,
             GroupId = "group",
             Name = "WORKS_WITH",
-            Fact = "Carol works with Alice."
+            Fact = "Carol works with Alice.",
+            FactEmbedding = new List<float> { 0f, 1f, 0f, 0f, 0f, 0f, 0f, 0f }
         };
         var mention = new EpisodicEdge
         {
@@ -332,7 +444,7 @@ public class NamespaceTests
     }
 
     [Fact]
-    public async Task CommunityNamespace_RejectsInvalidGeneratedEmbeddingBeforeSave()
+    public async Task CommunityNamespace_SaveRejectsInvalidGeneratedEmbeddingBeforeSave()
     {
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(
@@ -341,7 +453,7 @@ public class NamespaceTests
         var community = new CommunityNode { Uuid = "community", Name = "Community", GroupId = "group" };
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => graphiti.Nodes.Community.SaveBulkAsync(new[] { community }));
+            () => graphiti.Nodes.Community.SaveAsync(community));
 
         Assert.Contains("community node", exception.Message, StringComparison.Ordinal);
         Assert.Null(community.NameEmbedding);
@@ -367,6 +479,19 @@ public class NamespaceTests
             IReadOnlyList<string> input,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(_embeddings);
+    }
+
+    private sealed class ThrowingEmbedder : EmbedderClient
+    {
+        public ThrowingEmbedder(int embeddingDimension)
+            : base(new EmbedderConfig(embeddingDimension))
+        {
+        }
+
+        public override Task<IReadOnlyList<float>> CreateAsync(
+            string input,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("The namespace bulk path should not call the embedder.");
     }
 
     private sealed class ThrowingEnumerable<T> : IEnumerable<T>

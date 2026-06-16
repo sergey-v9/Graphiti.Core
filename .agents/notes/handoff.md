@@ -250,11 +250,22 @@ The remaining empty-filter-list candidates are now deliberately disposed as hard
 Python emits malformed/backend-dependent empty `NodeLabels` fragments (`n:`, `n: AND m:`, or Kuzu
 `list_has_all(..., [])`) and empty temporal fragments (`(`, `()`, or dangling `OR` groups), while C#
 keeps those shapes as no-op filters via existing `CompiledSearchFilter`/query-builder coverage.
-`OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
+Current audit follow-up closed namespace embedding drift and an in-memory triplet collision drift:
+namespace `SaveAsync` regenerates entity/community node and entity-edge embeddings even when prefilled,
+namespace `SaveBulkAsync` now preserves supplied null/precomputed embeddings without calling the
+embedder, and `AddTripletAsync` creates a fresh entity-edge UUID when the default in-memory backend
+already has a non-entity edge with the requested UUID. Search concurrency proof was also tightened so
+the fake driver waits for monotonic search-call arrivals instead of asserting a transient active count.
+Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests
+(`1012` passed, `3` skipped, `1015` total), both shippable package packs, and both package-consumer
+smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
-Open WS-2 audit candidates from this mini-pass: none. Continue the broader full-pipeline parity audit
-against current Python; new candidates should be added here as they are confirmed.
+Open WS-2 audit candidates from this mini-pass: decide whether to keep or remove the additive
+`CommunityEdgeNamespace.SaveBulkAsync` public helper, and whether to narrow base
+`Edge.DeleteByUuidsAsync` so it does not delete `HAS_EPISODE`/`NEXT_EPISODE` edges like Python's
+inherited base helper. Continue the broader full-pipeline parity audit against current Python; new
+candidates should be added here as they are confirmed.
 
 Latest checkpoint, 2026-06-13:
 

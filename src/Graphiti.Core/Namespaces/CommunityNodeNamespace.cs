@@ -14,35 +14,25 @@ public sealed class CommunityNodeNamespace
     }
 
     /// <summary>
-    /// Persists the community node, generating its name embedding first if one is not already present,
-    /// and returns the saved node.
+    /// Persists the community node, regenerating its name embedding first, and returns the saved node.
     /// </summary>
     public async Task<CommunityNode> SaveAsync(CommunityNode node, CancellationToken cancellationToken = default)
     {
-        if (node.NameEmbedding is null)
-        {
-            await node.GenerateNameEmbeddingAsync(_embedder, cancellationToken).ConfigureAwait(false);
-        }
-
+        await node.GenerateNameEmbeddingAsync(_embedder, cancellationToken).ConfigureAwait(false);
         await node.SaveAsync(_driver, cancellationToken).ConfigureAwait(false);
         return node;
     }
 
-    /// <summary>Persists many community nodes in batches, backfilling missing name embeddings.</summary>
+    /// <summary>Persists many community nodes in batches, preserving supplied name embeddings as-is.</summary>
     public async Task SaveBulkAsync(
         IEnumerable<CommunityNode> nodes,
         int batchSize = 100,
         CancellationToken cancellationToken = default)
     {
         NamespaceDriverHelpers.ValidateBatchSize(batchSize);
-        var nodeList = NamespaceDriverHelpers.MaterializeList(nodes, cancellationToken);
-        await NamespaceDriverHelpers.EnsureCommunityNodeEmbeddingsAsync(
-            nodeList,
-            _embedder,
-            cancellationToken).ConfigureAwait(false);
         await NamespaceDriverHelpers.SaveNodesAsync(
             _driver,
-            nodeList,
+            nodes,
             batchSize,
             cancellationToken).ConfigureAwait(false);
     }

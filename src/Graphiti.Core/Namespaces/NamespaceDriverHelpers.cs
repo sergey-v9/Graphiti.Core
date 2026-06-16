@@ -31,42 +31,6 @@ internal static class NamespaceDriverHelpers
             driver.SaveEdgeAsync,
             cancellationToken);
 
-    public static Task SaveEntityNodesBulkAsync(
-        IGraphDriver driver,
-        IEnumerable<EntityNode> nodes,
-        int batchSize,
-        IEmbedderClient embedder,
-        CancellationToken cancellationToken) =>
-        ForEachBatchAsync(
-            nodes,
-            batchSize,
-            (batch, token) => driver.SaveBulkAsync(
-                Array.Empty<EpisodicNode>(),
-                Array.Empty<EpisodicEdge>(),
-                batch,
-                Array.Empty<EntityEdge>(),
-                embedder,
-                token),
-            cancellationToken);
-
-    public static Task SaveEntityEdgesBulkAsync(
-        IGraphDriver driver,
-        IEnumerable<EntityEdge> edges,
-        int batchSize,
-        IEmbedderClient embedder,
-        CancellationToken cancellationToken) =>
-        ForEachBatchAsync(
-            edges,
-            batchSize,
-            (batch, token) => driver.SaveBulkAsync(
-                Array.Empty<EpisodicNode>(),
-                Array.Empty<EpisodicEdge>(),
-                Array.Empty<EntityNode>(),
-                batch,
-                embedder,
-                token),
-            cancellationToken);
-
     private static async Task SaveItemsAsync<TItem>(
         IEnumerable<TItem> items,
         int batchSize,
@@ -110,6 +74,7 @@ internal static class NamespaceDriverHelpers
         ValidateBatchSize(batchSize);
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(processBatchAsync);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var batch = new List<TItem>(batchSize);
         foreach (var item in items)
@@ -186,46 +151,6 @@ internal static class NamespaceDriverHelpers
         }
 
         await driver.DeleteEdgesByUuidsAsync(typedUuids, cancellationToken).ConfigureAwait(false);
-    }
-
-    public static async Task EnsureCommunityNodeEmbeddingsAsync(
-        IReadOnlyList<CommunityNode> nodes,
-        IEmbedderClient embedder,
-        CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(embedder);
-        ArgumentNullException.ThrowIfNull(nodes);
-
-        var nodesMissingEmbeddings = new List<CommunityNode>(nodes.Count);
-        for (var i = 0; i < nodes.Count; i++)
-        {
-            if (nodes[i].NameEmbedding is null)
-            {
-                nodesMissingEmbeddings.Add(nodes[i]);
-            }
-        }
-
-        if (nodesMissingEmbeddings.Count == 0)
-        {
-            return;
-        }
-
-        var inputs = new List<string>(nodesMissingEmbeddings.Count);
-        for (var i = 0; i < nodesMissingEmbeddings.Count; i++)
-        {
-            inputs.Add((nodesMissingEmbeddings[i].Name ?? string.Empty).Replace('\n', ' '));
-        }
-
-        var embeddings = EmbeddingVectorValidation.MaterializeBatch(
-            await embedder.CreateBatchAsync(inputs, cancellationToken).ConfigureAwait(false),
-            nodesMissingEmbeddings.Count,
-            embedder.EmbeddingDimension,
-            "community node name embeddings",
-            index => $"community node '{nodesMissingEmbeddings[index].Name}' at index {index}");
-        for (var i = 0; i < nodesMissingEmbeddings.Count; i++)
-        {
-            nodesMissingEmbeddings[i].NameEmbedding = embeddings[i];
-        }
     }
 
     public static async Task LoadEntityNodeEmbeddingsAsync(

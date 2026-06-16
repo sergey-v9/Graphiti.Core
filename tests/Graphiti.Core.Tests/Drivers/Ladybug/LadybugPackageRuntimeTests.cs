@@ -160,7 +160,8 @@ public class LadybugPackageRuntimeTests
             GroupId = "tenant",
             Labels = ["Person"],
             CreatedAt = createdAt,
-            Summary = "source for namespace embedding load"
+            Summary = "source for namespace embedding load",
+            NameEmbedding = [1f, 0f, 0f, 0f]
         };
         var bob = new EntityNode
         {
@@ -169,7 +170,8 @@ public class LadybugPackageRuntimeTests
             GroupId = "tenant",
             Labels = ["Person"],
             CreatedAt = createdAt,
-            Summary = "target for namespace embedding load"
+            Summary = "target for namespace embedding load",
+            NameEmbedding = [0f, 1f, 0f, 0f]
         };
         var knows = new EntityEdge
         {
@@ -181,7 +183,8 @@ public class LadybugPackageRuntimeTests
             Fact = "Embedding Alice knows Embedding Bob.",
             CreatedAt = createdAt,
             ValidAt = createdAt,
-            ReferenceTime = createdAt
+            ReferenceTime = createdAt,
+            FactEmbedding = [0f, 0f, 1f, 0f]
         };
         var helps = new EntityEdge
         {
@@ -193,7 +196,8 @@ public class LadybugPackageRuntimeTests
             Fact = "Embedding Bob helps Embedding Alice.",
             CreatedAt = createdAt,
             ValidAt = createdAt,
-            ReferenceTime = createdAt
+            ReferenceTime = createdAt,
+            FactEmbedding = [0f, 0f, 0f, 1f]
         };
 
         await graphiti.BuildIndicesAndConstraintsAsync();

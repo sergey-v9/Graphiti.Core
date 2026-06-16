@@ -266,6 +266,19 @@ episode retrieval or pick a saga from another group. C# now matches that public 
 reachable providers: InMemory returns no rows without a supplied group, Ladybug emits the grouped saga
 query with `group_id = null`, and Neo4j no longer uses a name-only saga match.
 
+**2026-06-17 namespace/triplet audit follow-up:** closed public namespace embedding and
+`add_triplet` collision drifts found by the current Python-vs-C# audit. Python namespace single saves
+always regenerate entity/community node and entity-edge embeddings, while namespace bulk saves delegate
+the supplied models as-is. C# namespace `SaveAsync` now regenerates prefilled embeddings, and namespace
+`SaveBulkAsync` preserves null/precomputed embeddings without calling the embedder; driver-level bulk
+ingestion still generates missing embeddings. `AddTripletAsync` also now preserves existing non-entity
+edges in the default in-memory backend when a submitted entity-edge UUID collides with an episodic,
+community, has-episode, or next-episode edge by assigning the entity edge a fresh UUID before saving.
+Remaining audit observations not changed in this pass: `CommunityEdgeNamespace.SaveBulkAsync` is an
+additive C# public helper not present in Python, and base `Edge.DeleteByUuidsAsync` reaches
+`HAS_EPISODE`/`NEXT_EPISODE` edges where Python's inherited base helper does not. Treat both as public
+API decision candidates before changing them.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
@@ -370,7 +383,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Basic fact search | `search` | `SearchAsync(query, ...)` | OK | |
 | Advanced graph search | `search_` | `SearchAdvancedAsync` / `SearchAsync(query, SearchConfig, ...)` | OK | Idiomatic C# names; Python-style aliases intentionally not added |
 | Episode contribution lookup | `get_nodes_and_edges_by_episode` | `GetNodesAndEdgesByEpisodeAsync` | OK + DIVERGENT | Per-episode entity-edge loads use bounded fan-out like Python `semaphore_gather`, then flatten in episode order. Bulk episodes own entity-edge UUIDs in C#, so bulk episode contribution lookup is more complete than Python |
-| Triplet ingest | `add_triplet` | `AddTripletAsync` | OK | Exact duplicate reuse scans the reranked/limited related-edge set after `EDGE_HYBRID_SEARCH_RRF`, matching Python; edge UUID collisions on different endpoint pairs generate a fresh UUID and preserve the original edge |
+| Triplet ingest | `add_triplet` | `AddTripletAsync` | OK | Exact duplicate reuse scans the reranked/limited related-edge set after `EDGE_HYBRID_SEARCH_RRF`, matching Python; edge UUID collisions on different endpoint pairs generate a fresh UUID and preserve the original edge; in-memory cross-type UUID collisions also generate a fresh entity-edge UUID so non-entity edges are not overwritten |
 | Episode removal | `remove_episode` | `RemoveEpisodeAsync` | DIVERGENT | C# prunes shared edge support and repairs saga membership/adjacency; Python only deletes first-supporting edges and the episode |
 
 ## Invented C# behaviors (not in Python)

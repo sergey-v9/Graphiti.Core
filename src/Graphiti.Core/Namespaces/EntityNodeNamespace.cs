@@ -14,34 +14,26 @@ public sealed class EntityNodeNamespace
     }
 
     /// <summary>
-    /// Persists the node, generating its name embedding first if one is not already present, and
-    /// returns the saved node.
+    /// Persists the node, regenerating its name embedding first, and returns the saved node.
     /// </summary>
     public async Task<EntityNode> SaveAsync(EntityNode node, CancellationToken cancellationToken = default)
     {
-        if (node.NameEmbedding is null)
-        {
-            await node.GenerateNameEmbeddingAsync(_embedder, cancellationToken).ConfigureAwait(false);
-        }
-
+        await node.GenerateNameEmbeddingAsync(_embedder, cancellationToken).ConfigureAwait(false);
         await node.SaveAsync(_driver, cancellationToken).ConfigureAwait(false);
         return node;
     }
 
-    /// <summary>Persists many nodes in batches, backfilling missing name embeddings before saving.</summary>
+    /// <summary>Persists many nodes in batches, preserving supplied name embeddings as-is.</summary>
     public async Task SaveBulkAsync(
         IEnumerable<EntityNode> nodes,
         int batchSize = 100,
         CancellationToken cancellationToken = default)
     {
         NamespaceDriverHelpers.ValidateBatchSize(batchSize);
-        ArgumentNullException.ThrowIfNull(nodes);
-
-        await NamespaceDriverHelpers.SaveEntityNodesBulkAsync(
+        await NamespaceDriverHelpers.SaveNodesAsync(
             _driver,
             nodes,
             batchSize,
-            _embedder,
             cancellationToken).ConfigureAwait(false);
     }
 

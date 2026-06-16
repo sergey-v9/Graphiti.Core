@@ -907,9 +907,10 @@ public sealed partial class Graphiti
 
             edge.SourceNodeUuid = resolvedSource.Uuid;
             edge.TargetNodeUuid = resolvedTarget.Uuid;
+            var tripletDriver = Driver;
             try
             {
-                var existingEdge = await EntityEdge.GetByUuidAsync(Driver, edge.Uuid, cancellationToken).ConfigureAwait(false);
+                var existingEdge = await EntityEdge.GetByUuidAsync(tripletDriver, edge.Uuid, cancellationToken).ConfigureAwait(false);
                 if (existingEdge.SourceNodeUuid != edge.SourceNodeUuid || existingEdge.TargetNodeUuid != edge.TargetNodeUuid)
                 {
                     edge.Uuid = GraphitiHelpers.NewUuid();
@@ -917,9 +918,14 @@ public sealed partial class Graphiti
             }
             catch (EdgeNotFoundException)
             {
+                if (tripletDriver is InMemoryGraphDriver &&
+                    await NonEntityEdgeExistsByUuidAsync(tripletDriver, edge.Uuid, cancellationToken).ConfigureAwait(false))
+                {
+                    edge.Uuid = GraphitiHelpers.NewUuid();
+                }
             }
 
-            var betweenNodesEdges = await Driver.GetEntityEdgesBetweenNodesAsync(
+            var betweenNodesEdges = await tripletDriver.GetEntityEdgesBetweenNodesAsync(
                 edge.SourceNodeUuid,
                 edge.TargetNodeUuid,
                 cancellationToken).ConfigureAwait(false);
@@ -979,6 +985,32 @@ public sealed partial class Graphiti
         {
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
+        }
+    }
+
+    private static async Task<bool> NonEntityEdgeExistsByUuidAsync(
+        IGraphDriver driver,
+        string uuid,
+        CancellationToken cancellationToken) =>
+        await EdgeExistsByUuidAsync<EpisodicEdge>(driver, uuid, cancellationToken).ConfigureAwait(false) ||
+        await EdgeExistsByUuidAsync<CommunityEdge>(driver, uuid, cancellationToken).ConfigureAwait(false) ||
+        await EdgeExistsByUuidAsync<HasEpisodeEdge>(driver, uuid, cancellationToken).ConfigureAwait(false) ||
+        await EdgeExistsByUuidAsync<NextEpisodeEdge>(driver, uuid, cancellationToken).ConfigureAwait(false);
+
+    private static async Task<bool> EdgeExistsByUuidAsync<TEdge>(
+        IGraphDriver driver,
+        string uuid,
+        CancellationToken cancellationToken)
+        where TEdge : Edge
+    {
+        try
+        {
+            await driver.GetEdgeByUuidAsync<TEdge>(uuid, cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (EdgeNotFoundException)
+        {
+            return false;
         }
     }
 

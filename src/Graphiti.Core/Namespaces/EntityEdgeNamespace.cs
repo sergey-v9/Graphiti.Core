@@ -14,34 +14,27 @@ public sealed class EntityEdgeNamespace
     }
 
     /// <summary>
-    /// Persists the entity edge (fact), generating its fact embedding first if one is not already
-    /// present, and returns the saved edge.
+    /// Persists the entity edge (fact), regenerating its fact embedding first, and returns the saved
+    /// edge.
     /// </summary>
     public async Task<EntityEdge> SaveAsync(EntityEdge edge, CancellationToken cancellationToken = default)
     {
-        if (edge.FactEmbedding is null)
-        {
-            await edge.GenerateEmbeddingAsync(_embedder, cancellationToken).ConfigureAwait(false);
-        }
-
+        await edge.GenerateEmbeddingAsync(_embedder, cancellationToken).ConfigureAwait(false);
         await edge.SaveAsync(_driver, cancellationToken).ConfigureAwait(false);
         return edge;
     }
 
-    /// <summary>Persists many entity edges (facts) in batches, backfilling missing fact embeddings.</summary>
+    /// <summary>Persists many entity edges (facts) in batches, preserving supplied fact embeddings as-is.</summary>
     public async Task SaveBulkAsync(
         IEnumerable<EntityEdge> edges,
         int batchSize = 100,
         CancellationToken cancellationToken = default)
     {
         NamespaceDriverHelpers.ValidateBatchSize(batchSize);
-        ArgumentNullException.ThrowIfNull(edges);
-
-        await NamespaceDriverHelpers.SaveEntityEdgesBulkAsync(
+        await NamespaceDriverHelpers.SaveEdgesAsync(
             _driver,
             edges,
             batchSize,
-            _embedder,
             cancellationToken).ConfigureAwait(false);
     }
 
