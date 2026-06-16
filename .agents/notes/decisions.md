@@ -223,6 +223,10 @@ no wire/prompt/cache/temporal behavior changed):
   `saga` still selects the saga branch, but the group parameter is null, so normal grouped sagas do
   not match and the query does not fall through to generic episode retrieval. InMemory returns an
   empty result for this shape; Ladybug and Neo4j bind the null group in the grouped saga match.
+- Empty node-label and empty temporal filter branches are intentional C# hardening divergences.
+  Python can emit malformed/backend-dependent fragments for these shapes (`n:`, `n: AND m:`, `(`,
+  `()`, or dangling `OR` groups). C# treats empty node labels and empty temporal groups as no-op
+  filters rather than reproducing invalid backend queries.
 - Saga summaries hard-truncate like Python and persist the typed LLM `summary` field directly,
   including empty or whitespace-only strings. No deterministic episode-content fallback is synthesized
   for saga summaries. Community/entity summary paths keep sentence-aware truncation where Python does.

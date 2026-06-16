@@ -397,6 +397,10 @@ biases toward a `centerNodeUuid`; **episode-mentions** favors facts mentioned in
 and temporal predicates (`ValidAt`, `InvalidAt`, `CreatedAt`, `ExpiredAt`), each an OR-of-AND-groups of
 `DateFilter`s.
 
+`EdgeTypes = []` and `EdgeUuids = []` are active empty predicates that match no edges. Empty
+`NodeLabels` and empty temporal groups are treated as no predicate; C# deliberately avoids Python's
+malformed empty-fragment queries for those shapes.
+
 See [docs/search.md](docs/search.md) for more detail on methods, rerankers, and filters.
 
 ## Custom entity & edge types

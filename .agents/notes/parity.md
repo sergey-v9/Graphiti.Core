@@ -203,9 +203,18 @@ payload boundary.
 drift. Python `edge_search_filter_query_constructor` emits `e.name in $edge_types` and
 `e.uuid in $edge_uuids` whenever those lists are non-null, so explicitly empty lists are active
 match-none predicates. C# now preserves the same null-vs-empty distinction for `EdgeTypes` and
-`EdgeUuids` in backend query fragments and in-memory/materialized matching. Empty `NodeLabels` and
-empty temporal branches remain intentionally unaligned pending a bug-compatibility decision because
-Python can emit malformed/backend-dependent fragments for those shapes.
+`EdgeUuids` in backend query fragments and in-memory/materialized matching.
+
+**2026-06-17 empty node/temporal filter closure:** formally kept the remaining empty-filter shapes as
+intentional C# hardening divergences. Python's filter compiler treats `node_labels=[]` as non-null and
+can emit malformed/backend-dependent label fragments (`n:`, `n: AND m:`, or Kuzu
+`list_has_all(..., [])`). It also emits invalid temporal fragments for empty date groups
+(`(`, `()`, `( OR ...)`, or `(... OR )`). C# keeps those shapes as no-op filters instead of
+reproducing invalid backend queries, pinned by the existing
+`CompiledSearchFilter_EmptyNodeLabelsNoOpButEmptyEdgeListsMatchNone`,
+`CompiledSearchFilter_TreatsEmptyDateBranchAsNoOp`,
+`EdgeSearchFilterQueryConstructor_SkipsEmptyDateFilterList`, and
+`EdgeSearchFilterQueryConstructor_EmptyDateOrBranchDoesNotEmitInvalidCypher` tests.
 
 **2026-06-16 search-helper follow-up:** closed the public helper gap for
 `graphiti_core.search.search_helpers`. C# now exposes `SearchHelpers.FormatEdgeDateRange` and

@@ -141,6 +141,11 @@ fall back to the lexical/identity ordering.
 For `EdgeTypes` and `EdgeUuids`, `null` means no predicate; an explicitly empty list is an active
 empty predicate and matches no edges, matching Python's filter constructors.
 
+For `NodeLabels` and the temporal filter groups, C# intentionally hardens Python's malformed
+empty-shape behavior. `NodeLabels = []`, an empty temporal outer list, or any empty temporal inner
+group is treated as no predicate instead of emitting backend-dependent fragments such as `n:`, `()`,
+or dangling `OR` groups.
+
 ```csharp
 var filters = new SearchFilters
 {

@@ -246,12 +246,15 @@ contract.
 `BuildRetrieveEpisodesStatement_BindsNullSagaGroupWithoutGroupIds` close the saga-scoped retrieval
 `groupIds: null` provider drift: InMemory no longer picks a cross-group saga, Ladybug no longer
 falls through to generic episode retrieval, and Neo4j no longer emits a name-only saga match.
+The remaining empty-filter-list candidates are now deliberately disposed as hardening divergences:
+Python emits malformed/backend-dependent empty `NodeLabels` fragments (`n:`, `n: AND m:`, or Kuzu
+`list_has_all(..., [])`) and empty temporal fragments (`(`, `()`, or dangling `OR` groups), while C#
+keeps those shapes as no-op filters via existing `CompiledSearchFilter`/query-builder coverage.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
-Open WS-2 audit candidates not yet disposed: empty `NodeLabels` and empty temporal filter branches
-still need a deliberate bug-compatibility decision because Python emits malformed/backend-dependent
-fragments for those shapes.
+Open WS-2 audit candidates from this mini-pass: none. Continue the broader full-pipeline parity audit
+against current Python; new candidates should be added here as they are confirmed.
 
 Latest checkpoint, 2026-06-13:
 
