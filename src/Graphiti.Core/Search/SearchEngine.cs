@@ -721,6 +721,7 @@ internal static class SearchEngine
 
         if (config.Reranker == EdgeReranker.CrossEncoder && ranked.Count > 0)
         {
+            ranked = SearchResultComposer.LimitRanked(ranked, limit);
             ranked = await SearchResultComposer.ApplyCrossEncoderRerankerAsync(
                 crossEncoder,
                 query,
@@ -1023,6 +1024,7 @@ internal static class SearchEngine
 
         if (config.Reranker == EpisodeReranker.CrossEncoder && ranked.Count > 0)
         {
+            ranked = SearchResultComposer.LimitRanked(ranked, limit);
             ranked = await SearchResultComposer.ApplyCrossEncoderRerankerAsync(
                 crossEncoder,
                 query,

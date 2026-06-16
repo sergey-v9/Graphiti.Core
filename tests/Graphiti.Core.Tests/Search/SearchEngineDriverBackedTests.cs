@@ -817,6 +817,44 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
+    public async Task EdgeSearch_CrossEncoderRanksOnlyLimitedPreliminaryCandidates()
+    {
+        var first = new EntityEdge { Uuid = "edge-first", Fact = "first fact", GroupId = "group" };
+        var second = new EntityEdge { Uuid = "edge-second", Fact = "second fact", GroupId = "group" };
+        var rescued = new EntityEdge { Uuid = "edge-rescued", Fact = "rescued fact", GroupId = "group" };
+        var driver = new DriverBackedSearchDriver
+        {
+            EdgeFulltextHits =
+            {
+                new SearchHit<EntityEdge>(first, 3),
+                new SearchHit<EntityEdge>(second, 2),
+                new SearchHit<EntityEdge>(rescued, 1)
+            }
+        };
+        var crossEncoder = new RecordingCrossEncoder
+        {
+            IndexedScores = new List<float> { 0.3f, 0.2f, 0.99f }
+        };
+
+        var ranked = await SearchEngine.EdgeSearchAsync(
+            driver,
+            crossEncoder,
+            "query",
+            queryVector: null,
+            new[] { "group" },
+            new EdgeSearchConfig
+            {
+                SearchMethods = { EdgeSearchMethod.Bm25 },
+                Reranker = EdgeReranker.CrossEncoder
+            },
+            new SearchFilters(),
+            limit: 2);
+
+        Assert.Equal(new[] { "first fact", "second fact" }, crossEncoder.LastPassages);
+        Assert.Equal(new[] { "edge-first", "edge-second" }, ranked.Select(item => item.Item.Uuid));
+    }
+
+    [Fact]
     public async Task EdgeSearch_BfsUsesDerivedSourceOrigins()
     {
         var textEdge = new EntityEdge { Uuid = "text", SourceNodeUuid = "source", TargetNodeUuid = "target", Fact = "Alice", GroupId = "group" };
@@ -1063,6 +1101,42 @@ public class SearchEngineDriverBackedTests
 
         Assert.Equal(new[] { "same content", "same content" }, crossEncoder.LastPassages);
         Assert.Equal(new[] { "episode-second", "episode-first" }, ranked.Select(item => item.Item.Uuid));
+    }
+
+    [Fact]
+    public async Task EpisodeSearch_CrossEncoderRanksOnlyLimitedRrfCandidates()
+    {
+        var first = new EpisodicNode { Uuid = "episode-first", Name = "First", Content = "first content", GroupId = "group" };
+        var second = new EpisodicNode { Uuid = "episode-second", Name = "Second", Content = "second content", GroupId = "group" };
+        var rescued = new EpisodicNode { Uuid = "episode-rescued", Name = "Rescued", Content = "rescued content", GroupId = "group" };
+        var driver = new DriverBackedSearchDriver
+        {
+            EpisodeFulltextHits =
+            {
+                new SearchHit<EpisodicNode>(first, 3),
+                new SearchHit<EpisodicNode>(second, 2),
+                new SearchHit<EpisodicNode>(rescued, 1)
+            }
+        };
+        var crossEncoder = new RecordingCrossEncoder
+        {
+            IndexedScores = new List<float> { 0.3f, 0.2f, 0.99f }
+        };
+
+        var ranked = await SearchEngine.EpisodeSearchAsync(
+            driver,
+            crossEncoder,
+            "query",
+            new[] { "group" },
+            new EpisodeSearchConfig
+            {
+                SearchMethods = { EpisodeSearchMethod.Bm25 },
+                Reranker = EpisodeReranker.CrossEncoder
+            },
+            limit: 2);
+
+        Assert.Equal(new[] { "first content", "second content" }, crossEncoder.LastPassages);
+        Assert.Equal(new[] { "episode-first", "episode-second" }, ranked.Select(item => item.Item.Uuid));
     }
 
     [Fact]

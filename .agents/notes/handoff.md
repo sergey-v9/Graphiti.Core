@@ -142,9 +142,9 @@ Latest checkpoint, 2026-06-16:
 format/build/pack, and the core-only test slice with `GraphitiCoreOnlyTests=true` (`905` passed,
 `0` skipped). `.\eng\Verify-GraphitiCore.ps1` is also green after the normal Ladybug-inclusive path,
 public driver-override proofs, saga empty-summary parity proof, and episode contribution fan-out
-proof:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`995`
-passed, `3` skipped, `998` total), `dotnet pack` for
+proof, plus edge/episode cross-encoder candidate-window parity:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`997`
+passed, `3` skipped, `1000` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -187,6 +187,11 @@ advance.
 `get_nodes_and_edges_by_episode` edge-loading behavior: attributed edge batches are fetched with
 bounded fan-out under `maxCoroutines` and flattened in episode order, preserving duplicate edge
 appearances across episodes.
+`EdgeSearch_CrossEncoderRanksOnlyLimitedPreliminaryCandidates` and
+`EpisodeSearch_CrossEncoderRanksOnlyLimitedRrfCandidates` pin Python search windowing: edge
+cross-encoder passages are limited to the first `limit` preliminary edge candidates, episode
+cross-encoder passages are limited to the first `limit` RRF-seeded episode candidates, and
+node/community cross-encoder paths remain intentionally unwindowed like Python.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 

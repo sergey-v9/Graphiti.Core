@@ -179,6 +179,13 @@ preserves an empty typed summary while still advancing the wall-clock and episod
 episode order. C# now uses bounded `SelectThrottledAsync` for those per-episode edge loads while
 preserving the existing ordered flattening and per-episode multiplicity.
 
+**2026-06-16 cross-encoder candidate-window follow-up:** closed a search-reranker drift. Python
+limits edge cross-encoder passages to the first `limit` deduped edge candidates and episode
+cross-encoder passages to the first `limit` RRF-seeded episode candidates, while node and community
+cross-encoder rerankers intentionally see the full preliminary candidate set. C# now applies the
+same pre-cross-encoder window only for edge and episode search, with regression coverage proving a
+third low-preliminary-rank candidate cannot be rescued by cross-encoder scoring in those two scopes.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
@@ -300,7 +307,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Area | Status | Notes |
 |---|---|---|
 | Search config recipes, reranker enums, wire values | OK | Verified equivalent, parity-tested |
-| Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | OK | Deterministic parts well tested |
+| Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | OK | Deterministic parts well tested; edge/episode cross-encoder candidate windows now match Python's pre-rerank `limit` slices, while node/community remain intentionally unwindowed like Python |
 | Community label propagation | OK | Algorithmically equivalent |
 | Graph drivers: InMemory (reference), LadybugDB (investment target), Neo4j (legacy reference) | OK | Runtime proof for Ladybug workflows, direct package binding of list/array/empty-list/null parameters, direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by UUID, public namespace community/saga reads and typed deletes, saga-scoped retrieval/content reads, paged group reads, directed endpoint-pair and incident edge reads, explicit and core file-backed paths, Kuzu `':memory:'` sentinel compatibility, package/native execution, and Ladybug-owned raw full-text query/label-filter construction; see kuzu-driver-port.md |
 | LLM/embedder/reranker adapters via Microsoft.Extensions.AI | DIVERGENT | Documented decision; structured output + Polly retries in place. `MicrosoftExtensionsAICrossEncoderClient` uses structured boolean+confidence scoring because generic M.E.AI lacks OpenAI top-logprob controls |
