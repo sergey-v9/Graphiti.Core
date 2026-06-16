@@ -244,6 +244,35 @@ public class NamespaceTests
     }
 
     [Fact]
+    public async Task EpisodeEdgeNamespace_ThrowsForAllMissingPluralUuidsLikePython()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var mention = new EpisodicEdge
+        {
+            Uuid = "mention-1",
+            SourceNodeUuid = "episode-1",
+            TargetNodeUuid = "entity-alice",
+            GroupId = "group"
+        };
+
+        await graphiti.Edges.Episode.SaveAsync(mention);
+
+        var modelException = await Assert.ThrowsAsync<EdgeNotFoundException>(() =>
+            EpisodicEdge.GetByUuidsAsync(driver, new[] { "missing-1", "missing-2" }));
+        Assert.Contains("missing-1", modelException.Message, StringComparison.Ordinal);
+
+        var namespaceException = await Assert.ThrowsAsync<EdgeNotFoundException>(() =>
+            graphiti.Edges.Episode.GetByUuidsAsync(new[] { "missing-1", "missing-2" }));
+        Assert.Contains("missing-1", namespaceException.Message, StringComparison.Ordinal);
+
+        var mixed = await graphiti.Edges.Episode.GetByUuidsAsync(new[] { "missing-1", mention.Uuid });
+        Assert.Equal(mention.Uuid, Assert.Single(mixed).Uuid);
+        Assert.Empty(await graphiti.Edges.Episode.GetByUuidsAsync(Array.Empty<string>()));
+        Assert.Empty(await graphiti.Edges.Entity.GetByUuidsAsync(new[] { "missing-1" }));
+    }
+
+    [Fact]
     public async Task EntityEdgeNamespace_ProvidesRelationshipLookupEmbeddingAndTypedDeletion()
     {
         var driver = new InMemoryGraphDriver();

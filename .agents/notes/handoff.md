@@ -144,10 +144,11 @@ format/build/pack, and the core-only test slice with `GraphitiCoreOnlyTests=true
 public driver-override proofs, saga empty-summary parity proof, and episode contribution fan-out
 proof, edge/episode cross-encoder candidate-window parity, community vector-search parity, temporal-filter
 grouping documentation, community blank-summary reduction parity, empty edge-filter-list parity, and
-search-helper context formatting parity, excluded-entity-type validation parity, and blank Lucene
-full-text hardening documentation, and database date parsing parity:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1005`
-passed, `3` skipped, `1008` total), `dotnet pack` for
+search-helper context formatting parity, excluded-entity-type validation parity, blank Lucene
+full-text hardening documentation, database date parsing parity, and episodic-edge plural-read
+parity:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1006`
+passed, `3` skipped, `1009` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -228,16 +229,19 @@ of issuing Python's backend-dependent `()` / grouped-empty query strings.
 semantics: ISO strings parse, blank/padded/non-ISO strings are rejected instead of being trimmed or
 parsed by culture fallback, and C# normalizes accepted values to UTC because its model surface stores
 `DateTime`.
+`EpisodeEdgeNamespace_ThrowsForAllMissingPluralUuidsLikePython` pins the narrow Python
+`EpisodicEdge.get_by_uuids` miss behavior: a non-empty all-missing UUID list raises
+`EdgeNotFoundException` for the first requested UUID through both the static model helper and
+`graphiti.Edges.Episode`, while mixed hits, empty input, and entity-edge plural misses stay
+list-returning.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
 Open WS-2 audit candidates not yet disposed: empty `NodeLabels` and empty temporal filter branches
 still need a deliberate bug-compatibility decision because Python emits malformed/backend-dependent
 fragments for those shapes; saga-scoped retrieval with `groupIds: null` differs across C# providers
-and from Python's grouped saga query; plural episodic-edge namespace/model reads return an empty list
-on all-missing non-empty UUID input where Python raises `EdgeNotFoundError` for the first requested
-UUID; content chunking zero-overlap/JSON spacing has candidate divergences that need either alignment
-or explicit documentation.
+and from Python's grouped saga query; content chunking zero-overlap/JSON spacing has candidate
+divergences that need either alignment or explicit documentation.
 
 Latest checkpoint, 2026-06-13:
 

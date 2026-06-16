@@ -233,6 +233,13 @@ inputs, preserving date-only, basic date, ISO week date, shortened time, comma/f
 forms while rejecting Python-invalid blanks/padding/non-ISO strings. Parsed values still normalize to
 UTC because the C# model surface stores `DateTime` rather than Python's naive/aware datetime union.
 
+**2026-06-17 episodic-edge plural-read follow-up:** closed the narrow namespace/model edge miss
+drift. Python `EpisodicEdge.get_by_uuids` raises `EdgeNotFoundError(uuids[0])` when a non-empty UUID
+list returns no rows, while the other plural edge helpers return empty lists. C#
+`EpisodicEdge.GetByUuidsAsync` now raises `EdgeNotFoundException` for that all-missing non-empty
+episodic-edge case through both the static model helper and `graphiti.Edges.Episode`, while preserving
+mixed-hit behavior and list-returning misses for entity/community/has/next edge helpers.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

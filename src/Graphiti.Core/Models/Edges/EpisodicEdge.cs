@@ -11,11 +11,21 @@ public sealed class EpisodicEdge : Edge
         driver.GetEdgeByUuidAsync<EpisodicEdge>(uuid, cancellationToken);
 
     /// <summary>Retrieves the episodic edges with the given UUIDs.</summary>
-    public static Task<IReadOnlyList<EpisodicEdge>> GetByUuidsAsync(
+    public static async Task<IReadOnlyList<EpisodicEdge>> GetByUuidsAsync(
         IGraphDriver driver,
         IEnumerable<string> uuids,
-        CancellationToken cancellationToken = default) =>
-        driver.GetEdgesByUuidsAsync<EpisodicEdge>(uuids, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        var requestedUuids = uuids as IReadOnlyList<string> ?? uuids.ToArray();
+        var edges = await driver.GetEdgesByUuidsAsync<EpisodicEdge>(requestedUuids, cancellationToken)
+            .ConfigureAwait(false);
+        if (requestedUuids.Count > 0 && edges.Count == 0)
+        {
+            throw new EdgeNotFoundException(requestedUuids[0]);
+        }
+
+        return edges;
+    }
 
     /// <summary>Retrieves episodic edges across the given group partitions, with optional UUID-cursor paging.</summary>
     public static Task<IReadOnlyList<EpisodicEdge>> GetByGroupIdsAsync(
