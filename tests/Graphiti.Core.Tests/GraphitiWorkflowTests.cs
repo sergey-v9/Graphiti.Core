@@ -659,6 +659,53 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task GetNodesAndEdgesByEpisode_FetchesEpisodeEdgesWithBoundedConcurrency()
+    {
+        var driver = new EmptyEdgeSearchGraphDriver
+        {
+            ExpectedConcurrentEdgeLoads = 2,
+            HoldExpectedConcurrentEdgeLoads = true
+        };
+        var graphiti = new Graphiti(graphDriver: driver, maxCoroutines: 2);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var episodeUuids = new List<string>();
+        for (var i = 0; i < 3; i++)
+        {
+            var edge = new EntityEdge
+            {
+                Uuid = $"edge-{i}",
+                SourceNodeUuid = $"alice-{i}",
+                TargetNodeUuid = $"bob-{i}",
+                GroupId = "group",
+                Name = "KNOWS",
+                Fact = $"Alice {i} knows Bob {i}",
+                CreatedAt = now
+            };
+            await edge.SaveAsync(driver);
+
+            var episode = new EpisodicNode
+            {
+                Uuid = $"episode-{i}",
+                Name = $"episode-{i}",
+                GroupId = "group",
+                CreatedAt = now.AddMinutes(i),
+                ValidAt = now.AddMinutes(i),
+                Content = edge.Fact,
+                EntityEdges = new List<string> { edge.Uuid }
+            };
+            await episode.SaveAsync(driver);
+            episodeUuids.Add(episode.Uuid);
+        }
+
+        var lookupTask = graphiti.GetNodesAndEdgesByEpisodeAsync(episodeUuids);
+
+        var results = await CompleteExpectedConcurrentEdgeLoadsAsync(driver, lookupTask);
+
+        Assert.Equal(2, driver.MaxConcurrentEdgeLoads);
+        Assert.Equal(new[] { "edge-0", "edge-1", "edge-2" }, results.Edges.Select(edge => edge.Uuid));
+    }
+
+    [Fact]
     public async Task RemoveEpisode_PrunesEpisodeFromSharedEntityEdge()
     {
         var driver = new InMemoryGraphDriver();
@@ -4564,6 +4611,37 @@ public class GraphitiWorkflowTests
         Assert.All(communityEdges, edge => Assert.Equal(fixedNow.UtcDateTime, edge.CreatedAt));
     }
 
+    private static async Task<T> CompleteExpectedConcurrentEdgeLoadsAsync<T>(
+        EmptyEdgeSearchGraphDriver driver,
+        Task<T> lookupTask)
+    {
+        try
+        {
+            var completed = await Task.WhenAny(driver.ExpectedConcurrentEdgeLoadsReached, lookupTask)
+                .WaitAsync(TimeSpan.FromSeconds(10));
+            if (completed == lookupTask)
+            {
+                await lookupTask;
+                Assert.Fail(
+                    $"Lookup completed before {driver.ExpectedConcurrentEdgeLoads} concurrent edge loads were active.");
+            }
+
+            await driver.ExpectedConcurrentEdgeLoadsReached;
+            Assert.Equal(driver.ExpectedConcurrentEdgeLoads, driver.MaxConcurrentEdgeLoads);
+        }
+        catch
+        {
+            driver.CancelExpectedConcurrentEdgeLoads();
+            throw;
+        }
+        finally
+        {
+            driver.ReleaseExpectedConcurrentEdgeLoads();
+        }
+
+        return await lookupTask.WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
     private sealed class FixedTimeProvider : TimeProvider
     {
         private readonly DateTimeOffset _utcNow;
@@ -4597,6 +4675,12 @@ public class GraphitiWorkflowTests
     private sealed class EmptyEdgeSearchGraphDriver : GraphDriverBase, ISearchGraphDriver
     {
         private readonly InMemoryGraphDriver _inner;
+        private readonly TaskCompletionSource _expectedConcurrentEdgeLoadsReached =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _releaseExpectedConcurrentEdgeLoads =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _activeEdgeLoads;
+        private int _maxConcurrentEdgeLoads;
 
         public EmptyEdgeSearchGraphDriver() : this(new InMemoryGraphDriver())
         {
@@ -4606,6 +4690,11 @@ public class GraphitiWorkflowTests
         {
             _inner = inner;
         }
+
+        public int ExpectedConcurrentEdgeLoads { get; set; }
+        public bool HoldExpectedConcurrentEdgeLoads { get; set; }
+        public Task ExpectedConcurrentEdgeLoadsReached => _expectedConcurrentEdgeLoadsReached.Task;
+        public int MaxConcurrentEdgeLoads => Volatile.Read(ref _maxConcurrentEdgeLoads);
 
         public override Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, CancellationToken cancellationToken = default) =>
             _inner.BuildIndicesAndConstraintsAsync(deleteExisting, cancellationToken);
@@ -4663,7 +4752,11 @@ public class GraphitiWorkflowTests
         public override Task<IReadOnlyList<T>> GetEdgesByUuidsAsync<T>(
             IEnumerable<string> uuids,
             CancellationToken cancellationToken = default) =>
-            _inner.GetEdgesByUuidsAsync<T>(uuids, cancellationToken);
+            typeof(T) == typeof(EntityEdge)
+                ? CompleteEdgeLoadAsync(
+                    () => _inner.GetEdgesByUuidsAsync<T>(uuids, cancellationToken),
+                    cancellationToken)
+                : _inner.GetEdgesByUuidsAsync<T>(uuids, cancellationToken);
 
         public override Task<IReadOnlyList<T>> GetEdgesByGroupIdsAsync<T>(
             IEnumerable<string> groupIds,
@@ -4672,6 +4765,79 @@ public class GraphitiWorkflowTests
             bool withEmbeddings = false,
             CancellationToken cancellationToken = default) =>
             _inner.GetEdgesByGroupIdsAsync<T>(groupIds, limit, uuidCursor, withEmbeddings, cancellationToken);
+
+        private async Task<IReadOnlyList<T>> CompleteEdgeLoadAsync<T>(
+            Func<Task<IReadOnlyList<T>>> operation,
+            CancellationToken cancellationToken)
+        {
+            var active = Interlocked.Increment(ref _activeEdgeLoads);
+            UpdateMaxConcurrentEdgeLoads(active);
+            try
+            {
+                await WaitForExpectedConcurrentEdgeLoadsAsync(active, cancellationToken)
+                    .ConfigureAwait(false);
+
+                return await operation().ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _activeEdgeLoads);
+            }
+        }
+
+        private async Task WaitForExpectedConcurrentEdgeLoadsAsync(
+            int active,
+            CancellationToken cancellationToken)
+        {
+            var expected = ExpectedConcurrentEdgeLoads;
+            if (expected <= 0)
+            {
+                return;
+            }
+
+            if (active >= expected)
+            {
+                _expectedConcurrentEdgeLoadsReached.TrySetResult();
+            }
+
+            await _expectedConcurrentEdgeLoadsReached.Task
+                .WaitAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (HoldExpectedConcurrentEdgeLoads)
+            {
+                await _releaseExpectedConcurrentEdgeLoads.Task
+                    .WaitAsync(cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        public void ReleaseExpectedConcurrentEdgeLoads()
+        {
+            _releaseExpectedConcurrentEdgeLoads.TrySetResult();
+        }
+
+        public void CancelExpectedConcurrentEdgeLoads()
+        {
+            _expectedConcurrentEdgeLoadsReached.TrySetCanceled();
+            _releaseExpectedConcurrentEdgeLoads.TrySetCanceled();
+        }
+
+        private void UpdateMaxConcurrentEdgeLoads(int active)
+        {
+            while (true)
+            {
+                var observed = _maxConcurrentEdgeLoads;
+                if (active <= observed)
+                {
+                    return;
+                }
+
+                if (Interlocked.CompareExchange(ref _maxConcurrentEdgeLoads, active, observed) == observed)
+                {
+                    return;
+                }
+            }
+        }
 
         public override Task<IReadOnlyList<EntityEdge>> GetEntityEdgesBetweenNodesAsync(
             string sourceNodeUuid,

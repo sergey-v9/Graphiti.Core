@@ -141,9 +141,10 @@ Latest checkpoint, 2026-06-16:
 (`.github/workflows/core-only.yml`): strict nuget.org-only restore with a temp package cache, core
 format/build/pack, and the core-only test slice with `GraphitiCoreOnlyTests=true` (`905` passed,
 `0` skipped). `.\eng\Verify-GraphitiCore.ps1` is also green after the normal Ladybug-inclusive path,
-public driver-override proofs, and saga empty-summary parity proof:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`994`
-passed, `3` skipped, `997` total), `dotnet pack` for
+public driver-override proofs, saga empty-summary parity proof, and episode contribution fan-out
+proof:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`995`
+passed, `3` skipped, `998` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -182,6 +183,10 @@ driver while leaving the instance root driver's communities untouched.
 assignment: an explicit empty typed LLM `summary` is persisted as `""` rather than replaced by
 deterministic episode-content fallback, while the wall-clock and episode-time watermarks still
 advance.
+`GetNodesAndEdgesByEpisode_FetchesEpisodeEdgesWithBoundedConcurrency` pins Python
+`get_nodes_and_edges_by_episode` edge-loading behavior: attributed edge batches are fetched with
+bounded fan-out under `maxCoroutines` and flattened in episode order, preserving duplicate edge
+appearances across episodes.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 

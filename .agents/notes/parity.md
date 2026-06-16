@@ -173,6 +173,12 @@ instance root driver's communities untouched.
 does not synthesize a deterministic fallback when the typed LLM response contains `""`. C# now
 preserves an empty typed summary while still advancing the wall-clock and episode-time watermarks.
 
+**2026-06-16 episode contribution fan-out follow-up:** closed a reachable
+`get_nodes_and_edges_by_episode` drift. Python loads each episode's attributed entity edges through
+`semaphore_gather(..., max_coroutines=self.max_coroutines)` and flattens the gathered batches in
+episode order. C# now uses bounded `SelectThrottledAsync` for those per-episode edge loads while
+preserving the existing ordered flattening and per-episode multiplicity.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
@@ -276,7 +282,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Communities | `build_communities` | `BuildCommunitiesAsync` | OK | |
 | Basic fact search | `search` | `SearchAsync(query, ...)` | OK | |
 | Advanced graph search | `search_` | `SearchAdvancedAsync` / `SearchAsync(query, SearchConfig, ...)` | OK | Idiomatic C# names; Python-style aliases intentionally not added |
-| Episode contribution lookup | `get_nodes_and_edges_by_episode` | `GetNodesAndEdgesByEpisodeAsync` | OK + DIVERGENT | Bulk episodes own entity-edge UUIDs in C#, so bulk episode contribution lookup is more complete than Python |
+| Episode contribution lookup | `get_nodes_and_edges_by_episode` | `GetNodesAndEdgesByEpisodeAsync` | OK + DIVERGENT | Per-episode entity-edge loads use bounded fan-out like Python `semaphore_gather`, then flatten in episode order. Bulk episodes own entity-edge UUIDs in C#, so bulk episode contribution lookup is more complete than Python |
 | Triplet ingest | `add_triplet` | `AddTripletAsync` | OK | Exact duplicate reuse scans the reranked/limited related-edge set after `EDGE_HYBRID_SEARCH_RRF`, matching Python; edge UUID collisions on different endpoint pairs generate a fresh UUID and preserve the original edge |
 | Episode removal | `remove_episode` | `RemoveEpisodeAsync` | DIVERGENT | C# prunes shared edge support and repairs saga membership/adjacency; Python only deletes first-supporting edges and the episode |
 

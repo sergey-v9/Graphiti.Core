@@ -173,18 +173,23 @@ public sealed partial class Graphiti
 
         try
         {
-            var episodes = await EpisodicNode.GetByUuidsAsync(Driver, episodeUuids, cancellationToken).ConfigureAwait(false);
+            var driver = Driver;
+            var episodes = await EpisodicNode.GetByUuidsAsync(driver, episodeUuids, cancellationToken).ConfigureAwait(false);
+            var episodeList = CopyList(episodes);
+            var edgeBatches = await SelectThrottledAsync(
+                episodeList,
+                async (episode, token) => await EntityEdge.GetByUuidsAsync(
+                    driver,
+                    episode.EntityEdges,
+                    token).ConfigureAwait(false),
+                cancellationToken).ConfigureAwait(false);
             var edges = new List<EntityEdge>(CountEpisodeEntityEdges(episodes));
-            for (var i = 0; i < episodes.Count; i++)
+            for (var i = 0; i < edgeBatches.Length; i++)
             {
-                var episodeEdges = await EntityEdge.GetByUuidsAsync(
-                    Driver,
-                    episodes[i].EntityEdges,
-                    cancellationToken).ConfigureAwait(false);
-                AppendEdges(edges, episodeEdges);
+                AppendEdges(edges, edgeBatches[i]);
             }
 
-            var nodes = await Driver.GetMentionedNodesAsync(episodes, cancellationToken).ConfigureAwait(false);
+            var nodes = await driver.GetMentionedNodesAsync(episodes, cancellationToken).ConfigureAwait(false);
             var results = new SearchResults
             {
                 Edges = edges,
