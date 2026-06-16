@@ -339,7 +339,7 @@ public class SearchUtilitiesTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void FulltextQuery_ReturnsEmptyForBlankSanitizedQuery(string query)
+    public void FulltextQuery_SkipsBlankLuceneQueriesAsIntentionalHardening(string query)
     {
         var fulltextQuery = SearchUtilities.FulltextQuery(
             query,

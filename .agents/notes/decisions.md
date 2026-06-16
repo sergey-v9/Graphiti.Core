@@ -187,6 +187,11 @@ no wire/prompt/cache/temporal behavior changed):
   uppercase `O`, `R`, `N`, `T`, `A`, and `D` characters.
 - Lucene group filters are parenthesized in C# even though Python's flat string shape can let the
   first group match without the query text. This is an intentional semantic hardening.
+- Direct Lucene full-text query construction returns an empty query for blank/whitespace input after
+  sanitization. Python top-level search also skips blank input, but lower-level Lucene helpers can
+  emit `()` / `group AND ()` query strings and let the backend decide. C# treats skipping these
+  direct blank Lucene calls as intentional hardening to avoid invalid or backend-dependent no-op
+  full-text queries.
 - Property filters are enforced in C# even though Python currently exposes the field without using
   it. Treat this as an intentional C# feature.
 - Date-filter Cypher uses unique parameter names across OR branches; Python's reset-per-branch

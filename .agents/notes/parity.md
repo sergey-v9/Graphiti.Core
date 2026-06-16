@@ -219,6 +219,12 @@ options. Python `validate_excluded_entity_types` accepts only `Entity` plus the 
 `ValidateExcludedEntityTypes` now uses the same key-only availability set. Later extraction/type
 resolution can still map labels/display names where that behavior is separately established.
 
+**2026-06-16 blank Lucene full-text audit:** disposed the open blank-query candidate as documented
+hardening. Python top-level search skips blank input, but lower-level Lucene full-text helpers can
+still build `()` / grouped-empty query strings. C# `SearchUtilities.FulltextQuery` returns an empty
+query for blank/whitespace sanitized Lucene input and direct Neo4j full-text methods skip the backend
+call. Keep this as an intentional divergence, pinned by `SearchUtilitiesTests`.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

@@ -144,7 +144,8 @@ format/build/pack, and the core-only test slice with `GraphitiCoreOnlyTests=true
 public driver-override proofs, saga empty-summary parity proof, and episode contribution fan-out
 proof, edge/episode cross-encoder candidate-window parity, community vector-search parity, temporal-filter
 grouping documentation, community blank-summary reduction parity, empty edge-filter-list parity, and
-search-helper context formatting parity, and excluded-entity-type validation parity:
+search-helper context formatting parity, excluded-entity-type validation parity, and blank Lucene
+full-text hardening documentation:
 restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1004`
 passed, `3` skipped, `1007` total), `dotnet pack` for
 both shippable packages
@@ -218,6 +219,9 @@ and a sectioned `SearchResults` context formatter for direct LLM prompt use.
 `ValidateExcludedEntityTypes_RejectsDeclaredDisplayNamesLikePython` pin Python's key-only
 `excluded_entity_types` validation: exclusions may name `Entity` or custom `entity_types` dictionary
 keys, but not separate display/model names.
+`FulltextQuery_SkipsBlankLuceneQueriesAsIntentionalHardening` documents the deliberate direct Lucene
+full-text divergence: lower-level C# full-text helpers skip blank/whitespace Lucene queries instead
+of issuing Python's backend-dependent `()` / grouped-empty query strings.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
@@ -225,9 +229,8 @@ Open WS-2 audit candidates not yet disposed: empty `NodeLabels` and empty tempor
 still need a deliberate bug-compatibility decision because Python emits malformed/backend-dependent
 fragments for those shapes; saga-scoped retrieval with `groupIds: null` differs across C# providers
 and from Python's grouped saga query; namespace edge reads return empty lists where Python model
-helpers raise not-found exceptions; `ParseDbDate`, blank Lucene full-text queries, and content
-chunking zero-overlap/JSON spacing have candidate divergences that need either alignment or explicit
-documentation.
+helpers raise not-found exceptions; `ParseDbDate` and content chunking zero-overlap/JSON spacing
+have candidate divergences that need either alignment or explicit documentation.
 
 Latest checkpoint, 2026-06-13:
 
