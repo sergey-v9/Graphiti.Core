@@ -200,8 +200,8 @@ public static partial class GraphitiHelpers
     }
 
     /// <summary>
-    /// Ensures every excluded entity type name refers to a known type (the built-in <c>Entity</c> or a
-    /// declared custom type), throwing <see cref="ArgumentException"/> otherwise.
+    /// Ensures every excluded entity type name refers to a known type key (the built-in <c>Entity</c>
+    /// or a declared custom type key), throwing <see cref="ArgumentException"/> otherwise.
     /// </summary>
     public static void ValidateExcludedEntityTypes(
         IEnumerable<string>? excludedEntityTypes,
@@ -221,7 +221,6 @@ public static partial class GraphitiHelpers
             foreach (var pair in entityTypes)
             {
                 availableTypes.Add(pair.Key);
-                availableTypes.Add(pair.Value.Name);
             }
         }
 

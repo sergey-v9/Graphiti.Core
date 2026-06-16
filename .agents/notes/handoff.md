@@ -144,9 +144,9 @@ format/build/pack, and the core-only test slice with `GraphitiCoreOnlyTests=true
 public driver-override proofs, saga empty-summary parity proof, and episode contribution fan-out
 proof, edge/episode cross-encoder candidate-window parity, community vector-search parity, temporal-filter
 grouping documentation, community blank-summary reduction parity, empty edge-filter-list parity, and
-search-helper context formatting parity:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1003`
-passed, `3` skipped, `1006` total), `dotnet pack` for
+search-helper context formatting parity, and excluded-entity-type validation parity:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1004`
+passed, `3` skipped, `1007` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -214,6 +214,10 @@ documented pending bug-compatibility decision.
 `SearchResultsToContextString_RendersPythonSearchHelperSections` pin the public C# counterpart to
 Python `graphiti_core.search.search_helpers`: `SearchHelpers` now exposes edge date-range formatting
 and a sectioned `SearchResults` context formatter for direct LLM prompt use.
+`ValidateExcludedEntityTypes_AllowsBuiltInAndDeclaredTypeKeys` and
+`ValidateExcludedEntityTypes_RejectsDeclaredDisplayNamesLikePython` pin Python's key-only
+`excluded_entity_types` validation: exclusions may name `Entity` or custom `entity_types` dictionary
+keys, but not separate display/model names.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
@@ -221,9 +225,9 @@ Open WS-2 audit candidates not yet disposed: empty `NodeLabels` and empty tempor
 still need a deliberate bug-compatibility decision because Python emits malformed/backend-dependent
 fragments for those shapes; saga-scoped retrieval with `groupIds: null` differs across C# providers
 and from Python's grouped saga query; namespace edge reads return empty lists where Python model
-helpers raise not-found exceptions; `ParseDbDate`, excluded entity-type key/name handling, blank
-Lucene full-text queries, and content chunking zero-overlap/JSON spacing have candidate divergences
-that need either alignment or explicit documentation.
+helpers raise not-found exceptions; `ParseDbDate`, blank Lucene full-text queries, and content
+chunking zero-overlap/JSON spacing have candidate divergences that need either alignment or explicit
+documentation.
 
 Latest checkpoint, 2026-06-13:
 

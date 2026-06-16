@@ -193,7 +193,7 @@ public class GraphitiHelperTests
     }
 
     [Fact]
-    public void ValidateExcludedEntityTypes_AllowsBuiltInKeysAndDeclaredTypeNames()
+    public void ValidateExcludedEntityTypes_AllowsBuiltInAndDeclaredTypeKeys()
     {
         var entityTypes = new Dictionary<string, EntityTypeDefinition>
         {
@@ -201,8 +201,25 @@ public class GraphitiHelperTests
         };
 
         GraphitiHelpers.ValidateExcludedEntityTypes(
-            new[] { "Entity", "person_alias", "Person" },
+            new[] { "Entity", "person_alias" },
             entityTypes);
+    }
+
+    [Fact]
+    public void ValidateExcludedEntityTypes_RejectsDeclaredDisplayNamesLikePython()
+    {
+        var exception = Assert.Throws<ArgumentException>(() =>
+            GraphitiHelpers.ValidateExcludedEntityTypes(
+                new[] { "Person" },
+                new Dictionary<string, EntityTypeDefinition>
+                {
+                    ["person_alias"] = new("Person")
+                }));
+
+        Assert.Contains(
+            "Invalid excluded entity types: [Person]. Available types: [Entity, person_alias]",
+            exception.Message,
+            StringComparison.Ordinal);
     }
 
     [Fact]

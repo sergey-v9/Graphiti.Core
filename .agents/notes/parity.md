@@ -213,6 +213,12 @@ Python can emit malformed/backend-dependent fragments for those shapes.
 fallback labels (`date unknown`, `present`, `None`, `Present`), and field names. JSON stays compact
 per the established C# prompt-serializer decision.
 
+**2026-06-16 excluded-entity validation follow-up:** closed a validation drift in ingestion
+options. Python `validate_excluded_entity_types` accepts only `Entity` plus the keys of the supplied
+`entity_types` dictionary; it does not also accept the Pydantic model/display class names. C#
+`ValidateExcludedEntityTypes` now uses the same key-only availability set. Later extraction/type
+resolution can still map labels/display names where that behavior is separately established.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
