@@ -215,7 +215,7 @@ public static partial class ContentChunking
         string content,
         int? chunkSizeTokens = null,
         int? overlapTokens = null) =>
-        ChunkJsonContent(content, chunkSizeTokens, overlapTokens, TokenCounter);
+        ChunkJsonContent(content, chunkSizeTokens, NormalizeExplicitOverlapTokens(overlapTokens), TokenCounter);
 
     internal static IReadOnlyList<string> ChunkJsonContent(
         string content,
@@ -252,7 +252,7 @@ public static partial class ContentChunking
         string content,
         int? chunkSizeTokens = null,
         int? overlapTokens = null) =>
-        ChunkTextContent(content, chunkSizeTokens, overlapTokens, TokenCounter);
+        ChunkTextContent(content, chunkSizeTokens, NormalizeExplicitOverlapTokens(overlapTokens), TokenCounter);
 
     internal static IReadOnlyList<string> ChunkTextContent(
         string content,
@@ -342,7 +342,7 @@ public static partial class ContentChunking
         string content,
         int? chunkSizeTokens = null,
         int? overlapTokens = null) =>
-        ChunkMessageContent(content, chunkSizeTokens, overlapTokens, TokenCounter);
+        ChunkMessageContent(content, chunkSizeTokens, NormalizeExplicitOverlapTokens(overlapTokens), TokenCounter);
 
     internal static IReadOnlyList<string> ChunkMessageContent(
         string content,
@@ -1227,6 +1227,9 @@ public static partial class ContentChunking
 
     private static int ResolveOverlapTokenCount(int? overlapTokens) =>
         overlapTokens is null or < 0 ? DefaultChunkOverlapTokens : overlapTokens.Value;
+
+    private static int? NormalizeExplicitOverlapTokens(int? overlapTokens) =>
+        overlapTokens == 0 ? null : overlapTokens;
 
     private static int TokensToChars(int tokens) => tokens * CharsPerToken;
 

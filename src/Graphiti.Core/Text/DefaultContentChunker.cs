@@ -51,7 +51,7 @@ public sealed class DefaultContentChunker : IContentChunker
         return ContentChunking.ChunkJsonContent(
             content,
             chunkSizeTokens ?? _options.ChunkTokenSize,
-            overlapTokens ?? _options.ChunkOverlapTokens,
+            ResolveOverlapTokens(overlapTokens),
             _tokenCounter);
     }
 
@@ -64,7 +64,7 @@ public sealed class DefaultContentChunker : IContentChunker
         return ContentChunking.ChunkTextContent(
             content,
             chunkSizeTokens ?? _options.ChunkTokenSize,
-            overlapTokens ?? _options.ChunkOverlapTokens,
+            ResolveOverlapTokens(overlapTokens),
             _tokenCounter);
     }
 
@@ -77,11 +77,14 @@ public sealed class DefaultContentChunker : IContentChunker
         return ContentChunking.ChunkMessageContent(
             content,
             chunkSizeTokens ?? _options.ChunkTokenSize,
-            overlapTokens ?? _options.ChunkOverlapTokens,
+            ResolveOverlapTokens(overlapTokens),
             _tokenCounter);
     }
 
     /// <inheritdoc />
     public IReadOnlyList<CoveringChunk<T>> GenerateCoveringChunks<T>(IReadOnlyList<T> items, int k) =>
         ContentChunking.GenerateCoveringChunks(items, k);
+
+    private int ResolveOverlapTokens(int? overlapTokens) =>
+        overlapTokens is 0 or null ? _options.ChunkOverlapTokens : overlapTokens.Value;
 }

@@ -142,6 +142,21 @@ public class ContentChunkingTests
     }
 
     [Fact]
+    public void ChunkJsonContent_UsesCompactJsonSerializationAsIntentionalDivergence()
+    {
+        const string content = """
+            [
+              { "id": 1, "name": "Alice" },
+              { "id": 2, "name": "Bob" }
+            ]
+            """;
+
+        var chunk = Assert.Single(ContentChunking.ChunkJsonContent(content, chunkSizeTokens: 1000));
+
+        Assert.Equal("""[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]""", chunk);
+    }
+
+    [Fact]
     public void ChunkJsonContent_SplitsArrayAtElementBoundaries()
     {
         var data = Enumerable.Range(0, 20)
@@ -174,7 +189,7 @@ public class ContentChunkingTests
     }
 
     [Fact]
-    public void ChunkJsonContent_HonorsZeroOverlapWithoutRepeatingArrayElements()
+    public void ChunkJsonContent_ExplicitZeroOverlapUsesPythonDefaultOverlap()
     {
         var original = ContentChunking.TokenCounter;
         try
@@ -183,17 +198,21 @@ public class ContentChunkingTests
             var content = JsonSerializer.Serialize(
                 Enumerable.Range(0, 8).Select(index => new { id = index }));
 
-            var chunks = ContentChunking.ChunkJsonContent(
+            var defaultChunks = ContentChunking.ChunkJsonContent(
+                content,
+                chunkSizeTokens: 5);
+            var zeroChunks = ContentChunking.ChunkJsonContent(
                 content,
                 chunkSizeTokens: 5,
                 overlapTokens: 0);
-            var seenIds = chunks
+
+            Assert.Equal(defaultChunks, zeroChunks);
+            var seenIds = zeroChunks
                 .SelectMany(chunk => JsonDocument.Parse(chunk).RootElement.EnumerateArray())
                 .Select(item => item.GetProperty("id").GetInt32())
                 .ToList();
 
-            Assert.Equal(Enumerable.Range(0, 8), seenIds);
-            Assert.Equal(seenIds.Count, seenIds.Distinct().Count());
+            Assert.True(seenIds.Count > seenIds.Distinct().Count());
         }
         finally
         {
@@ -204,36 +223,31 @@ public class ContentChunkingTests
     [Fact]
     public void ChunkJsonContent_SerializesArrayChunksWithEscapedValues()
     {
-        var original = ContentChunking.TokenCounter;
-        try
-        {
-            ContentChunking.TokenCounter = new WordTokenCounter();
-            const string content = """
-                [
-                  {"text": "keep [ brackets ] and { braces }"},
-                  "quote: \"hi\", slash: \\",
-                  null
-                ]
-                """;
+        var chunker = new DefaultContentChunker(
+            new WordTokenCounter(),
+            Options.Create(new ContentChunkingOptions
+            {
+                ChunkTokenSize = 4,
+                ChunkOverlapTokens = 0
+            }));
+        const string content = """
+            [
+              {"text": "keep [ brackets ] and { braces }"},
+              "quote: \"hi\", slash: \\",
+              null
+            ]
+            """;
 
-            var chunks = ContentChunking.ChunkJsonContent(
-                content,
-                chunkSizeTokens: 4,
-                overlapTokens: 0);
-            var merged = chunks
-                .SelectMany(chunk => JsonNode.Parse(chunk)!.AsArray())
-                .Select(node => node?.DeepClone())
-                .ToList();
+        var chunks = chunker.ChunkJsonContent(content);
+        var merged = chunks
+            .SelectMany(chunk => JsonNode.Parse(chunk)!.AsArray())
+            .Select(node => node?.DeepClone())
+            .ToList();
 
-            Assert.True(chunks.Count > 1);
-            Assert.Equal("keep [ brackets ] and { braces }", merged[0]?["text"]?.GetValue<string>());
-            Assert.Equal("quote: \"hi\", slash: \\", merged[1]?.GetValue<string>());
-            Assert.Null(merged[2]);
-        }
-        finally
-        {
-            ContentChunking.TokenCounter = original;
-        }
+        Assert.True(chunks.Count > 1);
+        Assert.Equal("keep [ brackets ] and { braces }", merged[0]?["text"]?.GetValue<string>());
+        Assert.Equal("quote: \"hi\", slash: \\", merged[1]?.GetValue<string>());
+        Assert.Null(merged[2]);
     }
 
     [Fact]
@@ -270,44 +284,39 @@ public class ContentChunkingTests
     [Fact]
     public void ChunkJsonContent_SerializesObjectChunksWithEscapedKeysAndNestedValues()
     {
-        var original = ContentChunking.TokenCounter;
-        try
-        {
-            ContentChunking.TokenCounter = new WordTokenCounter();
-            const string content = """
-                {
-                  "quote\"key": {"text": "keep { braces } and \\ slash"},
-                  "line\nkey": null,
-                  "array[key]": ["value"]
-                }
-                """;
-
-            var chunks = ContentChunking.ChunkJsonContent(
-                content,
-                chunkSizeTokens: 4,
-                overlapTokens: 0);
-            var merged = new JsonObject();
-            foreach (var chunk in chunks)
+        var chunker = new DefaultContentChunker(
+            new WordTokenCounter(),
+            Options.Create(new ContentChunkingOptions
             {
-                var parsed = JsonNode.Parse(chunk)!.AsObject();
-                foreach (var property in parsed)
-                {
-                    merged[property.Key] = property.Value?.DeepClone();
-                }
+                ChunkTokenSize = 4,
+                ChunkOverlapTokens = 0
+            }));
+        const string content = """
+            {
+              "quote\"key": {"text": "keep { braces } and \\ slash"},
+              "line\nkey": null,
+              "array[key]": ["value"]
             }
+            """;
 
-            Assert.True(chunks.Count > 1);
-            Assert.Equal(
-                "keep { braces } and \\ slash",
-                merged["quote\"key"]?["text"]?.GetValue<string>());
-            Assert.True(merged.ContainsKey("line\nkey"));
-            Assert.Null(merged["line\nkey"]);
-            Assert.Equal("value", merged["array[key]"]?[0]?.GetValue<string>());
-        }
-        finally
+        var chunks = chunker.ChunkJsonContent(content);
+        var merged = new JsonObject();
+        foreach (var chunk in chunks)
         {
-            ContentChunking.TokenCounter = original;
+            var parsed = JsonNode.Parse(chunk)!.AsObject();
+            foreach (var property in parsed)
+            {
+                merged[property.Key] = property.Value?.DeepClone();
+            }
         }
+
+        Assert.True(chunks.Count > 1);
+        Assert.Equal(
+            "keep { braces } and \\ slash",
+            merged["quote\"key"]?["text"]?.GetValue<string>());
+        Assert.True(merged.ContainsKey("line\nkey"));
+        Assert.Null(merged["line\nkey"]);
+        Assert.Equal("value", merged["array[key]"]?[0]?.GetValue<string>());
     }
 
     [Fact]
@@ -371,22 +380,18 @@ public class ContentChunkingTests
     [Fact]
     public void ChunkTextContent_ParagraphSplitterSkipsWhitespaceOnlySeparators()
     {
-        var original = ContentChunking.TokenCounter;
-        try
-        {
-            ContentChunking.TokenCounter = new WordTokenCounter();
+        var chunker = new DefaultContentChunker(
+            new WordTokenCounter(),
+            Options.Create(new ContentChunkingOptions
+            {
+                ChunkTokenSize = 2,
+                ChunkOverlapTokens = 0
+            }));
 
-            var chunks = ContentChunking.ChunkTextContent(
-                "  Alpha beta.  \r\n \t \n  Gamma delta.  \n\n   Epsilon zeta.   ",
-                chunkSizeTokens: 2,
-                overlapTokens: 0);
+        var chunks = chunker.ChunkTextContent(
+            "  Alpha beta.  \r\n \t \n  Gamma delta.  \n\n   Epsilon zeta.   ");
 
-            Assert.Equal(new[] { "Alpha beta.", "Gamma delta.", "Epsilon zeta." }, chunks);
-        }
-        finally
-        {
-            ContentChunking.TokenCounter = original;
-        }
+        Assert.Equal(new[] { "Alpha beta.", "Gamma delta.", "Epsilon zeta." }, chunks);
     }
 
     [Fact]
@@ -444,23 +449,18 @@ public class ContentChunkingTests
     [Fact]
     public void ChunkMessageContent_LineFallbackPreservesEmptyAndTrailingLines()
     {
-        var original = ContentChunking.TokenCounter;
-        try
-        {
-            ContentChunking.TokenCounter = new CharacterTokenCounter();
+        var chunker = new DefaultContentChunker(
+            new CharacterTokenCounter(),
+            Options.Create(new ContentChunkingOptions
+            {
+                ChunkTokenSize = 4,
+                ChunkOverlapTokens = 0
+            }));
 
-            var chunks = ContentChunking.ChunkMessageContent(
-                "aa\n\nbb\n",
-                chunkSizeTokens: 4,
-                overlapTokens: 0);
+        var chunks = chunker.ChunkMessageContent("aa\n\nbb\n");
 
-            Assert.Equal(new[] { "aa\n", "bb\n" }, chunks);
-            Assert.All(chunks, chunk => Assert.True(ContentChunking.EstimateTokens(chunk) <= 4));
-        }
-        finally
-        {
-            ContentChunking.TokenCounter = original;
-        }
+        Assert.Equal(new[] { "aa\n", "bb\n" }, chunks);
+        Assert.All(chunks, chunk => Assert.True(chunker.EstimateTokens(chunk) <= 4));
     }
 
     [Fact]

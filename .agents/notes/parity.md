@@ -240,6 +240,16 @@ list returns no rows, while the other plural edge helpers return empty lists. C#
 episodic-edge case through both the static model helper and `graphiti.Edges.Episode`, while preserving
 mixed-hit behavior and list-returning misses for entity/community/has/next edge helpers.
 
+**2026-06-17 content-chunking follow-up:** closed the zero-overlap half of the chunking candidate and
+documented the JSON-spacing half. Python's public chunk helpers use `overlap_tokens = overlap_tokens
+or CHUNK_OVERLAP_TOKENS`, so an explicit `overlap_tokens=0` falls back to the configured/default
+overlap rather than disabling overlap. C# static `ContentChunking.Chunk*Content(..., overlapTokens:
+0)` now follows that falsy-default behavior. `DefaultContentChunker` still allows a configured
+`ChunkOverlapTokens = 0`, which mirrors setting Python's `CHUNK_OVERLAP_TOKENS` environment-derived
+constant to zero. JSON chunk output remains compact System.Text.Json formatting rather than Python
+`json.dumps`'s default separator spaces; this is whitespace-only and pinned as an intentional C#
+serialization divergence.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

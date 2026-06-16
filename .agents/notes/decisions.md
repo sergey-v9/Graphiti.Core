@@ -212,6 +212,13 @@ no wire/prompt/cache/temporal behavior changed):
   consistently.
 - Real tiktoken-based chunking is the default, but callers can register `HeuristicTokenCounter(4)`
   when they need Python's exact token estimate.
+- Content chunking preserves Python's zero/default overlap semantics for direct helper calls:
+  `overlapTokens: 0` is treated like the default overlap, matching Python's
+  `overlap_tokens or CHUNK_OVERLAP_TOKENS`. Hosts can still configure `ChunkOverlapTokens = 0` on
+  `DefaultContentChunker`, which mirrors setting Python's environment-derived default overlap
+  constant to zero. JSON chunk serialization intentionally uses compact System.Text.Json output
+  instead of Python `json.dumps` separator spaces; the parsed JSON structure and chunk boundaries are
+  the parity contract, not whitespace.
 - Saga summaries hard-truncate like Python and persist the typed LLM `summary` field directly,
   including empty or whitespace-only strings. No deterministic episode-content fallback is synthesized
   for saga summaries. Community/entity summary paths keep sentence-aware truncation where Python does.

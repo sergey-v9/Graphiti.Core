@@ -146,9 +146,9 @@ proof, edge/episode cross-encoder candidate-window parity, community vector-sear
 grouping documentation, community blank-summary reduction parity, empty edge-filter-list parity, and
 search-helper context formatting parity, excluded-entity-type validation parity, blank Lucene
 full-text hardening documentation, database date parsing parity, and episodic-edge plural-read
-parity:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1006`
-passed, `3` skipped, `1009` total), `dotnet pack` for
+parity, and content chunking zero-overlap/default semantics:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1007`
+passed, `3` skipped, `1010` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -234,14 +234,20 @@ parsed by culture fallback, and C# normalizes accepted values to UTC because its
 `EdgeNotFoundException` for the first requested UUID through both the static model helper and
 `graphiti.Edges.Episode`, while mixed hits, empty input, and entity-edge plural misses stay
 list-returning.
+`ChunkJsonContent_ExplicitZeroOverlapUsesPythonDefaultOverlap` pins Python's direct helper
+zero-overlap semantics: `overlap_tokens=0` is falsy and falls back to the default overlap rather than
+disabling overlap. `DefaultContentChunker_HonorsConfiguredZeroOverlap` continues to pin the
+environment/configuration analogue where the configured default overlap itself is zero.
+`ChunkJsonContent_UsesCompactJsonSerializationAsIntentionalDivergence` documents the remaining
+JSON-spacing difference as compact System.Text.Json output with the same parsed structure/chunking
+contract.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
 Open WS-2 audit candidates not yet disposed: empty `NodeLabels` and empty temporal filter branches
 still need a deliberate bug-compatibility decision because Python emits malformed/backend-dependent
 fragments for those shapes; saga-scoped retrieval with `groupIds: null` differs across C# providers
-and from Python's grouped saga query; content chunking zero-overlap/JSON spacing has candidate
-divergences that need either alignment or explicit documentation.
+and from Python's grouped saga query.
 
 Latest checkpoint, 2026-06-13:
 
