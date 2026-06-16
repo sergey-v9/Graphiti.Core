@@ -250,6 +250,13 @@ constant to zero. JSON chunk output remains compact System.Text.Json formatting 
 `json.dumps`'s default separator spaces; this is whitespace-only and pinned as an intentional C#
 serialization divergence.
 
+**2026-06-17 saga episode-retrieval follow-up:** closed the `saga` + null/empty `groupIds`
+provider drift. Python's public fallback always takes the saga branch when `saga is not None`, binds
+`group_id = None` when no group list is supplied, and therefore does not fall through to generic
+episode retrieval or pick a saga from another group. C# now matches that public outcome across the
+reachable providers: InMemory returns no rows without a supplied group, Ladybug emits the grouped saga
+query with `group_id = null`, and Neo4j no longer uses a name-only saga match.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

@@ -387,6 +387,33 @@ public class LadybugFoundationTests
     }
 
     [Fact]
+    public void BuildRetrieveEpisodes_WithSagaAndNoGroupsBindsNullGroupId()
+    {
+        var referenceTime = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        var noGroups = LadybugStatementBuilder.BuildRetrieveEpisodes(
+            referenceTime,
+            2,
+            saga: "checkout");
+        var emptyGroups = LadybugStatementBuilder.BuildRetrieveEpisodes(
+            referenceTime,
+            2,
+            Array.Empty<string>(),
+            saga: "checkout");
+
+        foreach (var statement in new[] { noGroups, emptyGroups })
+        {
+            Assert.Contains(
+                "MATCH (s:Saga {name: $saga_name, group_id: $group_id})-[:HAS_EPISODE]->(e:Episodic)",
+                statement.Query,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain("AND e.group_id IN $group_ids", statement.Query, StringComparison.Ordinal);
+            Assert.Equal("checkout", statement.Parameters["saga_name"]);
+            Assert.Null(statement.Parameters["group_id"]);
+            Assert.False(statement.Parameters.ContainsKey("group_ids"));
+        }
+    }
+
+    [Fact]
     public void RecordMapper_DeserializesAttributesLikePythonKuzuParser()
     {
         var entity = LadybugRecordMapper.MapEntityNode(new Dictionary<string, object?>

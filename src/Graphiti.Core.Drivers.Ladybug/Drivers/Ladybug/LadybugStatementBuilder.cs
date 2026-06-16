@@ -302,10 +302,10 @@ internal static class LadybugStatementBuilder
             parameters["source"] = source.Value.ToWireValue();
         }
 
-        if (saga is not null && groupIds is { Count: > 0 })
+        if (saga is not null)
         {
             parameters["saga_name"] = saga;
-            parameters["group_id"] = groupIds[0];
+            parameters["group_id"] = groupIds is { Count: > 0 } ? groupIds[0] : null;
             return new LadybugStatement(
                 $$"""
                 MATCH (s:Saga {name: $saga_name, group_id: $group_id})-[:HAS_EPISODE]->(e:Episodic)

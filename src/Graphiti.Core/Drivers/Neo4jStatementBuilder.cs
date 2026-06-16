@@ -119,9 +119,7 @@ internal static partial class Neo4jStatementBuilder
 
         var sagaMatch = saga is null
             ? "MATCH (e:Episodic)"
-            : hasGroupIds
-                ? "MATCH (s:Saga {name: $saga, group_id: $saga_group_id})-[:HAS_EPISODE]->(e:Episodic)"
-                : "MATCH (s:Saga {name: $saga})-[:HAS_EPISODE]->(e:Episodic)";
+            : "MATCH (s:Saga {name: $saga, group_id: $saga_group_id})-[:HAS_EPISODE]->(e:Episodic)";
         var groupFilter = hasGroupIds ? "AND e.group_id IN $group_ids" : "";
         var sourceFilter = source is null ? "" : "AND e.source = $source";
 

@@ -146,9 +146,9 @@ proof, edge/episode cross-encoder candidate-window parity, community vector-sear
 grouping documentation, community blank-summary reduction parity, empty edge-filter-list parity, and
 search-helper context formatting parity, excluded-entity-type validation parity, blank Lucene
 full-text hardening documentation, database date parsing parity, and episodic-edge plural-read
-parity, and content chunking zero-overlap/default semantics:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1007`
-passed, `3` skipped, `1010` total), `dotnet pack` for
+parity, content chunking zero-overlap/default semantics, and saga-scoped null-group retrieval parity:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1009`
+passed, `3` skipped, `1012` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -241,13 +241,17 @@ environment/configuration analogue where the configured default overlap itself i
 `ChunkJsonContent_UsesCompactJsonSerializationAsIntentionalDivergence` documents the remaining
 JSON-spacing difference as compact System.Text.Json output with the same parsed structure/chunking
 contract.
+`RetrieveEpisodes_WithSagaAndNoGroupIdsDoesNotMatchAcrossGroups`,
+`BuildRetrieveEpisodes_WithSagaAndNoGroupsBindsNullGroupId`, and
+`BuildRetrieveEpisodesStatement_BindsNullSagaGroupWithoutGroupIds` close the saga-scoped retrieval
+`groupIds: null` provider drift: InMemory no longer picks a cross-group saga, Ladybug no longer
+falls through to generic episode retrieval, and Neo4j no longer emits a name-only saga match.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
 Open WS-2 audit candidates not yet disposed: empty `NodeLabels` and empty temporal filter branches
 still need a deliberate bug-compatibility decision because Python emits malformed/backend-dependent
-fragments for those shapes; saga-scoped retrieval with `groupIds: null` differs across C# providers
-and from Python's grouped saga query.
+fragments for those shapes.
 
 Latest checkpoint, 2026-06-13:
 

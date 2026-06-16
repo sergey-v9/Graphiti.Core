@@ -219,6 +219,10 @@ no wire/prompt/cache/temporal behavior changed):
   constant to zero. JSON chunk serialization intentionally uses compact System.Text.Json output
   instead of Python `json.dumps` separator spaces; the parsed JSON structure and chunk boundaries are
   the parity contract, not whitespace.
+- Saga-scoped episode retrieval follows Python's public fallback for null or empty group lists:
+  `saga` still selects the saga branch, but the group parameter is null, so normal grouped sagas do
+  not match and the query does not fall through to generic episode retrieval. InMemory returns an
+  empty result for this shape; Ladybug and Neo4j bind the null group in the grouped saga match.
 - Saga summaries hard-truncate like Python and persist the typed LLM `summary` field directly,
   including empty or whitespace-only strings. No deterministic episode-content fallback is synthesized
   for saga summaries. Community/entity summary paths keep sentence-aware truncation where Python does.

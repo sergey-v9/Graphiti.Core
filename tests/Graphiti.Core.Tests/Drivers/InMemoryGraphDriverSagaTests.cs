@@ -60,6 +60,46 @@ public class InMemoryGraphDriverSagaTests
     }
 
     [Fact]
+    public async Task RetrieveEpisodes_WithSagaAndNoGroupIdsDoesNotMatchAcrossGroups()
+    {
+        var driver = new InMemoryGraphDriver();
+        var referenceTime = new DateTime(2026, 5, 27, 12, 0, 0, DateTimeKind.Utc);
+        var saga = new SagaNode
+        {
+            Uuid = "saga-tenant",
+            Name = "onboarding",
+            GroupId = "tenant"
+        };
+        var sagaEpisode = Episode(
+            "episode-saga",
+            "tenant",
+            referenceTime.AddMinutes(-1),
+            content: "saga episode");
+        var genericEpisode = Episode(
+            "episode-generic",
+            "tenant",
+            referenceTime.AddMinutes(-2),
+            content: "generic episode");
+
+        await saga.SaveAsync(driver);
+        await SaveSagaEpisodeAsync(driver, saga, sagaEpisode);
+        await genericEpisode.SaveAsync(driver);
+
+        var noGroups = await driver.RetrieveEpisodesAsync(
+            referenceTime,
+            lastN: 10,
+            saga: "onboarding");
+        var emptyGroups = await driver.RetrieveEpisodesAsync(
+            referenceTime,
+            lastN: 10,
+            groupIds: Array.Empty<string>(),
+            saga: "onboarding");
+
+        Assert.Empty(noGroups);
+        Assert.Empty(emptyGroups);
+    }
+
+    [Fact]
     public async Task RetrieveEpisodesAsync_FiltersSourceReferenceTimeGroupsAndReturnsChronologicalClones()
     {
         var driver = new InMemoryGraphDriver();

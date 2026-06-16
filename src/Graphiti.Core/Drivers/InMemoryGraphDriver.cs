@@ -546,11 +546,14 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
                 : GetNodesFromIndex<EpisodicNode>(null, allWhenNoGroups: true);
 
             HashSet<string>? sagaEpisodeUuids = null;
-            if (!string.IsNullOrEmpty(saga))
+            if (saga is not null)
             {
-                var sagaNode = groupIds is { Count: > 0 }
-                    ? FindStoredSagaByName(groupIds[0], saga)
-                    : FindFirstStoredSagaByName(saga);
+                if (groupIds is not { Count: > 0 })
+                {
+                    return Task.FromResult<IReadOnlyList<EpisodicNode>>(Array.Empty<EpisodicNode>());
+                }
+
+                var sagaNode = FindStoredSagaByName(groupIds[0], saga);
 
                 if (sagaNode is null)
                 {

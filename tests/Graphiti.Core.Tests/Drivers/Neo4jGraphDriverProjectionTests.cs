@@ -114,7 +114,7 @@ public class Neo4jGraphDriverProjectionTests
     }
 
     [Fact]
-    public void BuildRetrieveEpisodesStatement_UsesNameOnlySagaLookupWithoutGroupIds()
+    public void BuildRetrieveEpisodesStatement_BindsNullSagaGroupWithoutGroupIds()
     {
         var statement = Neo4jStatementBuilder.BuildRetrieveEpisodesStatement(
             DateTime.UnixEpoch,
@@ -122,10 +122,9 @@ public class Neo4jGraphDriverProjectionTests
             saga: "onboarding");
 
         Assert.Contains(
-            "MATCH (s:Saga {name: $saga})-[:HAS_EPISODE]->(e:Episodic)",
+            "MATCH (s:Saga {name: $saga, group_id: $saga_group_id})-[:HAS_EPISODE]->(e:Episodic)",
             statement.Query,
             StringComparison.Ordinal);
-        Assert.DoesNotContain("group_id: $saga_group_id", statement.Query, StringComparison.Ordinal);
         Assert.DoesNotContain("AND e.group_id IN $group_ids", statement.Query, StringComparison.Ordinal);
         Assert.Null(statement.Parameters["saga_group_id"]);
     }
