@@ -95,8 +95,10 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
   is evidence-driven (benchmark-first) only (`roadmap.md`).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
   1–3 are complete; the remaining active work is plan-05 release infrastructure — E.2 (publish the
-  local LadybugDB package family from `W:\code\ladybug`) and versioning. CI is intentionally out of
-  scope. Performance work is benchmark-first and no longer on moratorium (`roadmap.md`).
+  local LadybugDB package family from `W:\code\ladybug`), versioning, and the full Ladybug-inclusive
+  CI lane gated on E.2. The core-only CI lane is wired through `.github/workflows/core-only.yml` and
+  `eng\Verify-GraphitiCoreOnly.ps1`. Performance work is benchmark-first and no longer on moratorium
+  (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
   internal services and helpers. Search boundaries: `SearchEngine` orchestrates,
   `SearchRetrievalRunner` retrieves, `SearchResultComposer` shapes results. Prompt builders live
@@ -135,11 +137,12 @@ added.
 
 Latest checkpoint, 2026-06-16:
 
-`.\eng\Verify-GraphitiCoreOnly.ps1` is green after adding the local core-only CI lane: strict
-nuget.org-only restore with a temp package cache, core format/build/pack, and the core-only test slice
-with `GraphitiCoreOnlyTests=true` (`904` passed, `0` skipped). `.\eng\Verify-GraphitiCore.ps1` is
-also green after the normal Ladybug-inclusive path: restore, format, warning-clean build including
-`Graphiti.Sample.OpenAI`, full test suite (`990` passed, `3` skipped, `993` total), `dotnet pack` for
+`.\eng\Verify-GraphitiCoreOnly.ps1` is green after wiring the core-only GitHub Actions lane
+(`.github/workflows/core-only.yml`): strict nuget.org-only restore with a temp package cache, core
+format/build/pack, and the core-only test slice with `GraphitiCoreOnlyTests=true` (`905` passed,
+`0` skipped). `.\eng\Verify-GraphitiCore.ps1` is also green after the normal Ladybug-inclusive path:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`991`
+passed, `3` skipped, `994` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -201,12 +204,12 @@ intended API change); a consumer `README.md`/`docs/search.md`; surface hardening
 `GRPH0001` and `GRPH0002` are locally suppressed only at deliberate compatibility-alias sites); the
 InMemory-default constructor + `AddEpisodeOptions`; the
 LadybugDB package split; and the retired shared Kuzu branches in generic search helpers. Remaining:
-E.2 (publish the local LadybugDB package family — `W:\code\ladybug`), versioning, full CI. A local
-`Graphiti.Core`-only CI lane is now executable via `eng\Verify-GraphitiCoreOnly.ps1`: it creates a
-strict nuget.org-only temp feed, restores/builds/tests the core-only test slice with
-`GraphitiCoreOnlyTests=true`, filters out the OpenAI provider tests, formats/packs `Graphiti.Core`,
-and excludes the Ladybug test folder and Ladybug public-API snapshot half without changing the normal
-full-suite path. See `plans/05`
+E.2 (publish the local LadybugDB package family — `W:\code\ladybug`), versioning, full CI. The
+`Graphiti.Core`-only GitHub Actions lane is wired via `.github/workflows/core-only.yml`, which runs
+`eng\Verify-GraphitiCoreOnly.ps1`: it creates a strict nuget.org-only temp feed,
+restores/builds/tests the core-only test slice with `GraphitiCoreOnlyTests=true`, filters out the
+OpenAI provider tests, formats/packs `Graphiti.Core`, and excludes the Ladybug test folder and
+Ladybug public-API snapshot half without changing the normal full-suite path. See `plans/05`
 and `decisions.md`. GOTCHA (still applies): do NOT run multiple worktree agents' `dotnet test`
 concurrently — the LadybugDB native package deadlocks across worktrees (1.5h hang on 06-14; recovered
 by killing orphaned testhost processes). Have worktree agents build/format-only and run the

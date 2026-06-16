@@ -169,6 +169,24 @@ public class PackageReadinessTests
     }
 
     [Fact]
+    public void CoreOnlyWorkflow_RunsCoreOnlyVerifierWithoutLadybugFeed()
+    {
+        var csharpRoot = FindCSharpRoot();
+        var workflow = File.ReadAllText(Path.Combine(
+            csharpRoot,
+            ".github",
+            "workflows",
+            "core-only.yml"));
+
+        Assert.Contains("actions/checkout@", workflow);
+        Assert.Contains("actions/setup-dotnet@", workflow);
+        Assert.Contains("dotnet-version: \"10.0.x\"", workflow);
+        Assert.Contains("./eng/Verify-GraphitiCoreOnly.ps1", workflow);
+        Assert.DoesNotContain("Verify-GraphitiCore.ps1", workflow);
+        Assert.DoesNotContain("ladybug-local", workflow, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void GeneratedXmlDocs_DoNotDescribeBulkInvalidationBackwards()
     {
         var xmlPath = Path.ChangeExtension(typeof(global::Graphiti.Core.Graphiti).Assembly.Location, ".xml");

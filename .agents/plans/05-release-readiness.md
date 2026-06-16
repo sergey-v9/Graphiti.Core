@@ -42,7 +42,7 @@ from strict package sources:
 - **Versioning** (confirm 2.0.0 line / alpha→beta cadence) and **CI**. NuGet metadata, README packing,
   XML docs, symbol package generation, and package-consumption smoke checks are now present and guarded
   for both shippable packages. CI for the full suite is itself gated on E.2 (the native Ladybug tests
-  need the package); a local `Graphiti.Core`-only lane is now executable via
+  need the package); a `Graphiti.Core`-only GitHub Actions lane now runs
   `eng\Verify-GraphitiCoreOnly.ps1` (strict nuget.org-only restore, core format/build/pack, and
   non-Ladybug tests with the OpenAI provider tests filtered out). Remember the parallel-`dotnet test`
   deadlock.
@@ -193,9 +193,10 @@ full Verify green; both packages `pack`. This is a milestone (`evolution.md`:
   `PackageReadmeFile`, XML docs, `.snupkg` symbols, and fresh package-consumer restore/build/setup/run
   checks) is
   already set and covered by `PackageReadinessTests` plus `Verify-GraphitiCore.ps1`.
-- **CI:** a build/format/test/pack pipeline (GitHub Actions or equivalent). Encode the native-package
-  test-concurrency gotcha (single-threaded or serialized Ladybug tests). Gate the key-dependent OpenAI
-  integration tests behind a secret (skip by default).
+- **CI:** the core-only GitHub Actions lane is wired through `.github/workflows/core-only.yml` and
+  `eng\Verify-GraphitiCoreOnly.ps1`. A full Ladybug-inclusive CI lane remains gated on E.2; encode the
+  native-package test-concurrency gotcha (single-threaded or serialized Ladybug tests) when wiring it.
+  Gate the key-dependent OpenAI integration tests behind a secret (skip by default).
 - **Publish prerequisites:** the LadybugDB package family must be publishable (Step E.2); decide whether to
   ship a metapackage (`Graphiti.Core` + `Graphiti.Core.Drivers.Ladybug`).
 
