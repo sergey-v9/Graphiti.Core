@@ -53,7 +53,11 @@ public class SearchEngineDriverBackedTests
             new SearchFilters());
         var results = await CompleteExpectedConcurrentSearchAsync(driver, searchTask);
 
-        Assert.Equal(4, driver.MaxConcurrentSearchCalls);
+        Assert.Equal(4, driver.StartedSearchCalls);
+        Assert.Equal(1, driver.EdgeFulltextCalls);
+        Assert.Equal(1, driver.NodeFulltextCalls);
+        Assert.Equal(1, driver.EpisodeFulltextCalls);
+        Assert.Equal(1, driver.CommunityFulltextCalls);
         Assert.Equal("edge", Assert.Single(results.Edges).Uuid);
         Assert.Equal("node", Assert.Single(results.Nodes).Uuid);
         Assert.Equal("episode", Assert.Single(results.Episodes).Uuid);
@@ -1367,7 +1371,9 @@ public class SearchEngineDriverBackedTests
             }
 
             await driver.ExpectedConcurrentSearchCallsReached;
-            Assert.Equal(driver.ExpectedConcurrentSearchCalls, driver.MaxConcurrentSearchCalls);
+            Assert.True(
+                driver.StartedSearchCalls >= driver.ExpectedConcurrentSearchCalls,
+                $"Expected at least {driver.ExpectedConcurrentSearchCalls} driver search calls to start.");
         }
         catch
         {
@@ -1452,7 +1458,7 @@ public class SearchEngineDriverBackedTests
         public int ExpectedConcurrentSearchCalls { get; set; }
         public bool HoldExpectedConcurrentSearchCalls { get; set; }
         public Task ExpectedConcurrentSearchCallsReached => _expectedConcurrentSearchCallsReached.Task;
-        public int MaxConcurrentSearchCalls => System.Threading.Volatile.Read(ref _maxConcurrentSearchCalls);
+        public int StartedSearchCalls => System.Threading.Volatile.Read(ref _startedSearchCalls);
         public bool NodeFulltextCancelsImmediately { get; set; }
         public Exception? NodeFulltextException { get; set; }
         public bool NodeVectorWaitsForCancellation { get; set; }
@@ -1508,8 +1514,7 @@ public class SearchEngineDriverBackedTests
         public float LastNodeVectorMinScore { get; private set; }
         public float LastEdgeVectorMinScore { get; private set; }
         public float LastCommunityVectorMinScore { get; private set; }
-        private int _activeSearchCalls;
-        private int _maxConcurrentSearchCalls;
+        private int _startedSearchCalls;
         private readonly TaskCompletionSource _expectedConcurrentSearchCallsReached =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _releaseExpectedConcurrentSearchCalls =
@@ -1704,28 +1709,20 @@ public class SearchEngineDriverBackedTests
             IReadOnlyList<T> results,
             CancellationToken cancellationToken)
         {
-            var active = System.Threading.Interlocked.Increment(ref _activeSearchCalls);
-            UpdateMaxConcurrentSearchCalls(active);
-            try
-            {
-                await WaitForExpectedConcurrentSearchCallsAsync(active, cancellationToken)
-                    .ConfigureAwait(false);
+            var started = System.Threading.Interlocked.Increment(ref _startedSearchCalls);
+            await WaitForExpectedConcurrentSearchCallsAsync(started, cancellationToken)
+                .ConfigureAwait(false);
 
-                if (SearchDelay > TimeSpan.Zero)
-                {
-                    await Task.Delay(SearchDelay, cancellationToken).ConfigureAwait(false);
-                }
-
-                return results;
-            }
-            finally
+            if (SearchDelay > TimeSpan.Zero)
             {
-                System.Threading.Interlocked.Decrement(ref _activeSearchCalls);
+                await Task.Delay(SearchDelay, cancellationToken).ConfigureAwait(false);
             }
+
+            return results;
         }
 
         private async Task WaitForExpectedConcurrentSearchCallsAsync(
-            int active,
+            int started,
             CancellationToken cancellationToken)
         {
             var expected = ExpectedConcurrentSearchCalls;
@@ -1734,7 +1731,7 @@ public class SearchEngineDriverBackedTests
                 return;
             }
 
-            if (active >= expected)
+            if (started >= expected)
             {
                 _expectedConcurrentSearchCallsReached.TrySetResult();
             }
@@ -1761,12 +1758,10 @@ public class SearchEngineDriverBackedTests
             _releaseExpectedConcurrentSearchCalls.TrySetCanceled();
         }
 
-        private async Task<IReadOnlyList<T>> WaitForSearchCancellationAsync<T>(
+        private static async Task<IReadOnlyList<T>> WaitForSearchCancellationAsync<T>(
             TaskCompletionSource cancellationObserved,
             CancellationToken cancellationToken)
         {
-            var active = System.Threading.Interlocked.Increment(ref _activeSearchCalls);
-            UpdateMaxConcurrentSearchCalls(active);
             try
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
@@ -1776,27 +1771,6 @@ public class SearchEngineDriverBackedTests
             {
                 cancellationObserved.TrySetResult();
                 throw;
-            }
-            finally
-            {
-                System.Threading.Interlocked.Decrement(ref _activeSearchCalls);
-            }
-        }
-
-        private void UpdateMaxConcurrentSearchCalls(int active)
-        {
-            while (true)
-            {
-                var observed = _maxConcurrentSearchCalls;
-                if (active <= observed)
-                {
-                    return;
-                }
-
-                if (System.Threading.Interlocked.CompareExchange(ref _maxConcurrentSearchCalls, active, observed) == observed)
-                {
-                    return;
-                }
             }
         }
 
