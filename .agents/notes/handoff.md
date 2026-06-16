@@ -133,11 +133,12 @@ when needed.
 Rerun verification before claiming the tree is green; historical test counts drift as coverage is
 added.
 
-Latest checkpoint, 2026-06-14:
+Latest checkpoint, 2026-06-16:
 
-`.\eng\Verify-GraphitiCore.ps1` is green after adding public AddTriplet edge-UUID collision parity
-coverage: restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite
-(`987` passed, `3` skipped, `990` total), `dotnet pack` for both shippable packages
+`.\eng\Verify-GraphitiCore.ps1` is green after strengthening public AddEpisode workflow coverage for
+multi-signature edge-type metadata: restore, format, warning-clean build including
+`Graphiti.Sample.OpenAI`, full test suite (`987` passed, `3` skipped, `990` total), `dotnet pack` for
+both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
 restore/build/setup/run checks for both packages. The verifier now packs both projects, then creates isolated
@@ -156,6 +157,8 @@ Python's exact endpoint-name validation: a case-mismatched LLM edge endpoint is 
 C# node-resolution maps remain case-insensitive for other dedupe paths. `GraphitiWorkflowTests` also
 pins Python `add_triplet` behavior for edge UUID collisions: if a submitted edge UUID already exists
 on a different endpoint pair, C# generates a fresh edge UUID and preserves the original edge.
+`AddEpisode_PassesTypeMetadataAndCustomInstructionsToExtractionPrompt` now proves the public
+ingestion path forwards all `fact_type_signatures` for an edge type instead of only one signature.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 

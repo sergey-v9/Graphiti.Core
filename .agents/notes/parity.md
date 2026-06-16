@@ -151,6 +151,12 @@ validation drift. Python `extract_edges` builds a plain `name_to_node` dict and 
 `EdgeResolutionService.BuildExtractedEdgeCandidates`, so case-mismatched LLM edge endpoints are
 skipped even though node-resolution maps remain case-insensitive for their other dedupe duties.
 
+**2026-06-16 edge-type signature workflow proof:** strengthened public `AddEpisodeAsync` metadata
+coverage for Python's `edge_type_signatures_map` invariant. The existing prompt-builder test already
+proved `ExtractEdgesPrompts` emits every `fact_type_signatures` entry for a fact type; the public
+workflow test now also passes two `WORKS_AT` signatures through ingestion and asserts both reach the
+edge extraction prompt.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

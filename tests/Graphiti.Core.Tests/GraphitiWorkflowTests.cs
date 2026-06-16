@@ -2081,6 +2081,7 @@ public class GraphitiWorkflowTests
             },
             edgeTypeMap: new Dictionary<(string SourceType, string TargetType), IReadOnlyList<string>>
             {
+                [("Person", "Entity")] = new[] { "WORKS_AT" },
                 [("Person", "Organization")] = new[] { "WORKS_AT" }
             },
             customExtractionInstructions: "Only extract durable workplace facts.");
@@ -2114,10 +2115,15 @@ public class GraphitiWorkflowTests
             JsonNode.Parse(ReadPromptSection(edgePrompt, "FACT_TYPES"))!.AsArray().OfType<JsonObject>());
         Assert.Equal("WORKS_AT", edgeType["fact_type_name"]?.GetValue<string>());
         Assert.Equal("Employment relationship", edgeType["fact_type_description"]?.GetValue<string>());
-        var signature = Assert.Single(Assert.IsType<JsonArray>(edgeType["fact_type_signatures"]));
-        Assert.Equal(
-            new[] { "Person", "Organization" },
-            signature!.AsArray().Select(part => part!.GetValue<string>()));
+        var signatures = Assert.IsType<JsonArray>(edgeType["fact_type_signatures"]);
+        Assert.Collection(
+            signatures,
+            signature => Assert.Equal(
+                new[] { "Person", "Entity" },
+                signature!.AsArray().Select(part => part!.GetValue<string>())),
+            signature => Assert.Equal(
+                new[] { "Person", "Organization" },
+                signature!.AsArray().Select(part => part!.GetValue<string>())));
     }
 
     [Fact]
