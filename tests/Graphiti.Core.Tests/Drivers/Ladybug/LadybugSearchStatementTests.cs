@@ -207,6 +207,31 @@ public class LadybugSearchStatementTests
     }
 
     [Fact]
+    public void BuildEdgeQuery_PreservesEmptyEdgeListsBeforeLadybugLabelFilter()
+    {
+        var filters = new SearchFilters
+        {
+            EdgeTypes = new List<string>(),
+            EdgeUuids = new List<string>(),
+            NodeLabels = new List<string> { "Person" }
+        };
+
+        var (queries, parameters) = LadybugSearchFilter.BuildEdgeQuery(filters);
+
+        Assert.Equal(
+            new[]
+            {
+                "e.name in $edge_types",
+                "e.uuid in $edge_uuids",
+                "list_has_all(n.labels, $labels) AND list_has_all(m.labels, $labels)"
+            },
+            queries);
+        Assert.Same(filters.EdgeTypes, parameters["edge_types"]);
+        Assert.Same(filters.EdgeUuids, parameters["edge_uuids"]);
+        Assert.Equal(new[] { "Person" }, Assert.IsType<List<string>>(parameters["labels"]));
+    }
+
+    [Fact]
     public void BuildEpisodeAndCommunitySearchStatements_PreserveKuzuIndexesAndVectors()
     {
         var episode = LadybugSearchStatementBuilder.BuildEpisodeFulltextSearchStatement(

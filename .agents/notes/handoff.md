@@ -143,9 +143,9 @@ format/build/pack, and the core-only test slice with `GraphitiCoreOnlyTests=true
 `0` skipped). `.\eng\Verify-GraphitiCore.ps1` is also green after the normal Ladybug-inclusive path,
 public driver-override proofs, saga empty-summary parity proof, and episode contribution fan-out
 proof, edge/episode cross-encoder candidate-window parity, community vector-search parity, temporal-filter
-grouping documentation, and community blank-summary reduction parity:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`999`
-passed, `3` skipped, `1002` total), `dotnet pack` for
+grouping documentation, community blank-summary reduction parity, and empty edge-filter-list parity:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1000`
+passed, `3` skipped, `1003` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -202,18 +202,23 @@ semantics that Python's query builder implements.
 `BuildCommunities_PreservesBlankEntitySummariesInPairReduction` pins Python `build_community`
 behavior: blank entity summaries are preserved in the pairwise `summarize_nodes.summarize_pair`
 payload instead of being filtered before reduction.
+`CompiledSearchFilter_EmptyNodeLabelsNoOpButEmptyEdgeListsMatchNone`,
+`BuildEdgeQuery_PreservesEmptyEdgeListsBeforeLadybugLabelFilter`, and
+`PackageRuntime_SearchExecutorRunsNonEmptySearchFilters` pin Python's null-vs-empty distinction for
+`EdgeTypes` and `EdgeUuids`: an explicitly empty edge type/UUID list emits an active predicate and
+matches no edges, including through the Ladybug package runtime, while empty node labels remain a
+documented pending bug-compatibility decision.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
 Open WS-2 audit candidates not yet disposed: Python search helper functions `format_edge_date_range`
 / `search_results_to_context_string` are not exposed in C# and would require a public-API decision;
-empty search-filter lists are no-ops in C# where Python emits active empty predicates, with the
-smallest likely parity slice narrowed to `EdgeTypes=[]` / `EdgeUuids=[]` while `NodeLabels=[]` and
-empty temporal branches need a deliberate bug-compatibility decision; saga-scoped retrieval with
-`groupIds: null` differs across C# providers and from Python's grouped saga query; namespace edge
-reads return empty lists where Python model helpers raise not-found exceptions; `ParseDbDate`,
-excluded entity-type key/name handling, blank Lucene full-text queries, and content chunking
-zero-overlap/JSON spacing have candidate divergences that need either alignment or explicit
+empty `NodeLabels` and empty temporal filter branches still need a deliberate bug-compatibility
+decision because Python emits malformed/backend-dependent fragments for those shapes; saga-scoped
+retrieval with `groupIds: null` differs across C# providers and from Python's grouped saga query;
+namespace edge reads return empty lists where Python model helpers raise not-found exceptions;
+`ParseDbDate`, excluded entity-type key/name handling, blank Lucene full-text queries, and content
+chunking zero-overlap/JSON spacing have candidate divergences that need either alignment or explicit
 documentation.
 
 Latest checkpoint, 2026-06-13:

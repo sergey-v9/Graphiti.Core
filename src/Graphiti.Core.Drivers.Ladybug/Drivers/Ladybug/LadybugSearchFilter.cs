@@ -22,8 +22,8 @@ internal static class LadybugSearchFilter
         var (filterQueries, filterParams) = CompiledSearchFilter
             .Compile(WithoutNodeLabels(searchFilter))
             .BuildEdgeQuery(GraphProvider.Neo4j);
-        var insertIndex = (searchFilter.EdgeTypes is { Count: > 0 } ? 1 : 0)
-            + (searchFilter.EdgeUuids is { Count: > 0 } ? 1 : 0);
+        var insertIndex = (searchFilter.EdgeTypes is not null ? 1 : 0)
+            + (searchFilter.EdgeUuids is not null ? 1 : 0);
         AddLabelFilter(filterQueries, filterParams, labels, includeTarget: true, insertIndex);
         return (filterQueries, filterParams);
     }

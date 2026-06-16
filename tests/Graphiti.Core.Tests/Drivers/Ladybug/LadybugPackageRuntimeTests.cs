@@ -1483,6 +1483,32 @@ public class LadybugPackageRuntimeTests
         Assert.All(nodeVector, hit => Assert.Contains("Person", hit.Item.Labels));
         Assert.Equal(keepEdge.Uuid, Assert.Single(edgeVector).Item.Uuid);
         Assert.Equal(keepEdge.Uuid, Assert.Single(edgeFulltext).Item.Uuid);
+
+        var emptyEdgeTypesFilters = new SearchFilters { EdgeTypes = [] };
+        var emptyEdgeUuidsFilters = new SearchFilters { EdgeUuids = [] };
+
+        Assert.Empty(await search.SearchEntityEdgesByEmbeddingAsync(
+            [1.0f, 0.0f],
+            emptyEdgeTypesFilters,
+            ["tenant"],
+            limit: 10,
+            minScore: 0.8f));
+        Assert.Empty(await search.SearchEntityEdgesFulltextAsync(
+            "Filtered",
+            emptyEdgeTypesFilters,
+            ["tenant"],
+            limit: 10));
+        Assert.Empty(await search.SearchEntityEdgesByEmbeddingAsync(
+            [1.0f, 0.0f],
+            emptyEdgeUuidsFilters,
+            ["tenant"],
+            limit: 10,
+            minScore: 0.8f));
+        Assert.Empty(await search.SearchEntityEdgesFulltextAsync(
+            "Filtered",
+            emptyEdgeUuidsFilters,
+            ["tenant"],
+            limit: 10));
     }
 
     [Fact]

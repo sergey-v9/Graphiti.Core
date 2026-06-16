@@ -54,8 +54,8 @@ internal sealed class CompiledSearchFilter
         NodeLabelsMatch(node) && NodePropertyFiltersMatch(node);
 
     public bool EdgeMatches(EntityEdge edge) =>
-        (_edgeTypes.Count == 0 || _edgeTypes.Contains(edge.Name))
-        && (_edgeUuids.Count == 0 || _edgeUuids.Contains(edge.Uuid))
+        (_queryEdgeTypes is null || _edgeTypes.Contains(edge.Name))
+        && (_queryEdgeUuids is null || _edgeUuids.Contains(edge.Uuid))
         && DateFiltersMatch(edge.ValidAt, _validAt)
         && DateFiltersMatch(edge.InvalidAt, _invalidAt)
         && DateFiltersMatch(edge.CreatedAt, _createdAt)
@@ -105,13 +105,13 @@ internal sealed class CompiledSearchFilter
             EstimateEdgeParameterCount(),
             StringComparer.Ordinal);
 
-        if (_queryEdgeTypes is { Count: > 0 })
+        if (_queryEdgeTypes is not null)
         {
             filterQueries.Add("e.name in $edge_types");
             filterParams["edge_types"] = _queryEdgeTypes;
         }
 
-        if (_queryEdgeUuids is { Count: > 0 })
+        if (_queryEdgeUuids is not null)
         {
             filterQueries.Add("e.uuid in $edge_uuids");
             filterParams["edge_uuids"] = _queryEdgeUuids;
@@ -133,8 +133,8 @@ internal sealed class CompiledSearchFilter
         + _propertyFilters.Length;
 
     private int EstimateEdgeQueryCount() =>
-        (_queryEdgeTypes is { Count: > 0 } ? 1 : 0)
-        + (_queryEdgeUuids is { Count: > 0 } ? 1 : 0)
+        (_queryEdgeTypes is not null ? 1 : 0)
+        + (_queryEdgeUuids is not null ? 1 : 0)
         + (_queryNodeLabels is { Count: > 0 } ? 1 : 0)
         + (_validAt is null ? 0 : 1)
         + (_invalidAt is null ? 0 : 1)
@@ -151,8 +151,8 @@ internal sealed class CompiledSearchFilter
         + DateFilterCount(_invalidAt)
         + DateFilterCount(_createdAt)
         + DateFilterCount(_expiredAt)
-        + (_queryEdgeTypes is { Count: > 0 } ? 1 : 0)
-        + (_queryEdgeUuids is { Count: > 0 } ? 1 : 0);
+        + (_queryEdgeTypes is not null ? 1 : 0)
+        + (_queryEdgeUuids is not null ? 1 : 0);
 
     private static int DateFilterCount(CompiledDateFilter[][]? filters)
     {

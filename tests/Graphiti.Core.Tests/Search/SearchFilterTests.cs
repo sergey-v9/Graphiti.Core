@@ -303,7 +303,7 @@ public sealed class SearchFilterTests
     }
 
     [Fact]
-    public void CompiledSearchFilter_TreatsEmptyListFiltersAsNoOpsInQueriesAndMatchers()
+    public void CompiledSearchFilter_EmptyNodeLabelsNoOpButEmptyEdgeListsMatchNone()
     {
         var filters = new SearchFilters
         {
@@ -318,11 +318,12 @@ public sealed class SearchFilterTests
 
         Assert.Empty(nodeQueries);
         Assert.Empty(nodeParameters);
-        Assert.Empty(edgeQueries);
-        Assert.Empty(edgeParameters);
+        Assert.Equal(new[] { "e.name in $edge_types", "e.uuid in $edge_uuids" }, edgeQueries);
+        Assert.Same(filters.EdgeTypes, edgeParameters["edge_types"]);
+        Assert.Same(filters.EdgeUuids, edgeParameters["edge_uuids"]);
         Assert.True(compiled.NodeMatches(
             new EntityNode { Name = "Project", Labels = new List<string> { "Entity", "Project" } }));
-        Assert.True(compiled.EdgeMatches(
+        Assert.False(compiled.EdgeMatches(
             new EntityEdge { Name = "RELATES_TO", Uuid = "edge-uuid" }));
     }
 

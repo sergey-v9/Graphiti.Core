@@ -119,9 +119,13 @@ fall back to the lexical/identity ordering.
 
 - `NodeLabels` (`List<string>?`) — restrict to nodes carrying these labels; validated on assignment.
 - `EdgeTypes` (`List<string>?`) — restrict to edges of these relationship types.
+- `EdgeUuids` (`List<string>?`) — restrict to specific edge UUIDs.
 - `ValidAt`, `InvalidAt`, `CreatedAt`, `ExpiredAt` (`List<List<DateFilter>>?`) — temporal predicates.
   Each inner list is combined with AND, and the outer list is combined with OR (matching Python filter
   semantics).
+
+For `EdgeTypes` and `EdgeUuids`, `null` means no predicate; an explicitly empty list is an active
+empty predicate and matches no edges, matching Python's filter constructors.
 
 ```csharp
 var filters = new SearchFilters

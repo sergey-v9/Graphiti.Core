@@ -423,9 +423,8 @@ internal sealed class EdgeResolutionService(
         }
 
         // Python applies the edge_uuids filter whenever it is not None (search_filters.py:132), so an
-        // empty valid_edges list yields zero matches. The shared C# CompiledSearchFilter skips an
-        // empty edge_uuids filter (treating it as no filter), which would instead run an unfiltered
-        // search; short-circuit here to preserve Python's zero-result semantics.
+        // empty valid_edges list yields zero matches. Short-circuit the same case here to avoid doing
+        // a backend search whose active empty edge_uuids predicate cannot return candidates.
         if (validEdgeUuids.Count == 0)
         {
             return Array.Empty<EntityEdge>();

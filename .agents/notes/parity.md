@@ -199,6 +199,14 @@ empty strings through `summarize_nodes.summarize_pair`. C# now preserves blank e
 pairwise reducer instead of filtering them before prompting, with regression coverage at the prompt
 payload boundary.
 
+**2026-06-16 empty edge-filter follow-up:** closed the reachable edge half of the empty-filter-list
+drift. Python `edge_search_filter_query_constructor` emits `e.name in $edge_types` and
+`e.uuid in $edge_uuids` whenever those lists are non-null, so explicitly empty lists are active
+match-none predicates. C# now preserves the same null-vs-empty distinction for `EdgeTypes` and
+`EdgeUuids` in backend query fragments and in-memory/materialized matching. Empty `NodeLabels` and
+empty temporal branches remain intentionally unaligned pending a bug-compatibility decision because
+Python can emit malformed/backend-dependent fragments for those shapes.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
@@ -320,7 +328,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Area | Status | Notes |
 |---|---|---|
 | Search config recipes, reranker enums, wire values | OK | Verified equivalent, parity-tested |
-| Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | OK | Deterministic parts well tested; edge/episode cross-encoder candidate windows now match Python's pre-rerank `limit` slices, while node/community remain intentionally unwindowed like Python. Community search now mirrors Python's unconditional vector retrieval when a query vector is available |
+| Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | OK | Deterministic parts well tested; edge/episode cross-encoder candidate windows now match Python's pre-rerank `limit` slices, while node/community remain intentionally unwindowed like Python. Community search now mirrors Python's unconditional vector retrieval when a query vector is available. Empty `EdgeTypes`/`EdgeUuids` filters are active match-none predicates like Python |
 | Community label propagation | OK | Algorithmically equivalent |
 | Graph drivers: InMemory (reference), LadybugDB (investment target), Neo4j (legacy reference) | OK | Runtime proof for Ladybug workflows, direct package binding of list/array/empty-list/null parameters, direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by UUID, public namespace community/saga reads and typed deletes, saga-scoped retrieval/content reads, paged group reads, directed endpoint-pair and incident edge reads, explicit and core file-backed paths, Kuzu `':memory:'` sentinel compatibility, package/native execution, and Ladybug-owned raw full-text query/label-filter construction; see kuzu-driver-port.md |
 | LLM/embedder/reranker adapters via Microsoft.Extensions.AI | DIVERGENT | Documented decision; structured output + Polly retries in place. `MicrosoftExtensionsAICrossEncoderClient` uses structured boolean+confidence scoring because generic M.E.AI lacks OpenAI top-logprob controls |
