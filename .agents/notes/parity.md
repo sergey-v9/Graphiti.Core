@@ -14,9 +14,9 @@ upstream sync below (none touched prompts/search/pipeline). **To pull the next b
 `upstream-sync-procedure.md`**: diff `graphiti_core/` against this anchor, disposition each change,
 verify, then move the anchor to the new `origin/main` HEAD.
 
-**Latest upstream check:** 2026-06-14 `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch` found
-`origin/main` still at `0ed90b72505c2a6a4f3ee953939888fb56572944`; `git log`, `git diff --stat`,
-and `git diff --name-status` over `0ed90b7..origin/main -- graphiti_core` were empty. No new Python
+**Latest upstream check:** 2026-06-16 `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch` found
+`origin/main` at `7de0c7184699636d2e69e7c511d22be4cdae2663`; `git log`, `git diff --stat`, and
+`git diff --name-status` over `0ed90b7..origin/main -- graphiti_core` were empty. No new Python
 library work needs porting.
 
 **Statuses**

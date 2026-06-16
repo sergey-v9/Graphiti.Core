@@ -210,10 +210,11 @@ Graphiti Core need. Follow-up hardening made the known search concurrency proof 
 Ladybug file-backed setup idempotent across reopen by ignoring duplicate errors for the four exact
 Graphiti FTS indexes; runtime coverage now proves build-write-close-reopen-build-search.
 
-Upstream Python check, 2026-06-14: `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch` confirmed
-`origin/main` still equals the recorded parity anchor
-`0ed90b72505c2a6a4f3ee953939888fb56572944`; there is no `graphiti_core/` delta to port. The helper
-now implements the Step 1 upstream-sync log/stat/name-status check and supports `-FailOnDelta`.
+Upstream Python check, 2026-06-16: `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch` confirmed
+`origin/main` is now `7de0c7184699636d2e69e7c511d22be4cdae2663`, and the log/stat/name-status checks
+over `0ed90b7..origin/main -- graphiti_core` are empty. There is no `graphiti_core/` delta to port.
+The helper implements the Step 1 upstream-sync log/stat/name-status check and supports
+`-FailOnDelta`.
 
 Edge-expiry parity follow-up, 2026-06-14: the tracked single-resolution-clock divergence was closed.
 `EdgeResolutionService` now uses `Graphiti.UtcNow` for non-fast-path resolved-edge expiry, and
