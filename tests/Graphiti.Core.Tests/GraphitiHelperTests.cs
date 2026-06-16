@@ -355,7 +355,6 @@ public class GraphitiHelperTests
     public void ParseDbDate_UsesInvariantUtcParsing()
     {
         Assert.Null(GraphitiHelpers.ParseDbDate(null));
-        Assert.Null(GraphitiHelpers.ParseDbDate("  "));
         Assert.Equal(
             new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc),
             GraphitiHelpers.ParseDbDate("2026-01-02T03:04:05Z"));
@@ -365,12 +364,44 @@ public class GraphitiHelperTests
         Assert.Equal(
             new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc),
             GraphitiHelpers.ParseDbDate("2026-01-02T03:04:05"));
+        Assert.Equal(
+            new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+            GraphitiHelpers.ParseDbDate("2026-01-02"));
+        Assert.Equal(
+            new DateTime(2026, 1, 2, 3, 4, 0, DateTimeKind.Utc),
+            GraphitiHelpers.ParseDbDate("2026-01-02 03:04"));
+        Assert.Equal(
+            new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc).AddTicks(1_234_560),
+            GraphitiHelpers.ParseDbDate("2026-01-02T03:04:05.1234567Z"));
     }
 
     [Fact]
-    public void ParseDbDate_RejectsInvalidValuesWithFormatException()
+    public void ParseDbDate_AcceptsPythonIsoformatVariants()
     {
-        Assert.Throws<FormatException>(() => GraphitiHelpers.ParseDbDate("not-a-date"));
+        Assert.Equal(
+            new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+            GraphitiHelpers.ParseDbDate("20260102"));
+        Assert.Equal(
+            new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+            GraphitiHelpers.ParseDbDate("2026-W01-5"));
+        Assert.Equal(
+            new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc),
+            GraphitiHelpers.ParseDbDate("2026-01-02X03:04:05"));
+        Assert.Equal(
+            new DateTime(2026, 1, 2, 3, 4, 0, DateTimeKind.Utc).AddTicks(5_000_000),
+            GraphitiHelpers.ParseDbDate("2026-01-02T0304.5"));
+        Assert.Equal(
+            new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc).AddTicks(1_234_560),
+            GraphitiHelpers.ParseDbDate("2026-01-02T03:04:05,1234567"));
+    }
+
+    [Fact]
+    public void ParseDbDate_RejectsPythonInvalidStringsWithFormatException()
+    {
+        foreach (var value in new[] { "", "  ", " 2026-01-02T03:04:05 ", "01/02/2026", "not-a-date" })
+        {
+            Assert.Throws<FormatException>(() => GraphitiHelpers.ParseDbDate(value));
+        }
     }
 
     [Fact]
@@ -379,8 +410,11 @@ public class GraphitiHelperTests
         Assert.True(GraphitiHelpers.TryParseDbDate("2026-01-02T03:04:05Z", out var parsed));
         Assert.Equal(new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc), parsed);
 
-        Assert.True(GraphitiHelpers.TryParseDbDate("  ", out var blank));
+        Assert.False(GraphitiHelpers.TryParseDbDate("  ", out var blank));
         Assert.Null(blank);
+
+        Assert.False(GraphitiHelpers.TryParseDbDate("01/02/2026", out var slashDate));
+        Assert.Null(slashDate);
 
         Assert.False(GraphitiHelpers.TryParseDbDate("not-a-date", out var invalid));
         Assert.Null(invalid);

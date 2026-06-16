@@ -135,7 +135,7 @@ when needed.
 Rerun verification before claiming the tree is green; historical test counts drift as coverage is
 added.
 
-Latest checkpoint, 2026-06-16:
+Latest checkpoint, 2026-06-17:
 
 `.\eng\Verify-GraphitiCoreOnly.ps1` is green after wiring the core-only GitHub Actions lane
 (`.github/workflows/core-only.yml`): strict nuget.org-only restore with a temp package cache, core
@@ -145,9 +145,9 @@ public driver-override proofs, saga empty-summary parity proof, and episode cont
 proof, edge/episode cross-encoder candidate-window parity, community vector-search parity, temporal-filter
 grouping documentation, community blank-summary reduction parity, empty edge-filter-list parity, and
 search-helper context formatting parity, excluded-entity-type validation parity, and blank Lucene
-full-text hardening documentation:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1004`
-passed, `3` skipped, `1007` total), `dotnet pack` for
+full-text hardening documentation, and database date parsing parity:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`1005`
+passed, `3` skipped, `1008` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -222,15 +222,22 @@ keys, but not separate display/model names.
 `FulltextQuery_SkipsBlankLuceneQueriesAsIntentionalHardening` documents the deliberate direct Lucene
 full-text divergence: lower-level C# full-text helpers skip blank/whitespace Lucene queries instead
 of issuing Python's backend-dependent `()` / grouped-empty query strings.
+`ParseDbDate_UsesInvariantUtcParsing`, `ParseDbDate_AcceptsPythonIsoformatVariants`,
+`ParseDbDate_RejectsPythonInvalidStringsWithFormatException`, and
+`TryParseDbDate_ReturnsFalseForInvalidValuesWithoutThrowing` pin Python `parse_db_date` string
+semantics: ISO strings parse, blank/padded/non-ISO strings are rejected instead of being trimmed or
+parsed by culture fallback, and C# normalizes accepted values to UTC because its model surface stores
+`DateTime`.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
 Open WS-2 audit candidates not yet disposed: empty `NodeLabels` and empty temporal filter branches
 still need a deliberate bug-compatibility decision because Python emits malformed/backend-dependent
 fragments for those shapes; saga-scoped retrieval with `groupIds: null` differs across C# providers
-and from Python's grouped saga query; namespace edge reads return empty lists where Python model
-helpers raise not-found exceptions; `ParseDbDate` and content chunking zero-overlap/JSON spacing
-have candidate divergences that need either alignment or explicit documentation.
+and from Python's grouped saga query; plural episodic-edge namespace/model reads return an empty list
+on all-missing non-empty UUID input where Python raises `EdgeNotFoundError` for the first requested
+UUID; content chunking zero-overlap/JSON spacing has candidate divergences that need either alignment
+or explicit documentation.
 
 Latest checkpoint, 2026-06-13:
 

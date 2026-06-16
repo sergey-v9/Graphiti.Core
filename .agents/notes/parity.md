@@ -225,6 +225,14 @@ still build `()` / grouped-empty query strings. C# `SearchUtilities.FulltextQuer
 query for blank/whitespace sanitized Lucene input and direct Neo4j full-text methods skip the backend
 call. Keep this as an intentional divergence, pinned by `SearchUtilitiesTests`.
 
+**2026-06-17 ParseDbDate follow-up:** closed the database date parsing drift. Python
+`parse_db_date` delegates string values to `datetime.fromisoformat`, so blank strings, padded strings,
+and locale-style slash dates raise instead of becoming `None` or being parsed through culture
+fallbacks. C# `GraphitiHelpers.ParseDbDate` now uses a strict Python-compatible ISO parser for string
+inputs, preserving date-only, basic date, ISO week date, shortened time, comma/fraction, and offset
+forms while rejecting Python-invalid blanks/padding/non-ISO strings. Parsed values still normalize to
+UTC because the C# model surface stores `DateTime` rather than Python's naive/aware datetime union.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
