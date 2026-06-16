@@ -323,11 +323,11 @@ Rechecked 2026-06-17: the nested binding repo is clean on
 `feature/parity-extensions-2026-06` at `0e709a0`; the actual local NuGet artifacts/nuspecs are
 `0.17.1` despite binding-side `version.txt`/README text saying `0.17.1.0`.
 
-Upstream Python check, 2026-06-16: `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch` confirmed
-`origin/main` is now `7de0c7184699636d2e69e7c511d22be4cdae2663`, and the log/stat/name-status checks
-over `0ed90b7..origin/main -- graphiti_core` are empty. There is no `graphiti_core/` delta to port.
-The helper implements the Step 1 upstream-sync log/stat/name-status check and supports
-`-FailOnDelta`.
+Upstream Python check, 2026-06-17: `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch -FailOnDelta`
+confirmed `origin/main` is now `b82b80e4c0c962fc714a22b74caf8c20997e8d83`, and the
+log/stat/name-status checks over `0ed90b7..origin/main -- graphiti_core` are empty. There is no
+`graphiti_core/` delta to port. The helper implements the Step 1 upstream-sync log/stat/name-status
+check and supports `-FailOnDelta`.
 
 Edge-expiry parity follow-up, 2026-06-14: the tracked single-resolution-clock divergence was closed.
 `EdgeResolutionService` now uses `Graphiti.UtcNow` for non-fast-path resolved-edge expiry, and
