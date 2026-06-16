@@ -157,6 +157,11 @@ proved `ExtractEdgesPrompts` emits every `fact_type_signatures` entry for a fact
 workflow test now also passes two `WORKS_AT` signatures through ingestion and asserts both reach the
 edge extraction prompt.
 
+**2026-06-16 public search driver-override proof:** added provider-free public workflow coverage for
+Python `Graphiti.search` / `Graphiti.search_` `driver` override forwarding. C# now has a regression
+test showing both basic `SearchAsync` and advanced `SearchAdvancedAsync` read from the supplied
+override driver rather than the `Graphiti` instance's root driver.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

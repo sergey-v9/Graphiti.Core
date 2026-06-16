@@ -140,9 +140,10 @@ Latest checkpoint, 2026-06-16:
 `.\eng\Verify-GraphitiCoreOnly.ps1` is green after wiring the core-only GitHub Actions lane
 (`.github/workflows/core-only.yml`): strict nuget.org-only restore with a temp package cache, core
 format/build/pack, and the core-only test slice with `GraphitiCoreOnlyTests=true` (`905` passed,
-`0` skipped). `.\eng\Verify-GraphitiCore.ps1` is also green after the normal Ladybug-inclusive path:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`991`
-passed, `3` skipped, `994` total), `dotnet pack` for
+`0` skipped). `.\eng\Verify-GraphitiCore.ps1` is also green after the normal Ladybug-inclusive path
+and public search driver-override proof:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`992`
+passed, `3` skipped, `995` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -170,6 +171,9 @@ episode content/source drive extraction and replacement call fields are ignored.
 `AddEpisode_ExplicitPreviousEpisodeUuidsOverrideAutomaticPreviousContext` pins Python's
 `previous_episode_uuids` branch by proving an explicit UUID list replaces, rather than merges with,
 the automatic recent-episode context window.
+`GraphitiSearchAsync_UsesProvidedDriverOverrideForBasicAndAdvanced` pins Python `search`/`search_`
+`driver` override forwarding by proving basic and advanced public searches read from the supplied
+override driver rather than the instance root driver.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 

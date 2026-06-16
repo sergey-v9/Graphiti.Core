@@ -738,6 +738,48 @@ public class SearchEngineRrfTests
     }
 
     [Fact]
+    public async Task GraphitiSearchAsync_UsesProvidedDriverOverrideForBasicAndAdvanced()
+    {
+        var rootDriver = new InMemoryGraphDriver();
+        var overrideDriver = new InMemoryGraphDriver();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var rootEdge = Edge("root-edge", "alpha root", new[] { 1f, 0f }, now);
+        var overrideEdge = Edge("override-edge", "alpha override", new[] { 1f, 0f }, now);
+        var rootNode = Node("root-node", "alpha root", new[] { 1f, 0f }, now);
+        var overrideNode = Node("override-node", "alpha override", new[] { 1f, 0f }, now);
+        await rootDriver.SaveEdgeAsync(rootEdge);
+        await rootDriver.SaveNodeAsync(rootNode);
+        await overrideDriver.SaveEdgeAsync(overrideEdge);
+        await overrideDriver.SaveNodeAsync(overrideNode);
+
+        var graphiti = new Graphiti(
+            graphDriver: rootDriver,
+            embedder: new RecordingEmbedder(new[] { 1f, 0f }));
+
+        var basic = await graphiti.SearchAsync(
+            "alpha",
+            numResults: 1,
+            driver: overrideDriver);
+        var advanced = await graphiti.SearchAdvancedAsync(
+            "alpha",
+            new SearchConfig
+            {
+                Limit = 1,
+                NodeConfig = new NodeSearchConfig
+                {
+                    SearchMethods = { NodeSearchMethod.Bm25 },
+                    Reranker = NodeReranker.Rrf
+                }
+            },
+            driver: overrideDriver);
+
+        Assert.Equal(overrideEdge.Uuid, Assert.Single(basic).Uuid);
+        Assert.Equal(overrideNode.Uuid, Assert.Single(advanced.Nodes).Uuid);
+        Assert.DoesNotContain(basic, edge => edge.Uuid == rootEdge.Uuid);
+        Assert.DoesNotContain(advanced.Nodes, node => node.Uuid == rootNode.Uuid);
+    }
+
+    [Fact]
     public async Task SearchAsync_AppliesRerankerMinScoreBeforeEdgeEpisodeMentionsSort()
     {
         var driver = new InMemoryGraphDriver();
