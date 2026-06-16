@@ -308,6 +308,9 @@ confirmation before bumping to `0.17.1`. Do not adopt `LadybugDB.Extensions` wit
 Graphiti Core need. Follow-up hardening made the known search concurrency proof deterministic and made
 Ladybug file-backed setup idempotent across reopen by ignoring duplicate errors for the four exact
 Graphiti FTS indexes; runtime coverage now proves build-write-close-reopen-build-search.
+Rechecked 2026-06-17: the nested binding repo is clean on
+`feature/parity-extensions-2026-06` at `0e709a0`; the actual local NuGet artifacts/nuspecs are
+`0.17.1` despite binding-side `version.txt`/README text saying `0.17.1.0`.
 
 Upstream Python check, 2026-06-16: `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch` confirmed
 `origin/main` is now `7de0c7184699636d2e69e7c511d22be4cdae2663`, and the log/stat/name-status checks

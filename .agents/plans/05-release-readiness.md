@@ -37,8 +37,10 @@ from strict package sources:
   `kuzu-driver-port.md`). WS-1 audit on 2026-06-14 found that the nearby
   `W:\code\ladybug\tools\csharp_api` checkout has clean `0.17.1` artifacts with the Graphiti
   parameter-binding repair and Linux/macOS native loader work, but Graphiti has not yet changed the pin;
-  get explicit user confirmation before replacing the `0.17.0-alpha.2-graphiti.1` pin. `Graphiti.Core` +
-  samples are already off-machine-restorable.
+  get explicit user confirmation before replacing the `0.17.0-alpha.2-graphiti.1` pin. Recheck on
+  2026-06-17 confirmed the actual local NuGet artifact/nuspec version is `0.17.1` even though the
+  binding-side `version.txt`/README text says `0.17.1.0`. `Graphiti.Core` + samples are already
+  off-machine-restorable.
 - **Versioning** (confirm 2.0.0 line / alpha→beta cadence) and **CI**. NuGet metadata, README packing,
   XML docs, symbol package generation, and package-consumption smoke checks are now present and guarded
   for both shippable packages. CI for the full suite is itself gated on E.2 (the native Ladybug tests

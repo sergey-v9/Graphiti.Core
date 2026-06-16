@@ -77,6 +77,12 @@ not be adopted by default in Graphiti Core: the current Graphiti package already
 options, factory, and driver boundary, and adopting the Extensions package would add host-level
 abstractions without a demonstrated Graphiti Core requirement.
 
+2026-06-17 recheck: the nested binding repo is still clean on
+`feature/parity-extensions-2026-06` at `0e709a0`. The actual local NuGet artifacts and their nuspecs
+are versioned `0.17.1` (`LadybugDB`, `LadybugDB.Native`, all RID native packages, `LadybugDB.Arrow`,
+and `LadybugDB.Extensions`), even though binding-side `version.txt`/README text says package family
+`0.17.1.0`. If/when Graphiti is approved to bump, use the artifact/NuGet version `0.17.1`.
+
 ## Current Status
 
 - The LadybugDB package and native references are owned by the `Graphiti.Core.Drivers.Ladybug` project
