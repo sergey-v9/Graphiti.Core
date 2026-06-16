@@ -205,14 +205,11 @@ internal sealed class CommunityService(
         foreach (var node in cluster)
         {
             // Seed the pairwise reduction with the RAW entity summary, not name-prefixed
-            // text. Python build_community (community_operations.py:177) uses
-            // `entity.summary` directly; for a single-node cluster this seed is persisted
-            // verbatim via truncate_at_sentence (:199).
-            var summary = node.Summary;
-            if (!string.IsNullOrWhiteSpace(summary))
-            {
-                summaries.Add(summary);
-            }
+            // text or a filtered subset. Python build_community
+            // (community_operations.py:177) uses `entity.summary` directly, including
+            // empty strings; for a single-node cluster this seed is persisted verbatim
+            // via truncate_at_sentence (:199).
+            summaries.Add(node.Summary);
         }
         if (summaries.Count == 0)
         {

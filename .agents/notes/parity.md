@@ -193,6 +193,12 @@ whenever a query vector is available, so a custom `BM25 + MMR` community config 
 text-only and vector-only candidates like Python. The public search-filter docs were also corrected
 to state Python's temporal grouping shape: OR of AND-groups.
 
+**2026-06-16 community blank-summary follow-up:** closed a reachable `build_community` drift. Python
+seeds community summary reduction from `[entity.summary for entity in community_cluster]`, preserving
+empty strings through `summarize_nodes.summarize_pair`. C# now preserves blank entity summaries in the
+pairwise reducer instead of filtering them before prompting, with regression coverage at the prompt
+payload boundary.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
@@ -285,7 +291,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Episodic edge building | edge_operations.build_episodic_edges | MaintenanceUtilities | OK | |
 | Bulk ingestion (true batch dedup/resolve) | bulk_utils, graphiti.py:1230+ | Graphiti.Ingestion.cs:195+ | OK + DIVERGENT | Staged extraction, cross-batch node/edge dedupe, final resolution, pointer remapping, per-episode provenance. 2026-06-13 fixes: bulk summaries no longer append edge facts (Python `edges=None`); first-pass node dedup no longer over-widens the candidate pool. Behaviors KEPT as documented DIVERGENT (see `decisions.md`): cross-episode edge invalidation is more aggressive than Python, bulk episodes own `episode.EntityEdges` where Python's bulk leaves it empty, and `storeRawEpisodeContent: false` also scrubs stored bulk episode content after extraction |
 | Saga association + episode-time watermarks | graphiti.py | SagaService | OK | Watermarks present |
-| Community update on ingest | graphiti.py | CommunityService | OK | Flow parity; community summary/name prompts ported 2026-06-11 |
+| Community update on ingest | graphiti.py | CommunityService | OK | Flow parity; community summary/name prompts ported 2026-06-11; blank entity summaries are preserved when summarized into communities |
 
 ## Public Graphiti workflows
 
@@ -293,7 +299,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 |---|---|---|---|---|
 | Lifecycle | `close` | `CloseAsync` / `DisposeAsync` | DIVERGENT | C# closes only owned drivers; explicit/DI drivers are caller/container-owned |
 | Episode retrieval | `retrieve_episodes` | `RetrieveEpisodesAsync` | OK | |
-| Communities | `build_communities` | `BuildCommunitiesAsync` | OK | |
+| Communities | `build_communities` | `BuildCommunitiesAsync` | OK | Community summary reduction preserves raw entity summaries, including blank strings, like Python |
 | Basic fact search | `search` | `SearchAsync(query, ...)` | OK | |
 | Advanced graph search | `search_` | `SearchAdvancedAsync` / `SearchAsync(query, SearchConfig, ...)` | OK | Idiomatic C# names; Python-style aliases intentionally not added |
 | Episode contribution lookup | `get_nodes_and_edges_by_episode` | `GetNodesAndEdgesByEpisodeAsync` | OK + DIVERGENT | Per-episode entity-edge loads use bounded fan-out like Python `semaphore_gather`, then flatten in episode order. Bulk episodes own entity-edge UUIDs in C#, so bulk episode contribution lookup is more complete than Python |

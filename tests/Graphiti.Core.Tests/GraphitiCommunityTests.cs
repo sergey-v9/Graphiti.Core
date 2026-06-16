@@ -255,6 +255,30 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
+    public async Task BuildCommunities_PreservesBlankEntitySummariesInPairReduction()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new CapturingCommunityLlmClient();
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group", now, "alice");
+        var bob = Entity("Bob", "group", now, "bob");
+        alice.Summary = string.Empty;
+        await alice.SaveAsync(driver);
+        await bob.SaveAsync(driver);
+        await Relates(alice, bob, "group", now).SaveAsync(driver);
+
+        var (communities, _) = await graphiti.BuildCommunitiesAsync(new[] { "group" });
+
+        Assert.Equal("combined team", Assert.Single(communities).Summary);
+        var pairMessages = Assert.Single(llm.MessagesByPrompt["summarize_nodes.summarize_pair"]);
+        var promptSummaries = ReadSummaryPairPayload(pairMessages[^1])
+            .Select(item => item?["summary"]?.GetValue<string>())
+            .ToArray();
+        Assert.Equal(new[] { string.Empty, "Bob summary" }, promptSummaries);
+    }
+
+    [Fact]
     public async Task BuildCommunities_RejectsEmptySummaryFromRealLlm()
     {
         var driver = new InMemoryGraphDriver();
@@ -651,6 +675,18 @@ public class GraphitiCommunityTests
             .Select(cluster => cluster.Select(node => node.Uuid).ToArray())
             .ToArray();
 
+    private static JsonArray ReadSummaryPairPayload(Message message)
+    {
+        const string marker = "Summaries:\n";
+        var markerIndex = message.Content.LastIndexOf(marker, StringComparison.Ordinal);
+        Assert.True(markerIndex >= 0, "Expected a Summaries section in the summarize-pair prompt.");
+        var summariesLine = message.Content[(markerIndex + marker.Length)..]
+            .Split(["\n"], StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .First(line => line.Length > 0 && line[0] == '[');
+        return JsonNode.Parse(summariesLine)!.AsArray();
+    }
+
     private static string[][] SynchronousLabelPropagationOracle(
         IReadOnlyList<EntityNode> nodes,
         IReadOnlyList<EntityEdge> edges)
@@ -747,6 +783,8 @@ public class GraphitiCommunityTests
 
         public Dictionary<string, List<Type?>> ResponseModelsByPrompt { get; } = new(StringComparer.Ordinal);
 
+        public Dictionary<string, List<IReadOnlyList<Message>>> MessagesByPrompt { get; } = new(StringComparer.Ordinal);
+
         protected override Task<JsonObject> GenerateResponseCoreAsync(
             IReadOnlyList<Message> messages,
             Type? responseModel,
@@ -767,6 +805,14 @@ public class GraphitiCommunityTests
                     }
 
                     responseModels.Add(responseModel);
+
+                    if (!MessagesByPrompt.TryGetValue(promptName, out var promptMessages))
+                    {
+                        promptMessages = new List<IReadOnlyList<Message>>();
+                        MessagesByPrompt[promptName] = promptMessages;
+                    }
+
+                    promptMessages.Add(messages.ToArray());
                 }
             }
 
