@@ -355,6 +355,44 @@ public sealed class SearchFilterTests
     }
 
     [Fact]
+    public void CompiledSearchFilter_DateFiltersUsePythonOrOfAndGroups()
+    {
+        var januaryStart = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var februaryStart = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var marchStart = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var aprilStart = new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc);
+        var compiled = CompiledSearchFilter.Compile(new SearchFilters
+        {
+            ValidAt = new List<List<DateFilter>>
+            {
+                new()
+                {
+                    new DateFilter(ComparisonOperator.GreaterThanEqual, januaryStart),
+                    new DateFilter(ComparisonOperator.LessThan, februaryStart)
+                },
+                new()
+                {
+                    new DateFilter(ComparisonOperator.GreaterThanEqual, marchStart),
+                    new DateFilter(ComparisonOperator.LessThan, aprilStart)
+                }
+            }
+        });
+
+        Assert.True(compiled.EdgeMatches(new EntityEdge
+        {
+            ValidAt = new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc)
+        }));
+        Assert.False(compiled.EdgeMatches(new EntityEdge
+        {
+            ValidAt = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc)
+        }));
+        Assert.True(compiled.EdgeMatches(new EntityEdge
+        {
+            ValidAt = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc)
+        }));
+    }
+
+    [Fact]
     public void CompiledSearchFilter_MatchesMissingAndNullPropertyFilters()
     {
         var attributes = new Dictionary<string, object?>

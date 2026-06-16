@@ -142,9 +142,10 @@ Latest checkpoint, 2026-06-16:
 format/build/pack, and the core-only test slice with `GraphitiCoreOnlyTests=true` (`905` passed,
 `0` skipped). `.\eng\Verify-GraphitiCore.ps1` is also green after the normal Ladybug-inclusive path,
 public driver-override proofs, saga empty-summary parity proof, and episode contribution fan-out
-proof, plus edge/episode cross-encoder candidate-window parity:
-restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`997`
-passed, `3` skipped, `1000` total), `dotnet pack` for
+proof, edge/episode cross-encoder candidate-window parity, community vector-search parity, and
+temporal-filter grouping documentation:
+restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`998`
+passed, `3` skipped, `1001` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -192,8 +193,24 @@ appearances across episodes.
 cross-encoder passages are limited to the first `limit` preliminary edge candidates, episode
 cross-encoder passages are limited to the first `limit` RRF-seeded episode candidates, and
 node/community cross-encoder paths remain intentionally unwindowed like Python.
+`CommunitySearch_Bm25MmrStillRunsVectorSearchLikePython` pins Python community-search behavior:
+community vector retrieval still runs when a query vector is available even if the custom
+`CommunitySearchConfig.SearchMethods` list contains only `Bm25`, so MMR can see text-only and
+vector-only candidates. `CompiledSearchFilter_DateFiltersUsePythonOrOfAndGroups` pins the in-memory
+temporal-filter grouping shape, and the public docs/XML comments now state the same OR-of-AND-groups
+semantics that Python's query builder implements.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
+
+Open WS-2 audit candidates not yet disposed: community summary reduction currently filters blank
+entity summaries before pairwise reduction where Python keeps them; Python search helper functions
+`format_edge_date_range` / `search_results_to_context_string` are not exposed in C# and would require
+a public-API decision; empty search-filter lists are no-ops in C# where Python emits active empty
+predicates; saga-scoped retrieval with `groupIds: null` differs across C# providers and from
+Python's grouped saga query; namespace edge reads return empty lists where Python model helpers raise
+not-found exceptions; `ParseDbDate`, excluded entity-type key/name handling, blank Lucene full-text
+queries, and content chunking zero-overlap/JSON spacing have candidate divergences that need either
+alignment or explicit documentation.
 
 Latest checkpoint, 2026-06-13:
 

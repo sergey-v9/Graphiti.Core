@@ -394,7 +394,7 @@ Rerankers at a glance: **RRF** fuses multiple ranked lists; **MMR** trades relev
 biases toward a `centerNodeUuid`; **episode-mentions** favors facts mentioned in more episodes.
 
 `SearchFilters` (`Graphiti.Core.Search`) further constrains candidates — by `NodeLabels`, `EdgeTypes`,
-and temporal predicates (`ValidAt`, `InvalidAt`, `CreatedAt`, `ExpiredAt`), each an AND-of-OR-groups of
+and temporal predicates (`ValidAt`, `InvalidAt`, `CreatedAt`, `ExpiredAt`), each an OR-of-AND-groups of
 `DateFilter`s.
 
 See [docs/search.md](docs/search.md) for more detail on methods, rerankers, and filters.

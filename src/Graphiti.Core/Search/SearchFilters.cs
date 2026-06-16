@@ -4,7 +4,7 @@ namespace Graphiti.Core.Search;
 
 /// <summary>
 /// Constraints applied to search candidates before ranking. The temporal fields use a list-of-lists
-/// shape where the outer list is combined with AND and each inner list is combined with OR (matching
+/// shape where each inner list is combined with AND and the outer list is combined with OR (matching
 /// the Python filter semantics). Setting <see cref="NodeLabels"/> validates the labels.
 /// </summary>
 public sealed class SearchFilters
@@ -27,19 +27,19 @@ public sealed class SearchFilters
     [JsonPropertyName("edge_types")]
     public List<string>? EdgeTypes { get; set; }
 
-    /// <summary>Predicates over the fact's <c>valid_at</c> field (AND of OR-groups).</summary>
+    /// <summary>Predicates over the fact's <c>valid_at</c> field (OR of AND-groups).</summary>
     [JsonPropertyName("valid_at")]
     public List<List<DateFilter>>? ValidAt { get; set; }
 
-    /// <summary>Predicates over the fact's <c>invalid_at</c> field (AND of OR-groups).</summary>
+    /// <summary>Predicates over the fact's <c>invalid_at</c> field (OR of AND-groups).</summary>
     [JsonPropertyName("invalid_at")]
     public List<List<DateFilter>>? InvalidAt { get; set; }
 
-    /// <summary>Predicates over the <c>created_at</c> field (AND of OR-groups).</summary>
+    /// <summary>Predicates over the <c>created_at</c> field (OR of AND-groups).</summary>
     [JsonPropertyName("created_at")]
     public List<List<DateFilter>>? CreatedAt { get; set; }
 
-    /// <summary>Predicates over the <c>expired_at</c> field (AND of OR-groups).</summary>
+    /// <summary>Predicates over the <c>expired_at</c> field (OR of AND-groups).</summary>
     [JsonPropertyName("expired_at")]
     public List<List<DateFilter>>? ExpiredAt { get; set; }
 

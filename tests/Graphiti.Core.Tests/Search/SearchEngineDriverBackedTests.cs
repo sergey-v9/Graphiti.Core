@@ -1175,30 +1175,47 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
-    public async Task CommunitySearch_Bm25OnlySkipsDisabledVectorDriverCalls()
+    public async Task CommunitySearch_Bm25MmrStillRunsVectorSearchLikePython()
     {
-        var textCommunity = new CommunityNode { Uuid = "text", Name = "Planning", GroupId = "group" };
+        var textCommunity = new CommunityNode
+        {
+            Uuid = "text",
+            Name = "Planning",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 0f, 1f }
+        };
+        var vectorCommunity = new CommunityNode
+        {
+            Uuid = "vector",
+            Name = "Roadmap",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 1f, 0f }
+        };
+        var queryVector = new[] { 1f, 0f };
         var driver = new DriverBackedSearchDriver
         {
-            CommunityFulltextHits = { new SearchHit<CommunityNode>(textCommunity, 4) }
+            CommunityFulltextHits = { new SearchHit<CommunityNode>(textCommunity, 4) },
+            CommunityVectorHits = { new SearchHit<CommunityNode>(vectorCommunity, 0.9f) }
         };
 
         var ranked = await SearchEngine.CommunitySearchAsync(
             driver,
             new IdentityCrossEncoderClient(),
             "planning",
-            queryVector: null,
+            queryVector,
             new[] { "group" },
             new CommunitySearchConfig
             {
                 SearchMethods = { CommunitySearchMethod.Bm25 },
-                Reranker = CommunityReranker.Rrf
+                Reranker = CommunityReranker.Mmr,
+                MmrLambda = 1
             },
             limit: 3);
 
-        Assert.Equal("text", Assert.Single(ranked).Item.Uuid);
+        Assert.Equal(new[] { "vector", "text" }, ranked.Select(item => item.Item.Uuid));
         Assert.Equal(1, driver.CommunityFulltextCalls);
-        Assert.Equal(0, driver.CommunityVectorCalls);
+        Assert.Equal(1, driver.CommunityVectorCalls);
+        Assert.Same(queryVector, driver.LastCommunityVectorQueryVector);
     }
 
     [Fact]

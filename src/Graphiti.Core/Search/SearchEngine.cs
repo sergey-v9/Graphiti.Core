@@ -1099,11 +1099,11 @@ internal static class SearchEngine
         SearchConfigValidator.ValidateLimit(limit);
         GraphitiHelpers.ValidateGroupIds(groupIds);
         var minScore = (float)rerankerMinScore;
-        var hasCosine = CommunityUsesCosine(config);
+        var runVectorSearch = queryVector is not null;
         var searchDriver = CreateSearchDriver(
             driver,
             groupIds,
-            hasCosine || config.Reranker == CommunityReranker.Mmr);
+            runVectorSearch || config.Reranker == CommunityReranker.Mmr);
         using var methodCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var methodCancellationToken = methodCancellation.Token;
         Task<List<(CommunityNode Item, float Score)>> textTask = SearchRetrievalRunner.GetCommunityFulltextRankedAsync(
@@ -1112,10 +1112,10 @@ internal static class SearchEngine
             groupIds,
             limit * 2,
             methodCancellationToken);
-        Task<List<(CommunityNode Item, float Score)>>? vectorTask = hasCosine && queryVector is not null
+        Task<List<(CommunityNode Item, float Score)>>? vectorTask = runVectorSearch
             ? SearchRetrievalRunner.GetCommunityVectorRankedAsync(
                 searchDriver,
-                queryVector,
+                queryVector!,
                 groupIds,
                 limit * 2,
                 (float)config.SimMinScore,

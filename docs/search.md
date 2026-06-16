@@ -120,7 +120,8 @@ fall back to the lexical/identity ordering.
 - `NodeLabels` (`List<string>?`) — restrict to nodes carrying these labels; validated on assignment.
 - `EdgeTypes` (`List<string>?`) — restrict to edges of these relationship types.
 - `ValidAt`, `InvalidAt`, `CreatedAt`, `ExpiredAt` (`List<List<DateFilter>>?`) — temporal predicates.
-  The outer list is combined with AND, each inner list with OR (matching Python filter semantics).
+  Each inner list is combined with AND, and the outer list is combined with OR (matching Python filter
+  semantics).
 
 ```csharp
 var filters = new SearchFilters
