@@ -28,11 +28,13 @@ public class PublicApiSnapshotTests
     public void GraphitiCore_PublicApi_MatchesApprovedBaseline()
         => AssertPublicApiMatches(typeof(Graphiti).Assembly, "Graphiti.Core");
 
+#if !GRAPHITI_CORE_ONLY_TESTS
     [Fact]
     public void GraphitiCoreDriversLadybug_PublicApi_MatchesApprovedBaseline()
         => AssertPublicApiMatches(
             typeof(global::Graphiti.Core.Configuration.LadybugDbOptions).Assembly,
             "Graphiti.Core.Drivers.Ladybug");
+#endif
 
     private static void AssertPublicApiMatches(Assembly assembly, string baselineName)
     {

@@ -149,6 +149,26 @@ public class PackageReadinessTests
     }
 
     [Fact]
+    public void CoreOnlyVerifyScript_UsesNuGetOrgOnlyAndExcludesLadybugTests()
+    {
+        var csharpRoot = FindCSharpRoot();
+        var verifyScript = File.ReadAllText(Path.Combine(csharpRoot, "eng", "Verify-GraphitiCoreOnly.ps1"));
+        var testProject = File.ReadAllText(Path.Combine(
+            csharpRoot,
+            "tests",
+            "Graphiti.Core.Tests",
+            "Graphiti.Core.Tests.csproj"));
+
+        Assert.Contains("<clear />", verifyScript);
+        Assert.Contains("https://api.nuget.org/v3/index.json", verifyScript);
+        Assert.DoesNotContain("ladybug-local", verifyScript, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("GraphitiCoreOnlyTests=true", verifyScript);
+        Assert.Contains("GRAPHITI_CORE_ONLY_TESTS", testProject);
+        Assert.Contains(@"Compile Remove=""Drivers\Ladybug\**\*.cs""", testProject);
+        Assert.Contains("Condition=\"'$(GraphitiCoreOnlyTests)' != 'true'\"", testProject);
+    }
+
+    [Fact]
     public void GeneratedXmlDocs_DoNotDescribeBulkInvalidationBackwards()
     {
         var xmlPath = Path.ChangeExtension(typeof(global::Graphiti.Core.Graphiti).Assembly.Location, ".xml");

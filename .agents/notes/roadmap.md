@@ -111,9 +111,10 @@ both assemblies.
 
 Remaining (release infra, partly gated on external work): **E.2** — publish/replace the local LadybugDB
 package family (`W:\code\ladybug` repo work) so `Graphiti.Core.Drivers.Ladybug` restores off-machine;
-**versioning** (2.0.0 line / alpha→beta cadence); and **CI** (a `Graphiti.Core`-only lane can run now; the
-full Ladybug suite is gated on E.2). NuGet metadata, README packing, XML docs, symbol package
-generation, and package-consumption smoke checks are present for both packages. The "Stable public API
+**versioning** (2.0.0 line / alpha→beta cadence); and **CI** (a local `Graphiti.Core`-only lane now
+runs through `eng\Verify-GraphitiCoreOnly.ps1`; the full Ladybug suite is gated on E.2). NuGet
+metadata, README packing, XML docs, symbol package generation, and package-consumption smoke checks
+are present for both packages. The "Stable public API
 release" candidate milestone in `evolution.md` is the target. A WS-1 audit on 2026-06-14 found local LadybugDB `0.17.1` artifacts with the needed
 binding and Unix-loader repairs, but Graphiti remains pinned to `0.17.0-alpha.2-graphiti.1` until the
 package-family change is explicitly approved. The public-API snapshot stays a drift guard (not a

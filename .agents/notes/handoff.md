@@ -135,10 +135,11 @@ added.
 
 Latest checkpoint, 2026-06-16:
 
-`.\eng\Verify-GraphitiCore.ps1` is green after strengthening public AddEpisode workflow coverage for
-explicit existing-episode UUID reuse and explicit previous-episode context override: restore, format,
-warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`989` passed, `3` skipped,
-`992` total), `dotnet pack` for
+`.\eng\Verify-GraphitiCoreOnly.ps1` is green after adding the local core-only CI lane: strict
+nuget.org-only restore with a temp package cache, core format/build/pack, and the core-only test slice
+with `GraphitiCoreOnlyTests=true` (`904` passed, `0` skipped). `.\eng\Verify-GraphitiCore.ps1` is
+also green after the normal Ladybug-inclusive path: restore, format, warning-clean build including
+`Graphiti.Sample.OpenAI`, full test suite (`990` passed, `3` skipped, `993` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -151,7 +152,8 @@ embeds the packed LadybugDB driver in `Graphiti`. Both consumers call
 back, then assert the provider and hit UUID (`InMemory:smoke-edge`, `LadybugDb:smoke-edge`). Both csprojs set
 `IncludeSymbols=true`/`SymbolPackageFormat=snupkg`, and `PackageReadinessTests` guards shared NuGet
 metadata, README packing, symbol settings, SemVer-like same-version alignment, the two-project pack
-loop, and the package-consumer smoke path. `GraphitiWorkflowTests` now pins Python
+loop, the package-consumer smoke path, and the core-only verifier's nuget.org-only/non-Ladybug shape.
+`GraphitiWorkflowTests` now pins Python
 `extract_edges` self-edge behavior through `AddEpisodeAsync`: an LLM-returned `Alice -> Alice` edge is
 dropped while the same extraction's `Alice -> Bob` edge is returned and persisted. It also pins
 Python's exact endpoint-name validation: a case-mismatched LLM edge endpoint is skipped even though
@@ -199,7 +201,12 @@ intended API change); a consumer `README.md`/`docs/search.md`; surface hardening
 `GRPH0001` and `GRPH0002` are locally suppressed only at deliberate compatibility-alias sites); the
 InMemory-default constructor + `AddEpisodeOptions`; the
 LadybugDB package split; and the retired shared Kuzu branches in generic search helpers. Remaining:
-E.2 (publish the local LadybugDB package family — `W:\code\ladybug`), versioning, CI. See `plans/05`
+E.2 (publish the local LadybugDB package family — `W:\code\ladybug`), versioning, full CI. A local
+`Graphiti.Core`-only CI lane is now executable via `eng\Verify-GraphitiCoreOnly.ps1`: it creates a
+strict nuget.org-only temp feed, restores/builds/tests the core-only test slice with
+`GraphitiCoreOnlyTests=true`, filters out the OpenAI provider tests, formats/packs `Graphiti.Core`,
+and excludes the Ladybug test folder and Ladybug public-API snapshot half without changing the normal
+full-suite path. See `plans/05`
 and `decisions.md`. GOTCHA (still applies): do NOT run multiple worktree agents' `dotnet test`
 concurrently — the LadybugDB native package deadlocks across worktrees (1.5h hang on 06-14; recovered
 by killing orphaned testhost processes). Have worktree agents build/format-only and run the

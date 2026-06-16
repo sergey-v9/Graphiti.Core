@@ -101,8 +101,11 @@ no wire/prompt/cache/temporal behavior changed):
   `AddLadybugDbGraphDriver`) and throws a clear `InvalidOperationException` if the package is not
   referenced/registered. `Graphiti.Core` adds `InternalsVisibleTo("Graphiti.Core.Drivers.Ladybug")`; the
   Ladybug package adds `InternalsVisibleTo("Graphiti.Core.Tests")`. The public-API snapshot guards both
-  assemblies. A real off-machine release still requires the local `0.17.0-alpha.2-graphiti.1` LadybugDB
-  package family to be published/replaced (plan 05 Step E.2; `kuzu-driver-port.md`).
+  assemblies in the normal suite; the `GraphitiCoreOnlyTests=true` test-project mode compiles out the
+  Ladybug-only tests and the Ladybug snapshot half so `eng\Verify-GraphitiCoreOnly.ps1` can prove
+  `Graphiti.Core` restore/build/test/pack from nuget.org only. A real off-machine release still
+  requires the local `0.17.0-alpha.2-graphiti.1` LadybugDB package family to be published/replaced
+  (plan 05 Step E.2; `kuzu-driver-port.md`).
 
 ## Library Boundaries
 

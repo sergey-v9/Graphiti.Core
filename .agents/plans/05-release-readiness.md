@@ -42,8 +42,10 @@ from strict package sources:
 - **Versioning** (confirm 2.0.0 line / alpha→beta cadence) and **CI**. NuGet metadata, README packing,
   XML docs, symbol package generation, and package-consumption smoke checks are now present and guarded
   for both shippable packages. CI for the full suite is itself gated on E.2 (the native Ladybug tests
-  need the package); a `Graphiti.Core`-only CI lane (build/format/pack + non-Ladybug tests) could run
-  now. Remember the parallel-`dotnet test` deadlock.
+  need the package); a local `Graphiti.Core`-only lane is now executable via
+  `eng\Verify-GraphitiCoreOnly.ps1` (strict nuget.org-only restore, core format/build/pack, and
+  non-Ladybug tests with the OpenAI provider tests filtered out). Remember the parallel-`dotnet test`
+  deadlock.
 
 ## Standing constraints (apply to every step)
 
