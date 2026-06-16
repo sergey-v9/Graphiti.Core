@@ -217,6 +217,43 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisode_ReusesExistingEpisodeWhenUuidIsProvided()
+    {
+        var driver = new InMemoryGraphDriver();
+        var now = new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+        var existing = new EpisodicNode
+        {
+            Uuid = "existing-episode",
+            Name = "stored",
+            GroupId = "group",
+            Source = EpisodeType.Message,
+            SourceDescription = "message",
+            Content = "Stored episode content.",
+            CreatedAt = now,
+            ValidAt = now
+        };
+        await existing.SaveAsync(driver);
+        var llm = new StaticLlmClient(new JsonObject());
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+
+        var result = await graphiti.AddEpisodeAsync(
+            "replacement",
+            "Replacement content should not be used.",
+            "text",
+            now.AddHours(1),
+            source: EpisodeType.Text,
+            groupId: "group",
+            uuid: existing.Uuid);
+
+        Assert.Equal(existing.Uuid, result.Episode.Uuid);
+        Assert.Equal("stored", result.Episode.Name);
+        var extractionCall = Assert.Single(llm.Calls, call => call.PromptName == "extract_nodes.extract_message");
+        Assert.Equal(
+            "Stored episode content.",
+            ReadPromptSection(extractionCall.Messages[^1].Content, "CURRENT MESSAGE"));
+    }
+
+    [Fact]
     public async Task AddEpisode_ExplicitMissingUuidRequiresExistingEpisode()
     {
         var driver = new InMemoryGraphDriver();
@@ -1636,6 +1673,56 @@ public class GraphitiWorkflowTests
         Assert.Equal(2, llm.PromptNames.Count(prompt => prompt == "extract_edges.edge"));
         Assert.DoesNotContain("extract_nodes_and_edges.extract_message", llm.PromptNames);
         Assert.DoesNotContain("extract_edges.extract_timestamps_batch", llm.PromptNames);
+    }
+
+    [Fact]
+    public async Task AddEpisode_ExplicitPreviousEpisodeUuidsOverrideAutomaticPreviousContext()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new StaticLlmClient(new JsonObject());
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+        var selectedPrevious = new EpisodicNode
+        {
+            Uuid = "selected-previous",
+            Name = "selected",
+            GroupId = "group",
+            Source = EpisodeType.Message,
+            SourceDescription = "message",
+            Content = "Selected previous content.",
+            CreatedAt = new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc),
+            ValidAt = new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc)
+        };
+        var automaticPrevious = new EpisodicNode
+        {
+            Uuid = "automatic-previous",
+            Name = "automatic",
+            GroupId = "group",
+            Source = EpisodeType.Message,
+            SourceDescription = "message",
+            Content = "Automatic recent content.",
+            CreatedAt = new DateTime(2026, 1, 2, 10, 0, 0, DateTimeKind.Utc),
+            ValidAt = new DateTime(2026, 1, 2, 10, 0, 0, DateTimeKind.Utc)
+        };
+        await selectedPrevious.SaveAsync(driver);
+        await automaticPrevious.SaveAsync(driver);
+
+        await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Current content.",
+            "message",
+            new DateTime(2026, 1, 3, 10, 0, 0, DateTimeKind.Utc),
+            groupId: "group",
+            previousEpisodeUuids: new[] { selectedPrevious.Uuid });
+
+        var extractionCall = Assert.Single(llm.Calls, call => call.PromptName == "extract_nodes.extract_message");
+        var previousEpisodes = JsonNode.Parse(
+            ReadPromptSection(extractionCall.Messages[^1].Content, "PREVIOUS MESSAGES"))!.AsArray();
+
+        var previousContents = previousEpisodes
+            .Select(episode => episode?["content"]?.GetValue<string>())
+            .ToList();
+        Assert.Contains("Selected previous content.", previousContents);
+        Assert.DoesNotContain("Automatic recent content.", previousContents);
     }
 
     [Fact]

@@ -136,8 +136,9 @@ added.
 Latest checkpoint, 2026-06-16:
 
 `.\eng\Verify-GraphitiCore.ps1` is green after strengthening public AddEpisode workflow coverage for
-multi-signature edge-type metadata: restore, format, warning-clean build including
-`Graphiti.Sample.OpenAI`, full test suite (`987` passed, `3` skipped, `990` total), `dotnet pack` for
+explicit existing-episode UUID reuse and explicit previous-episode context override: restore, format,
+warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`989` passed, `3` skipped,
+`992` total), `dotnet pack` for
 both shippable packages
 (`Graphiti.Core.2.0.0-alpha.1.nupkg` + `.snupkg` and
 `Graphiti.Core.Drivers.Ladybug.2.0.0-alpha.1.nupkg` + `.snupkg`), and fresh temp consumer
@@ -159,6 +160,11 @@ pins Python `add_triplet` behavior for edge UUID collisions: if a submitted edge
 on a different endpoint pair, C# generates a fresh edge UUID and preserves the original edge.
 `AddEpisode_PassesTypeMetadataAndCustomInstructionsToExtractionPrompt` now proves the public
 ingestion path forwards all `fact_type_signatures` for an edge type instead of only one signature.
+`AddEpisode_ReusesExistingEpisodeWhenUuidIsProvided` pins Python's `uuid is not None` branch: stored
+episode content/source drive extraction and replacement call fields are ignored.
+`AddEpisode_ExplicitPreviousEpisodeUuidsOverrideAutomaticPreviousContext` pins Python's
+`previous_episode_uuids` branch by proving an explicit UUID list replaces, rather than merges with,
+the automatic recent-episode context window.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 

@@ -235,7 +235,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 
 | Step | Python | C# | Status | Notes |
 |---|---|---|---|---|
-| Episode bookkeeping, previous-episode window | graphiti.py | Graphiti.Ingestion.cs | OK | |
+| Episode bookkeeping, previous-episode window | graphiti.py | Graphiti.Ingestion.cs | OK | Public workflow coverage pins both explicit existing-episode UUID reuse (stored episode content/source drive extraction, replacement call fields ignored like Python) and explicit `previousEpisodeUuids` overriding the automatic recent-context window |
 | Node extraction (LLM) | node_operations.extract_nodes | EpisodeGraphExtractor | OK | Prompts ported 2026-06-11 |
 | Multi-episode node/fact attribution | node_operations.py:103-112, 283-306; edge_operations.py:170-180, 290-313 | EpisodeGraphExtractor → EpisodeAttribution → MaintenanceUtilities.BuildEpisodicEdges / EdgeResolutionService | OK | C# parses `episode_indices` for extracted nodes and facts, maps fact attribution to edge `Episodes`/`ReferenceTime` using Python's first-raw-index `reference_time` rule, and now keeps node attribution keyed to extracted-node UUIDs like Python; resolved-node UUID mismatches therefore fall back to all provided episodes |
 | Node resolution: deterministic + embedding + LLM dedup | node_operations.resolve_extracted_nodes | NodeResolutionService | OK | Prompt ported 2026-06-11; deterministic, embedding, and LLM dedupe stages covered |
