@@ -24,27 +24,24 @@ from strict package sources:
   and restores from nuget.org alone; core resolves `LadybugDb`/`Kuzu` via `GraphDriverFactory` (set by
   `AddLadybugDbGraphDriver`) and throws a clear error if the package is absent. README/samples updated.
   The verifier now creates fresh package consumers: core uses only the packed core output + nuget.org;
-  Ladybug uses both packed Graphiti outputs + the local Ladybug feed + nuget.org and runs setup
+  Ladybug uses both packed Graphiti outputs + the fork GitHub Packages feed + nuget.org and runs setup
   through `Graphiti` with the packed driver. Both consumers are restored, built, run through
   `BuildIndicesAndConstraintsAsync()`, `AddTripletAsync`, and `SearchAsync`, then checked for the
   expected provider plus inserted hit UUID.
 - The public-API snapshot now guards BOTH assemblies (`Graphiti.Core` + `Graphiti.Core.Drivers.Ladybug`).
 
-**Remaining (release infra; partly gated on external work):**
-- **E.2 — publish the LadybugDB package family.** The `Graphiti.Core.Drivers.Ladybug` package still consumes
-  the local `0.17.0-alpha.2-graphiti.1` feed (`NuGet.config`). A real off-machine release needs that family
-  published to / replaced on a real feed — work in the separate `W:\code\ladybug` repo (see
-  `kuzu-driver-port.md`). WS-1 audit on 2026-06-14 found that the nearby
-  `W:\code\ladybug\tools\csharp_api` checkout has clean `0.17.1` artifacts with the Graphiti
-  parameter-binding repair and Linux/macOS native loader work, but Graphiti has not yet changed the pin;
-  get explicit user confirmation before replacing the `0.17.0-alpha.2-graphiti.1` pin. Recheck on
-  2026-06-17 confirmed the actual local NuGet artifact/nuspec version is `0.17.1` even though the
-  binding-side `version.txt`/README text says `0.17.1.0`. `Graphiti.Core` + samples are already
-  off-machine-restorable.
+**Remaining (release infra):**
+- **E.2 — consume the fork-published LadybugDB package family.** The `Graphiti.Core.Drivers.Ladybug`
+  package now restores `LadybugDB` / `LadybugDB.Native` from the
+  `sergey-v9/ladybug-dotnet` GitHub Packages feed in `NuGet.config`, pinned to
+  `0.17.1-dev.1.1.g6f3dbed`. Restores that include the Ladybug driver require credentials for source
+  `github_ladybug` with `read:packages`. Future binding fixes should land in the separate
+  `W:\code\ladybug` repo, push the fork's `dev` branch, let the GitHub Packages workflow publish a new
+  dev version, and then bump Graphiti to that published version.
 - **Versioning** (confirm 2.0.0 line / alpha→beta cadence) and **CI**. NuGet metadata, README packing,
   XML docs, symbol package generation, and package-consumption smoke checks are now present and guarded
-  for both shippable packages. CI for the full suite is itself gated on E.2 (the native Ladybug tests
-  need the package); a `Graphiti.Core`-only GitHub Actions lane now runs
+  for both shippable packages. CI for the full suite needs GitHub Packages credentials for the native
+  Ladybug tests; a `Graphiti.Core`-only GitHub Actions lane now runs
   `eng\Verify-GraphitiCoreOnly.ps1` (strict nuget.org-only restore, core format/build/pack, and
   non-Ladybug tests with the OpenAI provider tests filtered out). Remember the parallel-`dotnet test`
   deadlock.
@@ -163,7 +160,7 @@ covering the new default/explicit-driver behavior.
 ## Step E — Split LadybugDB into its own package (the publish blocker)
 
 **Goal:** `Graphiti.Core` restores from nuget.org alone; LadybugDB becomes opt-in so InMemory/Neo4j-only
-consumers aren't forced onto the local Ladybug feed.
+consumers are not forced onto Ladybug package credentials.
 
 This is the largest item and gates a real NuGet release. Sub-steps:
 1. **Extract** `Drivers/Ladybug/` into a new project `src/Graphiti.Core.Drivers.Ladybug/` that references
@@ -173,16 +170,18 @@ This is the largest item and gates a real NuGet release. Sub-steps:
    so core options validation doesn't hard-depend on the Ladybug assembly (factory/DI registration lives in
    the Ladybug package; core fails cleanly with a clear message if `LadybugDb` is selected without the
    package). Move the Ladybug tests to a matching test project (or keep in the suite with a project ref).
-2. **Publish/replace the LadybugDB package family.** The build currently pins the local repaired
-   `0.17.0-alpha.2-graphiti.1` via `NuGet.config`. Before a real release this must be either published to a
-   real feed or upstreamed; until then the new Ladybug package keeps the local-feed caveat (document it).
-   Coordinate with `W:\code\ladybug\tools\csharp_api` (the repaired binding) — see `kuzu-driver-port.md`.
+2. **Consume the fork-published LadybugDB package family.** The build now pins the fork-published
+   `0.17.1-dev.1.1.g6f3dbed` package family via the `sergey-v9/ladybug-dotnet` GitHub Packages feed in
+   `NuGet.config`. Restores that include the Ladybug driver require source `github_ladybug`
+   credentials with `read:packages`. Coordinate future package fixes through the separate
+   `W:\code\ladybug` repo, push the fork's `dev` branch, then bump Graphiti to the new published dev
+   version — see `kuzu-driver-port.md`.
 3. Update `Graphiti.Core.CSharp.slnx`, `Directory.Packages.props`, samples (Sample.OpenAI/Eval reference the
    Ladybug package), README install section, and the verify script. Confirm `Graphiti.Core` alone restores
-   with only nuget.org configured (test by temporarily disabling the local feed).
+   with only nuget.org configured.
 
-**Verify:** `Graphiti.Core` restores/builds/runs without the local Ladybug feed;
-`Graphiti.Core.Drivers.Ladybug` restores/builds/runs with the local Ladybug feed and its tests pass;
+**Verify:** `Graphiti.Core` restores/builds/runs without Ladybug package credentials;
+`Graphiti.Core.Drivers.Ladybug` restores/builds/runs with the GitHub Packages feed and its tests pass;
 full Verify green; both packages `pack`. This is a milestone (`evolution.md`:
 "Provider surface freeze" / "Stable public API release").
 

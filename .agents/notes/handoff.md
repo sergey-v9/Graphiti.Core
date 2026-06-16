@@ -94,9 +94,9 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
 - **Phases 1–3 are DONE.** The performance/allocation moratorium is LIFTED; further performance work
   is evidence-driven (benchmark-first) only (`roadmap.md`).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
-  1–3 are complete; the remaining active work is plan-05 release infrastructure — E.2 (publish the
-  local LadybugDB package family from `W:\code\ladybug`), versioning, and the full Ladybug-inclusive
-  CI lane gated on E.2. The core-only CI lane is wired through `.github/workflows/core-only.yml` and
+  1–3 are complete; the remaining active work is plan-05 release infrastructure — E.2 now consumes the
+  fork-published LadybugDB dev package family, while versioning and the full Ladybug-inclusive CI lane
+  still need follow-through. The core-only CI lane is wired through `.github/workflows/core-only.yml` and
   `eng\Verify-GraphitiCoreOnly.ps1`. Performance work is benchmark-first and no longer on moratorium
   (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
@@ -118,22 +118,34 @@ boundary. Active Ladybug full-text search builds Python Kuzu-style raw whitespac
 `Drivers/Ladybug/LadybugFulltextQuery`, and active Ladybug node-label search filters are built by
 `Drivers/Ladybug/LadybugSearchFilter`; the generic `SearchUtilities` and `CompiledSearchFilter` no
 longer carry separate `GraphProvider.Kuzu` compatibility branches.
-Graphiti now consumes a local repaired LadybugDB package family
-`0.17.0-alpha.2-graphiti.1` from `W:\code\ladybug\tools\csharp_api\artifacts` via
+Graphiti now consumes the fork-published LadybugDB package family
+`0.17.1-dev.1.1.g6f3dbed` from the `sergey-v9/ladybug-dotnet` GitHub Packages feed via
 `NuGet.config`; that binding supports Graphiti's list/array/empty-list/null parameters directly, so
-the former `LadybugStatementNormalizer` workaround has been removed.
+the former `LadybugStatementNormalizer` workaround has been removed. Restores that include the
+Ladybug driver require a NuGet credential for source `github_ladybug` with `read:packages`.
 
 For provider status, package facts, package bug recovery, runtime proof, and remaining work, read
 `kuzu-driver-port.md`. If implementation uncovers a likely LadybugDB package/binding issue, mark it
-separately from Graphiti port gaps. The current user-approved recovery path is local-only: patch and
-commit the fix in `W:\code\ladybug`, do not push remotely, draft a nearby markdown request for
-`ladybug-dotnet`, build a local NuGet package, and wire Graphiti to that local package for validation
-when needed.
+separately from Graphiti port gaps. The current user-approved recovery path is to patch and commit
+the fix in `W:\code\ladybug`, push the fork's `dev` branch when a fresh package is needed, let the
+`sergey-v9/ladybug-dotnet` workflow publish a new GitHub Packages dev version, and bump Graphiti to
+that published version.
 
 ## Verification
 
 Rerun verification before claiming the tree is green; historical test counts drift as coverage is
 added.
+
+Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
+Packages feed for LadybugDB packages (`0.17.1-dev.1.1.g6f3dbed`) and `NuGet.config` includes package
+source mapping for central package management. `.\eng\Verify-GraphitiCoreOnly.ps1` is green after this
+switch (`925` passed, `0` skipped; core pack succeeded), and a normal
+`dotnet restore src\Graphiti.Core\Graphiti.Core.csproj --locked-mode` through the repo config also
+restores from nuget.org without Ladybug credentials. Full `dotnet restore Graphiti.Core.CSharp.slnx`
+was attempted with the active `gh auth token` supplied as `NuGetPackageSourceCredentials_github_ladybug`
+and is blocked by GitHub Packages `403 Forbidden` for `LadybugDB` / `LadybugDB.Native`; `gh auth
+status` shows the token lacks `read:packages`. Provide a PAT/token with `read:packages` for source
+`github_ladybug` before rerunning `.\eng\Verify-GraphitiCore.ps1`.
 
 Latest checkpoint, 2026-06-17:
 
@@ -155,8 +167,8 @@ both shippable packages
 restore/build/setup/run checks for both packages. The verifier now packs both projects, then creates isolated
 `net10.0` consumers with strict `NuGet.config` files (`<clear />`), temp `NUGET_PACKAGES`, and
 `--no-cache`: the core consumer restores from the packed core output + nuget.org only, while the
-Ladybug consumer restores from both packed Graphiti outputs + the local Ladybug feed + nuget.org and
-embeds the packed LadybugDB driver in `Graphiti`. Both consumers call
+Ladybug consumer restores from both packed Graphiti outputs + the fork GitHub Packages feed +
+nuget.org and embeds the packed LadybugDB driver in `Graphiti`. Both consumers call
 `BuildIndicesAndConstraintsAsync()`, add a triplet through the public API, search the inserted fact
 back, then assert the provider and hit UUID (`InMemory:smoke-edge`, `LadybugDb:smoke-edge`). Both csprojs set
 `IncludeSymbols=true`/`SymbolPackageFormat=snupkg`, and `PackageReadinessTests` guards shared NuGet
@@ -298,7 +310,7 @@ intended API change); a consumer `README.md`/`docs/search.md`; surface hardening
 `GRPH0001` and `GRPH0002` are locally suppressed only at deliberate compatibility-alias sites); the
 InMemory-default constructor + `AddEpisodeOptions`; the
 LadybugDB package split; and the retired shared Kuzu branches in generic search helpers. Remaining:
-E.2 (publish the local LadybugDB package family — `W:\code\ladybug`), versioning, full CI. The
+E.2 follow-through on the fork GitHub Packages feed, versioning, full CI. The
 `Graphiti.Core`-only GitHub Actions lane is wired via `.github/workflows/core-only.yml`, which runs
 `eng\Verify-GraphitiCoreOnly.ps1`: it creates a strict nuget.org-only temp feed,
 restores/builds/tests the core-only test slice with `GraphitiCoreOnlyTests=true`, filters out the
@@ -314,8 +326,8 @@ WS-1 pre-bump audit checkpoint, 2026-06-14: direct local verification was green 
 3 skipped, 971 total, and `dotnet format --verify-no-changes --no-restore`). Read-only subagent audits
 confirmed the nearby `W:\code\ladybug\tools\csharp_api` `0.17.1` artifacts include the Graphiti
 list/array/empty-list/null parameter-binding repair, FTS/vector regression coverage, and Unix
-`RTLD_GLOBAL` native-loader work. Graphiti still pins `0.17.0-alpha.2-graphiti.1`; get explicit user
-confirmation before bumping to `0.17.1`. Do not adopt `LadybugDB.Extensions` without a concrete
+`RTLD_GLOBAL` native-loader work. On 2026-06-17 Graphiti moved to the fork-published
+`0.17.1-dev.1.1.g6f3dbed` package family. Do not adopt `LadybugDB.Extensions` without a concrete
 Graphiti Core need. Follow-up hardening made the known search concurrency proof deterministic and made
 Ladybug file-backed setup idempotent across reopen by ignoring duplicate errors for the four exact
 Graphiti FTS indexes; runtime coverage now proves build-write-close-reopen-build-search.

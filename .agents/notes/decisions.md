@@ -94,7 +94,7 @@ no wire/prompt/cache/temporal behavior changed):
   comments. Keep docs complete when adding public members to either package.
 - **LadybugDB is a separate package.** `Graphiti.Core` carries only the driver contract (`IGraphDriver`,
   `GraphProvider`, `GraphDriverBase`, `InMemoryGraphDriver`, `Neo4jGraphDriver`) and depends only on
-  nuget.org packages — it restores off-machine without the local Ladybug feed. The LadybugDB driver,
+  nuget.org packages — it restores off-machine without Ladybug package credentials. The LadybugDB driver,
   `LadybugDbOptions`, `AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory` live in
   `src/Graphiti.Core.Drivers.Ladybug/` (which owns the `LadybugDB`/`LadybugDB.Native` package refs).
   Core resolves `GraphProvider.LadybugDb`/`Kuzu` via `GraphitiOptions.GraphDriverFactory` (set by
@@ -104,9 +104,10 @@ no wire/prompt/cache/temporal behavior changed):
   assemblies in the normal suite; the `GraphitiCoreOnlyTests=true` test-project mode compiles out the
   Ladybug-only tests and the Ladybug snapshot half so `eng\Verify-GraphitiCoreOnly.ps1` can prove
   `Graphiti.Core` restore/build/test/pack from nuget.org only. `.github/workflows/core-only.yml` runs
-  that verifier as the core-only CI lane. A real off-machine release still requires the local
-  `0.17.0-alpha.2-graphiti.1` LadybugDB package family to be published/replaced (plan 05 Step E.2;
-  `kuzu-driver-port.md`).
+  that verifier as the core-only CI lane. The LadybugDB package refs restore from the
+  `sergey-v9/ladybug-dotnet` GitHub Packages feed, currently pinned to
+  `0.17.1-dev.1.1.g6f3dbed`; full Ladybug restores require source `github_ladybug` credentials with
+  `read:packages` (plan 05 Step E.2; `kuzu-driver-port.md`).
 
 ## Library Boundaries
 

@@ -208,7 +208,7 @@ function Invoke-PackageConsumerSmokes {
     $version = Get-ProjectProperty -ProjectPath "src\Graphiti.Core\Graphiti.Core.csproj" -PropertyName "Version"
     $corePackageSource = (Resolve-Path "src\Graphiti.Core\bin\Release").Path
     $ladybugPackageSource = (Resolve-Path "src\Graphiti.Core.Drivers.Ladybug\bin\Release").Path
-    $ladybugLocalSource = (Resolve-Path "..\..\ladybug\tools\csharp_api\artifacts").Path
+    $ladybugGitHubSource = "https://nuget.pkg.github.com/sergey-v9/index.json"
     $nugetSource = "https://api.nuget.org/v3/index.json"
 
     Invoke-PackageConsumerSmoke `
@@ -248,7 +248,7 @@ Console.WriteLine($"{graphiti.Driver.Provider}:{hits.Single().Uuid}");
         -PackageSources @{
             "graphiti-core-pack" = $corePackageSource
             "graphiti-ladybug-pack" = $ladybugPackageSource
-            "ladybug-local" = $ladybugLocalSource
+            "github_ladybug" = $ladybugGitHubSource
             "nuget.org" = $nugetSource
         } `
         -ProgramSource @'

@@ -8,10 +8,11 @@ compatibility vocabulary.
 resolves through core DI/options when `AddLadybugDbGraphDriver` is registered. The LadybugDB driver
 was extracted into a separate opt-in package `src/Graphiti.Core.Drivers.Ladybug/`. `Graphiti.Core`
 no longer references the LadybugDB packages; the new project owns them, `AddLadybugDbGraphDriver`,
-driver-owned full-text query construction, and Ladybug label-filter syntax. The one remaining release
-blocker is publishing/replacing the local `0.17.0-alpha.2-graphiti.1` package family (Step E.2):
-patch+pack in `W:\code\ladybug\tools\csharp_api`, publish to a real feed (or keep the local feed for
-dev), then point `Graphiti.Core.Drivers.Ladybug` at it.
+driver-owned full-text query construction, and Ladybug label-filter syntax. Step E.2 now consumes the
+`sergey-v9/ladybug-dotnet` fork's GitHub Packages feed rather than the sibling local artifact feed:
+Graphiti pins `LadybugDB` / `LadybugDB.Native` to `0.17.1-dev.1.1.g6f3dbed` from
+`https://nuget.pkg.github.com/sergey-v9/index.json`. Restores that include the Ladybug driver require
+a NuGet credential for source `github_ladybug` with `read:packages`.
 
 ## Native search adoption (deep-dive 2026-06-14)
 
@@ -41,8 +42,9 @@ Bindings feedback left for the binding agent at
 a full `fts` (and ideally `vector`) `CREATE/QUERY` round-trip on linux-x64, since Graphiti is only
 validated on win-x64 today; (2) optional WS-C first-class `FLOAT[N]` array binding would let us drop
 the inline `CAST($search_vector AS FLOAT[dim])`. The local binding has since advanced to `0.17.1` with
-a `LadybugDB.Extensions` package and the P0–P3 `feature/parity-extensions-2026-06` initiative; Graphiti
-still pins `0.17.0-alpha.2-graphiti.1` (C API unchanged 0.17.0→0.17.2).
+a `LadybugDB.Extensions` package and the P0–P3 `feature/parity-extensions-2026-06` initiative;
+Graphiti now pins the fork-published `0.17.1-dev.1.1.g6f3dbed` package family (C API unchanged
+0.17.0→0.17.2).
 
 ## WS-1 binding and cross-platform audit (2026-06-14)
 
@@ -61,27 +63,30 @@ Graphiti cross-platform audit result: Graphiti itself does not hard-code a `win-
 identifier; the Ladybug driver references the cross-platform meta packages. Follow-up on 2026-06-14
 added package-consumption smoke checks to `Verify-GraphitiCore.ps1`: fresh temp consumers
 restore/build/setup/run `Graphiti.Core` from the packed core output + nuget.org only, and
-`Graphiti.Core.Drivers.Ladybug` from both packed Graphiti outputs + the local Ladybug feed + nuget.org,
-with strict `NuGet.config`, temp `NUGET_PACKAGES`, `--no-cache`, setup through `Graphiti` with a
-packed LadybugDB driver, and asserted provider output. The remaining Linux risk is runtime validation on a Linux runner, not an
+`Graphiti.Core.Drivers.Ladybug` from both packed Graphiti outputs + the Ladybug GitHub Packages feed
+and nuget.org, with strict `NuGet.config`, temp `NUGET_PACKAGES`, `--no-cache`, setup through
+`Graphiti` with a packed LadybugDB driver, and asserted provider output. The remaining Linux risk is runtime validation on a Linux runner, not an
 obvious source-level Windows dependency or a missing Windows package-consumer proof. Follow-up on
 2026-06-14 made persisted Ladybug setup idempotent across reopen: duplicate errors for the four exact
 Graphiti FTS indexes are ignored because LadybugDB's `CREATE_FTS_INDEX` has no `IF NOT EXISTS`/skip flag,
 and `LadybugRuntimeDriverTests.FileBackedDriverCanRebuildIndicesAfterReopenAndSearch` proves
 build-write-close-reopen-build-search on a file-backed database.
 
-Decision point before implementation: do not silently bump Graphiti from
-`0.17.0-alpha.2-graphiti.1` to `0.17.1`. The evidence supports the bump, but user confirmation is
-required because it changes the local package family used by the C# port. `LadybugDB.Extensions` should
-not be adopted by default in Graphiti Core: the current Graphiti package already owns its DI helper,
-options, factory, and driver boundary, and adopting the Extensions package would add host-level
-abstractions without a demonstrated Graphiti Core requirement.
+Decision point resolved 2026-06-17: the user directed Graphiti to consume packages published by the
+`sergey-v9/ladybug-dotnet` fork's GitHub Packages workflow. Graphiti now pins the normalized fork dev
+package family `0.17.1-dev.1.1.g6f3dbed` instead of the local
+`0.17.0-alpha.2-graphiti.1` artifact family. `LadybugDB.Extensions` should not be adopted by default
+in Graphiti Core: the current Graphiti package already owns its DI helper, options, factory, and
+driver boundary, and adopting the Extensions package would add host-level abstractions without a
+demonstrated Graphiti Core requirement.
 
 2026-06-17 recheck: the nested binding repo is still clean on
 `feature/parity-extensions-2026-06` at `0e709a0`. The actual local NuGet artifacts and their nuspecs
 are versioned `0.17.1` (`LadybugDB`, `LadybugDB.Native`, all RID native packages, `LadybugDB.Arrow`,
 and `LadybugDB.Extensions`), even though binding-side `version.txt`/README text says package family
-`0.17.1.0`. If/when Graphiti is approved to bump, use the artifact/NuGet version `0.17.1`.
+`0.17.1.0`. The fork's `github-packages-dev.yml` run
+`https://github.com/sergey-v9/ladybug-dotnet/actions/runs/27654947039` published normalized dev
+version `0.17.1-dev.1.1.g6f3dbed`; Graphiti consumes that published version.
 
 ## Current Status
 
@@ -118,10 +123,10 @@ and `LadybugDB.Extensions`), even though binding-side `version.txt`/README text 
 - The LadybugDB package has a nearby source checkout at `W:\code\ladybug`; this is background
   provenance for the NuGet/API surface. Graphiti work operates against package-facing behavior and
   Graphiti tests. When package or binding behavior looks suspect, mark the symptom separately from
-  Graphiti port gaps. The user has authorized local repair work in that checkout when it unblocks the
-  C# driver: patch and commit LadybugDB changes only in `W:\code\ladybug`, do not push remotely,
-  draft a nearby markdown request for `ladybug-dotnet`, build a local NuGet package, and connect
-  Graphiti to that local package for validation.
+  Graphiti port gaps. The user has authorized repair work in that checkout when it unblocks the C#
+  driver: patch and commit LadybugDB changes there, push the fork's `dev` branch when a fresh package
+  is needed, let the fork workflow publish a new GitHub Packages dev version, then bump Graphiti to
+  that published version.
 - As of 2026-06-11, the nearby Ladybug checkout may show a locally advanced `extension` submodule and
   an untracked `tools/csharp_api/` checkout with reference material. Treat that as preserved
   recovery/provenance state; do not clean or overwrite it while working on Graphiti.
@@ -141,10 +146,10 @@ and `LadybugDB.Extensions`), even though binding-side `version.txt`/README text 
 ## Confirmed Package/API Facts
 
 - Package id: `LadybugDB`; version comes from central package management. Graphiti currently uses
-  the local repaired package family `0.17.0-alpha.2-graphiti.1` from
-  `../../ladybug/tools/csharp_api/artifacts` via `NuGet.config`. A read-only 2026-06-14 audit found
-  local `0.17.1` artifacts with the same Graphiti binding repair plus Unix native-loader work; do not
-  change the Graphiti pin until that bump is explicitly approved.
+  the fork-published dev package family `0.17.1-dev.1.1.g6f3dbed` from the
+  `sergey-v9/ladybug-dotnet` GitHub Packages feed via `NuGet.config`. Restores that include the
+  Ladybug driver require credentials for source `github_ladybug` with `read:packages`. `Graphiti.Core`
+  itself remains Ladybug-free and restores from nuget.org alone.
 - Native assets are packaged separately, for example `LadybugDB.Native` and RID-specific native
   packages.
 - Exposed API includes `Database`, `Connection`, `Query`, `Prepare`, `Execute`,
@@ -163,12 +168,13 @@ and `LadybugDB.Extensions`), even though binding-side `version.txt`/README text 
 
 - A LadybugDB .NET binding gap blocked Graphiti's Kuzu-style statements: package
   `PreparedStatement.Bind(object?)` rejected `List<string>`, arrays, empty lists, and null values.
-  The local `W:\code\ladybug\tools\csharp_api` checkout now has a C# binding repair that wraps
-  native `lbug_value` creation and `lbug_prepared_statement_bind_value`. Graphiti consumes the local
-  `0.17.0-alpha.2-graphiti.1` package family and executes statements with bound parameters directly.
-- `LadybugStatementNormalizer` was removed from Graphiti after the local package repair. If the
-  local package source is missing, restore will fail instead of silently falling back to literal
-  rewriting.
+  The `sergey-v9/ladybug-dotnet` fork's published `0.17.1-dev.1.1.g6f3dbed` package family includes
+  the C# binding repair that wraps native `lbug_value` creation and
+  `lbug_prepared_statement_bind_value`. Graphiti consumes that package family and executes statements
+  with bound parameters directly.
+- `LadybugStatementNormalizer` was removed from Graphiti after the package repair. If the GitHub
+  Packages feed cannot be authenticated, restore will fail instead of silently falling back to
+  literal rewriting.
 - The current Python Kuzu code has provider-specific inconsistencies around Saga schema/query fields,
   entity-edge `reference_time`, and source-only `EntityEdge.get_by_node_uuid` reads. The C#
   foundation intentionally uses the full `SagaNode` shape, saves/returns entity-edge

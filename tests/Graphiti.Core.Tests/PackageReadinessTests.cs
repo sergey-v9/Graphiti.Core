@@ -68,17 +68,19 @@ public class PackageReadinessTests
     {
         var csharpRoot = FindCSharpRoot();
         var props = XDocument.Load(Path.Combine(csharpRoot, "Directory.Packages.props"));
+        var packageVersionsById = props.Root!
+            .Elements("ItemGroup")
+            .Elements("PackageVersion")
+            .ToDictionary(
+                element => element.Attribute("Include")?.Value ?? "",
+                element => element.Attribute("Version")?.Value ?? "",
+                StringComparer.Ordinal);
         var testProject = XDocument.Load(Path.Combine(
             csharpRoot,
             "tests",
             "Graphiti.Core.Tests",
             "Graphiti.Core.Tests.csproj"));
-        var packageVersions = props.Root!
-            .Elements("ItemGroup")
-            .Elements("PackageVersion")
-            .Select(element => element.Attribute("Include")?.Value)
-            .OfType<string>()
-            .ToHashSet(StringComparer.Ordinal);
+        var packageVersions = packageVersionsById.Keys.ToHashSet(StringComparer.Ordinal);
         var testPackageReferences = testProject.Root!
             .Elements("ItemGroup")
             .Elements("PackageReference")
@@ -93,6 +95,8 @@ public class PackageReadinessTests
         Assert.Contains("xunit.v3", packageVersions);
         Assert.DoesNotContain("xunit", testPackageReferences);
         Assert.Contains("xunit.v3", testPackageReferences);
+        Assert.Equal("0.17.1-dev.1.1.g6f3dbed", packageVersionsById["LadybugDB"]);
+        Assert.Equal("0.17.1-dev.1.1.g6f3dbed", packageVersionsById["LadybugDB.Native"]);
     }
 
     [Fact]
@@ -105,6 +109,35 @@ public class PackageReadinessTests
         Assert.Contains("obj/", gitIgnore);
         Assert.Contains("*.nupkg", gitIgnore);
         Assert.Contains("*.snupkg", gitIgnore);
+    }
+
+    [Fact]
+    public void NuGetConfig_MapsLadybugPackagesToGitHubPackages()
+    {
+        var csharpRoot = FindCSharpRoot();
+        var nugetConfig = XDocument.Load(Path.Combine(csharpRoot, "NuGet.config"));
+        var sourceValues = nugetConfig.Root!
+            .Element("packageSources")!
+            .Elements("add")
+            .ToDictionary(
+                element => element.Attribute("key")!.Value,
+                element => element.Attribute("value")!.Value,
+                StringComparer.Ordinal);
+        var mappedPackages = nugetConfig.Root!
+            .Element("packageSourceMapping")!
+            .Elements("packageSource")
+            .ToDictionary(
+                element => element.Attribute("key")!.Value,
+                element => element.Elements("package")
+                    .Select(package => package.Attribute("pattern")!.Value)
+                    .ToHashSet(StringComparer.Ordinal),
+                StringComparer.Ordinal);
+
+        Assert.Equal("https://nuget.pkg.github.com/sergey-v9/index.json", sourceValues["github_ladybug"]);
+        Assert.Equal("https://api.nuget.org/v3/index.json", sourceValues["nuget.org"]);
+        Assert.Contains("LadybugDB", mappedPackages["github_ladybug"]);
+        Assert.Contains("LadybugDB.*", mappedPackages["github_ladybug"]);
+        Assert.Contains("*", mappedPackages["nuget.org"]);
     }
 
     [Fact]
@@ -144,7 +177,9 @@ public class PackageReadinessTests
         Assert.Contains("<clear />", verifyScript);
         Assert.Contains("graphiti-core-pack", verifyScript);
         Assert.Contains("graphiti-ladybug-pack", verifyScript);
-        Assert.Contains("ladybug-local", verifyScript);
+        Assert.Contains("github_ladybug", verifyScript);
+        Assert.Contains("https://nuget.pkg.github.com/sergey-v9/index.json", verifyScript);
+        Assert.DoesNotContain("ladybug-local", verifyScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("NUGET_PACKAGES", verifyScript);
     }
 

@@ -109,16 +109,18 @@ now LadybugDB-free and restores from nuget.org alone, with the LadybugDB driver 
 `Graphiti.Core.Drivers.Ladybug` package. The public-API snapshot and package-readiness tests guard
 both assemblies.
 
-Remaining (release infra, partly gated on external work): **E.2** — publish/replace the local LadybugDB
-package family (`W:\code\ladybug` repo work) so `Graphiti.Core.Drivers.Ladybug` restores off-machine;
-**versioning** (2.0.0 line / alpha→beta cadence); and **CI** (a `Graphiti.Core`-only GitHub Actions
-lane now runs `eng\Verify-GraphitiCoreOnly.ps1`; the full Ladybug suite is gated on E.2). NuGet
+Remaining (release infra): **E.2 follow-through** — Graphiti now points at the
+`sergey-v9/ladybug-dotnet` GitHub Packages feed and pins the fork-published
+`0.17.1-dev.1.1.g6f3dbed` LadybugDB package family; full local verification requires a NuGet
+credential for source `github_ladybug` with `read:packages`. **Versioning** (2.0.0 line /
+alpha→beta cadence); and **CI** (a `Graphiti.Core`-only GitHub Actions lane now runs
+`eng\Verify-GraphitiCoreOnly.ps1`; the full Ladybug suite needs GitHub Packages credentials). NuGet
 metadata, README packing, XML docs, symbol package generation, and package-consumption smoke checks
 are present for both packages. The "Stable public API
-release" candidate milestone in `evolution.md` is the target. A WS-1 audit on 2026-06-14 found local LadybugDB `0.17.1` artifacts with the needed
-binding and Unix-loader repairs, but Graphiti remains pinned to `0.17.0-alpha.2-graphiti.1` until the
-package-family change is explicitly approved. The public-API snapshot stays a drift guard (not a
-freeze); surface changes regenerate the baseline.
+release" candidate milestone in `evolution.md` is the target. A WS-1 audit on 2026-06-14 found local
+LadybugDB `0.17.1` artifacts with the needed binding and Unix-loader repairs; the 2026-06-17 bump now
+uses the fork workflow's published dev package version rather than those local artifacts. The
+public-API snapshot stays a drift guard (not a freeze); surface changes regenerate the baseline.
 
 NOTE for future parallel batches: do NOT run multiple worktree agents' `dotnet test` concurrently —
 the LadybugDB native package serializes poorly across worktrees and deadlocks. Stagger the test step

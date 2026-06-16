@@ -131,9 +131,9 @@ Provider/package facts:
   `LadybugDB`/`LadybugDB.Native` package references, `LadybugDbOptions`,
   `AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory`.
 - `Verify-GraphitiCore.ps1` packs both shippable packages and runs fresh package-consumer smoke
-  builds. A real off-machine Ladybug package release still requires the local LadybugDB package
-  family to be published or replaced; do not bump the pinned LadybugDB version without explicit user
-  approval.
+  builds. LadybugDB package refs restore from the `sergey-v9/ladybug-dotnet` GitHub Packages feed
+  through source `github_ladybug`; full Ladybug restore/test runs require credentials with
+  `read:packages`. Do not bump the pinned LadybugDB version without explicit user approval.
 - Durable provider policy lives in `.agents/notes/decisions.md`; detailed LadybugDB state lives in
   `.agents/notes/kuzu-driver-port.md`.
 
