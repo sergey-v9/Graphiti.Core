@@ -140,8 +140,8 @@ Latest checkpoint, 2026-06-16:
 `.\eng\Verify-GraphitiCoreOnly.ps1` is green after wiring the core-only GitHub Actions lane
 (`.github/workflows/core-only.yml`): strict nuget.org-only restore with a temp package cache, core
 format/build/pack, and the core-only test slice with `GraphitiCoreOnlyTests=true` (`905` passed,
-`0` skipped). `.\eng\Verify-GraphitiCore.ps1` is also green after the normal Ladybug-inclusive path
-and public driver-override proofs:
+`0` skipped). `.\eng\Verify-GraphitiCore.ps1` is also green after the normal Ladybug-inclusive path,
+public driver-override proofs, and saga empty-summary parity proof:
 restore, format, warning-clean build including `Graphiti.Sample.OpenAI`, full test suite (`994`
 passed, `3` skipped, `997` total), `dotnet pack` for
 both shippable packages
@@ -178,6 +178,10 @@ override driver rather than the instance root driver.
 Python `retrieve_episodes` / `build_communities` `driver` override forwarding: retrieval reads from
 the supplied driver, and community rebuild removes stale communities plus saves replacements on that
 driver while leaving the instance root driver's communities untouched.
+`SummarizeSaga_PreservesEmptyTypedLlmSummaryLikePython` pins Python `summarize_saga` summary
+assignment: an explicit empty typed LLM `summary` is persisted as `""` rather than replaced by
+deterministic episode-content fallback, while the wall-clock and episode-time watermarks still
+advance.
 `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 

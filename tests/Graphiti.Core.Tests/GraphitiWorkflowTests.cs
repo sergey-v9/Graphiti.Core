@@ -4443,10 +4443,11 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task SummarizeSaga_UsesDeterministicFallbackWhenTypedLlmReturnsNoSummary()
+    public async Task SummarizeSaga_PreservesEmptyTypedLlmSummaryLikePython()
     {
         var driver = new InMemoryGraphDriver();
-        var graphiti = new Graphiti(graphDriver: driver);
+        var llm = new StaticLlmClient(new JsonObject { ["summary"] = string.Empty });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
         var timestamp = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var saga = new SagaNode
         {
@@ -4486,9 +4487,8 @@ public class GraphitiWorkflowTests
 
         var summarized = await graphiti.SummarizeSagaAsync(saga.Uuid);
 
-        Assert.Equal(
-            "Launch moved to March 15.\nMarketing owns the launch checklist.",
-            summarized.Summary);
+        Assert.Equal(string.Empty, summarized.Summary);
+        Assert.NotNull(summarized.LastSummarizedAt);
         Assert.Equal(secondEpisode.ValidAt, summarized.LastSummarizedEpisodeValidAt);
     }
 

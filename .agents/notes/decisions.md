@@ -207,10 +207,9 @@ no wire/prompt/cache/temporal behavior changed):
   consistently.
 - Real tiktoken-based chunking is the default, but callers can register `HeuristicTokenCounter(4)`
   when they need Python's exact token estimate.
-- Saga summaries hard-truncate like Python. Community/entity summary paths keep sentence-aware
-  truncation where Python does.
-- Saga summarization treats a missing or blank typed LLM summary the same as an unavailable typed
-  LLM response and falls back to deterministic episode-content concatenation.
+- Saga summaries hard-truncate like Python and persist the typed LLM `summary` field directly,
+  including empty or whitespace-only strings. No deterministic episode-content fallback is synthesized
+  for saga summaries. Community/entity summary paths keep sentence-aware truncation where Python does.
 - Incremental community updates choose the mode community among neighboring entities. Ties keep the
   first community encountered from the neighbor traversal, matching Python's first-max behavior
   rather than sorting by UUID.

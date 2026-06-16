@@ -33,10 +33,7 @@ internal sealed class SagaService(
                 promptName: "summarize_sagas.summarize_saga",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            saga.Summary = HardTruncateSummary(
-                string.IsNullOrWhiteSpace(response.Summary)
-                    ? BuildFallbackSummary(episodesData)
-                    : response.Summary);
+            saga.Summary = HardTruncateSummary(response.Summary);
 
             saga.LastSummarizedAt = UtcNow();
             if (maxValidAt is not null
@@ -211,9 +208,6 @@ internal sealed class SagaService(
                 ? summary[..TextUtilities.MaxSummaryChars]
                 : summary;
 
-    private static string BuildFallbackSummary(IReadOnlyList<SagaEpisodeContent> episodesData) =>
-        JoinEpisodeContents(episodesData, "\n");
-
     private static DateTime? MaxValidAt(IReadOnlyList<SagaEpisodeContent> episodes)
     {
         DateTime? maxValidAt = null;
@@ -229,43 +223,5 @@ internal sealed class SagaService(
         return maxValidAt;
     }
 
-    private static string JoinEpisodeContents(
-        IReadOnlyList<SagaEpisodeContent> episodes,
-        string separator,
-        string emptyValue = "")
-    {
-        if (episodes.Count == 0)
-        {
-            return emptyValue;
-        }
-
-        var length = separator.Length * (episodes.Count - 1);
-        for (var i = 0; i < episodes.Count; i++)
-        {
-            length += episodes[i].Content.Length;
-        }
-
-        return string.Create(length, (Episodes: episodes, Separator: separator), static (destination, state) =>
-        {
-            var offset = 0;
-            for (var i = 0; i < state.Episodes.Count; i++)
-            {
-                var content = state.Episodes[i].Content.AsSpan();
-                content.CopyTo(destination.Slice(offset));
-                offset += content.Length;
-
-                if (i == state.Episodes.Count - 1)
-                {
-                    continue;
-                }
-
-                var separator = state.Separator.AsSpan();
-                separator.CopyTo(destination.Slice(offset));
-                offset += separator.Length;
-            }
-        });
-    }
-
     private DateTime UtcNow() => timeProvider.GetUtcNow().UtcDateTime;
-
 }

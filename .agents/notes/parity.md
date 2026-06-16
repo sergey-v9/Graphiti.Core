@@ -168,6 +168,11 @@ forwarding. C# now proves episode retrieval reads from the override driver, and 
 removes stale communities plus saves replacement communities on the override driver while leaving the
 instance root driver's communities untouched.
 
+**2026-06-16 saga empty-summary follow-up:** closed a reachable `summarize_saga` drift. Python reads
+`llm_response.get('summary', '')`, hard-truncates only if needed, and persists the value directly; it
+does not synthesize a deterministic fallback when the typed LLM response contains `""`. C# now
+preserves an empty typed summary while still advancing the wall-clock and episode-time watermarks.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched
@@ -235,7 +240,7 @@ an internal default-false helper flag; C# pins the same public default.
 | `extract_nodes.extract_entity_summaries_from_episodes` | prompts/extract_nodes.py:613 | EntitySummaryService → Prompts/ExtractNodesPrompts | OK | Ported 2026-06-11; internal `skip_fact_appending`/episode-summary path supported; full-string tests pin optional entity-type-description section placement, including empty-string descriptions |
 | `summarize_nodes.summarize_pair` | prompts/summarize_nodes.py:54 | CommunityService → Prompts/SummarizeNodesPrompts | OK | Ported 2026-06-11; sends the two source summaries as JSON like Python, deterministic text remains only no-LLM fallback |
 | `summarize_nodes.summary_description` | prompts/summarize_nodes.py:119 | CommunityService → Prompts/SummarizeNodesPrompts | OK | Ported 2026-06-11; golden-text tests pin one-sentence description prompt |
-| `summarize_sagas.summarize_saga` | prompts/summarize_sagas.py | SagaService → Prompts/SummarizeSagasPrompts | OK | Ported to prompt builder 2026-06-11; golden-text tests pin content, including worked examples. 2026-06-14 follow-up aligns and full-string-pins existing-summary section truthiness for whitespace-only summaries |
+| `summarize_sagas.summarize_saga` | prompts/summarize_sagas.py | SagaService → Prompts/SummarizeSagasPrompts | OK | Ported to prompt builder 2026-06-11; golden-text tests pin content, including worked examples. 2026-06-14 follow-up aligns and full-string-pins existing-summary section truthiness for whitespace-only summaries. 2026-06-16 follow-up pins empty typed summaries as persisted empty strings, matching Python |
 
 Unused-in-pipeline Python prompts (verify before porting; as of the baseline these have no live
 call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
