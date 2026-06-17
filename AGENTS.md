@@ -24,6 +24,14 @@ When the open plan items are blocked on those decisions, choose work from `roadm
 that directly strengthens parity, packaging verification, upstream sync, or documented current state.
 Performance work is allowed only when it is benchmark-first and parity-safe.
 
+**No Python coupling in the code.** The product is *behavioral / wire* parity with Python (enforced by
+tests, tracked in `parity.md`) — but the C# `src/` and `tests/` must not be textually welded to Python.
+Never put "Python" or a `.py` file/line into an identifier, method name, **test name**, or comment;
+name and comment by what the C# code *does*, not its Python provenance ("ignores property filters",
+not "...LikePython"). Python mapping/provenance lives in `parity.md`, not in code; commit messages
+describe the change, not "like python". Full rule: `decisions.md` "Parity without Python coupling in
+the code." Don't add new offenders; the existing ones are a tracked rename/reword backlog.
+
 The notes can change outside your session. Re-read relevant notes before finalizing work that touches
 direction, architecture, providers, verification, or roadmap items; if current notes contradict your
 plan, reconcile them before editing or ask. The coordination convention lives in

@@ -24,6 +24,39 @@ semantics, wire compatibility, or performance/allocation discipline.
 - Preserve Python wire values for serialized enums and configuration names, such as `fact_triple`
   and `reciprocal_rank_fusion`.
 
+## Parity without Python coupling in the code (added 2026-06-17)
+
+The product goal is **behavioral / feature / wire parity** with Python `graphiti_core` — same results,
+same wire values, same cache/schema identity. That parity is enforced by **tests** and tracked in
+**`parity.md`**. The C# code must read as a first-class .NET library, **not** as a transliteration log
+of Python. Tight *textual* coupling to Python is not allowed in `src/` or `tests/`:
+
+- **No "Python" (or a Python symbol / `.py` file) in any identifier** — method, class, property, field,
+  or **test** name. Forbidden examples that exist today and must be renamed: `FormatPythonStringList`,
+  `AppendPythonStringLiteral`, `IsUpperLikePython`, `ValidateGroupId_MatchesPythonSafeIdentifierRules`,
+  `BuildExtractAttributes_RendersPythonParityPrompt`, `..._LikePython`. Name by **what the code does or
+  asserts** in C# terms: `FormatStringList`, `IsUpper`, `ValidateGroupId_RejectsInvalidCharacters`,
+  `BuildExtractAttributes_RendersExpectedPrompt`.
+- **No comment that justifies behavior by citing Python** — not "mirrors Python", "like Python",
+  "Python does X", "Python's …", nor a `graphiti_core/…py:NN` file/line citation. Comments explain the
+  **behavior and intent** (e.g. "`expired_at` stays null when no candidate contradicts the edge"),
+  never the provenance. Python file/line pointers rot and are noise.
+- **Commit messages** describe the change and its behavior, not "like python".
+
+Where Python provenance legitimately lives:
+- **`parity.md`** is the single home for "what is ported and how it maps to Python" — put any Python
+  file/line mapping in the parity row, not in code.
+- A golden/parity test class may carry **one** generic summary line ("golden tests pin the rendered
+  prompt; reconcile against `parity.md`") — but individual test names and inline comments stay
+  Python-free.
+- A deliberate difference from Python is a documented **DIVERGENT** decision in this file, referenced
+  generically; the code comment states the C# behavior, the rationale lives in the decision.
+
+Feature parity ≠ naming parity. Existing offenders (~5 `*Python*` production methods, ~30 `*Python*`
+test methods, ~70 `.py:line` comment citations, ~30 "Python"-citing comment phrases) are a cleanup
+backlog: **do not add new ones**, and scrub the existing ones (rename + reword to behavior-first) in a
+dedicated pass. This is rename/reword only — behavior and golden expected-strings stay identical.
+
 ## Prompt Parity Contract (added 2026-06-11)
 
 - Python prompt instruction text in `graphiti_core/prompts/` is product behavior, the same way
