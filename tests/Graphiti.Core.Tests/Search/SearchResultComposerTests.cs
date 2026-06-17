@@ -214,6 +214,31 @@ public class SearchResultComposerTests
     }
 
     [Fact]
+    public async Task CrossEncoderReranker_CollapsesDuplicatePassagesAndUsesLastCandidate()
+    {
+        var first = new ComposerCandidate("first", "same");
+        var unique = new ComposerCandidate("unique", "unique");
+        var last = new ComposerCandidate("last", "same");
+        var crossEncoder = new IndexedCrossEncoder(
+        [
+            new CrossEncoderRank(1, "unique", 0.8f),
+            new CrossEncoderRank(0, "same", 0.7f)
+        ]);
+
+        var reranked = await SearchResultComposer.ApplyCrossEncoderRerankerAsync(
+            crossEncoder,
+            "query",
+            new[] { (first, 0.1f), (unique, 0.2f), (last, 0.3f) },
+            candidate => candidate.Label,
+            minScore: 0.5f,
+            CancellationToken.None);
+
+        Assert.Equal(new[] { "same", "unique" }, crossEncoder.LastPassages);
+        Assert.Equal(new[] { "unique", "last" }, reranked.Select(item => item.Item.Key));
+        Assert.Equal(new[] { 0.8f, 0.7f }, reranked.Select(item => item.Score));
+    }
+
+    [Fact]
     public void ToRankedList_PreservesHitOrderAndScores()
     {
         var first = new ComposerCandidate("a", "first");

@@ -444,7 +444,7 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
-    public async Task NodeSearch_CrossEncoderPreservesSameNameCandidates()
+    public async Task NodeSearch_CrossEncoderCollapsesSameNameCandidatesLikePython()
     {
         var first = new EntityNode { Uuid = "node-first", Name = "Same", GroupId = "group" };
         var second = new EntityNode { Uuid = "node-second", Name = "Same", GroupId = "group" };
@@ -458,7 +458,7 @@ public class SearchEngineDriverBackedTests
         };
         var crossEncoder = new RecordingCrossEncoder
         {
-            IndexedScores = new List<float> { 0.1f, 0.9f }
+            IndexedScores = new List<float> { 0.9f }
         };
 
         var ranked = await SearchEngine.NodeSearchAsync(
@@ -475,8 +475,8 @@ public class SearchEngineDriverBackedTests
             new SearchFilters(),
             limit: 2);
 
-        Assert.Equal(new[] { "Same", "Same" }, crossEncoder.LastPassages);
-        Assert.Equal(new[] { "node-second", "node-first" }, ranked.Select(item => item.Item.Uuid));
+        Assert.Equal(new[] { "Same" }, crossEncoder.LastPassages);
+        Assert.Equal(new[] { "node-second" }, ranked.Select(item => item.Item.Uuid));
     }
 
     [Fact]
@@ -785,7 +785,7 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
-    public async Task EdgeSearch_CrossEncoderPreservesDuplicateFacts()
+    public async Task EdgeSearch_CrossEncoderCollapsesDuplicateFactsLikePython()
     {
         var first = new EntityEdge { Uuid = "edge-first", Fact = "same fact", GroupId = "group" };
         var second = new EntityEdge { Uuid = "edge-second", Fact = "same fact", GroupId = "group" };
@@ -799,7 +799,7 @@ public class SearchEngineDriverBackedTests
         };
         var crossEncoder = new RecordingCrossEncoder
         {
-            IndexedScores = new List<float> { 0.1f, 0.9f }
+            IndexedScores = new List<float> { 0.9f }
         };
 
         var ranked = await SearchEngine.EdgeSearchAsync(
@@ -816,8 +816,8 @@ public class SearchEngineDriverBackedTests
             new SearchFilters(),
             limit: 2);
 
-        Assert.Equal(new[] { "same fact", "same fact" }, crossEncoder.LastPassages);
-        Assert.Equal(new[] { "edge-second", "edge-first" }, ranked.Select(item => item.Item.Uuid));
+        Assert.Equal(new[] { "same fact" }, crossEncoder.LastPassages);
+        Assert.Equal(new[] { "edge-second" }, ranked.Select(item => item.Item.Uuid));
     }
 
     [Fact]
@@ -1074,7 +1074,7 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
-    public async Task EpisodeSearch_CrossEncoderPreservesDuplicateContent()
+    public async Task EpisodeSearch_CrossEncoderCollapsesDuplicateContentLikePython()
     {
         var first = new EpisodicNode { Uuid = "episode-first", Name = "First", Content = "same content", GroupId = "group" };
         var second = new EpisodicNode { Uuid = "episode-second", Name = "Second", Content = "same content", GroupId = "group" };
@@ -1088,7 +1088,7 @@ public class SearchEngineDriverBackedTests
         };
         var crossEncoder = new RecordingCrossEncoder
         {
-            IndexedScores = new List<float> { 0.1f, 0.9f }
+            IndexedScores = new List<float> { 0.9f }
         };
 
         var ranked = await SearchEngine.EpisodeSearchAsync(
@@ -1103,8 +1103,8 @@ public class SearchEngineDriverBackedTests
             },
             limit: 2);
 
-        Assert.Equal(new[] { "same content", "same content" }, crossEncoder.LastPassages);
-        Assert.Equal(new[] { "episode-second", "episode-first" }, ranked.Select(item => item.Item.Uuid));
+        Assert.Equal(new[] { "same content" }, crossEncoder.LastPassages);
+        Assert.Equal(new[] { "episode-second" }, ranked.Select(item => item.Item.Uuid));
     }
 
     [Fact]
@@ -1321,7 +1321,7 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
-    public async Task CommunitySearch_CrossEncoderPreservesSameNameCandidates()
+    public async Task CommunitySearch_CrossEncoderCollapsesSameNameCandidatesLikePython()
     {
         var first = new CommunityNode { Uuid = "community-first", Name = "Same", GroupId = "group" };
         var second = new CommunityNode { Uuid = "community-second", Name = "Same", GroupId = "group" };
@@ -1335,7 +1335,7 @@ public class SearchEngineDriverBackedTests
         };
         var crossEncoder = new RecordingCrossEncoder
         {
-            IndexedScores = new List<float> { 0.1f, 0.9f }
+            IndexedScores = new List<float> { 0.9f }
         };
 
         var ranked = await SearchEngine.CommunitySearchAsync(
@@ -1351,8 +1351,8 @@ public class SearchEngineDriverBackedTests
             },
             limit: 2);
 
-        Assert.Equal(new[] { "Same", "Same" }, crossEncoder.LastPassages);
-        Assert.Equal(new[] { "community-second", "community-first" }, ranked.Select(item => item.Item.Uuid));
+        Assert.Equal(new[] { "Same" }, crossEncoder.LastPassages);
+        Assert.Equal(new[] { "community-second" }, ranked.Select(item => item.Item.Uuid));
     }
 
     private static async Task<T> CompleteExpectedConcurrentSearchAsync<T>(

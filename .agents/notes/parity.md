@@ -287,13 +287,12 @@ Entity/Saga node type no longer removes the stored node across that boundary. Th
 do not implement the internal seam still use a typed read before falling back to the existing broad
 delete primitive.
 
-**Open 2026-06-17 cross-encoder duplicate audit:** Python's search rerankers collapse duplicate
-cross-encoder passage strings through dict-comprehension behavior: passages are sent once in
-first-seen passage order, while the last duplicate candidate wins the passage-to-result mapping.
-Current C# search composition preserves duplicate passages by index, and existing tests pin that
-behavior for duplicate edge facts, node names, episode content, and community names. Treat this as an
-open search parity gap; the expected repair is unique first-seen passage ranking plus last-duplicate
-mapping.
+**2026-06-17 cross-encoder duplicate follow-up:** closed the duplicate-passage search drift. Python's
+search rerankers collapse duplicate cross-encoder passage strings through dict-comprehension behavior:
+passages are sent once in first-seen passage order, while the last duplicate candidate wins the
+passage-to-result mapping. C# `SearchResultComposer` now ranks unique passages with the same first-seen
+ordering and maps each ranked passage back to the last candidate using that passage. Driver-backed
+tests pin the behavior for duplicate edge facts, node names, episode content, and community names.
 
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
@@ -416,7 +415,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Area | Status | Notes |
 |---|---|---|
 | Search config recipes, reranker enums, wire values | OK | Verified equivalent, parity-tested |
-| Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | PARTIAL | Deterministic parts well tested; edge/episode cross-encoder candidate windows now match Python's pre-rerank `limit` slices, while node/community remain intentionally unwindowed like Python. Community search now mirrors Python's unconditional vector retrieval when a query vector is available. Empty `EdgeTypes`/`EdgeUuids` filters are active match-none predicates like Python. Public search-result context helpers are exposed via `SearchHelpers`. Open gap: duplicate cross-encoder passage strings currently preserve duplicate candidates in C# instead of Python's first-seen passage / last-duplicate-candidate mapping |
+| Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | OK | Deterministic parts well tested; edge/episode cross-encoder candidate windows now match Python's pre-rerank `limit` slices, while node/community remain intentionally unwindowed like Python. Duplicate cross-encoder passages now match Python's first-seen passage / last-duplicate-candidate mapping. Community search now mirrors Python's unconditional vector retrieval when a query vector is available. Empty `EdgeTypes`/`EdgeUuids` filters are active match-none predicates like Python. Public search-result context helpers are exposed via `SearchHelpers` |
 | Community label propagation | OK | Algorithmically equivalent |
 | Graph drivers: InMemory (reference), LadybugDB (investment target), Neo4j (legacy reference) | OK | Runtime proof for Ladybug workflows, direct package binding of list/array/empty-list/null parameters, direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by UUID, public namespace community/saga reads and typed deletes, saga-scoped retrieval/content reads, paged group reads, directed endpoint-pair and incident edge reads, explicit and core file-backed paths, Kuzu `':memory:'` sentinel compatibility, package/native execution, and Ladybug-owned raw full-text query/label-filter construction; see kuzu-driver-port.md |
 | LLM/embedder/reranker adapters via Microsoft.Extensions.AI | DIVERGENT | Documented decision; structured output + Polly retries in place. `MicrosoftExtensionsAICrossEncoderClient` uses structured boolean+confidence scoring because generic M.E.AI lacks OpenAI top-logprob controls |

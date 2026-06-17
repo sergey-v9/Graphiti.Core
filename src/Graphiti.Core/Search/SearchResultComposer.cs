@@ -22,21 +22,29 @@ internal static class SearchResultComposer
         try
         {
             var passages = new List<string>(ranked.Count);
+            var lastIndexByPassage = new Dictionary<string, int>(ranked.Count, StringComparer.Ordinal);
             for (var i = 0; i < ranked.Count; i++)
             {
-                passages.Add(passageSelector(ranked[i].Item));
+                var passage = passageSelector(ranked[i].Item);
+                if (lastIndexByPassage.TryAdd(passage, i))
+                {
+                    passages.Add(passage);
+                    continue;
+                }
+
+                lastIndexByPassage[passage] = i;
             }
 
             var crossRanks = await crossEncoder
                 .RankIndexedAsync(query, passages, cancellationToken)
                 .ConfigureAwait(false);
-            var seen = new bool[ranked.Count];
+            var seen = new bool[passages.Count];
             var reranked = new List<(T Item, float Score, int Index)>(
-                Math.Min(crossRanks.Count, ranked.Count));
+                Math.Min(crossRanks.Count, passages.Count));
 
             foreach (var rank in crossRanks)
             {
-                if ((uint)rank.Index >= (uint)ranked.Count || seen[rank.Index])
+                if ((uint)rank.Index >= (uint)passages.Count || seen[rank.Index])
                 {
                     continue;
                 }
@@ -44,7 +52,9 @@ internal static class SearchResultComposer
                 seen[rank.Index] = true;
                 if (rank.Score >= minScore)
                 {
-                    reranked.Add((ranked[rank.Index].Item, rank.Score, rank.Index));
+                    var passage = passages[rank.Index];
+                    var candidateIndex = lastIndexByPassage[passage];
+                    reranked.Add((ranked[candidateIndex].Item, rank.Score, candidateIndex));
                 }
             }
 
