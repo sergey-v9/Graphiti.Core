@@ -315,6 +315,13 @@ both the static model helper and `graphiti.Edges.Episode`.
 or zero, preserves explicit positive caps, and rejects negative direct helper input instead of
 running unbounded.
 
+**2026-06-17 entity-type-id key follow-up:** closed an extraction parsing drift. Python builds the
+LLM `entity_type_id` context from `entity_types.items()` and resolves extracted IDs back to the
+dictionary key (`type_name`), not the model/display class name. C#
+`Graphiti.ExtractEntityNames` / `ExtractEntities` now resolve IDs to the declared
+`entityTypes` key, so aliased types such as `person_alias -> Person` flow into labels and exclusion
+matching like Python.
+
 **2026-06-17 cross-encoder duplicate follow-up:** closed the duplicate-passage search drift. Python's
 search rerankers collapse duplicate cross-encoder passage strings through dict-comprehension behavior:
 passages are sent once in first-seen passage order, while the last duplicate candidate wins the

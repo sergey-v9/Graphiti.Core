@@ -57,6 +57,27 @@ public class GraphitiExtractionParsingTests
     }
 
     [Fact]
+    public void ExtractEntityNames_ResolvesEntityTypeIdsToDeclaredKeysLikePython()
+    {
+        var response = new JsonObject
+        {
+            ["extracted_entities"] = new JsonArray
+            {
+                new JsonObject { ["name"] = "Alice", ["entity_type_id"] = 1 }
+            }
+        };
+
+        var extracted = Assert.Single(Graphiti.ExtractEntityNames(
+            response,
+            new Dictionary<string, EntityTypeDefinition>
+            {
+                ["person_alias"] = new("Person")
+            }));
+
+        Assert.Equal(("Alice", "person_alias"), extracted);
+    }
+
+    [Fact]
     public void ExtractEntityNames_DoesNotEnumerateEntityTypesWhenTypeIsExplicit()
     {
         var response = new JsonObject

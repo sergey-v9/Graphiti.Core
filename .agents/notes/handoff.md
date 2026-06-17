@@ -138,9 +138,10 @@ added.
 
 Latest verification checkpoint, 2026-06-17: `GraphitiHelpers.SemaphoreGatherAsync` now defaults to
 Python's `SEMAPHORE_LIMIT` behavior (20 when `maxConcurrency` is omitted or zero, negative values
-rejected) instead of running unbounded. `.\eng\Verify-GraphitiCore.ps1` is green with the active
-GitHub Packages credential (`1023` passed, `3` skipped; both shippable packages packed and both fresh
-package-consumer smoke builds succeeded).
+rejected) instead of running unbounded, and extracted `entity_type_id` values now resolve to declared
+entity-type keys instead of display names like Python. `.\eng\Verify-GraphitiCore.ps1` is green with
+the active GitHub Packages credential (`1024` passed, `3` skipped; both shippable packages packed and
+both fresh package-consumer smoke builds succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
 Packages feed for LadybugDB packages (`0.17.1-dev.1.1.g6f3dbed`) and `NuGet.config` includes package
@@ -282,8 +283,8 @@ keeps those shapes as no-op filters via existing `CompiledSearchFilter`/query-bu
 Current audit follow-up closed namespace embedding drift, an in-memory triplet collision drift, the
 typed node-delete Saga boundary, the duplicate-passage cross-encoder drift, the base node-delete
 scope drift, the entity UUID group-filter drift, the in-memory episodic-metadata drift, the
-episodic-edge group-miss drift, the semaphore default-concurrency drift, and the base edge-delete
-scope drift:
+episodic-edge group-miss drift, the semaphore default-concurrency drift, the entity-type-id key
+mapping drift, and the base edge-delete scope drift:
 namespace `SaveAsync` regenerates entity/community node and entity-edge embeddings even when prefilled,
 namespace `SaveBulkAsync` now preserves supplied null/precomputed embeddings without calling the
 embedder, and `AddTripletAsync` creates a fresh entity-edge UUID when the default in-memory backend
@@ -299,6 +300,9 @@ results, matching Python's `GroupsEdgesNotFoundError` branch for episodic-edge g
 `GraphitiHelpers.SemaphoreGatherAsync` now uses Python's default semaphore limit of 20 when callers
 omit the cap or pass zero, while rejecting negative direct helper input instead of treating every
 non-positive cap as unbounded.
+Extracted `entity_type_id` values now map back to the declared `entityTypes` dictionary keys instead
+of `EntityTypeDefinition.Name`, so custom type aliases flow into labels and exclusions like Python's
+`entity_types` context.
 Cross-encoder search composition now
 deduplicates passage strings in first-seen order and maps ranked passages back to the last duplicate
 candidate, matching Python's dict-comprehension behavior. Base `Edge.DeleteByUuidsAsync` now excludes

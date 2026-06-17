@@ -70,7 +70,7 @@ public sealed partial class Graphiti
         var names = new List<string>(entityTypes.Count + 1) { "Entity" };
         foreach (var pair in entityTypes)
         {
-            names.Add(pair.Value.Name);
+            names.Add(pair.Key);
         }
 
         return names;
