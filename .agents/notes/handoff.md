@@ -303,6 +303,9 @@ non-positive cap as unbounded.
 Extracted `entity_type_id` values now map back to the declared `entityTypes` dictionary keys instead
 of `EntityTypeDefinition.Name`, so custom type aliases flow into labels and exclusions like Python's
 `entity_types` context.
+Node dedupe label promotion now matches Python's `_promote_resolved_node`: an extracted specific
+label upgrades a matched canonical node only when that canonical node is still generic `Entity`;
+already-typed existing nodes keep their labels.
 Cross-encoder search composition now
 deduplicates passage strings in first-seen order and maps ranked passages back to the last duplicate
 candidate, matching Python's dict-comprehension behavior. Base `Edge.DeleteByUuidsAsync` now excludes
@@ -310,7 +313,7 @@ candidate, matching Python's dict-comprehension behavior. Base `Edge.DeleteByUui
 typed deletes instead. Search concurrency proof was also tightened so the fake driver waits for
 monotonic search-call arrivals instead of asserting a transient active count.
 Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests
-(`1012` passed, `3` skipped, `1015` total), both shippable package packs, and both package-consumer
+(`1025` passed, `3` skipped, `1028` total), both shippable package packs, and both package-consumer
 smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 

@@ -3018,6 +3018,52 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisode_ExactNormalizedDedupDoesNotPromoteLabelsOntoTypedExistingNode()
+    {
+        var driver = new InMemoryGraphDriver();
+        var existing = new EntityNode
+        {
+            Name = "Audrey",
+            GroupId = "group",
+            Labels = new List<string> { "Entity", "Person" }
+        };
+        await existing.SaveAsync(driver);
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            llmClient: new StaticLlmClient(new JsonObject
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = " Audrey ", ["entity_type"] = "Organization" },
+                    new JsonObject { ["name"] = "Bob", ["entity_type"] = "Person" }
+                },
+                ["edges"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["source"] = " Audrey ",
+                        ["target"] = "Bob",
+                        ["relation_type"] = "KNOWS",
+                        ["fact"] = "Audrey knows Bob."
+                    }
+                }
+            }));
+
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Audrey knows Bob.",
+            "message",
+            new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+            groupId: "group");
+
+        Assert.Contains(result.Nodes, node => node.Uuid == existing.Uuid);
+        var edge = Assert.Single(result.Edges);
+        Assert.Equal(existing.Uuid, edge.SourceNodeUuid);
+        var storedExisting = await EntityNode.GetByUuidAsync(driver, existing.Uuid);
+        Assert.Equal(new[] { "Entity", "Person" }, storedExisting.Labels);
+    }
+
+    [Fact]
     public async Task AddEpisode_LowEntropyShortNameDoesNotFuzzyMerge()
     {
         var driver = new InMemoryGraphDriver();

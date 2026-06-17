@@ -400,7 +400,7 @@ internal sealed class NodeResolutionService(
 
     internal static EntityNode MergeExtractedNode(EntityNode existing, EntityNode extracted)
     {
-        existing.Labels = MergeLabels(existing.Labels, extracted.Labels);
+        PromoteResolvedNodeLabels(existing, extracted);
 
         if (!string.IsNullOrWhiteSpace(extracted.Summary))
         {
@@ -413,6 +413,33 @@ internal sealed class NodeResolutionService(
         }
 
         return existing;
+    }
+
+    private static void PromoteResolvedNodeLabels(EntityNode existing, EntityNode extracted)
+    {
+        if (HasSpecificLabel(existing.Labels))
+        {
+            return;
+        }
+
+        if (!HasSpecificLabel(extracted.Labels))
+        {
+            return;
+        }
+
+        var labels = new List<string>(1 + existing.Labels.Count + extracted.Labels.Count);
+        AddLabel("Entity", labels);
+        AddLabels(existing.Labels, labels);
+        for (var i = 0; i < extracted.Labels.Count; i++)
+        {
+            var label = extracted.Labels[i];
+            if (!string.Equals(label, "Entity", StringComparison.Ordinal))
+            {
+                AddLabel(label, labels);
+            }
+        }
+
+        existing.Labels = labels;
     }
 
     public async Task<EntityNode> ResolveTripletNodeAsync(EntityNode input, CancellationToken cancellationToken)
@@ -477,12 +504,29 @@ internal sealed class NodeResolutionService(
     {
         for (var i = 0; i < source.Count; i++)
         {
-            var label = source[i];
-            if (!ContainsLabel(target, label))
+            AddLabel(source[i], target);
+        }
+    }
+
+    private static void AddLabel(string label, List<string> labels)
+    {
+        if (!ContainsLabel(labels, label))
+        {
+            labels.Add(label);
+        }
+    }
+
+    private static bool HasSpecificLabel(List<string> labels)
+    {
+        for (var i = 0; i < labels.Count; i++)
+        {
+            if (!string.Equals(labels[i], "Entity", StringComparison.Ordinal))
             {
-                target.Add(label);
+                return true;
             }
         }
+
+        return false;
     }
 
     private static bool ContainsLabel(List<string> labels, string label)
