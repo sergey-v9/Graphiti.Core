@@ -288,6 +288,14 @@ while present, so deleting through the wrong Entity/Saga node type or inherited 
 removes saga nodes across that boundary. Third-party drivers that do not implement the internal seam
 still use a typed read before falling back to the existing broad delete primitive.
 
+**2026-06-17 entity UUID group-filter follow-up:** closed a model helper drift. Python
+`EntityNode.get_by_uuids(..., group_id=...)` accepts `group_id`, but the normal fallback query filters
+only by UUID and the Neo4j operation implementation also has no group parameter. C#
+`EntityNode.GetByUuidsAsync(..., groupId: ...)` now preserves the optional parameter for public
+signature compatibility but ignores it before calling the driver, so model-helper reads return the
+requested entity UUIDs regardless of group like Python. Lower-level `IGraphDriver.GetNodesByUuidsAsync`
+still keeps its optional group filter for callers that use the driver contract directly.
+
 **2026-06-17 cross-encoder duplicate follow-up:** closed the duplicate-passage search drift. Python's
 search rerankers collapse duplicate cross-encoder passage strings through dict-comprehension behavior:
 passages are sent once in first-seen passage order, while the last duplicate candidate wins the

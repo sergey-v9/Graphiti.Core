@@ -59,13 +59,16 @@ public sealed class EntityNode : Node
         CancellationToken cancellationToken = default) =>
         driver.GetNodeByUuidAsync<EntityNode>(uuid, cancellationToken);
 
-    /// <summary>Retrieves the entity nodes with the given UUIDs, optionally scoped to a group partition.</summary>
+    /// <summary>
+    /// Retrieves the entity nodes with the given UUIDs. The optional <paramref name="groupId"/>
+    /// parameter is accepted for Python signature parity but is not applied by Python's fallback query.
+    /// </summary>
     public static Task<IReadOnlyList<EntityNode>> GetByUuidsAsync(
         IGraphDriver driver,
         IEnumerable<string> uuids,
         string? groupId = null,
         CancellationToken cancellationToken = default) =>
-        driver.GetNodesByUuidsAsync<EntityNode>(uuids, groupId, cancellationToken);
+        driver.GetNodesByUuidsAsync<EntityNode>(uuids, cancellationToken: cancellationToken);
 
     /// <summary>
     /// Retrieves entity nodes across the given group partitions, with optional UUID-cursor paging and

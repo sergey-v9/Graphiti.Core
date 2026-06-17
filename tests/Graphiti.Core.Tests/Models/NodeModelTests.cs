@@ -45,6 +45,21 @@ public class NodeModelTests
         Assert.Equal(saga.Uuid, storedSaga.Uuid);
     }
 
+    [Fact]
+    public async Task EntityNodeGetByUuidsAsync_IgnoresGroupIdLikePython()
+    {
+        var driver = new InMemoryGraphDriver();
+        var entity = new EntityNode { Uuid = "entity", Name = "Entity", GroupId = "tenant-a" };
+        await driver.SaveNodeAsync(entity);
+
+        var nodes = await EntityNode.GetByUuidsAsync(
+            driver,
+            new[] { entity.Uuid },
+            groupId: "tenant-b");
+
+        Assert.Equal(entity.Uuid, Assert.Single(nodes).Uuid);
+    }
+
     private static async Task SaveNodesAsync(InMemoryGraphDriver driver, params Node[] nodes)
     {
         for (var i = 0; i < nodes.Length; i++)

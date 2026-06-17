@@ -149,12 +149,13 @@ status` shows the token lacks `read:packages`. Provide a PAT/token with `read:pa
 
 Current core-only checkpoint, 2026-06-17: typed node deletes now preserve Python's Saga boundary for
 direct model `DeleteAsync`, base `Node.DeleteByGroupIdAsync` / `Node.DeleteByUuidsAsync`, and typed
-node namespaces, and cross-encoder search now collapses duplicate passage strings like Python while
-mapping each passage back to the last duplicate candidate. Base
+node namespaces; `EntityNode.GetByUuidsAsync` now accepts but ignores `groupId` like Python's fallback
+query; and cross-encoder search now collapses duplicate passage strings like Python while mapping
+each passage back to the last duplicate candidate. Base
 `Edge.DeleteByUuidsAsync` now matches Python's inherited base helper scope by excluding
 `HAS_EPISODE`/`NEXT_EPISODE`, while concrete saga edge deletes and episode-removal saga repair still
 delete those relationship types through typed paths. `.\eng\Verify-GraphitiCoreOnly.ps1` is green
-(`931` passed, `0` skipped; core pack succeeded). A no-restore build of
+(`932` passed, `0` skipped; core pack succeeded). A no-restore build of
 `Graphiti.Core.Drivers.Ladybug` was also attempted to catch syntax errors, but it is blocked by the
 same GitHub Packages `403 Forbidden` for `LadybugDB` / `LadybugDB.Native` until source
 `github_ladybug` has a credential with `read:packages`.
@@ -276,14 +277,16 @@ Python emits malformed/backend-dependent empty `NodeLabels` fragments (`n:`, `n:
 keeps those shapes as no-op filters via existing `CompiledSearchFilter`/query-builder coverage.
 Current audit follow-up closed namespace embedding drift, an in-memory triplet collision drift, the
 typed node-delete Saga boundary, the duplicate-passage cross-encoder drift, the base node-delete
-scope drift, and the base edge-delete scope drift:
+scope drift, the entity UUID group-filter drift, and the base edge-delete scope drift:
 namespace `SaveAsync` regenerates entity/community node and entity-edge embeddings even when prefilled,
 namespace `SaveBulkAsync` now preserves supplied null/precomputed embeddings without calling the
 embedder, and `AddTripletAsync` creates a fresh entity-edge UUID when the default in-memory backend
 already has a non-entity edge with the requested UUID. Direct model `DeleteAsync`, base
 `Node.DeleteByGroupIdAsync` / `Node.DeleteByUuidsAsync`, and typed node namespaces now use typed
 deletion for the Python-scoped node types, so deleting through the wrong Entity/Saga node type or
-inherited base helper no longer removes saga nodes across that boundary. Cross-encoder search composition now
+inherited base helper no longer removes saga nodes across that boundary. `EntityNode.GetByUuidsAsync`
+keeps the Python-compatible optional `groupId` parameter but no longer applies it, because Python's
+normal entity UUID query filters only by UUID. Cross-encoder search composition now
 deduplicates passage strings in first-seen order and maps ranked passages back to the last duplicate
 candidate, matching Python's dict-comprehension behavior. Base `Edge.DeleteByUuidsAsync` now excludes
 `HAS_EPISODE`/`NEXT_EPISODE` like Python's inherited base helper, with C# saga repair using concrete
