@@ -57,7 +57,6 @@ internal static class LadybugSearchFilter
             ValidAt = source.ValidAt,
             InvalidAt = source.InvalidAt,
             CreatedAt = source.CreatedAt,
-            ExpiredAt = source.ExpiredAt,
-            PropertyFilters = source.PropertyFilters
+            ExpiredAt = source.ExpiredAt
         };
 }

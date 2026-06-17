@@ -1,13 +1,11 @@
 using System.Collections.Frozen;
-using System.Globalization;
 using System.Text;
-using System.Text.Json;
 
 namespace Graphiti.Core.Search;
 
 /// <summary>
 /// A pre-processed form of <see cref="SearchFilters"/>. Compiling once amortizes parsing of label,
-/// type, temporal, and property predicates so they can be efficiently turned into backend query
+/// type, and temporal predicates so they can be efficiently turned into backend query
 /// fragments (<c>BuildNodeQuery</c>/<c>BuildEdgeQuery</c>) or evaluated in memory (<c>NodeMatches</c>/<c>EdgeMatches</c>).
 /// </summary>
 internal sealed class CompiledSearchFilter
@@ -25,7 +23,6 @@ internal sealed class CompiledSearchFilter
     private readonly CompiledDateFilter[][]? _invalidAt;
     private readonly CompiledDateFilter[][]? _createdAt;
     private readonly CompiledDateFilter[][]? _expiredAt;
-    private readonly CompiledPropertyFilter[] _propertyFilters;
 
     private CompiledSearchFilter(SearchFilters filters)
     {
@@ -39,7 +36,6 @@ internal sealed class CompiledSearchFilter
         _invalidAt = CompileDateFilters(filters.InvalidAt);
         _createdAt = CompileDateFilters(filters.CreatedAt);
         _expiredAt = CompileDateFilters(filters.ExpiredAt);
-        _propertyFilters = CompilePropertyFilters(filters.PropertyFilters);
     }
 
     public bool RequiresEndpointNodeLookup => _nodeLabels.Count > 0;
@@ -51,7 +47,7 @@ internal sealed class CompiledSearchFilter
     }
 
     public bool NodeMatches(EntityNode node) =>
-        NodeLabelsMatch(node) && NodePropertyFiltersMatch(node);
+        NodeLabelsMatch(node);
 
     public bool EdgeMatches(EntityEdge edge) =>
         (_queryEdgeTypes is null || _edgeTypes.Contains(edge.Name))
@@ -59,8 +55,7 @@ internal sealed class CompiledSearchFilter
         && DateFiltersMatch(edge.ValidAt, _validAt)
         && DateFiltersMatch(edge.InvalidAt, _invalidAt)
         && DateFiltersMatch(edge.CreatedAt, _createdAt)
-        && DateFiltersMatch(edge.ExpiredAt, _expiredAt)
-        && EdgePropertyFiltersMatch(edge);
+        && DateFiltersMatch(edge.ExpiredAt, _expiredAt);
 
     public bool EdgeMatches(
         EntityEdge edge,
@@ -90,7 +85,6 @@ internal sealed class CompiledSearchFilter
             StringComparer.Ordinal);
 
         AppendNodeLabelFilter(filterQueries, includeTarget: false);
-        AppendPropertyFilters(filterQueries, filterParams, _propertyFilters, "node_property", "n");
         return (filterQueries, filterParams);
     }
 
@@ -119,14 +113,12 @@ internal sealed class CompiledSearchFilter
         AppendDateFilters(filterQueries, filterParams, _invalidAt, "invalid_at", "e.invalid_at");
         AppendDateFilters(filterQueries, filterParams, _createdAt, "created_at", "e.created_at");
         AppendDateFilters(filterQueries, filterParams, _expiredAt, "expired_at", "e.expired_at");
-        AppendPropertyFilters(filterQueries, filterParams, _propertyFilters, "edge_property", "e");
 
         return (filterQueries, filterParams);
     }
 
     private int EstimateNodeQueryCount() =>
-        (_queryNodeLabels is { Count: > 0 } ? 1 : 0)
-        + _propertyFilters.Length;
+        _queryNodeLabels is { Count: > 0 } ? 1 : 0;
 
     private int EstimateEdgeQueryCount() =>
         (_queryEdgeTypes is not null ? 1 : 0)
@@ -135,15 +127,13 @@ internal sealed class CompiledSearchFilter
         + (_validAt is null ? 0 : 1)
         + (_invalidAt is null ? 0 : 1)
         + (_createdAt is null ? 0 : 1)
-        + (_expiredAt is null ? 0 : 1)
-        + _propertyFilters.Length;
+        + (_expiredAt is null ? 0 : 1);
 
-    private int EstimateNodeParameterCount() =>
-        _propertyFilters.Length * 2;
+    private static int EstimateNodeParameterCount() =>
+        0;
 
     private int EstimateEdgeParameterCount() =>
-        _propertyFilters.Length * 2
-        + DateFilterCount(_validAt)
+        DateFilterCount(_validAt)
         + DateFilterCount(_invalidAt)
         + DateFilterCount(_createdAt)
         + DateFilterCount(_expiredAt)
@@ -198,11 +188,6 @@ internal sealed class CompiledSearchFilter
     public static bool DateFiltersMatch(DateTime? value, IReadOnlyList<List<DateFilter>>? filters) =>
         DateFiltersMatch(value, CompileDateFilters(filters));
 
-    public static bool PropertyFiltersMatch(
-        IReadOnlyDictionary<string, object?> attributes,
-        IReadOnlyList<PropertyFilter>? filters) =>
-        PropertyFiltersMatch(attributes, CompilePropertyFilters(filters));
-
     private bool NodeLabelsMatch(EntityNode node)
     {
         if (_nodeLabels.Count == 0)
@@ -225,27 +210,6 @@ internal sealed class CompiledSearchFilter
         values is { Count: > 0 }
             ? values.ToFrozenSet(StringComparer.Ordinal)
             : EmptyStringSet;
-
-    private static CompiledPropertyFilter[] CompilePropertyFilters(
-        IReadOnlyList<PropertyFilter>? filters)
-    {
-        if (filters is null || filters.Count == 0)
-        {
-            return Array.Empty<CompiledPropertyFilter>();
-        }
-
-        var compiled = new CompiledPropertyFilter[filters.Count];
-        for (var i = 0; i < filters.Count; i++)
-        {
-            var filter = filters[i];
-            compiled[i] = new CompiledPropertyFilter(
-                filter.PropertyName,
-                filter.PropertyValue,
-                filter.ComparisonOperator);
-        }
-
-        return compiled;
-    }
 
     private static CompiledDateFilter[][]? CompileDateFilters(IReadOnlyList<List<DateFilter>>? filters)
     {
@@ -309,92 +273,7 @@ internal sealed class CompiledSearchFilter
         return false;
     }
 
-    private static bool PropertyFiltersMatch(
-        IReadOnlyDictionary<string, object?> attributes,
-        ReadOnlySpan<CompiledPropertyFilter> filters)
-    {
-        foreach (var filter in filters)
-        {
-            attributes.TryGetValue(filter.PropertyName, out var actual);
-            if (!Compare(actual, filter.PropertyValue, filter.ComparisonOperator))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private bool NodePropertyFiltersMatch(EntityNode node)
-    {
-        if (_propertyFilters.Length == 0)
-        {
-            return true;
-        }
-
-        foreach (var filter in _propertyFilters)
-        {
-            var actual = GetNodeProperty(node, filter.PropertyName);
-            if (!Compare(actual, filter.PropertyValue, filter.ComparisonOperator))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private bool EdgePropertyFiltersMatch(EntityEdge edge)
-    {
-        if (_propertyFilters.Length == 0)
-        {
-            return true;
-        }
-
-        foreach (var filter in _propertyFilters)
-        {
-            var actual = GetEdgeProperty(edge, filter.PropertyName);
-            if (!Compare(actual, filter.PropertyValue, filter.ComparisonOperator))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static object? GetNodeProperty(EntityNode node, string propertyName) =>
-        propertyName switch
-        {
-            "uuid" => node.Uuid,
-            "name" => node.Name,
-            "group_id" => node.GroupId,
-            "summary" => node.Summary,
-            "created_at" => node.CreatedAt,
-            "name_embedding" => node.NameEmbedding,
-            _ => node.Attributes.TryGetValue(propertyName, out var value) ? value : null
-        };
-
-    private static object? GetEdgeProperty(EntityEdge edge, string propertyName) =>
-        propertyName switch
-        {
-            "uuid" => edge.Uuid,
-            "group_id" => edge.GroupId,
-            "source_node_uuid" => edge.SourceNodeUuid,
-            "target_node_uuid" => edge.TargetNodeUuid,
-            "name" => edge.Name,
-            "fact" => edge.Fact,
-            "fact_embedding" => edge.FactEmbedding,
-            "episodes" => edge.Episodes,
-            "created_at" => edge.CreatedAt,
-            "expired_at" => edge.ExpiredAt,
-            "valid_at" => edge.ValidAt,
-            "invalid_at" => edge.InvalidAt,
-            "reference_time" => edge.ReferenceTime,
-            _ => edge.Attributes.TryGetValue(propertyName, out var value) ? value : null
-        };
-
-    private static bool Compare(object? actual, object? expected, ComparisonOperator op)
+    private static bool Compare(DateTime? actual, DateTime? expected, ComparisonOperator op)
     {
         if (op == ComparisonOperator.IsNull)
         {
@@ -408,12 +287,12 @@ internal sealed class CompiledSearchFilter
 
         if (op == ComparisonOperator.Equals)
         {
-            return ValuesEqual(actual, expected);
+            return actual == expected;
         }
 
         if (op == ComparisonOperator.NotEquals)
         {
-            return !ValuesEqual(actual, expected);
+            return actual != expected;
         }
 
         if (actual is null || expected is null)
@@ -421,7 +300,7 @@ internal sealed class CompiledSearchFilter
             return false;
         }
 
-        var comparison = CompareValues(actual, expected);
+        var comparison = actual.Value.CompareTo(expected.Value);
         return op switch
         {
             ComparisonOperator.GreaterThan => comparison > 0,
@@ -430,163 +309,6 @@ internal sealed class CompiledSearchFilter
             ComparisonOperator.LessThanEqual => comparison <= 0,
             _ => false
         };
-    }
-
-    private static int CompareValues(object actual, object expected)
-    {
-        actual = NormalizeJsonScalar(actual) ?? string.Empty;
-        expected = NormalizeJsonScalar(expected) ?? string.Empty;
-
-        if (actual is DateTime actualDate && expected is DateTime expectedDate)
-        {
-            return actualDate.CompareTo(expectedDate);
-        }
-
-        if (TryConvertNumber(actual, allowNumericStrings: true, out var left)
-            && TryConvertNumber(expected, allowNumericStrings: true, out var right))
-        {
-            return left.CompareTo(right);
-        }
-
-        return string.CompareOrdinal(
-            Convert.ToString(actual, CultureInfo.InvariantCulture),
-            Convert.ToString(expected, CultureInfo.InvariantCulture));
-    }
-
-    private static bool ValuesEqual(object? actual, object? expected)
-    {
-        actual = NormalizeJsonScalar(actual);
-        expected = NormalizeJsonScalar(expected);
-
-        if (actual is null || expected is null)
-        {
-            return actual is null && expected is null;
-        }
-
-        if (TryConvertNumber(actual, allowNumericStrings: false, out var left)
-            && TryConvertNumber(expected, allowNumericStrings: false, out var right))
-        {
-            return left.Equals(right);
-        }
-
-        return Equals(actual, expected);
-    }
-
-    private static object? NormalizeJsonScalar(object? value)
-    {
-        if (value is not JsonElement element)
-        {
-            return value;
-        }
-
-        return element.ValueKind switch
-        {
-            JsonValueKind.Null or JsonValueKind.Undefined => null,
-            JsonValueKind.String => element.GetString(),
-            JsonValueKind.Number when element.TryGetInt64(out var integer) => integer,
-            JsonValueKind.Number when decimal.TryParse(
-                element.GetRawText(),
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out var number) => number,
-            JsonValueKind.Number => element.GetDouble(),
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            _ => element.GetRawText()
-        };
-    }
-
-    private static bool TryConvertNumber(object value, bool allowNumericStrings, out decimal number)
-    {
-        switch (value)
-        {
-            case byte typed:
-                number = typed;
-                return true;
-            case sbyte typed:
-                number = typed;
-                return true;
-            case short typed:
-                number = typed;
-                return true;
-            case ushort typed:
-                number = typed;
-                return true;
-            case int typed:
-                number = typed;
-                return true;
-            case uint typed:
-                number = typed;
-                return true;
-            case long typed:
-                number = typed;
-                return true;
-            case ulong typed:
-                number = typed;
-                return true;
-            case decimal typed:
-                number = typed;
-                return true;
-            case float typed when float.IsFinite(typed)
-                && typed <= (float)decimal.MaxValue
-                && typed >= (float)decimal.MinValue:
-                number = (decimal)typed;
-                return true;
-            case double typed when double.IsFinite(typed)
-                && typed <= (double)decimal.MaxValue
-                && typed >= (double)decimal.MinValue:
-                number = (decimal)typed;
-                return true;
-            case string text when allowNumericStrings:
-                return decimal.TryParse(
-                    text,
-                    NumberStyles.Float,
-                    CultureInfo.InvariantCulture,
-                    out number);
-        }
-
-        number = 0;
-        return false;
-    }
-
-    private static void AppendPropertyFilters(
-        List<string> filterQueries,
-        Dictionary<string, object?> filterParams,
-        ReadOnlySpan<CompiledPropertyFilter> filters,
-        string paramPrefix,
-        string valueName)
-    {
-        for (var i = 0; i < filters.Length; i++)
-        {
-            var filter = filters[i];
-            var nameParam = $"{paramPrefix}_name_{i}";
-            var valueParam = $"{paramPrefix}_value_{i}";
-            var propertyAccess = $"{valueName}[${nameParam}]";
-            filterParams[nameParam] = filter.PropertyName;
-
-            if (filter.ComparisonOperator == ComparisonOperator.IsNull
-                || (filter.ComparisonOperator == ComparisonOperator.Equals && filter.PropertyValue is null))
-            {
-                filterQueries.Add($"({propertyAccess} IS NULL)");
-                continue;
-            }
-
-            if (filter.ComparisonOperator == ComparisonOperator.IsNotNull
-                || (filter.ComparisonOperator == ComparisonOperator.NotEquals && filter.PropertyValue is null))
-            {
-                filterQueries.Add($"({propertyAccess} IS NOT NULL)");
-                continue;
-            }
-
-            filterParams[valueParam] = filter.PropertyValue;
-            if (filter.ComparisonOperator == ComparisonOperator.NotEquals)
-            {
-                filterQueries.Add($"({propertyAccess} IS NULL OR {propertyAccess} <> ${valueParam})");
-                continue;
-            }
-
-            filterQueries.Add($"({propertyAccess} {filter.ComparisonOperator.ToWireValue()} ${valueParam})");
-        }
     }
 
     private static void AppendDateFilters(
@@ -637,11 +359,6 @@ internal sealed class CompiledSearchFilter
         builder.Append(')');
         filterQueries.Add(builder.ToString());
     }
-
-    private readonly record struct CompiledPropertyFilter(
-        string PropertyName,
-        object? PropertyValue,
-        ComparisonOperator ComparisonOperator);
 
     private readonly record struct CompiledDateFilter(
         DateTime? Date,

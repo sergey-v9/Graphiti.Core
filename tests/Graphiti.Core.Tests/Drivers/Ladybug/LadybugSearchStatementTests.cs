@@ -43,15 +43,15 @@ public class LadybugSearchStatementTests
             StringComparison.Ordinal);
         Assert.Contains("WITH node AS n, score", statement.Query, StringComparison.Ordinal);
         Assert.Contains(
-            "WHERE list_has_all(n.labels, $labels) AND (n[$node_property_name_0] = $node_property_value_0) AND n.group_id IN $group_ids",
+            "WHERE list_has_all(n.labels, $labels) AND n.group_id IN $group_ids",
             statement.Query,
             StringComparison.Ordinal);
         Assert.Contains("score AS score", statement.Query, StringComparison.Ordinal);
         Assert.Equal("alice", statement.Parameters["query"]);
         Assert.Equal(7, statement.Parameters["limit"]);
         Assert.Equal(new[] { "Person" }, Assert.IsType<List<string>>(statement.Parameters["labels"]));
-        Assert.Equal("status", statement.Parameters["node_property_name_0"]);
-        Assert.Equal("active", statement.Parameters["node_property_value_0"]);
+        Assert.DoesNotContain("node_property", statement.Query, StringComparison.Ordinal);
+        Assert.DoesNotContain(statement.Parameters, parameter => parameter.Key.StartsWith("node_property", StringComparison.Ordinal));
         Assert.Equal(
             new[] { "tenant-a", "tenant-b" },
             Assert.IsType<List<string>>(statement.Parameters["group_ids"]));
@@ -191,8 +191,7 @@ public class LadybugSearchStatementTests
                 "((e.valid_at >= $valid_at_0))",
                 "((e.invalid_at < $invalid_at_0))",
                 "((e.created_at = $created_at_0))",
-                "((e.expired_at = $expired_at_0))",
-                "(e[$edge_property_name_0] > $edge_property_value_0)"
+                "((e.expired_at = $expired_at_0))"
             },
             queries);
         Assert.Equal(new[] { "KNOWS" }, parameters["edge_types"]);
@@ -202,8 +201,7 @@ public class LadybugSearchStatementTests
         Assert.Equal(invalidAt, parameters["invalid_at_0"]);
         Assert.Equal(createdAt, parameters["created_at_0"]);
         Assert.Equal(expiredAt, parameters["expired_at_0"]);
-        Assert.Equal("confidence", parameters["edge_property_name_0"]);
-        Assert.Equal(0.5, parameters["edge_property_value_0"]);
+        Assert.DoesNotContain(parameters, parameter => parameter.Key.StartsWith("edge_property", StringComparison.Ordinal));
     }
 
     [Fact]

@@ -1,6 +1,4 @@
 using Graphiti.Core;
-using System.Globalization;
-using System.Text.Json;
 
 namespace Graphiti.Core.Tests.Search;
 
@@ -38,7 +36,7 @@ public sealed class SearchFilterTests
     }
 
     [Fact]
-    public void NodeSearchFilterQueryConstructor_BuildsPropertyFilters()
+    public void SearchFilterCompiler_IgnoresPropertyFiltersLikePython()
     {
         var filters = new SearchFilters
         {
@@ -50,23 +48,18 @@ public sealed class SearchFilterTests
             }
         };
 
-        var (queries, parameters) =
+        var (nodeQueries, nodeParameters) =
             SearchFilterQueryBuilder.NodeSearchFilterQueryConstructor(filters);
+        var (edgeQueries, edgeParameters) =
+            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters);
+        var compiled = CompiledSearchFilter.Compile(filters);
 
-        Assert.Equal(
-            new[]
-            {
-                "(n[$node_property_name_0] = $node_property_value_0)",
-                "(n[$node_property_name_1] >= $node_property_value_1)",
-                "(n[$node_property_name_2] IS NULL)"
-            },
-            queries);
-        Assert.Equal("status", parameters["node_property_name_0"]);
-        Assert.Equal("active", parameters["node_property_value_0"]);
-        Assert.Equal("score", parameters["node_property_name_1"]);
-        Assert.Equal(0.75, parameters["node_property_value_1"]);
-        Assert.Equal("deleted_at", parameters["node_property_name_2"]);
-        Assert.False(parameters.ContainsKey("node_property_value_2"));
+        Assert.Empty(nodeQueries);
+        Assert.Empty(nodeParameters);
+        Assert.Empty(edgeQueries);
+        Assert.Empty(edgeParameters);
+        Assert.True(compiled.NodeMatches(new EntityNode { Name = "inactive" }));
+        Assert.True(compiled.EdgeMatches(new EntityEdge { Name = "LOW_CONFIDENCE" }));
     }
 
     [Fact]
@@ -104,107 +97,6 @@ public sealed class SearchFilterTests
     }
 
     [Fact]
-    public void SearchFilterMatcher_UsesInvariantCultureForNumericComparisons()
-    {
-        var originalCulture = CultureInfo.CurrentCulture;
-        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
-        try
-        {
-            var attributes = new Dictionary<string, object?>
-            {
-                ["score"] = "10.0"
-            };
-            var filters = new List<PropertyFilter>
-            {
-                new("score", ComparisonOperator.GreaterThan, 2.0)
-            };
-
-            Assert.True(SearchFilterMatcher.PropertyFiltersMatch(attributes, filters));
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = originalCulture;
-        }
-    }
-
-    [Fact]
-    public void SearchFilterMatcher_MatchesJsonOriginatedNumericPropertyFilters()
-    {
-        const string json = """
-            {
-              "property_filters": [
-                {"property_name": "score", "property_value": 1.0, "comparison_operator": "="},
-                {"property_name": "score", "property_value": 0.5, "comparison_operator": ">"},
-                {"property_name": "rank", "property_value": 2, "comparison_operator": "<>"}
-              ]
-            }
-            """;
-        var filters = JsonSerializer.Deserialize<SearchFilters>(json, GraphitiJsonSerializer.Options)!;
-        var attributes = new Dictionary<string, object?>
-        {
-            ["score"] = 1L,
-            ["rank"] = 3
-        };
-
-        Assert.True(SearchFilterMatcher.PropertyFiltersMatch(attributes, filters.PropertyFilters));
-    }
-
-    [Fact]
-    public void SearchFilterMatcher_DoesNotRoundLargeIntegersThroughDouble()
-    {
-        var attributes = new Dictionary<string, object?>
-        {
-            ["score"] = 9_007_199_254_740_993L
-        };
-
-        Assert.False(SearchFilterMatcher.PropertyFiltersMatch(
-            attributes,
-            new[]
-            {
-                new PropertyFilter(
-                    "score",
-                    ComparisonOperator.Equals,
-                    9_007_199_254_740_992L)
-            }));
-        Assert.True(SearchFilterMatcher.PropertyFiltersMatch(
-            attributes,
-            new[]
-            {
-                new PropertyFilter(
-                    "score",
-                    ComparisonOperator.GreaterThan,
-                    9_007_199_254_740_992L)
-            }));
-    }
-
-    [Fact]
-    public void SearchFilterMatcher_ParsesJsonElementNumbersWithoutDoubleRounding()
-    {
-        var attributes = JsonSerializer.Deserialize<Dictionary<string, object?>>(
-            "{\"score\":9007199254740993}",
-            GraphitiJsonSerializer.Options)!;
-
-        Assert.True(SearchFilterMatcher.PropertyFiltersMatch(
-            attributes,
-            new[]
-            {
-                new PropertyFilter(
-                    "score",
-                    ComparisonOperator.Equals,
-                    9_007_199_254_740_993L)
-            }));
-        Assert.False(SearchFilterMatcher.PropertyFiltersMatch(
-            attributes,
-            new[]
-            {
-                new PropertyFilter(
-                    "score",
-                    ComparisonOperator.Equals,
-                    9_007_199_254_740_992L)
-            }));
-    }
-
-    [Fact]
     public void SearchFilterMatcher_NodeLabelsMatchAnyRequestedLabel()
     {
         var filters = new SearchFilters
@@ -218,88 +110,6 @@ public sealed class SearchFilterTests
         Assert.False(SearchFilterMatcher.NodeMatches(
             new EntityNode { Name = "Project", Labels = new List<string> { "Entity", "Project" } },
             filters));
-    }
-
-    [Fact]
-    public void SearchFilterMatcher_NodePropertyFiltersMatchCanonicalFields()
-    {
-        var createdAt = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-        var node = new EntityNode
-        {
-            Uuid = "node-uuid",
-            Name = "Alice",
-            GroupId = "tenant-a",
-            Summary = "project lead",
-            CreatedAt = createdAt,
-            Attributes = new Dictionary<string, object?>
-            {
-                ["name"] = "attribute-name",
-                ["summary"] = "attribute-summary"
-            }
-        };
-        var filters = new SearchFilters
-        {
-            PropertyFilters = new List<PropertyFilter>
-            {
-                new("uuid", ComparisonOperator.Equals, node.Uuid),
-                new("name", ComparisonOperator.Equals, node.Name),
-                new("group_id", ComparisonOperator.Equals, node.GroupId),
-                new("summary", ComparisonOperator.Equals, node.Summary),
-                new("created_at", ComparisonOperator.LessThanEqual, createdAt)
-            }
-        };
-
-        Assert.True(SearchFilterMatcher.NodeMatches(node, filters));
-    }
-
-    [Fact]
-    public void SearchFilterMatcher_EdgePropertyFiltersMatchCanonicalFields()
-    {
-        var createdAt = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-        var expiredAt = createdAt.AddDays(1);
-        var validAt = createdAt.AddMinutes(1);
-        var invalidAt = createdAt.AddMinutes(2);
-        var referenceTime = createdAt.AddMinutes(3);
-        var edge = new EntityEdge
-        {
-            Uuid = "edge-uuid",
-            GroupId = "tenant-a",
-            SourceNodeUuid = "source-uuid",
-            TargetNodeUuid = "target-uuid",
-            Name = "WORKS_AT",
-            Fact = "Alice works at Acme",
-            Episodes = new List<string> { "episode-uuid" },
-            CreatedAt = createdAt,
-            ExpiredAt = expiredAt,
-            ValidAt = validAt,
-            InvalidAt = invalidAt,
-            ReferenceTime = referenceTime,
-            Attributes = new Dictionary<string, object?>
-            {
-                ["fact"] = "attribute fact",
-                ["source_node_uuid"] = "attribute-source"
-            }
-        };
-        var filters = new SearchFilters
-        {
-            PropertyFilters = new List<PropertyFilter>
-            {
-                new("uuid", ComparisonOperator.Equals, edge.Uuid),
-                new("group_id", ComparisonOperator.Equals, edge.GroupId),
-                new("source_node_uuid", ComparisonOperator.Equals, edge.SourceNodeUuid),
-                new("target_node_uuid", ComparisonOperator.Equals, edge.TargetNodeUuid),
-                new("name", ComparisonOperator.Equals, edge.Name),
-                new("fact", ComparisonOperator.Equals, edge.Fact),
-                new("episodes", ComparisonOperator.IsNotNull),
-                new("created_at", ComparisonOperator.Equals, createdAt),
-                new("expired_at", ComparisonOperator.Equals, expiredAt),
-                new("valid_at", ComparisonOperator.Equals, validAt),
-                new("invalid_at", ComparisonOperator.Equals, invalidAt),
-                new("reference_time", ComparisonOperator.Equals, referenceTime)
-            }
-        };
-
-        Assert.True(SearchFilterMatcher.EdgeMatches(edge, filters));
     }
 
     [Fact]
@@ -391,29 +201,6 @@ public sealed class SearchFilterTests
         {
             ValidAt = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc)
         }));
-    }
-
-    [Fact]
-    public void CompiledSearchFilter_MatchesMissingAndNullPropertyFilters()
-    {
-        var attributes = new Dictionary<string, object?>
-        {
-            ["deleted_at"] = null,
-            ["archived_at"] = "2026-01-01",
-            ["status"] = "active"
-        };
-        var compiled = CompiledSearchFilter.Compile(new SearchFilters
-        {
-            PropertyFilters = new List<PropertyFilter>
-            {
-                new("deleted_at", ComparisonOperator.IsNull),
-                new("missing", ComparisonOperator.Equals, null),
-                new("archived_at", ComparisonOperator.NotEquals, null),
-                new("status", ComparisonOperator.IsNotNull)
-            }
-        });
-
-        Assert.True(compiled.NodeMatches(new EntityNode { Attributes = attributes }));
     }
 
     [Fact]
@@ -593,55 +380,4 @@ public sealed class SearchFilterTests
         Assert.Empty(parameters);
     }
 
-    [Fact]
-    public void EdgeSearchFilterQueryConstructor_BuildsPropertyFilters()
-    {
-        var filters = new SearchFilters
-        {
-            PropertyFilters = new List<PropertyFilter>
-            {
-                new("source", ComparisonOperator.IsNotNull),
-                new("confidence", ComparisonOperator.LessThan, 0.8),
-                new("archived_at", ComparisonOperator.NotEquals, null)
-            }
-        };
-
-        var (queries, parameters) =
-            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters);
-
-        Assert.Equal(
-            new[]
-            {
-                "(e[$edge_property_name_0] IS NOT NULL)",
-                "(e[$edge_property_name_1] < $edge_property_value_1)",
-                "(e[$edge_property_name_2] IS NOT NULL)"
-            },
-            queries);
-        Assert.Equal("source", parameters["edge_property_name_0"]);
-        Assert.Equal("confidence", parameters["edge_property_name_1"]);
-        Assert.Equal(0.8, parameters["edge_property_value_1"]);
-        Assert.Equal("archived_at", parameters["edge_property_name_2"]);
-        Assert.False(parameters.ContainsKey("edge_property_value_0"));
-        Assert.False(parameters.ContainsKey("edge_property_value_2"));
-    }
-
-    [Fact]
-    public void EdgeSearchFilterQueryConstructor_UsesPrimitiveJsonPropertyFilterValues()
-    {
-        const string json = """
-            {
-              "property_filters": [
-                {"property_name": "confidence", "property_value": 0.2, "comparison_operator": "<"}
-              ]
-            }
-            """;
-        var filters = JsonSerializer.Deserialize<SearchFilters>(json, GraphitiJsonSerializer.Options)!;
-
-        var (queries, parameters) =
-            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters);
-
-        Assert.Equal(new[] { "(e[$edge_property_name_0] < $edge_property_value_0)" }, queries);
-        Assert.Equal("confidence", parameters["edge_property_name_0"]);
-        Assert.Equal(0.2, Assert.IsType<double>(parameters["edge_property_value_0"]));
-    }
 }

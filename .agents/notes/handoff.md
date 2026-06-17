@@ -23,7 +23,7 @@ lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 > PENDING Sergey's confirmation. See `roadmap.md` → "User-gated". Neo4j removal: DONE (2026-06-17).
 > The library work itself
 > (parity sweep, search/pipeline correctness) is solid and green (latest full verifier:
-> 976 passed / 3 skipped).
+> 967 passed / 3 skipped).
 
 ## Current Layout
 
@@ -168,8 +168,10 @@ maps use dictionary keys for custom type names like Python. MMR reranking now re
 and community candidates in Python's first-seen retrieval order, and edge episode-mentions scores
 stay in pre-sort RRF order like Python. Bulk ingestion skips the extra upfront entity/exclusion type
 validation absent from Python `add_episode_bulk` while single `AddEpisodeAsync` still validates.
-`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`976` passed,
-`3` skipped, `979` total; both shippable packages packed and both fresh package-consumer smoke builds
+Search `PropertyFilters` are now ignored by backend query construction and in-memory/materialized
+matching while keeping the DTO field, matching Python's current `property_filters` behavior.
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`967` passed,
+`3` skipped, `970` total; both shippable packages packed and both fresh package-consumer smoke builds
 succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
@@ -404,12 +406,17 @@ match Python entity/fact projections by omitting `NameEmbedding` / `FactEmbeddin
 vectors. Positive `maxCoroutines` bulk scoping was also split out and closed: C# bulk extraction,
 first-pass bulk node resolution, and final bulk node resolution now use the Python bare
 `semaphore_gather` default cap of 20 instead of the instance cap, while Graphiti-level fan-outs still
-use `maxCoroutines`.
+use `maxCoroutines`. Search `PropertyFilters` parity was also split out and closed: C# keeps the
+public DTO field for Python wire-shape parity, but backend query construction plus
+in-memory/materialized matching now ignore it because Python defines `property_filters` without
+applying it in the node or edge search filter constructors.
 
-Open concrete follow-up candidates from the 2026-06-17 read-only audit: none currently remain after
-the verified slices above. Continue the broader Python-vs-C# audit and add new candidates here as
-they are confirmed; decision-gated release/API/provider items remain separate in plan 05 and the
-provider notes.
+Open concrete follow-up candidate from the 2026-06-17 read-only audit: invalidated-edge ordering.
+Python sorts `invalidation_candidates` by `valid_at` before expiring the resolved edge and returning
+the contradicted older edges; C# currently preserves candidate-search order through
+`ResolveEdgeContradictions`. Treat this as the next separate verified slice. Continue the broader
+Python-vs-C# audit and add new candidates here as they are confirmed; decision-gated release/API/provider
+items remain separate in plan 05 and the provider notes.
 
 Latest checkpoint, 2026-06-13:
 

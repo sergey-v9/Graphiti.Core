@@ -38,9 +38,4 @@ internal static class SearchFilterMatcher
 
     public static bool DateFiltersMatch(DateTime? value, IReadOnlyList<List<DateFilter>>? filters) =>
         CompiledSearchFilter.DateFiltersMatch(value, filters);
-
-    public static bool PropertyFiltersMatch(
-        IReadOnlyDictionary<string, object?> attributes,
-        IReadOnlyList<PropertyFilter>? filters) =>
-        CompiledSearchFilter.PropertyFiltersMatch(attributes, filters);
 }

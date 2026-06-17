@@ -334,7 +334,7 @@ public class InMemorySearchGraphDriverTests
     }
 
     [Fact]
-    public async Task InMemorySearchDriver_PropertyFilterOnFactMatchesEdgeFulltext()
+    public async Task InMemorySearchDriver_IgnoresPropertyFiltersLikePython()
     {
         var driver = new InMemoryGraphDriver();
         var searchDriver = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
@@ -343,10 +343,13 @@ public class InMemorySearchGraphDriverTests
         var target = Entity("target", now);
         var edge = Edge(source, target, "apollo canonical fact", now);
         edge.Attributes["fact"] = "attribute fact";
+        var otherEdge = Edge(source, target, "apollo alternative fact", now);
+        otherEdge.Attributes["fact"] = "other attribute fact";
 
         await source.SaveAsync(driver);
         await target.SaveAsync(driver);
         await edge.SaveAsync(driver);
+        await otherEdge.SaveAsync(driver);
 
         var hits = await searchDriver.SearchEntityEdgesFulltextAsync(
             "apollo",
@@ -354,13 +357,15 @@ public class InMemorySearchGraphDriverTests
             {
                 PropertyFilters = new List<PropertyFilter>
                 {
-                    new("fact", ComparisonOperator.Equals, edge.Fact)
+                    new("fact", ComparisonOperator.Equals, "no matching attribute")
                 }
             },
             new[] { "group" },
             limit: 10);
 
-        Assert.Equal(edge.Uuid, Assert.Single(hits).Item.Uuid);
+        Assert.Equal(
+            new[] { edge.Uuid, otherEdge.Uuid }.Order(StringComparer.Ordinal),
+            hits.Select(hit => hit.Item.Uuid).Order(StringComparer.Ordinal));
     }
 
     [Fact]
