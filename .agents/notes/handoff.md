@@ -149,8 +149,11 @@ status` shows the token lacks `read:packages`. Provide a PAT/token with `read:pa
 
 Current core-only checkpoint, 2026-06-17: typed node deletes now preserve Python's Saga boundary for
 direct model `DeleteAsync` and typed node namespaces, and cross-encoder search now collapses duplicate
-passage strings like Python while mapping each passage back to the last duplicate candidate.
-`.\eng\Verify-GraphitiCoreOnly.ps1` is green (`928` passed, `0` skipped; core pack succeeded). A no-restore build of
+passage strings like Python while mapping each passage back to the last duplicate candidate. Base
+`Edge.DeleteByUuidsAsync` now matches Python's inherited base helper scope by excluding
+`HAS_EPISODE`/`NEXT_EPISODE`, while concrete saga edge deletes and episode-removal saga repair still
+delete those relationship types through typed paths. `.\eng\Verify-GraphitiCoreOnly.ps1` is green
+(`929` passed, `0` skipped; core pack succeeded). A no-restore build of
 `Graphiti.Core.Drivers.Ladybug` was also attempted to catch syntax errors, but it is blocked by the
 same GitHub Packages `403 Forbidden` for `LadybugDB` / `LadybugDB.Native` until source
 `github_ladybug` has a credential with `read:packages`.
@@ -271,7 +274,8 @@ Python emits malformed/backend-dependent empty `NodeLabels` fragments (`n:`, `n:
 `list_has_all(..., [])`) and empty temporal fragments (`(`, `()`, or dangling `OR` groups), while C#
 keeps those shapes as no-op filters via existing `CompiledSearchFilter`/query-builder coverage.
 Current audit follow-up closed namespace embedding drift, an in-memory triplet collision drift, the
-typed node-delete Saga boundary, and the duplicate-passage cross-encoder drift:
+typed node-delete Saga boundary, the duplicate-passage cross-encoder drift, and the base edge-delete
+scope drift:
 namespace `SaveAsync` regenerates entity/community node and entity-edge embeddings even when prefilled,
 namespace `SaveBulkAsync` now preserves supplied null/precomputed embeddings without calling the
 embedder, and `AddTripletAsync` creates a fresh entity-edge UUID when the default in-memory backend
@@ -279,19 +283,21 @@ already has a non-entity edge with the requested UUID. Direct model `DeleteAsync
 namespaces now use an internal typed-delete driver seam, so deleting through the wrong Entity/Saga
 node type no longer removes the stored node across that boundary. Cross-encoder search composition now
 deduplicates passage strings in first-seen order and maps ranked passages back to the last duplicate
-candidate, matching Python's dict-comprehension behavior. Search concurrency proof was also tightened
-so the fake driver waits for monotonic search-call arrivals instead of asserting a transient active
-count.
+candidate, matching Python's dict-comprehension behavior. Base `Edge.DeleteByUuidsAsync` now excludes
+`HAS_EPISODE`/`NEXT_EPISODE` like Python's inherited base helper, with C# saga repair using concrete
+typed deletes instead. Search concurrency proof was also tightened so the fake driver waits for
+monotonic search-call arrivals instead of asserting a transient active count.
 Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests
 (`1012` passed, `3` skipped, `1015` total), both shippable package packs, and both package-consumer
 smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
-Open WS-2 audit candidates from this mini-pass: decide whether to keep or remove the additive
-`CommunityEdgeNamespace.SaveBulkAsync` public helper, and whether to narrow base
-`Edge.DeleteByUuidsAsync` so it does not delete `HAS_EPISODE`/`NEXT_EPISODE` edges like Python's
-inherited base helper. Continue the broader full-pipeline parity audit against current Python; new
-candidates should be added here as they are confirmed.
+Open WS-2 audit candidate from this mini-pass: decide whether to keep or remove the additive
+`CommunityEdgeNamespace.SaveBulkAsync` public helper. A read-only side audit confirmed Python has no
+community-edge `save_bulk`, while C# exposes `SaveBulkAsync` publicly and pins it in the API snapshot
+plus Ladybug package runtime tests. Treat this as an ask-user public API decision before changing the
+surface. Continue the broader full-pipeline parity audit against current Python; new candidates
+should be added here as they are confirmed.
 
 Latest checkpoint, 2026-06-13:
 

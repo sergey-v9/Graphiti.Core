@@ -356,6 +356,71 @@ public class NamespaceTests
     }
 
     [Fact]
+    public async Task EdgeModel_DeleteByUuidsDoesNotDeleteSagaEdgesLikePython()
+    {
+        var driver = new InMemoryGraphDriver();
+        var entity = new EntityEdge
+        {
+            Uuid = "entity-edge",
+            SourceNodeUuid = "entity-a",
+            TargetNodeUuid = "entity-b",
+            GroupId = "group",
+            Name = "KNOWS",
+            Fact = "Alice knows Bob."
+        };
+        var mention = new EpisodicEdge
+        {
+            Uuid = "mention-edge",
+            SourceNodeUuid = "episode",
+            TargetNodeUuid = "entity-a",
+            GroupId = "group"
+        };
+        var membership = new CommunityEdge
+        {
+            Uuid = "community-edge",
+            SourceNodeUuid = "community",
+            TargetNodeUuid = "entity-a",
+            GroupId = "group"
+        };
+        var hasEpisode = new HasEpisodeEdge
+        {
+            Uuid = "has-episode-edge",
+            SourceNodeUuid = "saga",
+            TargetNodeUuid = "episode",
+            GroupId = "group"
+        };
+        var nextEpisode = new NextEpisodeEdge
+        {
+            Uuid = "next-episode-edge",
+            SourceNodeUuid = "episode-a",
+            TargetNodeUuid = "episode-b",
+            GroupId = "group"
+        };
+
+        await entity.SaveAsync(driver);
+        await mention.SaveAsync(driver);
+        await membership.SaveAsync(driver);
+        await hasEpisode.SaveAsync(driver);
+        await nextEpisode.SaveAsync(driver);
+
+        await Edge.DeleteByUuidsAsync(
+            driver,
+            new[] { entity.Uuid, mention.Uuid, membership.Uuid, hasEpisode.Uuid, nextEpisode.Uuid });
+
+        await Assert.ThrowsAsync<EdgeNotFoundException>(() => EntityEdge.GetByUuidAsync(driver, entity.Uuid));
+        await Assert.ThrowsAsync<EdgeNotFoundException>(() => EpisodicEdge.GetByUuidAsync(driver, mention.Uuid));
+        await Assert.ThrowsAsync<EdgeNotFoundException>(() => CommunityEdge.GetByUuidAsync(driver, membership.Uuid));
+        Assert.Equal(hasEpisode.Uuid, (await HasEpisodeEdge.GetByUuidAsync(driver, hasEpisode.Uuid)).Uuid);
+        Assert.Equal(nextEpisode.Uuid, (await NextEpisodeEdge.GetByUuidAsync(driver, nextEpisode.Uuid)).Uuid);
+
+        await hasEpisode.DeleteAsync(driver);
+        await nextEpisode.DeleteAsync(driver);
+
+        await Assert.ThrowsAsync<EdgeNotFoundException>(() => HasEpisodeEdge.GetByUuidAsync(driver, hasEpisode.Uuid));
+        await Assert.ThrowsAsync<EdgeNotFoundException>(() => NextEpisodeEdge.GetByUuidAsync(driver, nextEpisode.Uuid));
+    }
+
+    [Fact]
     public async Task EpisodeNamespace_ProvidesMentionLookupAndTemporalRetrieval()
     {
         var driver = new InMemoryGraphDriver();

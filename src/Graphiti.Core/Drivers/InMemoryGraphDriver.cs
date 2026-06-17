@@ -9,7 +9,7 @@ namespace Graphiti.Core.Drivers;
 /// (<see cref="ISearchGraphDriver"/>), making it ideal for tests, examples, and ephemeral graphs.
 /// All mutating operations are guarded by a lock; the driver can be cloned to snapshot its state.
 /// </summary>
-public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, ITypedNodeDeleteGraphDriver
+public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, ITypedNodeDeleteGraphDriver, ITypedEdgeDeleteGraphDriver
 {
     private readonly Lock _gate;
     private readonly Dictionary<string, Node> _nodes = new(StringComparer.Ordinal);
@@ -308,6 +308,42 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         lock (_gate)
         {
             RemoveEdgeByUuid(uuid);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    Task ITypedEdgeDeleteGraphDriver.DeleteEdgeAsync<TEdge>(
+        string uuid,
+        CancellationToken cancellationToken) =>
+        DeleteEdgeByUuidAsync<TEdge>(uuid, cancellationToken);
+
+    async Task ITypedEdgeDeleteGraphDriver.DeleteEdgesByUuidsAsync<TEdge>(
+        IEnumerable<string> uuids,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uuids);
+        cancellationToken.ThrowIfCancellationRequested();
+        var uuidList = MaterializeUuids(uuids);
+        for (var i = 0; i < uuidList.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await DeleteEdgeByUuidAsync<TEdge>(uuidList[i], cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private Task DeleteEdgeByUuidAsync<TEdge>(
+        string uuid,
+        CancellationToken cancellationToken)
+        where TEdge : Edge
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_gate)
+        {
+            if (_edges.TryGetValue(uuid, out var edge) && edge is TEdge)
+            {
+                RemoveEdgeByUuid(uuid);
+            }
         }
 
         return Task.CompletedTask;

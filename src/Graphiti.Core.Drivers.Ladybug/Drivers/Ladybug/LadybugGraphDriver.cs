@@ -3,7 +3,7 @@ namespace Graphiti.Core.Drivers.Ladybug;
 /// <summary>
 /// LadybugDB/Kuzu driver core over an abstract statement executor.
 /// </summary>
-internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, IEmbeddingLoadGraphDriver, ITypedNodeDeleteGraphDriver
+internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, IEmbeddingLoadGraphDriver, ITypedNodeDeleteGraphDriver, ITypedEdgeDeleteGraphDriver
 {
     private readonly SharedState _shared;
     private readonly ILadybugQueryExecutor _executor;
@@ -318,6 +318,31 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             cancellationToken).ConfigureAwait(false);
         await _executor.ExecuteAsync(
             LadybugStatementBuilder.BuildEdgeDeleteByUuid<NextEpisodeEdge>(uuid),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    async Task ITypedEdgeDeleteGraphDriver.DeleteEdgeAsync<TEdge>(
+        string uuid,
+        CancellationToken cancellationToken)
+    {
+        await _executor.ExecuteAsync(
+            LadybugStatementBuilder.BuildEdgeDeleteByUuid<TEdge>(uuid),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    async Task ITypedEdgeDeleteGraphDriver.DeleteEdgesByUuidsAsync<TEdge>(
+        IEnumerable<string> uuids,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uuids);
+        var edgeUuids = MaterializeWithCancellation(uuids, cancellationToken);
+        if (edgeUuids.Count == 0)
+        {
+            return;
+        }
+
+        await _executor.ExecuteAsync(
+            LadybugStatementBuilder.BuildEdgesDeleteByUuids<TEdge>(edgeUuids),
             cancellationToken).ConfigureAwait(false);
     }
 

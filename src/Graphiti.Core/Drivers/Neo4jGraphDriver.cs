@@ -7,7 +7,7 @@ namespace Graphiti.Core.Drivers;
 /// search (<see cref="ISearchGraphDriver"/>) by issuing Cypher queries, including full-text and vector
 /// retrieval, and provisions the required constraints and indexes on initialization.
 /// </summary>
-public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver, ITypedNodeDeleteGraphDriver
+public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver, ITypedNodeDeleteGraphDriver, ITypedEdgeDeleteGraphDriver
 {
     private static readonly IReadOnlyList<string> Neo4jSchemaStatements = Array.AsReadOnly(new[]
     {
@@ -321,6 +321,29 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver, ITyp
             new Dictionary<string, object?> { ["uuid"] = uuid },
             cancellationToken);
 
+    Task ITypedEdgeDeleteGraphDriver.DeleteEdgeAsync<TEdge>(
+        string uuid,
+        CancellationToken cancellationToken) =>
+        RunWriteAsync(
+            $"MATCH ()-[e:{RelationshipTypeFor<TEdge>()} {{uuid: $uuid}}]-() DELETE e",
+            new Dictionary<string, object?> { ["uuid"] = uuid },
+            cancellationToken);
+
+    Task ITypedEdgeDeleteGraphDriver.DeleteEdgesByUuidsAsync<TEdge>(
+        IEnumerable<string> uuids,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uuids);
+        cancellationToken.ThrowIfCancellationRequested();
+        var uuidList = uuids.ToList();
+        return uuidList.Count == 0
+            ? Task.CompletedTask
+            : RunWriteAsync(
+                $"MATCH ()-[e:{RelationshipTypeFor<TEdge>()}]-() WHERE e.uuid IN $uuids DELETE e",
+                new Dictionary<string, object?> { ["uuids"] = uuidList },
+                cancellationToken);
+    }
+
     /// <inheritdoc />
     public override Task DeleteEdgesByUuidsAsync(IEnumerable<string> uuids, CancellationToken cancellationToken = default)
     {
@@ -341,8 +364,39 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver, ITyp
             ? RunWriteAsync("MATCH (n) DETACH DELETE n", new Dictionary<string, object?>(), cancellationToken)
             : RunWriteAsync(
                 "MATCH (n) WHERE n.group_id IN $group_ids DETACH DELETE n",
-                new Dictionary<string, object?> { ["group_ids"] = groupIds.ToList() },
-                cancellationToken);
+            new Dictionary<string, object?> { ["group_ids"] = groupIds.ToList() },
+            cancellationToken);
+
+    private static string RelationshipTypeFor<TEdge>()
+        where TEdge : Edge
+    {
+        if (typeof(TEdge) == typeof(EntityEdge))
+        {
+            return "RELATES_TO";
+        }
+
+        if (typeof(TEdge) == typeof(EpisodicEdge))
+        {
+            return "MENTIONS";
+        }
+
+        if (typeof(TEdge) == typeof(CommunityEdge))
+        {
+            return "HAS_MEMBER";
+        }
+
+        if (typeof(TEdge) == typeof(HasEpisodeEdge))
+        {
+            return "HAS_EPISODE";
+        }
+
+        if (typeof(TEdge) == typeof(NextEpisodeEdge))
+        {
+            return "NEXT_EPISODE";
+        }
+
+        throw new ArgumentOutOfRangeException(typeof(TEdge).Name);
+    }
 
     /// <inheritdoc />
     public override async Task<TNode> GetNodeByUuidAsync<TNode>(string uuid, CancellationToken cancellationToken = default)

@@ -164,7 +164,10 @@ public sealed partial class Graphiti
         }
 
         var sagaEdgeUuidsToDelete = BuildSagaEdgeDeleteUuidList(removedMembershipEdges, nextEdgesToDelete);
-        await Edge.DeleteByUuidsAsync(Driver, sagaEdgeUuidsToDelete, cancellationToken).ConfigureAwait(false);
+        await DeleteSagaRepairEdgesAsync(
+            removedMembershipEdges,
+            nextEdgesToDelete,
+            cancellationToken).ConfigureAwait(false);
 
         return new SagaEpisodeDeletionRepairResult(
             updatedSagas,
@@ -345,6 +348,33 @@ public sealed partial class Graphiti
         var seen = new HashSet<string>(StringComparer.Ordinal);
         AddEdgeUuids(removedMembershipEdges, seen, edgeUuids);
         AddEdgeUuids(nextEdgesToDelete, seen, edgeUuids);
+        return edgeUuids;
+    }
+
+    private async Task DeleteSagaRepairEdgesAsync(
+        List<HasEpisodeEdge> removedMembershipEdges,
+        List<NextEpisodeEdge> nextEdgesToDelete,
+        CancellationToken cancellationToken)
+    {
+        await TypedEdgeDeletion.DeleteEdgesByUuidsAsync<HasEpisodeEdge>(
+            Driver,
+            BuildTypedEdgeUuidList(removedMembershipEdges),
+            cancellationToken).ConfigureAwait(false);
+        await TypedEdgeDeletion.DeleteEdgesByUuidsAsync<NextEpisodeEdge>(
+            Driver,
+            BuildTypedEdgeUuidList(nextEdgesToDelete),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static List<string> BuildTypedEdgeUuidList<TEdge>(List<TEdge> edges)
+        where TEdge : Edge
+    {
+        var edgeUuids = new List<string>(edges.Count);
+        for (var i = 0; i < edges.Count; i++)
+        {
+            edgeUuids.Add(edges[i].Uuid);
+        }
+
         return edgeUuids;
     }
 

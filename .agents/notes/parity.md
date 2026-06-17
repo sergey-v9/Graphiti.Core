@@ -274,10 +274,9 @@ the supplied models as-is. C# namespace `SaveAsync` now regenerates prefilled em
 ingestion still generates missing embeddings. `AddTripletAsync` also now preserves existing non-entity
 edges in the default in-memory backend when a submitted entity-edge UUID collides with an episodic,
 community, has-episode, or next-episode edge by assigning the entity edge a fresh UUID before saving.
-Remaining audit observations not changed in this pass: `CommunityEdgeNamespace.SaveBulkAsync` is an
-additive C# public helper not present in Python, and base `Edge.DeleteByUuidsAsync` reaches
-`HAS_EPISODE`/`NEXT_EPISODE` edges where Python's inherited base helper does not. Treat both as public
-API decision candidates before changing them.
+Remaining audit observation not changed in this pass: `CommunityEdgeNamespace.SaveBulkAsync` is an
+additive C# public helper not present in Python. Treat it as an ask-user public API decision before
+removing it; keeping it would need an explicit documented additive-API call.
 
 **2026-06-17 typed node-delete follow-up:** closed a Saga boundary drift. Python base
 `Node.delete` reaches only `Entity`, `Episodic`, and `Community`, while `SagaNode.delete` is Saga-only.
@@ -293,6 +292,14 @@ passages are sent once in first-seen passage order, while the last duplicate can
 passage-to-result mapping. C# `SearchResultComposer` now ranks unique passages with the same first-seen
 ordering and maps each ranked passage back to the last candidate using that passage. Driver-backed
 tests pin the behavior for duplicate edge facts, node names, episode content, and community names.
+
+**2026-06-17 base edge-delete follow-up:** closed the inherited base edge helper drift. Python base
+`Edge.delete` / `Edge.delete_by_uuids` delete only `MENTIONS`, `RELATES_TO`, and `HAS_MEMBER`;
+`HAS_EPISODE` and `NEXT_EPISODE` have concrete delete paths. C# base `Edge.DeleteByUuidsAsync` now
+uses the same inherited-base scope, while direct concrete `DeleteAsync` and typed edge namespaces use
+an internal typed-delete driver seam for all five edge types. The stronger C# episode-removal saga
+repair still deletes saga membership/order edges, but now does so through concrete
+`HasEpisodeEdge`/`NextEpisodeEdge` typed delete calls instead of the Python-scoped base helper.
 
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 

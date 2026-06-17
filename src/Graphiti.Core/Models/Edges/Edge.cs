@@ -29,14 +29,14 @@ public abstract class Edge : IEquatable<Edge>
 
     /// <summary>Deletes this edge from the graph.</summary>
     public Task DeleteAsync(IGraphDriver driver, CancellationToken cancellationToken = default) =>
-        driver.DeleteEdgeAsync(Uuid, cancellationToken);
+        TypedEdgeDeletion.DeleteEdgeAsync(this, driver, cancellationToken);
 
     /// <summary>Deletes the edges with the given UUIDs.</summary>
     public static Task DeleteByUuidsAsync(
         IGraphDriver driver,
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
-        driver.DeleteEdgesByUuidsAsync(uuids, cancellationToken);
+        TypedEdgeDeletion.DeleteBaseEdgesByUuidsAsync(driver, uuids, cancellationToken);
 
     /// <summary>Two edges are equal when they share the same <see cref="Uuid"/>.</summary>
     public bool Equals(Edge? other) => other is not null && Uuid == other.Uuid;

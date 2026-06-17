@@ -129,17 +129,10 @@ internal static class NamespaceDriverHelpers
         CancellationToken cancellationToken)
         where TEdge : Edge
     {
-        ArgumentNullException.ThrowIfNull(uuids);
-        var typedEdges = await driver.GetEdgesByUuidsAsync<TEdge>(
+        await TypedEdgeDeletion.DeleteEdgesByUuidsAsync<TEdge>(
+            driver,
             uuids,
             cancellationToken).ConfigureAwait(false);
-        var typedUuids = BuildEdgeUuidList(typedEdges);
-        if (typedUuids.Count == 0)
-        {
-            return;
-        }
-
-        await driver.DeleteEdgesByUuidsAsync(typedUuids, cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task LoadEntityNodeEmbeddingsAsync(
@@ -256,8 +249,7 @@ internal static class NamespaceDriverHelpers
         return uuids;
     }
 
-    private static List<string> BuildEdgeUuidList<TEdge>(IReadOnlyList<TEdge> edges)
-        where TEdge : Edge
+    private static List<string> BuildEdgeUuidList(List<EntityEdge> edges)
     {
         var uuids = new List<string>(edges.Count);
         for (var i = 0; i < edges.Count; i++)
