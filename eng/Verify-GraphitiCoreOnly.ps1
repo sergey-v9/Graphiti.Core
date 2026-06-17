@@ -1,8 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$Configuration = "Release",
-    [string]$CoreProject = "src\Graphiti.Core\Graphiti.Core.csproj",
-    [string]$TestProject = "tests\Graphiti.Core.Tests\Graphiti.Core.Tests.csproj",
+    [string]$CoreProject = "src/Graphiti.Core/Graphiti.Core.csproj",
+    [string]$TestProject = "tests/Graphiti.Core.Tests/Graphiti.Core.Tests.csproj",
     [switch]$SkipTests,
     [switch]$SkipPack
 )

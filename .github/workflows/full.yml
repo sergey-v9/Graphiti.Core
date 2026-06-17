@@ -22,7 +22,10 @@ concurrency:
 jobs:
   full:
     name: Full verifier
-    runs-on: ubuntu-latest
+    # The fork LadybugDB Linux package currently loads the upstream FTS extension from
+    # ~/.lbdb/extension and fails with an ABI mismatch there. Keep this workflow focused on
+    # authenticated package restore plus the full Graphiti verifier on the known-good RID.
+    runs-on: windows-latest
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "1"

@@ -146,9 +146,9 @@ public class PackageReadinessTests
         var csharpRoot = FindCSharpRoot();
         var verifyScript = File.ReadAllText(Path.Combine(csharpRoot, "eng", "Verify-GraphitiCore.ps1"));
 
-        Assert.Contains(@"src\Graphiti.Core\Graphiti.Core.csproj", verifyScript);
+        Assert.Contains("src/Graphiti.Core/Graphiti.Core.csproj", verifyScript);
         Assert.Contains(
-            @"src\Graphiti.Core.Drivers.Ladybug\Graphiti.Core.Drivers.Ladybug.csproj",
+            "src/Graphiti.Core.Drivers.Ladybug/Graphiti.Core.Drivers.Ladybug.csproj",
             verifyScript);
         Assert.Contains("dotnet pack $packageProject", verifyScript);
     }

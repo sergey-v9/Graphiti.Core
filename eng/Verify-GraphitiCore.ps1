@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$Solution = "Graphiti.Core.CSharp.slnx",
-    [string]$TestProject = "tests\Graphiti.Core.Tests\Graphiti.Core.Tests.csproj",
+    [string]$TestProject = "tests/Graphiti.Core.Tests/Graphiti.Core.Tests.csproj",
     [string]$FocusedFilter,
     [switch]$SkipPack,
     [switch]$SkipPackageSmoke
@@ -205,9 +205,9 @@ function Invoke-PackageConsumerSmoke {
 }
 
 function Invoke-PackageConsumerSmokes {
-    $version = Get-ProjectProperty -ProjectPath "src\Graphiti.Core\Graphiti.Core.csproj" -PropertyName "Version"
-    $corePackageSource = (Resolve-Path "src\Graphiti.Core\bin\Release").Path
-    $ladybugPackageSource = (Resolve-Path "src\Graphiti.Core.Drivers.Ladybug\bin\Release").Path
+    $version = Get-ProjectProperty -ProjectPath "src/Graphiti.Core/Graphiti.Core.csproj" -PropertyName "Version"
+    $corePackageSource = (Resolve-Path "src/Graphiti.Core/bin/Release").Path
+    $ladybugPackageSource = (Resolve-Path "src/Graphiti.Core.Drivers.Ladybug/bin/Release").Path
     $ladybugGitHubSource = "https://nuget.pkg.github.com/sergey-v9/index.json"
     $nugetSource = "https://api.nuget.org/v3/index.json"
 
@@ -300,8 +300,8 @@ Invoke-VerifyStep "test" {
 
 if (-not $SkipPack) {
     $packageProjects = @(
-        "src\Graphiti.Core\Graphiti.Core.csproj",
-        "src\Graphiti.Core.Drivers.Ladybug\Graphiti.Core.Drivers.Ladybug.csproj"
+        "src/Graphiti.Core/Graphiti.Core.csproj",
+        "src/Graphiti.Core.Drivers.Ladybug/Graphiti.Core.Drivers.Ladybug.csproj"
     )
 
     foreach ($packageProject in $packageProjects) {

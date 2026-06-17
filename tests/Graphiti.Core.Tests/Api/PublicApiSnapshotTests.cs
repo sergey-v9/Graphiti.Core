@@ -87,15 +87,31 @@ public class PublicApiSnapshotTests
 
     private static string GetApiDirectory([CallerFilePath] string thisFilePath = "")
     {
-        // The baseline lives in source control next to this test file, not in the build output, so
-        // anchor to the compiler-provided path of this source file rather than AppContext.BaseDirectory.
+        // The baseline lives in source control next to this test file. In local builds, CallerFilePath
+        // points there directly; deterministic CI builds can remap it to /_/, so fall back to walking
+        // from the test output directory to the repository root.
         var directory = Path.GetDirectoryName(thisFilePath);
-        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+        if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
         {
-            throw new DirectoryNotFoundException(
-                $"Could not locate the API fixture directory from source path '{thisFilePath}'.");
+            return directory;
         }
 
-        return directory;
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "Graphiti.Core.CSharp.slnx")))
+            {
+                var apiDirectory = Path.Combine(current.FullName, "tests", "Graphiti.Core.Tests", "Api");
+                if (Directory.Exists(apiDirectory))
+                {
+                    return apiDirectory;
+                }
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException(
+            $"Could not locate the API fixture directory from source path '{thisFilePath}'.");
     }
 }
