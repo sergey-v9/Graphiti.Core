@@ -31,13 +31,16 @@ from strict package sources:
 - The public-API snapshot now guards BOTH assemblies (`Graphiti.Core` + `Graphiti.Core.Drivers.Ladybug`).
 
 **Remaining (release infra):**
-- **Versioning** (confirm 2.0.0 line / alpha→beta cadence) and **CI**. NuGet metadata, README packing,
+- **Versioning** (confirm 2.0.0 line / alpha→beta cadence). NuGet metadata, README packing,
   XML docs, symbol package generation, and package-consumption smoke checks are now present and guarded
-  for both shippable packages. CI for the full suite needs GitHub Packages credentials for the native
-  Ladybug tests; a `Graphiti.Core`-only GitHub Actions lane now runs
-  `eng\Verify-GraphitiCoreOnly.ps1` (strict nuget.org-only restore, core format/build/pack, and
-  non-Ladybug tests with the OpenAI provider tests filtered out). Remember the parallel-`dotnet test`
-  deadlock.
+  for both shippable packages. CI now has both a `Graphiti.Core`-only lane
+  (`.github/workflows/core-only.yml`, `eng\Verify-GraphitiCoreOnly.ps1`, strict nuget.org-only restore)
+  and a full Ladybug-inclusive lane (`.github/workflows/full.yml`, `eng\Verify-GraphitiCore.ps1`,
+  authenticated `github_ladybug` package restore on Windows). The full lane uses the repository
+  `GITHUB_TOKEN` with packages read permission and requires the LadybugDB packages to grant this
+  repository Actions access. `OPENAI_API_KEY` remains optional; provider tests skip unless the secret is
+  present. Keep the full verifier single-job/serialized because parallel `dotnet test` runs can hang
+  the native Ladybug package.
 
 **Completed E.2 checkpoint (2026-06-17):** `Graphiti.Core.Drivers.Ladybug` restores `LadybugDB` /
 `LadybugDB.Native` from the `sergey-v9/ladybug-dotnet` GitHub Packages feed in `NuGet.config`, pinned
@@ -47,6 +50,10 @@ packages. With `NuGetPackageSourceCredentials_github_ladybug` set from the activ
 and both fresh package-consumer smoke builds succeeded). Future binding fixes should land in the
 separate `W:\code\ladybug` repo, push the fork's `dev` branch, let the GitHub Packages workflow publish
 a new dev version, and then bump Graphiti to that published version.
+
+**CI checkpoint (2026-06-17):** both workflow YAML files parse locally, the core-only verifier is green
+(`937` passed, `0` skipped; core pack succeeded), and the full verifier is green locally with GitHub
+Packages credentials (`1025` passed, `3` skipped; both packages and consumer smokes succeeded).
 
 ## Standing constraints (apply to every step)
 
@@ -194,11 +201,11 @@ full Verify green; both packages `pack`. This is a milestone (`evolution.md`:
   `PackageReadmeFile`, XML docs, `.snupkg` symbols, and fresh package-consumer restore/build/setup/run
   checks) is
   already set and covered by `PackageReadinessTests` plus `Verify-GraphitiCore.ps1`.
-- **CI:** the core-only GitHub Actions lane is wired through `.github/workflows/core-only.yml` and
-  `eng\Verify-GraphitiCoreOnly.ps1`. A full Ladybug-inclusive CI lane remains gated on adding
-  `github_ladybug` credentials with `read:packages` as a CI secret; encode the native-package
-  test-concurrency gotcha (single-threaded or serialized Ladybug tests) when wiring it. Gate the
-  key-dependent OpenAI integration tests behind a secret (skip by default).
+- **CI:** wired. The core-only GitHub Actions lane runs `eng\Verify-GraphitiCoreOnly.ps1`; the full
+  Ladybug-inclusive lane runs `eng\Verify-GraphitiCore.ps1` on Windows with the `github_ladybug`
+  credential sourced from `GITHUB_TOKEN`. The full lane is intentionally a single serialized job for
+  the native Ladybug package, and `OPENAI_API_KEY` is an optional secret so live-provider tests skip by
+  default.
 - **Publish prerequisites:** the LadybugDB package family is publishable and currently consumed from
   the fork GitHub Packages feed; decide whether to ship a metapackage (`Graphiti.Core` +
   `Graphiti.Core.Drivers.Ladybug`).

@@ -115,10 +115,11 @@ Remaining (release infra): **E.2 follow-through** — Graphiti now points at the
 `sergey-v9/ladybug-dotnet` GitHub Packages feed and pins the fork-published
 `0.17.1-dev.1.1.g6f3dbed` LadybugDB package family; full local verification requires a NuGet
 credential for source `github_ladybug` with `read:packages`. **Versioning** (2.0.0 line /
-alpha→beta cadence); and **CI** (a `Graphiti.Core`-only GitHub Actions lane now runs
-`eng\Verify-GraphitiCoreOnly.ps1`; the full Ladybug suite needs GitHub Packages credentials). NuGet
-metadata, README packing, XML docs, symbol package generation, and package-consumption smoke checks
-are present for both packages. The "Stable public API
+alpha→beta cadence) remains decision-gated. CI has both a `Graphiti.Core`-only GitHub Actions lane
+running `eng\Verify-GraphitiCoreOnly.ps1` and a full Ladybug-inclusive Windows lane running
+`eng\Verify-GraphitiCore.ps1` with authenticated GitHub Packages restore. NuGet metadata, README
+packing, XML docs, symbol package generation, and package-consumption smoke checks are present for
+both packages. The "Stable public API
 release" candidate milestone in `evolution.md` is the target. A WS-1 audit on 2026-06-14 found local
 LadybugDB `0.17.1` artifacts with the needed binding and Unix-loader repairs; the 2026-06-17 bump now
 uses the fork workflow's published dev package version rather than those local artifacts. The

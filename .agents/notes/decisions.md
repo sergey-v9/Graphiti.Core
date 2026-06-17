@@ -107,10 +107,13 @@ no wire/prompt/cache/temporal behavior changed):
   assemblies in the normal suite; the `GraphitiCoreOnlyTests=true` test-project mode compiles out the
   Ladybug-only tests and the Ladybug snapshot half so `eng\Verify-GraphitiCoreOnly.ps1` can prove
   `Graphiti.Core` restore/build/test/pack from nuget.org only. `.github/workflows/core-only.yml` runs
-  that verifier as the core-only CI lane. The LadybugDB package refs restore from the
-  `sergey-v9/ladybug-dotnet` GitHub Packages feed, currently pinned to
+  that verifier as the core-only CI lane. `.github/workflows/full.yml` runs the full
+  Ladybug-inclusive verifier on Windows in a single serialized job. The LadybugDB package refs restore
+  from the `sergey-v9/ladybug-dotnet` GitHub Packages feed, currently pinned to
   `0.17.1-dev.1.1.g6f3dbed`; full Ladybug restores require source `github_ladybug` credentials with
-  `read:packages` (plan 05 Step E.2; `kuzu-driver-port.md`).
+  `read:packages` (CI uses `GITHUB_TOKEN` plus package Actions access; local runs use
+  `NuGetPackageSourceCredentials_github_ladybug`). `OPENAI_API_KEY` is optional in CI, so live-provider
+  tests skip by default unless the secret is present.
 
 ## Library Boundaries
 

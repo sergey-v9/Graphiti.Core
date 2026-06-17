@@ -99,10 +99,11 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
   is evidence-driven (benchmark-first) only (`roadmap.md`).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
   1–3 are complete; the remaining active work is plan-05 release infrastructure — E.2 now consumes the
-  fork-published LadybugDB dev package family, while versioning and the full Ladybug-inclusive CI lane
-  still need follow-through. The core-only CI lane is wired through `.github/workflows/core-only.yml` and
-  `eng\Verify-GraphitiCoreOnly.ps1`. Performance work is benchmark-first and no longer on moratorium
-  (`roadmap.md`).
+  fork-published LadybugDB dev package family, and CI has both the core-only lane
+  (`.github/workflows/core-only.yml`) and full Ladybug-inclusive lane (`.github/workflows/full.yml`)
+  wired. Workflow YAML parsing and `.\eng\Verify-GraphitiCoreOnly.ps1` are green locally; the full
+  verifier is also green with GitHub Packages credentials. Versioning and publish-path decisions remain
+  decision-gated. Performance work is benchmark-first and no longer on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
   internal services and helpers. Search boundaries: `SearchEngine` orchestrates,
   `SearchRetrievalRunner` retrieves, `SearchResultComposer` shapes results. Prompt builders live
