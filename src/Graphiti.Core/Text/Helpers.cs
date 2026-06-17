@@ -14,6 +14,8 @@ namespace Graphiti.Core.Text;
 /// </summary>
 public static partial class GraphitiHelpers
 {
+    private const int DefaultSemaphoreLimit = 20;
+
     /// <summary>Target token size for a content chunk.</summary>
     public const int ChunkTokenSize = ContentChunking.DefaultChunkTokenSize;
 
@@ -836,8 +838,8 @@ public static partial class GraphitiHelpers
 
     /// <summary>
     /// Runs the operations concurrently and returns their results in input order. When
-    /// <paramref name="maxConcurrency"/> is null or non-positive, all run unbounded; otherwise
-    /// concurrency is capped at that value.
+    /// <paramref name="maxConcurrency"/> is null or zero, the Python-compatible default cap of
+    /// 20 is used; otherwise concurrency is capped at the supplied positive value.
     /// </summary>
     public static async Task<IReadOnlyList<T>> SemaphoreGatherAsync<T>(
         IEnumerable<Func<CancellationToken, Task<T>>> operations,
@@ -847,15 +849,18 @@ public static partial class GraphitiHelpers
         ArgumentNullException.ThrowIfNull(operations);
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (maxConcurrency < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxConcurrency));
+        }
+
+        var resolvedMaxConcurrency = maxConcurrency is null or 0
+            ? DefaultSemaphoreLimit
+            : maxConcurrency.Value;
         var opList = SnapshotOperations(operations);
         if (opList.Length == 0)
         {
             return Array.Empty<T>();
-        }
-
-        if (maxConcurrency is null || maxConcurrency <= 0)
-        {
-            return await RunUnboundedOperationsAsync(opList, cancellationToken).ConfigureAwait(false);
         }
 
         var results = new T[opList.Length];
@@ -864,7 +869,7 @@ public static partial class GraphitiHelpers
             opList.Length,
             new ParallelOptions
             {
-                MaxDegreeOfParallelism = maxConcurrency.Value,
+                MaxDegreeOfParallelism = resolvedMaxConcurrency,
                 CancellationToken = cancellationToken
             },
             async (index, token) =>
@@ -915,20 +920,6 @@ public static partial class GraphitiHelpers
 
         return snapshot;
     }
-
-    private static async Task<T[]> RunUnboundedOperationsAsync<T>(
-        Func<CancellationToken, Task<T>>[] operations,
-        CancellationToken cancellationToken)
-    {
-        var tasks = new Task<T>[operations.Length];
-        for (var i = 0; i < operations.Length; i++)
-        {
-            tasks[i] = operations[i](cancellationToken);
-        }
-
-        return await Task.WhenAll(tasks).ConfigureAwait(false);
-    }
-
     /// <summary>Normalizes text into a comparison key: trimmed, lowercased, whitespace collapsed.</summary>
     public static string NormalizeEntityKey(string text)
     {

@@ -34,29 +34,60 @@ public class ConcurrencyHelperTests
         Assert.InRange(maxObservedConcurrency, 1, 3);
     }
 
-    [Fact]
-    public async Task SemaphoreGatherAsync_UnboundedModeStartsAllOperations()
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0)]
+    public async Task SemaphoreGatherAsync_DefaultModeUsesPythonSemaphoreLimit(int? maxConcurrency)
     {
+        const int DefaultLimit = 20;
         var started = 0;
+        var reachedLimit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var extraStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var operations = Enumerable.Range(0, 6)
+        var operations = Enumerable.Range(0, 25)
             .Select<int, Func<CancellationToken, Task<int>>>(index => async cancellationToken =>
             {
-                Interlocked.Increment(ref started);
+                var current = Interlocked.Increment(ref started);
+                if (current == DefaultLimit)
+                {
+                    reachedLimit.TrySetResult();
+                }
+
+                if (current > DefaultLimit)
+                {
+                    extraStarted.TrySetResult();
+                }
+
                 await release.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
                 return index;
             })
             .ToList();
 
-        var gatherTask = GraphitiHelpers.SemaphoreGatherAsync(operations);
-        SpinWait.SpinUntil(() => Volatile.Read(ref started) == operations.Count, TimeSpan.FromSeconds(5));
+        var gatherTask = maxConcurrency is null
+            ? GraphitiHelpers.SemaphoreGatherAsync(operations)
+            : GraphitiHelpers.SemaphoreGatherAsync(operations, maxConcurrency);
 
-        Assert.Equal(operations.Count, Volatile.Read(ref started));
+        await reachedLimit.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var firstCompleted = await Task.WhenAny(
+            extraStarted.Task,
+            Task.Delay(TimeSpan.FromMilliseconds(100)));
+
+        Assert.NotSame(extraStarted.Task, firstCompleted);
+        Assert.Equal(DefaultLimit, Volatile.Read(ref started));
 
         release.SetResult();
         var results = await gatherTask;
 
         Assert.Equal(Enumerable.Range(0, operations.Count), results);
+    }
+
+    [Fact]
+    public async Task SemaphoreGatherAsync_RejectsNegativeMaxConcurrency()
+    {
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            GraphitiHelpers.SemaphoreGatherAsync(
+                new[] { new Func<CancellationToken, Task<int>>(_ => Task.FromResult(1)) },
+                maxConcurrency: -1));
     }
 
     [Fact]

@@ -308,6 +308,13 @@ query returns no edges, while other edge group helpers return empty lists. C#
 `EpisodicEdge.GetByGroupIdsAsync` now throws `GroupsEdgesNotFoundException` on empty results through
 both the static model helper and `graphiti.Edges.Episode`.
 
+**2026-06-17 semaphore default follow-up:** closed the helper default-concurrency drift. Python
+`semaphore_gather(..., max_coroutines=None)` uses `SEMAPHORE_LIMIT` (`20` by default), and
+`max_coroutines=0` also falls back to that default via Python's `or` semantics. C#
+`GraphitiHelpers.SemaphoreGatherAsync` now uses a 20-operation cap when `maxConcurrency` is omitted
+or zero, preserves explicit positive caps, and rejects negative direct helper input instead of
+running unbounded.
+
 **2026-06-17 cross-encoder duplicate follow-up:** closed the duplicate-passage search drift. Python's
 search rerankers collapse duplicate cross-encoder passage strings through dict-comprehension behavior:
 passages are sent once in first-seen passage order, while the last duplicate candidate wins the
