@@ -817,6 +817,41 @@ public class SearchEngineRrfTests
     }
 
     [Fact]
+    public async Task SearchAsync_EdgeEpisodeMentionsKeepsScoresInPreSortRrfOrder()
+    {
+        var driver = new InMemoryGraphDriver();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var highRrfScore = Edge("high-rrf", "alpha beta", new[] { 1f, 0f }, now);
+        var lowRrfScoreManyEpisodes = Edge("low-rrf", "alpha", new[] { 1f, 0f }, now);
+        lowRrfScoreManyEpisodes.Episodes = new List<string> { "e1", "e2", "e3" };
+        await driver.SaveEdgeAsync(highRrfScore);
+        await driver.SaveEdgeAsync(lowRrfScoreManyEpisodes);
+        var clients = new GraphitiClients(
+            driver,
+            new NoOpLlmClient(),
+            new HashEmbedder(2),
+            new IdentityCrossEncoderClient());
+
+        var results = await SearchEngine.SearchAsync(
+            clients,
+            "alpha beta",
+            groupIds: null,
+            new SearchConfig
+            {
+                Limit = 2,
+                EdgeConfig = new EdgeSearchConfig
+                {
+                    SearchMethods = { EdgeSearchMethod.Bm25 },
+                    Reranker = EdgeReranker.EpisodeMentions
+                }
+            },
+            new SearchFilters());
+
+        Assert.Equal(new[] { lowRrfScoreManyEpisodes.Uuid, highRrfScore.Uuid }, results.Edges.Select(edge => edge.Uuid));
+        Assert.Equal(new[] { 1d, 0.5d }, results.EdgeRerankerScores.Select(score => Math.Round(score, 6)));
+    }
+
+    [Fact]
     public async Task NodeDistance_RerankerMinScoreFiltersSeedRrfBeforeDistanceRanking()
     {
         var driver = new InMemoryGraphDriver();

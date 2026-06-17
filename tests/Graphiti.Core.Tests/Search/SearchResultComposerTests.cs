@@ -331,7 +331,7 @@ public class SearchResultComposerTests
     }
 
     [Fact]
-    public void EpisodeMentionsSort_OrdersByMentionCountWithStableTies()
+    public void EpisodeMentionsSort_OrdersEdgesButKeepsScoresInPreSortOrderLikePython()
     {
         var firstTie = new EntityEdge { Uuid = "first", Episodes = { "a" } };
         var most = new EntityEdge { Uuid = "most", Episodes = { "a", "b" } };
@@ -341,7 +341,7 @@ public class SearchResultComposerTests
             new[] { (firstTie, 0.1f), (most, 0.2f), (secondTie, 0.3f) });
 
         Assert.Equal(new[] { "most", "first", "second" }, sorted.Select(item => item.Item.Uuid));
-        Assert.Equal(new[] { 0.2f, 0.1f, 0.3f }, sorted.Select(item => item.Score));
+        Assert.Equal(new[] { 0.1f, 0.2f, 0.3f }, sorted.Select(item => item.Score));
     }
 
     [Fact]

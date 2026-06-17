@@ -332,9 +332,9 @@ internal static class SearchResultComposer
         });
 
         var results = new List<(EntityEdge Item, float Score)>(ordered.Count);
-        foreach (var item in ordered)
+        for (var i = 0; i < ordered.Count; i++)
         {
-            results.Add((item.Item, item.Score));
+            results.Add((ordered[i].Item, ranked[i].Score));
         }
 
         return results;

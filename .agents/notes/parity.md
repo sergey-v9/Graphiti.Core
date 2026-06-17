@@ -418,12 +418,15 @@ first-seen retrieval order rather than preliminary BM25/vector scores. C# now fe
 first-seen merge path for all three scopes while still preserving max preliminary scores for the
 non-MMR merge path.
 
+**2026-06-17 edge episode-mentions score follow-up:** closed the score-list ordering drift. Python's
+edge `episode_mentions` reranker first computes RRF UUIDs/scores, then sorts only the returned edge
+objects by episode count and returns the original RRF score slice. C# now mirrors that shape: edges
+move by episode-count order, while `EdgeRerankerScores` remain in the pre-sort RRF order.
+
 **2026-06-17 separate audit candidates not changed in this pass:** keep these as independent slices
 with their own tests before changing behavior. Python preserves duplicate resolved/invalidated edge
 appearances in `resolve_extracted_edges`, while C# currently dedupes the returned edge list by UUID
-during collection. Python's `EdgeReranker.episode_mentions` sorts only the returned edge list by
-episode-count after RRF, leaving the returned score list in pre-sort RRF order; C# currently sorts
-edge/score pairs together.
+during collection.
 
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
