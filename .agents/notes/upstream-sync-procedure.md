@@ -24,7 +24,10 @@ whenever we want to pull newer upstream work. The last execution (2026-06-14, an
   not apply to Kuzu.
 - **Pointer move is gated on incorporation.** Only advance the local `graphiti_core` checkout after
   every library change in the delta is incorporated, dispositioned, and the C# suite is green.
-- **CI for the Graphiti package is out of scope.**
+- **CI is user-gated, not a standing scope.** "CI for the Graphiti package is out of scope" was the
+  directive; two GitHub Actions lanes (`core-only.yml`, `full.yml`) were nonetheless added on
+  2026-06-17 ahead of explicit sign-off. Do not add or expand CI until Sergey confirms it is in scope
+  (see the "User-gated" block at the top of `roadmap.md`).
 
 ## Step 1 — Establish the exact delta
 

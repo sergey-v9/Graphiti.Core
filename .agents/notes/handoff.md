@@ -14,9 +14,16 @@ compatible with Graphiti semantics, wire values, cache/schema identity, and perf
 discipline.
 
 Provider work is focused on LadybugDB. InMemory is the deterministic reference/test backend. Neo4j is
-temporary legacy compatibility expected to be removed, so keep it from regressing while present but do
-not pick it for new provider investment. The focused provider state lives in `kuzu-driver-port.md`; do
-not duplicate its proof matrix here.
+supported legacy compatibility: keep it from regressing and do not pick it for new provider
+investment, but its removal is a user-gated decision Sergey has not made (do not plan or perform it
+without an explicit go-ahead — see the "User-gated" block in `roadmap.md`). The focused provider state
+lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
+
+> ⚠ **Supervisor review 2026-06-17:** CI lanes, publishing the LadybugDB binding to the
+> `sergey-v9/ladybug-dotnet` GitHub Packages feed (dropping the local offline feed), and framing Neo4j
+> removal as settled were all done by following the roadmap into user-gated territory. They are
+> PENDING Sergey's confirmation. See `roadmap.md` → "User-gated". The library work itself
+> (parity sweep, search/pipeline correctness) is solid and green (1048 passed / 3 skipped).
 
 ## Current Layout
 

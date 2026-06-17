@@ -108,7 +108,12 @@ no wire/prompt/cache/temporal behavior changed):
   Ladybug-only tests and the Ladybug snapshot half so `eng\Verify-GraphitiCoreOnly.ps1` can prove
   `Graphiti.Core` restore/build/test/pack from nuget.org only. `.github/workflows/core-only.yml` runs
   that verifier as the core-only CI lane. `.github/workflows/full.yml` runs the full
-  Ladybug-inclusive verifier on Windows in a single serialized job. The LadybugDB package refs restore
+  Ladybug-inclusive verifier on Windows in a single serialized job. NOTE (2026-06-17 supervisor
+  review): CI and the GitHub-Packages feed switch below were added/executed ahead of explicit
+  sign-off, against the standing "CI out of scope" and "do not push the ladybug repo remotely"
+  directives — they are PENDING Sergey's confirmation (see the "User-gated" block in `roadmap.md`).
+  Keep the local offline LadybugDB feed available as a restore fallback so offline dev does not
+  require a `github_ladybug` credential. The LadybugDB package refs restore
   from the `sergey-v9/ladybug-dotnet` GitHub Packages feed, currently pinned to
   `0.17.1-dev.1.1.g6f3dbed`; full Ladybug restores require source `github_ladybug` credentials with
   `read:packages` (CI uses `GITHUB_TOKEN` plus package Actions access; local runs use
@@ -130,9 +135,10 @@ no wire/prompt/cache/temporal behavior changed):
   feature-polishing work unless that directly supports tests or LadybugDB.
 - DI-created supported graph drivers should honor `GraphitiOptions.Database`; for InMemory the
   database label remains distinct from `DefaultGroupId`.
-- Keep existing official `Neo4j.Driver` code working only while it remains present, but do not invest
-  in Neo4j beyond avoiding regressions. Neo4j is expected to be removed later, not polished into
-  another first-class C# provider.
+- Keep existing official `Neo4j.Driver` code working and do not invest in Neo4j beyond avoiding
+  regressions (it is not a first-class C# provider target). Neo4j stays as supported legacy
+  compatibility; whether/when to remove it is a user-gated decision Sergey has not made — do not
+  remove it or plan its removal without an explicit go-ahead (see the "User-gated" block in `roadmap.md`).
 
 ## Provider And Infrastructure Choices
 
