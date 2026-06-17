@@ -398,6 +398,27 @@ slices. C# `SearchConfigValidator` now validates only structural shape (null con
 unknown enum values) plus rejects negative limits; zero limits return empty results, and inactive
 numeric knobs no longer block BM25/RRF searches.
 
+**2026-06-17 text truncation negative-limit follow-up:** closed a public helper edge-case drift.
+Python `truncate_at_sentence(text, max_chars)` applies normal slice semantics for negative
+`max_chars`, while C# previously threw. `TextUtilities.TruncateAtSentence` now computes the same
+effective slice length, including preserving sentence-boundary preference inside that shortened
+prefix.
+
+**2026-06-17 entity/fact prompt type-key follow-up:** closed the prompt/rendering half of the
+aliased custom-type identity drift. Python builds node `entity_type_name` and edge
+`fact_type_name` from the `entity_types` / `edge_types` dictionary keys, and summary type-description
+maps use the same keys. C# prompt builders and `EntitySummaryService` now use those keys rather than
+`EntityTypeDefinition.Name`, so aliased type definitions render the same identifiers the parser
+already treats as canonical.
+
+**2026-06-17 separate audit candidates not changed in this pass:** keep these as independent slices
+with their own tests before changing behavior. Python preserves duplicate resolved/invalidated edge
+appearances in `resolve_extracted_edges`, while C# currently dedupes the returned edge list by UUID
+during collection. Python's `EdgeReranker.episode_mentions` sorts only the returned edge list by
+episode-count after RRF, leaving the returned score list in pre-sort RRF order; C# currently sorts
+edge/score pairs together. Python MMR candidate input preserves first-seen retrieval-result order
+from the UUID maps; C# currently feeds MMR through score-sorted merged candidates.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

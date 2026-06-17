@@ -19,22 +19,21 @@ public static partial class TextUtilities
     /// </summary>
     public static string? TruncateAtSentence(string? text, int maxChars)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(maxChars);
-
         if (string.IsNullOrEmpty(text) || text.Length <= maxChars)
         {
             return text;
         }
 
+        var truncateLength = maxChars < 0 ? Math.Max(text.Length + maxChars, 0) : maxChars;
         var lastBoundaryEnd = -1;
-        foreach (var match in SentenceBoundaryRegex().EnumerateMatches(text.AsSpan(0, maxChars)))
+        foreach (var match in SentenceBoundaryRegex().EnumerateMatches(text.AsSpan(0, truncateLength)))
         {
             lastBoundaryEnd = match.Index + match.Length;
         }
 
         if (lastBoundaryEnd < 0)
         {
-            return text.AsSpan(0, maxChars).TrimEnd().ToString();
+            return text.AsSpan(0, truncateLength).TrimEnd().ToString();
         }
 
         return text.AsSpan(0, lastBoundaryEnd).TrimEnd().ToString();

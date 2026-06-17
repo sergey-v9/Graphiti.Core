@@ -217,6 +217,61 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task EntitySummaryService_UsesEntityTypeDictionaryKeysForDescriptionPrompt()
+    {
+        var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["extract_nodes.extract_entity_summaries_from_episodes"] = new()
+            {
+                ["summaries"] = new JsonArray()
+            }
+        });
+        var service = new EntitySummaryService(
+            llm,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+            () => Environment.ProcessorCount);
+        var nodes = new List<EntityNode>
+        {
+            new()
+            {
+                Name = "Alice",
+                GroupId = "group",
+                Labels = new List<string> { "Entity", "person_alias" }
+            }
+        };
+        var episode = new EpisodicNode
+        {
+            Name = "conversation",
+            Content = "Alice leads search.",
+            Source = EpisodeType.Message,
+            SourceDescription = "message",
+            GroupId = "group",
+            ValidAt = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)
+        };
+
+        await service.ExtractEntitySummariesAsync(
+            nodes,
+            episode,
+            Array.Empty<EpisodicNode>(),
+            Array.Empty<EntityEdge>(),
+            shouldSummarizeNode: null,
+            skipFactAppending: true,
+            entityTypes: new Dictionary<string, EntityTypeDefinition>
+            {
+                ["person_alias"] = new("Person", "A human person.")
+            },
+            includeTypeDescriptions: true,
+            CancellationToken.None);
+
+        var summaryCall = Assert.Single(
+            llm.Calls,
+            call => call.PromptName == "extract_nodes.extract_entity_summaries_from_episodes");
+        var prompt = summaryCall.Messages[^1].Content;
+        Assert.Contains("\"person_alias\":\"A human person.\"", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"Person\":\"A human person.\"", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AddEpisode_ReusesExistingEpisodeWhenUuidIsProvided()
     {
         var driver = new InMemoryGraphDriver();

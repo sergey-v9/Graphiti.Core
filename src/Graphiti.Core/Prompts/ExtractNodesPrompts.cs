@@ -596,7 +596,7 @@ internal static class ExtractNodesPrompts
             context.Add(new JsonObject
             {
                 ["entity_type_id"] = index++,
-                ["entity_type_name"] = pair.Value.Name,
+                ["entity_type_name"] = pair.Key,
                 ["entity_type_description"] = pair.Value.Description
             });
         }

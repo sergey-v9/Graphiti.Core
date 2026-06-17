@@ -235,8 +235,10 @@ Recorded sweep result, 2026-06-17:
    `BuildCommunitiesAsync` explicit-empty `groupIds` semantics, and default empty-string group
    discovery for community builds, and namespace all-miss plural-read behavior for entity/episodic
    edge namespaces while preserving static model helper exceptions, and lazy search-config numeric
-   validation/zero-limit behavior. No concrete non-decision follow-up from this audit remains in
-   plan 05.
+   validation/zero-limit behavior, negative-limit text truncation, and entity/fact prompt type-key
+   rendering. Remaining concrete audit candidates are split out as separate parity streams rather
+   than plan-05 release-infra work: resolved/invalidated edge result duplicate preservation,
+   `EdgeReranker.EpisodeMentions` score-list ordering, and first-seen candidate ordering before MMR.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

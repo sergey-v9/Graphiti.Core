@@ -316,7 +316,7 @@ internal static class ExtractEdgesPrompts
             var pair = sortedEdgeTypes[i];
             context.Add(new JsonObject
             {
-                ["fact_type_name"] = pair.Value.Name,
+                ["fact_type_name"] = pair.Key,
                 ["fact_type_signatures"] = BuildSignaturesContext(pair.Key, edgeTypeMap),
                 ["fact_type_description"] = pair.Value.Description
             });

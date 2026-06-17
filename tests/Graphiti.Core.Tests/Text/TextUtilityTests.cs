@@ -22,13 +22,20 @@ public class TextUtilityTests
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("Text")]
-    public void TruncateAtSentence_RejectsNegativeMaxChars(string? text)
+    [InlineData("Alpha beta", -20, "")]
+    [InlineData("Alpha beta", -6, "Alph")]
+    [InlineData("Alpha beta", -1, "Alpha bet")]
+    [InlineData("Alpha. Beta gamma", -6, "Alpha.")]
+    [InlineData("Alpha. Beta gamma", -1, "Alpha.")]
+    [InlineData("", -1, "")]
+    public void TruncateAtSentence_UsesPythonSliceSemanticsForNegativeMaxChars(
+        string text,
+        int maxChars,
+        string expected)
     {
-        Assert.Throws<ArgumentOutOfRangeException>(
-            () => TextUtilities.TruncateAtSentence(text, -1));
+        var result = TextUtilities.TruncateAtSentence(text, maxChars);
+
+        Assert.Equal(expected, result);
     }
 
     [Fact]

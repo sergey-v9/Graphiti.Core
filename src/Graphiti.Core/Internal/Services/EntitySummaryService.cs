@@ -281,7 +281,7 @@ internal sealed class EntitySummaryService(
             var description = TruncateTypeDescription(pair.Value.Description);
             if (!string.IsNullOrWhiteSpace(description))
             {
-                descriptions[pair.Value.Name] = description;
+                descriptions[pair.Key] = description;
             }
         }
 

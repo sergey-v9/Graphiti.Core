@@ -851,6 +851,25 @@ public class ExtractNodesPromptsTests
     }
 
     [Fact]
+    public void BuildContext_UsesEntityTypeDictionaryKeysAsPromptNames()
+    {
+        var episode = CreateEpisode("Alice: hello", EpisodeType.Message);
+        var entityTypes = new Dictionary<string, EntityTypeDefinition>
+        {
+            ["person_alias"] = new("Person", "A human person.")
+        };
+
+        var context = ExtractNodesPrompts.BuildContext(
+            episode,
+            Array.Empty<EpisodicNode>(),
+            entityTypes,
+            customExtractionInstructions: null);
+
+        Assert.Contains("\"entity_type_name\":\"person_alias\"", context.EntityTypesJson);
+        Assert.DoesNotContain("\"entity_type_name\":\"Person\"", context.EntityTypesJson);
+    }
+
+    [Fact]
     public void Build_DispatchesOnEpisodeSourceLikePython()
     {
         var context = ExtractNodesPrompts.BuildContext(

@@ -157,8 +157,10 @@ InMemory and LadybugDB. Public entity/episodic edge namespaces now return empty 
 plural UUID/group reads like Python namespaces, while static model helper exceptions remain pinned.
 Edge cross-encoder windowing applies the `limit` after
 retrieval-order dedupe; node/community cross-encoder inputs remain full-pool but use the same
-retrieval order.
-`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1039` passed,
+retrieval order. `TextUtilities.TruncateAtSentence` mirrors Python negative-slice behavior for
+negative `max_chars`, and node/edge extraction prompt contexts plus entity-summary type-description
+maps use dictionary keys for custom type names like Python.
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1043` passed,
 `3` skipped; both shippable packages packed and both fresh package-consumer smoke builds succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
@@ -303,8 +305,8 @@ Current audit follow-up closed namespace embedding drift, an in-memory triplet c
 typed node-delete Saga boundary, the duplicate-passage cross-encoder drift, the base node-delete
 scope drift, the entity UUID group-filter drift, the in-memory episodic-metadata drift, the
 entity/episodic-edge group-miss drift, the semaphore default-concurrency drift, the entity-type-id key
-mapping/schema drift, the base edge-delete scope drift, and the eager search-config numeric validation
-drift:
+mapping/schema drift, the base edge-delete scope drift, the eager search-config numeric validation
+drift, the negative-limit text truncation drift, and the entity/fact prompt type-key drift:
 namespace `SaveAsync` regenerates entity/community node and entity-edge embeddings even when prefilled,
 namespace `SaveBulkAsync` now preserves supplied null/precomputed embeddings without calling the
 embedder, and `AddTripletAsync` creates a fresh entity-edge UUID when the default in-memory backend
@@ -340,10 +342,14 @@ monotonic search-call arrivals instead of asserting a transient active count.
 Search config validation now mirrors Python's lazy numeric use: zero limits return empty results, and
 inactive `sim_min_score`/`mmr_lambda`/`bfs_max_depth` values no longer fail BM25/RRF searches before
 dispatch.
+`TextUtilities.TruncateAtSentence` now mirrors Python's negative `max_chars` slice semantics instead
+of throwing before truncation.
+Node/edge extraction prompt contexts and entity-summary type-description maps now render custom type
+dictionary keys instead of `EntityTypeDefinition.Name`, matching Python's aliased type identity.
 Top-level community search now supplies Python's zero query vector fallback when no real embedding
 path is configured, so BM25/RRF community searches still execute vector retrieval like Python.
 Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests
-(`1037` passed, `3` skipped, `1040` total), both shippable package packs, and both package-consumer
+(`1043` passed, `3` skipped, `1046` total), both shippable package packs, and both package-consumer
 smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
@@ -353,8 +359,11 @@ community-edge `save_bulk`, while C# exposes `SaveBulkAsync` publicly and pins i
 plus Ladybug package runtime tests. Treat this as an ask-user public API decision before changing the
 surface. A separate read-only maintenance audit found that C# entity attribute definitions do not
 currently expose Python's per-field `max_length` and required-field metadata; adding that shape would
-also be a public API decision. Continue the broader full-pipeline parity audit against current Python;
-new candidates should be added here as they are confirmed.
+also be a public API decision. Separate concrete parity candidates found in the same audit pass,
+but not changed in this prompt/text slice: resolved/invalidated edge result duplicate preservation,
+`EdgeReranker.EpisodeMentions` score-list ordering, and first-seen candidate ordering before MMR.
+Continue the broader full-pipeline parity audit against current Python; new candidates should be
+added here as they are confirmed.
 
 Latest checkpoint, 2026-06-13:
 

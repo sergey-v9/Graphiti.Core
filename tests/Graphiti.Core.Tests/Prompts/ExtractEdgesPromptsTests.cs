@@ -224,6 +224,32 @@ public class ExtractEdgesPromptsTests
     }
 
     [Fact]
+    public void BuildEdge_UsesEdgeTypeDictionaryKeysAsPromptNames()
+    {
+        var episode = CreateEpisode("Alice works at Acme.");
+        var edgeTypes = new Dictionary<string, EntityTypeDefinition>
+        {
+            ["works_alias"] = new("WORKS_AT", "Employment relationship")
+        };
+        var edgeTypeMap = new Dictionary<(string SourceType, string TargetType), IReadOnlyList<string>>
+        {
+            [("Person", "Organization")] = new[] { "works_alias" }
+        };
+
+        var context = ExtractEdgesPrompts.BuildContext(
+            episode,
+            Array.Empty<EpisodicNode>(),
+            new[] { CreateNode("Alice") },
+            edgeTypes,
+            edgeTypeMap,
+            customExtractionInstructions: null);
+
+        Assert.Contains("\"fact_type_name\":\"works_alias\"", context.EdgeTypesJson);
+        Assert.Contains("[[\"Person\",\"Organization\"]]", context.EdgeTypesJson);
+        Assert.DoesNotContain("\"fact_type_name\":\"WORKS_AT\"", context.EdgeTypesJson);
+    }
+
+    [Fact]
     public void BuildEdge_DefaultsSignaturesToEntityPair()
     {
         var episode = CreateEpisode("Alice works at Acme.");
