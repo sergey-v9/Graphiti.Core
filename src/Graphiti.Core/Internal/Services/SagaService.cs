@@ -186,7 +186,7 @@ internal sealed class SagaService(
     private static SagaNode ProjectExistingSagaForNameAssociation(SagaNode existing) =>
         new()
         {
-            // Python _get_or_create_saga returns only these fields for an existing saga.
+            // Name-based association intentionally uses the minimal existing-saga shape.
             Uuid = existing.Uuid,
             Name = existing.Name,
             GroupId = existing.GroupId,

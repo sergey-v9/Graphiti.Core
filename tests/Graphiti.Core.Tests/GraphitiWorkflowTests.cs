@@ -4521,7 +4521,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task SagaAssociation_ByNameProjectsExistingSagaLikePython()
+    public async Task SagaAssociation_ByNameUsesMinimalExistingSagaProjection()
     {
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(graphDriver: driver);
