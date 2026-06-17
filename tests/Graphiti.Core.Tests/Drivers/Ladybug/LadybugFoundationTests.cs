@@ -201,6 +201,28 @@ public class LadybugFoundationTests
     }
 
     [Fact]
+    public void BuildGroupReads_TreatEmptyUuidCursorLikeNoCursor()
+    {
+        var nodeRead = LadybugStatementBuilder.BuildNodesGetByGroupIds<EntityNode>(
+            ["tenant"],
+            limit: 10,
+            uuidCursor: string.Empty);
+        var edgeRead = LadybugStatementBuilder.BuildEdgesGetByGroupIds<EntityEdge>(
+            ["tenant"],
+            limit: 10,
+            uuidCursor: string.Empty);
+
+        Assert.DoesNotContain("n.uuid < $uuid", nodeRead.Query, StringComparison.Ordinal);
+        Assert.DoesNotContain("e.uuid < $uuid", edgeRead.Query, StringComparison.Ordinal);
+        Assert.False(nodeRead.Parameters.ContainsKey("uuid"));
+        Assert.False(edgeRead.Parameters.ContainsKey("uuid"));
+        Assert.Contains("LIMIT $limit", nodeRead.Query, StringComparison.Ordinal);
+        Assert.Contains("LIMIT $limit", edgeRead.Query, StringComparison.Ordinal);
+        Assert.Equal(10, nodeRead.Parameters["limit"]);
+        Assert.Equal(10, edgeRead.Parameters["limit"]);
+    }
+
+    [Fact]
     public void BuildSagaNodeSave_UsesFullSagaModelShapeForRuntimeWiring()
     {
         var createdAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);

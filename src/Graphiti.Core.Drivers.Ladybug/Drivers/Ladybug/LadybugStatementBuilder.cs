@@ -99,10 +99,11 @@ internal static class LadybugStatementBuilder
     {
         ArgumentNullException.ThrowIfNull(groupIds);
         var variable = NodeVariable<TNode>();
-        var cursorClause = uuidCursor is null ? string.Empty : $"AND {variable}.uuid < $uuid";
+        var hasCursor = !string.IsNullOrEmpty(uuidCursor);
+        var cursorClause = hasCursor ? $"AND {variable}.uuid < $uuid" : string.Empty;
         var limitClause = limit is null ? string.Empty : "LIMIT $limit";
         var parameters = Parameters(("group_ids", SnapshotList(groupIds)));
-        if (uuidCursor is not null)
+        if (hasCursor)
         {
             parameters["uuid"] = uuidCursor;
         }
@@ -219,10 +220,11 @@ internal static class LadybugStatementBuilder
         where TEdge : Edge
     {
         ArgumentNullException.ThrowIfNull(groupIds);
-        var cursorClause = uuidCursor is null ? string.Empty : "AND e.uuid < $uuid";
+        var hasCursor = !string.IsNullOrEmpty(uuidCursor);
+        var cursorClause = hasCursor ? "AND e.uuid < $uuid" : string.Empty;
         var limitClause = limit is null ? string.Empty : "LIMIT $limit";
         var parameters = Parameters(("group_ids", SnapshotList(groupIds)));
-        if (uuidCursor is not null)
+        if (hasCursor)
         {
             parameters["uuid"] = uuidCursor;
         }

@@ -75,6 +75,12 @@ distance and episode-mention rank queries already constrain each per-UUID query 
 `node_uuid`; the executor now also ignores impossible rows whose returned `uuid` is outside the input
 score map, so rank results stay restricted to requested candidates like Python's reranker output.
 
+**2026-06-17 Ladybug empty-cursor follow-up:** closed a provider query-builder drift. Python node and
+edge group reads add `uuid_cursor` predicates only when the cursor string is truthy, so `uuid_cursor=""`
+behaves like no cursor. Ladybug node and edge group-read statements now use the same truthiness:
+empty cursors do not emit `uuid < $uuid` and do not bind a `uuid` parameter, while non-empty cursors
+still page normally.
+
 **2026-06-14 attribution reference-time follow-up:** closed the tracked edge `reference_time` drift
 inside the latent multi-episode attribution helpers. Python maps valid `episode_indices` to episode
 UUIDs by filtering valid entries, but chooses `reference_time` only from the first raw index when that
