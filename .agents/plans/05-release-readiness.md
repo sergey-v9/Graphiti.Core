@@ -31,13 +31,6 @@ from strict package sources:
 - The public-API snapshot now guards BOTH assemblies (`Graphiti.Core` + `Graphiti.Core.Drivers.Ladybug`).
 
 **Remaining (release infra):**
-- **E.2 — consume the fork-published LadybugDB package family.** The `Graphiti.Core.Drivers.Ladybug`
-  package now restores `LadybugDB` / `LadybugDB.Native` from the
-  `sergey-v9/ladybug-dotnet` GitHub Packages feed in `NuGet.config`, pinned to
-  `0.17.1-dev.1.1.g6f3dbed`. Restores that include the Ladybug driver require credentials for source
-  `github_ladybug` with `read:packages`. Future binding fixes should land in the separate
-  `W:\code\ladybug` repo, push the fork's `dev` branch, let the GitHub Packages workflow publish a new
-  dev version, and then bump Graphiti to that published version.
 - **Versioning** (confirm 2.0.0 line / alpha→beta cadence) and **CI**. NuGet metadata, README packing,
   XML docs, symbol package generation, and package-consumption smoke checks are now present and guarded
   for both shippable packages. CI for the full suite needs GitHub Packages credentials for the native
@@ -45,6 +38,15 @@ from strict package sources:
   `eng\Verify-GraphitiCoreOnly.ps1` (strict nuget.org-only restore, core format/build/pack, and
   non-Ladybug tests with the OpenAI provider tests filtered out). Remember the parallel-`dotnet test`
   deadlock.
+
+**Completed E.2 checkpoint (2026-06-17):** `Graphiti.Core.Drivers.Ladybug` restores `LadybugDB` /
+`LadybugDB.Native` from the `sergey-v9/ladybug-dotnet` GitHub Packages feed in `NuGet.config`, pinned
+to `0.17.1-dev.1.1.g6f3dbed`. GitHub Packages currently reports only that published version for both
+packages. With `NuGetPackageSourceCredentials_github_ladybug` set from the active GitHub token,
+`.\eng\Verify-GraphitiCore.ps1` is green (`1021` passed, `3` skipped; both shippable packages packed
+and both fresh package-consumer smoke builds succeeded). Future binding fixes should land in the
+separate `W:\code\ladybug` repo, push the fork's `dev` branch, let the GitHub Packages workflow publish
+a new dev version, and then bump Graphiti to that published version.
 
 ## Standing constraints (apply to every step)
 
@@ -195,11 +197,13 @@ full Verify green; both packages `pack`. This is a milestone (`evolution.md`:
   checks) is
   already set and covered by `PackageReadinessTests` plus `Verify-GraphitiCore.ps1`.
 - **CI:** the core-only GitHub Actions lane is wired through `.github/workflows/core-only.yml` and
-  `eng\Verify-GraphitiCoreOnly.ps1`. A full Ladybug-inclusive CI lane remains gated on E.2; encode the
-  native-package test-concurrency gotcha (single-threaded or serialized Ladybug tests) when wiring it.
-  Gate the key-dependent OpenAI integration tests behind a secret (skip by default).
-- **Publish prerequisites:** the LadybugDB package family must be publishable (Step E.2); decide whether to
-  ship a metapackage (`Graphiti.Core` + `Graphiti.Core.Drivers.Ladybug`).
+  `eng\Verify-GraphitiCoreOnly.ps1`. A full Ladybug-inclusive CI lane remains gated on adding
+  `github_ladybug` credentials with `read:packages` as a CI secret; encode the native-package
+  test-concurrency gotcha (single-threaded or serialized Ladybug tests) when wiring it. Gate the
+  key-dependent OpenAI integration tests behind a secret (skip by default).
+- **Publish prerequisites:** the LadybugDB package family is publishable and currently consumed from
+  the fork GitHub Packages feed; decide whether to ship a metapackage (`Graphiti.Core` +
+  `Graphiti.Core.Drivers.Ladybug`).
 
 ## Done when
 

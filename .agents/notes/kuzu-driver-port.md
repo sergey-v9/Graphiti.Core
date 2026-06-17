@@ -86,7 +86,12 @@ are versioned `0.17.1` (`LadybugDB`, `LadybugDB.Native`, all RID native packages
 and `LadybugDB.Extensions`), even though binding-side `version.txt`/README text says package family
 `0.17.1.0`. The fork's `github-packages-dev.yml` run
 `https://github.com/sergey-v9/ladybug-dotnet/actions/runs/27654947039` published normalized dev
-version `0.17.1-dev.1.1.g6f3dbed`; Graphiti consumes that published version.
+version `0.17.1-dev.1.1.g6f3dbed`; Graphiti consumes that published version. A 2026-06-17 GitHub
+Packages recheck reports only that version for both `LadybugDB` and `LadybugDB.Native`. With the
+active `read:packages` GitHub token passed as `NuGetPackageSourceCredentials_github_ladybug`,
+`dotnet restore src\Graphiti.Core.Drivers.Ladybug\Graphiti.Core.Drivers.Ladybug.csproj --locked-mode`
+and `.\eng\Verify-GraphitiCore.ps1` are green (`1021` passed, `3` skipped; both Graphiti packages and
+fresh package-consumer smoke builds succeeded).
 
 ## Current Status
 

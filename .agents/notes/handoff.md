@@ -138,14 +138,11 @@ added.
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
 Packages feed for LadybugDB packages (`0.17.1-dev.1.1.g6f3dbed`) and `NuGet.config` includes package
-source mapping for central package management. `.\eng\Verify-GraphitiCoreOnly.ps1` is green after this
-switch (`925` passed, `0` skipped; core pack succeeded), and a normal
-`dotnet restore src\Graphiti.Core\Graphiti.Core.csproj --locked-mode` through the repo config also
-restores from nuget.org without Ladybug credentials. Full `dotnet restore Graphiti.Core.CSharp.slnx`
-was attempted with the active `gh auth token` supplied as `NuGetPackageSourceCredentials_github_ladybug`
-and is blocked by GitHub Packages `403 Forbidden` for `LadybugDB` / `LadybugDB.Native`; `gh auth
-status` shows the token lacks `read:packages`. Provide a PAT/token with `read:packages` for source
-`github_ladybug` before rerunning `.\eng\Verify-GraphitiCore.ps1`.
+source mapping for central package management. GitHub Packages currently reports only that published
+version for both `LadybugDB` and `LadybugDB.Native` (created 2026-06-16). With the active GitHub token
+supplied through `NuGetPackageSourceCredentials_github_ladybug`, full restore from source
+`github_ladybug` succeeds and `.\eng\Verify-GraphitiCore.ps1` is green (`1021` passed, `3` skipped;
+both shippable packages packed and both fresh package-consumer smoke builds succeeded).
 
 Current core-only checkpoint, 2026-06-17: typed node deletes now preserve Python's Saga boundary for
 direct model `DeleteAsync`, base `Node.DeleteByGroupIdAsync` / `Node.DeleteByUuidsAsync`, and typed
@@ -157,10 +154,9 @@ back to the last duplicate candidate. Base
 `Edge.DeleteByUuidsAsync` now matches Python's inherited base helper scope by excluding
 `HAS_EPISODE`/`NEXT_EPISODE`, while concrete saga edge deletes and episode-removal saga repair still
 delete those relationship types through typed paths. `.\eng\Verify-GraphitiCoreOnly.ps1` is green
-(`933` passed, `0` skipped; core pack succeeded). A no-restore build of
-`Graphiti.Core.Drivers.Ladybug` was also attempted to catch syntax errors, but it is blocked by the
-same GitHub Packages `403 Forbidden` for `LadybugDB` / `LadybugDB.Native` until source
-`github_ladybug` has a credential with `read:packages`.
+(`933` passed, `0` skipped; core pack succeeded). The full Ladybug-inclusive verifier is also green
+with the active GitHub Packages credential (`1021` passed, `3` skipped; package-consumer smoke builds
+succeeded).
 
 Latest checkpoint, 2026-06-17:
 
