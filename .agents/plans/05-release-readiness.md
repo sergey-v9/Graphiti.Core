@@ -232,10 +232,9 @@ Recorded sweep result, 2026-06-17:
 7. Follow-up sweep during the 2026-06-17 parity audit split confirmed issues into separate streams.
    Concrete implementation slices now handled: InMemory typed node/edge UUID storage boundaries,
    `BuildCommunitiesAsync` explicit-empty `groupIds` semantics, and default empty-string group
-   discovery for community builds. Remaining separately handled follow-up: namespace all-miss
-   plural-read behavior for entity/episodic edge namespaces; a read-only audit classified it as a
-   non-decision implementation slice if Python public namespace behavior stays the source of truth,
-   while static model helper exceptions should remain separately pinned.
+   discovery for community builds, and namespace all-miss plural-read behavior for entity/episodic
+   edge namespaces while preserving static model helper exceptions. No concrete non-decision
+   follow-up from this audit remains in plan 05.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

@@ -56,7 +56,7 @@ public sealed class EntityEdgeNamespace
     public Task<IReadOnlyList<EntityEdge>> GetByUuidsAsync(
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
-        EntityEdge.GetByUuidsAsync(_driver, uuids, cancellationToken);
+        _driver.GetEdgesByUuidsAsync<EntityEdge>(uuids, cancellationToken);
 
     /// <summary>
     /// Loads entity edges (facts) across the given group partitions, with optional UUID-cursor paging
@@ -68,7 +68,12 @@ public sealed class EntityEdgeNamespace
         string? uuidCursor = null,
         bool withEmbeddings = false,
         CancellationToken cancellationToken = default) =>
-        EntityEdge.GetByGroupIdsAsync(_driver, groupIds, limit, uuidCursor, withEmbeddings, cancellationToken);
+        _driver.GetEdgesByGroupIdsAsync<EntityEdge>(
+            groupIds,
+            limit,
+            uuidCursor,
+            withEmbeddings,
+            cancellationToken);
 
     /// <summary>Loads the entity edges (facts) that directly connect two nodes.</summary>
     public Task<IReadOnlyList<EntityEdge>> GetBetweenNodesAsync(

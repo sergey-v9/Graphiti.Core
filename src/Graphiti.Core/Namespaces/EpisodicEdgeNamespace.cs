@@ -43,7 +43,7 @@ public sealed class EpisodicEdgeNamespace
     public Task<IReadOnlyList<EpisodicEdge>> GetByUuidsAsync(
         IEnumerable<string> uuids,
         CancellationToken cancellationToken = default) =>
-        EpisodicEdge.GetByUuidsAsync(_driver, uuids, cancellationToken);
+        _driver.GetEdgesByUuidsAsync<EpisodicEdge>(uuids, cancellationToken);
 
     /// <summary>Loads episodic edges across the given group partitions, with optional UUID-cursor paging.</summary>
     public Task<IReadOnlyList<EpisodicEdge>> GetByGroupIdsAsync(
@@ -51,5 +51,10 @@ public sealed class EpisodicEdgeNamespace
         int? limit = null,
         string? uuidCursor = null,
         CancellationToken cancellationToken = default) =>
-        EpisodicEdge.GetByGroupIdsAsync(_driver, groupIds, limit, uuidCursor, cancellationToken);
+        _driver.GetEdgesByGroupIdsAsync<EpisodicEdge>(
+            groupIds,
+            limit,
+            uuidCursor,
+            false,
+            cancellationToken);
 }

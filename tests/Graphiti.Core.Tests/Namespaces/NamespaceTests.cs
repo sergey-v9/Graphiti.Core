@@ -547,7 +547,7 @@ public class NamespaceTests
     }
 
     [Fact]
-    public async Task EpisodeEdgeNamespace_ThrowsForAllMissingPluralUuidsLikePython()
+    public async Task EdgeNamespaces_ReturnEmptyForAllMissingPluralReadsLikePythonNamespaces()
     {
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(graphDriver: driver);
@@ -565,14 +565,13 @@ public class NamespaceTests
             EpisodicEdge.GetByUuidsAsync(driver, new[] { "missing-1", "missing-2" }));
         Assert.Contains("missing-1", modelException.Message, StringComparison.Ordinal);
 
-        var namespaceException = await Assert.ThrowsAsync<EdgeNotFoundException>(() =>
-            graphiti.Edges.Episode.GetByUuidsAsync(new[] { "missing-1", "missing-2" }));
-        Assert.Contains("missing-1", namespaceException.Message, StringComparison.Ordinal);
-
+        Assert.Empty(await graphiti.Edges.Episode.GetByUuidsAsync(new[] { "missing-1", "missing-2" }));
         var mixed = await graphiti.Edges.Episode.GetByUuidsAsync(new[] { "missing-1", mention.Uuid });
         Assert.Equal(mention.Uuid, Assert.Single(mixed).Uuid);
         Assert.Empty(await graphiti.Edges.Episode.GetByUuidsAsync(Array.Empty<string>()));
         Assert.Empty(await graphiti.Edges.Entity.GetByUuidsAsync(new[] { "missing-1" }));
+        Assert.Empty(await graphiti.Edges.Entity.GetByGroupIdsAsync(new[] { "missing-group" }));
+        Assert.Empty(await graphiti.Edges.Episode.GetByGroupIdsAsync(new[] { "missing-group" }));
     }
 
     [Fact]

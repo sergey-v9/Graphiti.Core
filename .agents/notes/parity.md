@@ -267,8 +267,15 @@ UTC because the C# model surface stores `DateTime` rather than Python's naive/aw
 drift. Python `EpisodicEdge.get_by_uuids` raises `EdgeNotFoundError(uuids[0])` when a non-empty UUID
 list returns no rows, while the other plural edge helpers return empty lists. C#
 `EpisodicEdge.GetByUuidsAsync` now raises `EdgeNotFoundException` for that all-missing non-empty
-episodic-edge case through both the static model helper and `graphiti.Edges.Episode`, while preserving
-mixed-hit behavior and list-returning misses for entity/community/has/next edge helpers.
+episodic-edge case through the static model helper, while preserving mixed-hit behavior and
+list-returning misses for entity/community/has/next edge helpers.
+
+**2026-06-17 edge namespace all-miss follow-up:** closed the public namespace/static-helper split for
+entity and episodic edge plural reads. Python public edge namespaces delegate to driver operations
+and return empty lists for all-missing UUID lists or group reads, even where static model helpers
+raise on empty all-miss results. C# `graphiti.Edges.Entity` and `graphiti.Edges.Episode` now call the
+driver plural APIs directly for `GetByUuidsAsync`/`GetByGroupIdsAsync`, preserving static
+`EntityEdge`/`EpisodicEdge` helper exceptions separately.
 
 **2026-06-17 content-chunking follow-up:** closed the zero-overlap half of the chunking candidate and
 documented the JSON-spacing half. Python's public chunk helpers use `overlap_tokens = overlap_tokens
