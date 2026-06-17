@@ -30,7 +30,7 @@ Never put "Python" or a `.py` file/line into an identifier, method name, **test 
 name and comment by what the C# code *does*, not its Python provenance ("ignores property filters",
 not "...LikePython"). Python mapping/provenance lives in `parity.md`, not in code; commit messages
 describe the change, not "like python". Full rule: `decisions.md` "Parity without Python coupling in
-the code." Don't add new offenders; the existing ones are a tracked rename/reword backlog.
+the code." The code was fully de-coupled on 2026-06-18 (commit `508abf3`) — **do not re-introduce** it.
 
 The notes can change outside your session. Re-read relevant notes before finalizing work that touches
 direction, architecture, providers, verification, or roadmap items; if current notes contradict your

@@ -17,13 +17,14 @@ Provider work is focused on LadybugDB. InMemory is the deterministic reference/t
 removed 2026-06-17 and is no longer a provider. The focused provider state
 lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 
-> ⚠ **Supervisor review 2026-06-17:** CI lanes and publishing the LadybugDB binding to the
-> `sergey-v9/ladybug-dotnet` GitHub Packages feed (dropping the local offline feed) were done by
-> following the roadmap into user-gated territory. They are
-> PENDING Sergey's confirmation. See `roadmap.md` → "User-gated". Neo4j removal: DONE (2026-06-17).
-> The library work itself
-> (parity sweep, search/pipeline correctness) is solid and green (latest full verifier:
-> 967 passed / 3 skipped).
+> ⚠ **Supervisor review (updated 2026-06-18):** Sergey RESOLVED the previously user-gated items —
+> CI lanes stay (keep as-is, do not expand); the LadybugDB feed is GitHub-Packages-only (no local
+> fallback, credential required); Neo4j removed (2026-06-17). See `roadmap.md` → "Resolved scope
+> decisions". The code was also de-coupled from Python textually (names + comments) on 2026-06-18 —
+> keep it that way (`decisions.md` "Parity without Python coupling in the code"). Library work is solid
+> and green (976 passed / 3 skipped). Still user-gated: **release versioning/publishing**. The
+> **Ladybug→Core merge (plan 06)** is scheduled but **opt-in — do NOT auto-pick it** via the
+> work-selection rule; run it only when Sergey initiates it.
 
 ## Current Layout
 

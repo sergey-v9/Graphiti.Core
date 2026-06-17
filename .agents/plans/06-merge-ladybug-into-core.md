@@ -7,8 +7,13 @@ should be folded back into `Graphiti.Core`.
 
 ## Status
 
-Not started. Do this as its own implementation stream, not as part of versioning, publishing, or a
-parity micro-slice.
+**Not started — and NOT a default work-selection pick.** Sergey scheduled this, but it is *not* top
+priority and it carries a real consequence: after the merge `Graphiti.Core` depends on the LadybugDB
+packages + the `github_ladybug` feed, so it no longer restores from nuget.org alone and **cannot be
+published to nuget.org until LadybugDB is public there**. Therefore: **do NOT auto-pick this plan** via
+the AGENTS.md "lowest-numbered plan with unchecked items" rule. Execute it only when Sergey explicitly
+initiates it, as its own implementation stream (not a versioning/publishing step or a parity
+micro-slice). Default ongoing work stays on parity hardening / docs / verification.
 
 ## Work Items
 
