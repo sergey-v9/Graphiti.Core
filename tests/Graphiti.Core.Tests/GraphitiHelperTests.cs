@@ -217,7 +217,7 @@ public class GraphitiHelperTests
                 }));
 
         Assert.Contains(
-            "Invalid excluded entity types: [Person]. Available types: [Entity, person_alias]",
+            "Invalid excluded entity types: ['Person']. Available types: ['Entity', 'person_alias']",
             exception.Message,
             StringComparison.Ordinal);
     }
@@ -234,7 +234,7 @@ public class GraphitiHelperTests
                 }));
 
         Assert.Contains(
-            "Invalid excluded entity types: [Animal, Location, Zed]. Available types: [Entity, Person]",
+            "Invalid excluded entity types: ['Animal', 'Location', 'Zed']. Available types: ['Entity', 'Person']",
             exception.Message,
             StringComparison.Ordinal);
     }

@@ -225,8 +225,9 @@ per the established C# prompt-serializer decision.
 **2026-06-16 excluded-entity validation follow-up:** closed a validation drift in ingestion
 options. Python `validate_excluded_entity_types` accepts only `Entity` plus the keys of the supplied
 `entity_types` dictionary; it does not also accept the Pydantic model/display class names. C#
-`ValidateExcludedEntityTypes` now uses the same key-only availability set. Later extraction/type
-resolution can still map labels/display names where that behavior is separately established.
+`ValidateExcludedEntityTypes` now uses the same key-only availability set and formats invalid/available
+type names like Python's sorted string-list representation. Later extraction/type resolution can still
+map labels/display names where that behavior is separately established.
 
 **2026-06-16 blank Lucene full-text audit:** disposed the open blank-query candidate as documented
 hardening. Python top-level search skips blank input, but lower-level Lucene full-text helpers can

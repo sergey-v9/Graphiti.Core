@@ -307,6 +307,8 @@ non-positive cap as unbounded.
 Extracted `entity_type_id` values now map back to the declared `entityTypes` dictionary keys instead
 of `EntityTypeDefinition.Name`, so custom type aliases flow into labels and exclusions like Python's
 `entity_types` context.
+Excluded-entity validation error messages now format invalid and available type names like Python's
+sorted string-list representation.
 Node dedupe label promotion now matches Python's `_promote_resolved_node`: an extracted specific
 label upgrades a matched canonical node only when that canonical node is still generic `Entity`;
 already-typed existing nodes keep their labels.

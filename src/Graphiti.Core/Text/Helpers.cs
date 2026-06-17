@@ -670,7 +670,7 @@ public static partial class GraphitiHelpers
 
             sortedAvailableTypes.Sort(StringComparer.Ordinal);
             throw new ArgumentException(
-                $"Invalid excluded entity types: [{FormatCommaSeparated(invalidTypes)}]. Available types: [{FormatCommaSeparated(sortedAvailableTypes)}]",
+                $"Invalid excluded entity types: {FormatPythonStringList(invalidTypes)}. Available types: {FormatPythonStringList(sortedAvailableTypes)}",
                 nameof(excludedEntityTypes));
         }
     }
@@ -698,28 +698,61 @@ public static partial class GraphitiHelpers
         }
     }
 
-    private static string FormatCommaSeparated(List<string> values)
+    private static string FormatPythonStringList(List<string> values)
     {
         if (values.Count == 0)
         {
-            return string.Empty;
+            return "[]";
         }
 
-        var length = (values.Count - 1) * 2;
-        for (var i = 0; i < values.Count; i++)
-        {
-            length += values[i].Length;
-        }
-
-        var builder = new StringBuilder(length);
-        builder.Append(values[0]);
+        var builder = new StringBuilder();
+        builder.Append('[');
+        AppendPythonStringLiteral(builder, values[0]);
         for (var i = 1; i < values.Count; i++)
         {
             builder.Append(", ");
-            builder.Append(values[i]);
+            AppendPythonStringLiteral(builder, values[i]);
         }
 
+        builder.Append(']');
         return builder.ToString();
+    }
+
+    private static void AppendPythonStringLiteral(StringBuilder builder, string value)
+    {
+        var quote = value.Contains('\'')
+            && !value.Contains('"')
+            ? '"'
+            : '\'';
+        builder.Append(quote);
+        for (var i = 0; i < value.Length; i++)
+        {
+            var ch = value[i];
+            if (ch == '\\' || ch == quote)
+            {
+                builder.Append('\\');
+                builder.Append(ch);
+                continue;
+            }
+
+            switch (ch)
+            {
+                case '\n':
+                    builder.Append("\\n");
+                    break;
+                case '\r':
+                    builder.Append("\\r");
+                    break;
+                case '\t':
+                    builder.Append("\\t");
+                    break;
+                default:
+                    builder.Append(ch);
+                    break;
+            }
+        }
+
+        builder.Append(quote);
     }
 
     /// <summary>
