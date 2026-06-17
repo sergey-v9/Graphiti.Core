@@ -74,6 +74,7 @@ public class InMemorySearchGraphDriverTests
             FactEmbedding = new List<float> { 0f, 1f }
         };
         await node.SaveAsync(driver);
+        await new EntityNode { Uuid = "bob", Name = "Bob", GroupId = "group" }.SaveAsync(driver);
         await edge.SaveAsync(driver);
 
         var nodeByUuid = await EntityNode.GetByUuidAsync(driver, node.Uuid);

@@ -164,6 +164,11 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         lock (_gate)
         {
             var clone = CloneEdge(edge);
+            if (!EdgeEndpointsExist(clone))
+            {
+                return Task.CompletedTask;
+            }
+
             var key = GetEdgeKey(clone);
             if (_edges.TryGetValue(key, out var existing))
             {
@@ -370,7 +375,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                     && string.Equals(episodic.TargetNodeUuid, nodeKey.Uuid, StringComparison.Ordinal)),
             CommunityEdge community => (nodeKey.Type == typeof(CommunityNode)
                     && string.Equals(community.SourceNodeUuid, nodeKey.Uuid, StringComparison.Ordinal))
-                || (nodeKey.Type == typeof(EntityNode)
+                || ((nodeKey.Type == typeof(EntityNode) || nodeKey.Type == typeof(CommunityNode))
                     && string.Equals(community.TargetNodeUuid, nodeKey.Uuid, StringComparison.Ordinal)),
             HasEpisodeEdge hasEpisode => (nodeKey.Type == typeof(SagaNode)
                     && string.Equals(hasEpisode.SourceNodeUuid, nodeKey.Uuid, StringComparison.Ordinal))
@@ -381,6 +386,27 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                     || string.Equals(nextEpisode.TargetNodeUuid, nodeKey.Uuid, StringComparison.Ordinal)),
             _ => false
         };
+
+    private bool EdgeEndpointsExist(Edge edge) =>
+        edge switch
+        {
+            EntityEdge entity => HasNode<EntityNode>(entity.SourceNodeUuid)
+                && HasNode<EntityNode>(entity.TargetNodeUuid),
+            EpisodicEdge episodic => HasNode<EpisodicNode>(episodic.SourceNodeUuid)
+                && HasNode<EntityNode>(episodic.TargetNodeUuid),
+            CommunityEdge community => HasNode<CommunityNode>(community.SourceNodeUuid)
+                && (HasNode<EntityNode>(community.TargetNodeUuid)
+                    || HasNode<CommunityNode>(community.TargetNodeUuid)),
+            HasEpisodeEdge hasEpisode => HasNode<SagaNode>(hasEpisode.SourceNodeUuid)
+                && HasNode<EpisodicNode>(hasEpisode.TargetNodeUuid),
+            NextEpisodeEdge nextEpisode => HasNode<EpisodicNode>(nextEpisode.SourceNodeUuid)
+                && HasNode<EpisodicNode>(nextEpisode.TargetNodeUuid),
+            _ => false
+        };
+
+    private bool HasNode<TNode>(string uuid)
+        where TNode : Node =>
+        _nodes.ContainsKey(GetNodeKey<TNode>(uuid));
 
     /// <inheritdoc />
     public override Task DeleteNodesByGroupIdAsync(string groupId, int batchSize = 100, CancellationToken cancellationToken = default)

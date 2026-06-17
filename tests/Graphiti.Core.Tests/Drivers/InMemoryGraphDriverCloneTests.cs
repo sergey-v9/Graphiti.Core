@@ -64,6 +64,8 @@ public sealed class InMemoryGraphDriverCloneTests
         var edge = new EntityEdge
         {
             Uuid = "edge",
+            SourceNodeUuid = "source",
+            TargetNodeUuid = "target",
             Name = "RELATES_TO",
             Fact = "fact",
             Attributes =
@@ -73,6 +75,8 @@ public sealed class InMemoryGraphDriverCloneTests
             }
         };
 
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "source", Name = "Source" });
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "target", Name = "Target" });
         await driver.SaveEdgeAsync(edge);
         nested["value"] = "mutated";
         weights.Add(2L);

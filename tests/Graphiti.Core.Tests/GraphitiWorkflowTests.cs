@@ -737,6 +737,7 @@ public class GraphitiWorkflowTests
             Fact = "Alice knows Bob",
             CreatedAt = now
         };
+        await SaveEntityEdgeEndpointNodesAsync(driver, edge);
         await edge.SaveAsync(driver);
         var firstEpisode = new EpisodicNode
         {
@@ -789,6 +790,7 @@ public class GraphitiWorkflowTests
                 Fact = $"Alice {i} knows Bob {i}",
                 CreatedAt = now
             };
+            await SaveEntityEdgeEndpointNodesAsync(driver, edge);
             await edge.SaveAsync(driver);
 
             var episode = new EpisodicNode
@@ -840,6 +842,7 @@ public class GraphitiWorkflowTests
                 Fact = $"Alice {i} knows Bob {i}",
                 CreatedAt = now
             };
+            await SaveEntityEdgeEndpointNodesAsync(driver, edge);
             await edge.SaveAsync(driver);
 
             var episode = new EpisodicNode
@@ -5221,6 +5224,25 @@ public class GraphitiWorkflowTests
                 SourceNodeUuid = episode.Uuid,
                 TargetNodeUuid = target.Uuid,
                 CreatedAt = episode.CreatedAt
+            }.SaveAsync(driver);
+        }
+    }
+
+    private static async Task SaveEntityEdgeEndpointNodesAsync(IGraphDriver driver, EntityEdge edge)
+    {
+        await new EntityNode
+        {
+            Uuid = edge.SourceNodeUuid,
+            Name = edge.SourceNodeUuid,
+            GroupId = edge.GroupId
+        }.SaveAsync(driver);
+        if (!string.Equals(edge.SourceNodeUuid, edge.TargetNodeUuid, StringComparison.Ordinal))
+        {
+            await new EntityNode
+            {
+                Uuid = edge.TargetNodeUuid,
+                Name = edge.TargetNodeUuid,
+                GroupId = edge.GroupId
             }.SaveAsync(driver);
         }
     }

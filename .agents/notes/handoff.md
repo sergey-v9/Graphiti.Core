@@ -171,9 +171,11 @@ validation absent from Python `add_episode_bulk` while single `AddEpisodeAsync` 
 Search `PropertyFilters` are now ignored by backend query construction and in-memory/materialized
 matching while keeping the DTO field, matching Python's current `property_filters` behavior.
 Invalidation candidates are now sorted by `valid_at` ascending with nulls last before resolved-edge
-expiry and contradiction handling, matching Python's invalidated-edge ordering.
-`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`968` passed,
-`3` skipped, `971` total; both shippable packages packed and both fresh package-consumer smoke builds
+expiry and contradiction handling, matching Python's invalidated-edge ordering. InMemory edge saves
+now require the same typed endpoint presence as Python's edge `MATCH`/`MERGE` save queries and leave
+existing edges untouched when a replacement save has missing or wrong-typed endpoints.
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`975` passed,
+`3` skipped, `978` total; both shippable packages packed and both fresh package-consumer smoke builds
 succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
@@ -413,10 +415,15 @@ public DTO field for Python wire-shape parity, but backend query construction pl
 in-memory/materialized matching now ignore it because Python defines `property_filters` without
 applying it in the node or edge search filter constructors.
 
-Open concrete follow-up candidates from the 2026-06-17 read-only audit: none currently remain after
-the verified slices above. Continue the broader Python-vs-C# audit and add new candidates here as
-they are confirmed; decision-gated release/API/provider items remain separate in plan 05 and the
-provider notes.
+Open concrete follow-up candidates from the latest read-only audits: plan-folder inventory found
+only plan 06 unchecked, and that LadybugDB merge remains a separate optional stream under
+`.agents/plans/06-merge-ladybug-into-core.md`, not release/versioning work. The endpoint-gated
+InMemory edge-save drift is now closed. Two saga candidates remain separate: existing saga-by-name
+association hydrates/preserves more saga state than Python's minimal `_get_or_create_saga` return, and
+bulk saga predecessor lookup excludes the first bulk episode where Python passes an empty
+`current_episode_uuid`. Verify either against Python behavior before changing it; the second may be a
+cycle-avoidance divergence that needs an explicit decision. Decision-gated release/API/provider items
+remain separate in plan 05 and the provider notes.
 
 Latest checkpoint, 2026-06-13:
 

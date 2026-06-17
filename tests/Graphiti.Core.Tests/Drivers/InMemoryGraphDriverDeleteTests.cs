@@ -58,6 +58,8 @@ public class InMemoryGraphDriverDeleteTests
     public async Task DeleteEdgesByUuidsAsync_EmptyInputDoesNotMutateState()
     {
         var driver = new InMemoryGraphDriver();
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "source", Name = "Source", GroupId = "tenant" });
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "target", Name = "Target", GroupId = "tenant" });
         var edge = new EntityEdge
         {
             Uuid = "edge",
@@ -73,6 +75,70 @@ public class InMemoryGraphDriverDeleteTests
 
         var stored = await driver.GetEdgeByUuidAsync<EntityEdge>(edge.Uuid);
         Assert.Equal(edge.Uuid, stored.Uuid);
+    }
+
+    [Theory]
+    [MemberData(nameof(DanglingTypedEdges))]
+    public async Task SaveEdgeAsync_SkipsEdgesWhenTypedEndpointsAreMissingLikePython(Edge edge)
+    {
+        var driver = new InMemoryGraphDriver();
+
+        await driver.SaveEdgeAsync(edge);
+
+        await AssertTypedEdgeMissingAsync(driver, edge);
+    }
+
+    [Fact]
+    public async Task SaveEdgeAsync_MissingEndpointOverwriteLeavesExistingEdgeLikePython()
+    {
+        var driver = new InMemoryGraphDriver();
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "source", Name = "Source", GroupId = "tenant" });
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "target", Name = "Target", GroupId = "tenant" });
+        var existing = new EntityEdge
+        {
+            Uuid = "edge",
+            GroupId = "tenant",
+            SourceNodeUuid = "source",
+            TargetNodeUuid = "target",
+            Name = "RELATES_TO",
+            Fact = "original"
+        };
+        await driver.SaveEdgeAsync(existing);
+
+        await driver.SaveEdgeAsync(new EntityEdge
+        {
+            Uuid = existing.Uuid,
+            GroupId = "tenant",
+            SourceNodeUuid = "source",
+            TargetNodeUuid = "missing",
+            Name = "RELATES_TO",
+            Fact = "replacement"
+        });
+
+        var stored = await driver.GetEdgeByUuidAsync<EntityEdge>(existing.Uuid);
+        Assert.Equal("original", stored.Fact);
+        Assert.Equal("target", stored.TargetNodeUuid);
+    }
+
+    [Fact]
+    public async Task SaveEdgeAsync_SkipsEdgesWhenEndpointTypesDoNotMatchLikePython()
+    {
+        var driver = new InMemoryGraphDriver();
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "entity", Name = "Entity", GroupId = "group" });
+        await driver.SaveNodeAsync(new CommunityNode { Uuid = "community", Name = "Community", GroupId = "group" });
+        var edge = new EntityEdge
+        {
+            Uuid = "edge",
+            GroupId = "group",
+            SourceNodeUuid = "entity",
+            TargetNodeUuid = "community",
+            Name = "RELATES_TO",
+            Fact = "entity relates to community"
+        };
+
+        await driver.SaveEdgeAsync(edge);
+
+        await AssertTypedEdgeMissingAsync(driver, edge);
     }
 
     [Fact]
@@ -174,6 +240,8 @@ public class InMemoryGraphDriverDeleteTests
     public async Task SaveEdgeAsync_RepeatedSaveKeepsSingleIndexEntry()
     {
         var driver = new InMemoryGraphDriver();
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "source", Name = "Source", GroupId = "tenant" });
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "target", Name = "Target", GroupId = "tenant" });
         await driver.SaveEdgeAsync(new EntityEdge
         {
             Uuid = "edge",
@@ -208,6 +276,8 @@ public class InMemoryGraphDriverDeleteTests
     public async Task EntityEdgeLookups_ReturnUuidOrderedEdges()
     {
         var driver = new InMemoryGraphDriver();
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "source", Name = "Source", GroupId = "tenant" });
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "target", Name = "Target", GroupId = "tenant" });
         await driver.SaveEdgeAsync(new EntityEdge
         {
             Uuid = "edge-b",
@@ -232,6 +302,74 @@ public class InMemoryGraphDriverDeleteTests
 
         Assert.Equal(new[] { "edge-a", "edge-b" }, incidentEdges.Select(edge => edge.Uuid));
         Assert.Equal(new[] { "edge-a", "edge-b" }, endpointEdges.Select(edge => edge.Uuid));
+    }
+
+    public static TheoryData<Edge> DanglingTypedEdges => new()
+    {
+        new EntityEdge
+        {
+            Uuid = "entity-edge",
+            GroupId = "group",
+            SourceNodeUuid = "entity-a",
+            TargetNodeUuid = "entity-b",
+            Name = "RELATES_TO",
+            Fact = "Alice knows Bob."
+        },
+        new EpisodicEdge
+        {
+            Uuid = "mention-edge",
+            GroupId = "group",
+            SourceNodeUuid = "episode",
+            TargetNodeUuid = "entity"
+        },
+        new CommunityEdge
+        {
+            Uuid = "community-edge",
+            GroupId = "group",
+            SourceNodeUuid = "community",
+            TargetNodeUuid = "entity"
+        },
+        new HasEpisodeEdge
+        {
+            Uuid = "has-episode-edge",
+            GroupId = "group",
+            SourceNodeUuid = "saga",
+            TargetNodeUuid = "episode"
+        },
+        new NextEpisodeEdge
+        {
+            Uuid = "next-episode-edge",
+            GroupId = "group",
+            SourceNodeUuid = "episode-a",
+            TargetNodeUuid = "episode-b"
+        }
+    };
+
+    private static async Task AssertTypedEdgeMissingAsync(InMemoryGraphDriver driver, Edge edge)
+    {
+        switch (edge)
+        {
+            case EntityEdge:
+                await Assert.ThrowsAsync<EdgeNotFoundException>(() =>
+                    driver.GetEdgeByUuidAsync<EntityEdge>(edge.Uuid));
+                break;
+            case EpisodicEdge:
+                await Assert.ThrowsAsync<EdgeNotFoundException>(() =>
+                    driver.GetEdgeByUuidAsync<EpisodicEdge>(edge.Uuid));
+                break;
+            case CommunityEdge:
+                await Assert.ThrowsAsync<EdgeNotFoundException>(() =>
+                    driver.GetEdgeByUuidAsync<CommunityEdge>(edge.Uuid));
+                break;
+            case HasEpisodeEdge:
+                await Assert.ThrowsAsync<EdgeNotFoundException>(() =>
+                    driver.GetEdgeByUuidAsync<HasEpisodeEdge>(edge.Uuid));
+                break;
+            case NextEpisodeEdge:
+                await Assert.ThrowsAsync<EdgeNotFoundException>(() =>
+                    driver.GetEdgeByUuidAsync<NextEpisodeEdge>(edge.Uuid));
+                break;
+        }
     }
 
     [Fact]

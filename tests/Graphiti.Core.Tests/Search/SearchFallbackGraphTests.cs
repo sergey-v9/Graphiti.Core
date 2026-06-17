@@ -37,9 +37,9 @@ public class SearchFallbackGraphTests
             Uuid = "entity-edge",
             GroupId = "group",
             SourceNodeUuid = entity.Uuid,
-            TargetNodeUuid = community.Uuid,
+            TargetNodeUuid = entity.Uuid,
             Name = "RELATES_TO",
-            Fact = "entity relates to community",
+            Fact = "entity relates to entity",
             FactEmbedding = new List<float> { 1f, 1f },
             CreatedAt = now
         };
@@ -126,7 +126,7 @@ public class SearchFallbackGraphTests
         Assert.Equal(new[] { 1f, 0f }, storedEntity.NameEmbedding);
         Assert.Equal("Community", storedCommunity.Name);
         Assert.Equal(new[] { 0f, 1f }, storedCommunity.NameEmbedding);
-        Assert.Equal("entity relates to community", storedEdge.Fact);
+        Assert.Equal("entity relates to entity", storedEdge.Fact);
         await storedEdge.LoadFactEmbeddingAsync(driver);
         Assert.Equal(new[] { 1f, 1f }, storedEdge.FactEmbedding);
     }

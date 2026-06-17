@@ -13,9 +13,9 @@ public class SearchEngineRrfTests
         var vectorWinner = Edge("vector", "gamma", new[] { 0.95f, 0.05f }, now);
         var fusedWinner = Edge("fused", "alpha", new[] { 1f, 0f }, now);
 
-        await driver.SaveEdgeAsync(textWinner);
-        await driver.SaveEdgeAsync(vectorWinner);
-        await driver.SaveEdgeAsync(fusedWinner);
+        await SaveEdgeWithEndpointNodesAsync(driver, textWinner);
+        await SaveEdgeWithEndpointNodesAsync(driver, vectorWinner);
+        await SaveEdgeWithEndpointNodesAsync(driver, fusedWinner);
 
         var ranked = await SearchEngine.EdgeSearchAsync(
             driver,
@@ -747,9 +747,9 @@ public class SearchEngineRrfTests
         var overrideEdge = Edge("override-edge", "alpha override", new[] { 1f, 0f }, now);
         var rootNode = Node("root-node", "alpha root", new[] { 1f, 0f }, now);
         var overrideNode = Node("override-node", "alpha override", new[] { 1f, 0f }, now);
-        await rootDriver.SaveEdgeAsync(rootEdge);
+        await SaveEdgeWithEndpointNodesAsync(rootDriver, rootEdge);
         await rootDriver.SaveNodeAsync(rootNode);
-        await overrideDriver.SaveEdgeAsync(overrideEdge);
+        await SaveEdgeWithEndpointNodesAsync(overrideDriver, overrideEdge);
         await overrideDriver.SaveNodeAsync(overrideNode);
 
         var graphiti = new Graphiti(
@@ -787,8 +787,8 @@ public class SearchEngineRrfTests
         var highRrfScore = Edge("high-rrf", "alpha beta", new[] { 1f, 0f }, now);
         var lowRrfScoreManyEpisodes = Edge("low-rrf", "alpha", new[] { 1f, 0f }, now);
         lowRrfScoreManyEpisodes.Episodes = new List<string> { "e1", "e2", "e3" };
-        await driver.SaveEdgeAsync(highRrfScore);
-        await driver.SaveEdgeAsync(lowRrfScoreManyEpisodes);
+        await SaveEdgeWithEndpointNodesAsync(driver, highRrfScore);
+        await SaveEdgeWithEndpointNodesAsync(driver, lowRrfScoreManyEpisodes);
         var clients = new GraphitiClients(
             driver,
             new NoOpLlmClient(),
@@ -824,8 +824,8 @@ public class SearchEngineRrfTests
         var highRrfScore = Edge("high-rrf", "alpha beta", new[] { 1f, 0f }, now);
         var lowRrfScoreManyEpisodes = Edge("low-rrf", "alpha", new[] { 1f, 0f }, now);
         lowRrfScoreManyEpisodes.Episodes = new List<string> { "e1", "e2", "e3" };
-        await driver.SaveEdgeAsync(highRrfScore);
-        await driver.SaveEdgeAsync(lowRrfScoreManyEpisodes);
+        await SaveEdgeWithEndpointNodesAsync(driver, highRrfScore);
+        await SaveEdgeWithEndpointNodesAsync(driver, lowRrfScoreManyEpisodes);
         var clients = new GraphitiClients(
             driver,
             new NoOpLlmClient(),
@@ -910,6 +910,17 @@ public class SearchEngineRrfTests
             Labels = { "Entity" },
             CreatedAt = now
         };
+
+    private static async Task SaveEdgeWithEndpointNodesAsync(InMemoryGraphDriver driver, EntityEdge edge)
+    {
+        await driver.SaveNodeAsync(Node(edge.SourceNodeUuid, edge.SourceNodeUuid, new[] { 1f, 0f }, edge.CreatedAt));
+        if (!string.Equals(edge.SourceNodeUuid, edge.TargetNodeUuid, StringComparison.Ordinal))
+        {
+            await driver.SaveNodeAsync(Node(edge.TargetNodeUuid, edge.TargetNodeUuid, new[] { 1f, 0f }, edge.CreatedAt));
+        }
+
+        await driver.SaveEdgeAsync(edge);
+    }
 
     private sealed class RecordingEmbedder : EmbedderClient
     {

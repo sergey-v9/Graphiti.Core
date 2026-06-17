@@ -94,7 +94,7 @@ public class NamespaceTests
         {
             Uuid = "edge",
             SourceNodeUuid = "entity",
-            TargetNodeUuid = "other",
+            TargetNodeUuid = "entity",
             GroupId = "group",
             Name = "KNOWS",
             Fact = "Alice knows Bob.",
@@ -430,6 +430,7 @@ public class NamespaceTests
             GroupId = "group"
         };
 
+        await SaveSharedEdgeEndpointNodesAsync(driver);
         await entity.SaveAsync(driver);
         await mention.SaveAsync(driver);
         await membership.SaveAsync(driver);
@@ -496,6 +497,7 @@ public class NamespaceTests
             GroupId = "group"
         };
 
+        await SaveSharedEdgeEndpointNodesAsync(driver);
         await entity.SaveAsync(driver);
         await mention.SaveAsync(driver);
         await membership.SaveAsync(driver);
@@ -567,6 +569,8 @@ public class NamespaceTests
             GroupId = "group"
         };
 
+        await driver.SaveNodeAsync(new EpisodicNode { Uuid = "episode-1", Name = "episode", GroupId = "group" });
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "entity-alice", Name = "Alice", GroupId = "group" });
         await graphiti.Edges.Episode.SaveAsync(mention);
 
         var modelException = await Assert.ThrowsAsync<EdgeNotFoundException>(() =>
@@ -619,6 +623,12 @@ public class NamespaceTests
             TargetNodeUuid = alice.Uuid,
             GroupId = "group"
         };
+        await graphiti.Nodes.Episode.SaveAsync(new EpisodicNode
+        {
+            Uuid = "episode-1",
+            Name = "episode",
+            GroupId = "group"
+        });
         await graphiti.Edges.Episode.SaveAsync(mention);
 
         await graphiti.Edges.Entity.SaveBulkAsync(new[] { knows, worksWith });
@@ -643,6 +653,17 @@ public class NamespaceTests
         await Assert.ThrowsAsync<EdgeNotFoundException>(() => graphiti.Edges.Entity.GetByUuidAsync(knows.Uuid));
         Assert.Equal(mention.Uuid, (await graphiti.Edges.Episode.GetByUuidAsync(mention.Uuid)).Uuid);
         Assert.Equal(worksWith.Uuid, (await graphiti.Edges.Entity.GetByUuidAsync(worksWith.Uuid)).Uuid);
+    }
+
+    private static async Task SaveSharedEdgeEndpointNodesAsync(InMemoryGraphDriver driver)
+    {
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "entity-a", Name = "Entity A", GroupId = "group" });
+        await driver.SaveNodeAsync(new EntityNode { Uuid = "entity-b", Name = "Entity B", GroupId = "group" });
+        await driver.SaveNodeAsync(new EpisodicNode { Uuid = "episode", Name = "Episode", GroupId = "group" });
+        await driver.SaveNodeAsync(new EpisodicNode { Uuid = "episode-a", Name = "Episode A", GroupId = "group" });
+        await driver.SaveNodeAsync(new EpisodicNode { Uuid = "episode-b", Name = "Episode B", GroupId = "group" });
+        await driver.SaveNodeAsync(new CommunityNode { Uuid = "community", Name = "Community", GroupId = "group" });
+        await driver.SaveNodeAsync(new SagaNode { Uuid = "saga", Name = "Saga", GroupId = "group" });
     }
 
     [Fact]

@@ -258,6 +258,8 @@ public class SearchGraphTraversalTests
         var near = Entity("near", now);
         var farA = Entity("far-a", now);
         var farB = Entity("far-b", now);
+        await driver.SaveNodeAsync(center);
+        await driver.SaveNodeAsync(near);
         await driver.SaveEdgeAsync(Edge(center, near, "center near", now));
         var searchDriver = new MaterializingSearchGraphDriver(driver);
 
@@ -278,6 +280,8 @@ public class SearchGraphTraversalTests
         var near = Entity("near", now);
         var farA = Entity("far-a", now);
         var farB = Entity("far-b", now);
+        await driver.SaveNodeAsync(center);
+        await driver.SaveNodeAsync(near);
         await driver.SaveEdgeAsync(Edge(center, near, "center near", now));
         var searchDriver = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
 
@@ -298,6 +302,11 @@ public class SearchGraphTraversalTests
         var twice = Entity("twice", now);
         var unmentionedA = Entity("unmentioned-a", now);
         var unmentionedB = Entity("unmentioned-b", now);
+        await driver.SaveNodeAsync(twice);
+        await driver.SaveNodeAsync(once);
+        await driver.SaveNodeAsync(Episode("episode-1", now));
+        await driver.SaveNodeAsync(Episode("episode-2", now));
+        await driver.SaveNodeAsync(Episode("episode-3", now));
         await driver.SaveEdgeAsync(EpisodicMention("episode-1", twice.Uuid, now));
         await driver.SaveEdgeAsync(EpisodicMention("episode-2", once.Uuid, now));
         await driver.SaveEdgeAsync(EpisodicMention("episode-3", twice.Uuid, now));
@@ -323,6 +332,11 @@ public class SearchGraphTraversalTests
         var twice = Entity("twice", now);
         var unmentionedA = Entity("unmentioned-a", now);
         var unmentionedB = Entity("unmentioned-b", now);
+        await driver.SaveNodeAsync(twice);
+        await driver.SaveNodeAsync(once);
+        await driver.SaveNodeAsync(Episode("episode-1", now));
+        await driver.SaveNodeAsync(Episode("episode-2", now));
+        await driver.SaveNodeAsync(Episode("episode-3", now));
         await driver.SaveEdgeAsync(EpisodicMention("episode-1", twice.Uuid, now));
         await driver.SaveEdgeAsync(EpisodicMention("episode-2", once.Uuid, now));
         await driver.SaveEdgeAsync(EpisodicMention("episode-3", twice.Uuid, now));
@@ -473,6 +487,16 @@ public class SearchGraphTraversalTests
             GroupId = "group",
             Labels = { "Entity" },
             CreatedAt = now
+        };
+
+    private static EpisodicNode Episode(string uuid, DateTime now) =>
+        new()
+        {
+            Uuid = uuid,
+            Name = uuid,
+            GroupId = "group",
+            CreatedAt = now,
+            ValidAt = now
         };
 
     private static EntityEdge Edge(EntityNode source, EntityNode target, string fact, DateTime now) =>
