@@ -42,7 +42,7 @@ public sealed partial class Graphiti : IAsyncDisposable
     /// <param name="crossEncoder">Reranker client; defaults to an identity lexical reranker.</param>
     /// <param name="storeRawEpisodeContent">Whether to persist raw episode content.</param>
     /// <param name="graphDriver">An explicit graph driver. When omitted, an in-memory driver is used.</param>
-    /// <param name="maxCoroutines">Optional cap on concurrent operations.</param>
+    /// <param name="maxCoroutines">Optional cap on concurrent operations; null or zero uses the Python-compatible default.</param>
     /// <param name="timeProvider">Time source used for timestamps; defaults to the system clock.</param>
     /// <param name="logger">Logger; defaults to a null logger.</param>
     /// <param name="database">Database name (group/db label) for the default in-memory driver.</param>
@@ -59,7 +59,7 @@ public sealed partial class Graphiti : IAsyncDisposable
     {
         if (maxCoroutines is { } concurrency)
         {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(concurrency, nameof(maxCoroutines));
+            ArgumentOutOfRangeException.ThrowIfNegative(concurrency, nameof(maxCoroutines));
         }
 
         var ownsDriver = false;

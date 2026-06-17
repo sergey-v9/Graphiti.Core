@@ -18,7 +18,7 @@ public sealed class GraphitiOptions
     /// <summary>Whether to persist raw episode content.</summary>
     public bool StoreRawEpisodeContent { get; set; } = true;
 
-    /// <summary>Optional cap on concurrent operations.</summary>
+    /// <summary>Optional cap on concurrent operations; null or zero uses the Python-compatible default.</summary>
     public int? MaxCoroutines { get; set; }
 
     /// <summary>Embedding vector dimension used when no embedder-specific value is set.</summary>
@@ -42,9 +42,9 @@ internal sealed class GraphitiOptionsValidator : IValidateOptions<GraphitiOption
             failures.Add("GraphitiOptions.EmbeddingDimension must be positive.");
         }
 
-        if (options.MaxCoroutines is <= 0)
+        if (options.MaxCoroutines is < 0)
         {
-            failures.Add("GraphitiOptions.MaxCoroutines must be positive when set.");
+            failures.Add("GraphitiOptions.MaxCoroutines must be non-negative when set.");
         }
 
         if (!string.IsNullOrEmpty(options.Database) && string.IsNullOrWhiteSpace(options.Database))

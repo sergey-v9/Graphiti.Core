@@ -180,7 +180,7 @@ internal sealed class EdgeResolutionService(
                     nodesByUuid,
                     attributeSchemaCache,
                     token),
-                getMaxDegreeOfParallelism?.Invoke() ?? Environment.ProcessorCount,
+                getMaxDegreeOfParallelism?.Invoke() ?? GraphitiHelpers.DefaultSemaphoreLimit,
                 cancellationToken).ConfigureAwait(false);
 
             // Serial collection pass in input order (mirrors edge_operations.py:511-526).

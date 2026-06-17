@@ -813,6 +813,59 @@ public class GraphitiWorkflowTests
         Assert.Equal(new[] { "edge-0", "edge-1", "edge-2" }, results.Edges.Select(edge => edge.Uuid));
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0)]
+    public async Task GetNodesAndEdgesByEpisode_NullOrZeroMaxCoroutinesUsesPythonSemaphoreLimit(int? maxCoroutines)
+    {
+        var driver = new EmptyEdgeSearchGraphDriver
+        {
+            ExpectedConcurrentEdgeLoads = 20,
+            HoldExpectedConcurrentEdgeLoads = true
+        };
+        var graphiti = maxCoroutines is null
+            ? new Graphiti(graphDriver: driver)
+            : new Graphiti(graphDriver: driver, maxCoroutines: maxCoroutines.Value);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var episodeUuids = new List<string>();
+        for (var i = 0; i < 25; i++)
+        {
+            var edge = new EntityEdge
+            {
+                Uuid = $"default-edge-{i}",
+                SourceNodeUuid = $"alice-{i}",
+                TargetNodeUuid = $"bob-{i}",
+                GroupId = "group",
+                Name = "KNOWS",
+                Fact = $"Alice {i} knows Bob {i}",
+                CreatedAt = now
+            };
+            await edge.SaveAsync(driver);
+
+            var episode = new EpisodicNode
+            {
+                Uuid = $"default-episode-{i}",
+                Name = $"default-episode-{i}",
+                GroupId = "group",
+                CreatedAt = now.AddMinutes(i),
+                ValidAt = now.AddMinutes(i),
+                Content = edge.Fact,
+                EntityEdges = new List<string> { edge.Uuid }
+            };
+            await episode.SaveAsync(driver);
+            episodeUuids.Add(episode.Uuid);
+        }
+
+        var lookupTask = graphiti.GetNodesAndEdgesByEpisodeAsync(episodeUuids);
+
+        var results = await CompleteExpectedConcurrentEdgeLoadsAsync(driver, lookupTask);
+
+        Assert.Equal(20, driver.MaxConcurrentEdgeLoads);
+        Assert.Equal(
+            Enumerable.Range(0, 25).Select(index => $"default-edge-{index}"),
+            results.Edges.Select(edge => edge.Uuid));
+    }
+
     [Fact]
     public async Task RemoveEpisode_PrunesEpisodeFromSharedEntityEdge()
     {

@@ -37,7 +37,9 @@ public sealed partial class Graphiti
         ThrottledWork.SelectAsync(items, operation, GetMaxDegreeOfParallelism(), cancellationToken);
 
     private int GetMaxDegreeOfParallelism() =>
-        _maxCoroutines ?? Environment.ProcessorCount;
+        _maxCoroutines is null or 0
+            ? GraphitiHelpers.DefaultSemaphoreLimit
+            : _maxCoroutines.Value;
 
     private DateTime UtcNow() => _timeProvider.GetUtcNow().UtcDateTime;
 

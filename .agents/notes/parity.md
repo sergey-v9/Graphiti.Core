@@ -366,7 +366,9 @@ the static model helpers and public namespaces.
 `max_coroutines=0` also falls back to that default via Python's `or` semantics. C#
 `GraphitiHelpers.SemaphoreGatherAsync` now uses a 20-operation cap when `maxConcurrency` is omitted
 or zero, preserves explicit positive caps, and rejects negative direct helper input instead of
-running unbounded.
+running unbounded. Follow-up: Graphiti workflow-level throttling now uses the same null/zero
+resolution, so the constructor and DI options accept zero like Python and feed `ThrottledWork` a
+positive cap of 20.
 
 **2026-06-17 normalize_l2 follow-up:** closed the remaining vector-normalization helper drift.
 Python `normalize_l2` preserves only zero-norm embeddings; non-finite norms divide through NumPy and

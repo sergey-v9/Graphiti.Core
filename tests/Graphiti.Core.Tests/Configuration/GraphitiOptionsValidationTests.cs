@@ -12,7 +12,6 @@ public class GraphitiOptionsValidationTests
         {
             options => options.EmbeddingDimension = 0,
             options => options.EmbeddingDimension = -1,
-            options => options.MaxCoroutines = 0,
             options => options.MaxCoroutines = -1,
             options => options.Database = "   ",
             options => options.Provider = GraphProvider.FalkorDb,
@@ -52,15 +51,30 @@ public class GraphitiOptionsValidationTests
             () => scope.ServiceProvider.GetRequiredService<Graphiti>());
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void Constructor_FailsForInvalidMaxCoroutines(int maxCoroutines)
+    [Fact]
+    public void Constructor_FailsForNegativeMaxCoroutines()
     {
         var exception = Assert.Throws<ArgumentOutOfRangeException>(
-            () => new Graphiti(graphDriver: new InMemoryGraphDriver(), maxCoroutines: maxCoroutines));
+            () => new Graphiti(graphDriver: new InMemoryGraphDriver(), maxCoroutines: -1));
 
         Assert.Equal("maxCoroutines", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task MaxCoroutines_ZeroIsAcceptedLikePythonDefault()
+    {
+        await using var graphiti = new Graphiti(
+            graphDriver: new InMemoryGraphDriver(),
+            maxCoroutines: 0);
+        await using var provider = BuildProvider(options => options.MaxCoroutines = 0);
+        await using var scope = provider.CreateAsyncScope();
+
+        var options = provider.GetRequiredService<IOptions<GraphitiOptions>>().Value;
+        var resolved = scope.ServiceProvider.GetRequiredService<Graphiti>();
+
+        Assert.Equal(0, options.MaxCoroutines);
+        Assert.IsType<InMemoryGraphDriver>(graphiti.Driver);
+        Assert.IsType<InMemoryGraphDriver>(resolved.Driver);
     }
 
     [Theory]

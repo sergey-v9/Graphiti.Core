@@ -14,7 +14,7 @@ namespace Graphiti.Core.Text;
 /// </summary>
 public static partial class GraphitiHelpers
 {
-    private const int DefaultSemaphoreLimit = 20;
+    internal const int DefaultSemaphoreLimit = 20;
 
     /// <summary>Target token size for a content chunk.</summary>
     public const int ChunkTokenSize = ContentChunking.DefaultChunkTokenSize;
