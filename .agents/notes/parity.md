@@ -423,10 +423,12 @@ edge `episode_mentions` reranker first computes RRF UUIDs/scores, then sorts onl
 objects by episode count and returns the original RRF score slice. C# now mirrors that shape: edges
 move by episode-count order, while `EdgeRerankerScores` remain in the pre-sort RRF order.
 
-**2026-06-17 separate audit candidates not changed in this pass:** keep these as independent slices
-with their own tests before changing behavior. Python preserves duplicate resolved/invalidated edge
-appearances in `resolve_extracted_edges`, while C# currently dedupes the returned edge list by UUID
-during collection.
+**2026-06-17 edge-resolution duplicate-result follow-up:** closed the final concrete candidate from
+the current read-only audit. Python appends every resolved edge and every invalidated-edge chunk from
+`resolve_extracted_edges` in input order, even when the same edge UUID appears more than once. C#
+now preserves those duplicate appearances during the resolution collection pass; callers that build
+episode edge UUID lists from the single-episode path therefore see the same duplicate sequence shape
+Python would return.
 
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 

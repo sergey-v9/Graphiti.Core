@@ -164,17 +164,6 @@ internal static class EdgeMergeHelpers
         return edges;
     }
 
-    internal static void AddResolvedEdge(
-        List<EntityEdge> edges,
-        HashSet<string> seenUuids,
-        EntityEdge edge)
-    {
-        if (seenUuids.Add(edge.Uuid))
-        {
-            edges.Add(edge);
-        }
-    }
-
     internal static List<EntityEdge> FilterEdgesByUuid(
         IEnumerable<EntityEdge> edges,
         HashSet<string> uuids)

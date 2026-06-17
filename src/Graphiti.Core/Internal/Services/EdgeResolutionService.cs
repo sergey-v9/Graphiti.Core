@@ -95,7 +95,6 @@ internal sealed class EdgeResolutionService(
         try
         {
             var result = new List<EntityEdge>();
-            var resultUuids = new HashSet<string>(StringComparer.Ordinal);
             var seen = new Dictionary<(string SourceUuid, string TargetUuid, string NormalizedFact), EntityEdge>();
             var skippedEdges = 0;
             var nodesByUuid = BuildNodesByUuid(nodes);
@@ -193,10 +192,10 @@ internal sealed class EdgeResolutionService(
                     newlyCreatedEdgeUuids?.Add(outcome.ResolvedEdge.Uuid);
                 }
 
-                EdgeMergeHelpers.AddResolvedEdge(result, resultUuids, outcome.ResolvedEdge);
+                result.Add(outcome.ResolvedEdge);
                 foreach (var invalidatedEdge in outcome.InvalidatedEdges)
                 {
-                    EdgeMergeHelpers.AddResolvedEdge(result, resultUuids, invalidatedEdge);
+                    result.Add(invalidatedEdge);
                 }
             }
 

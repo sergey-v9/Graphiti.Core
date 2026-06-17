@@ -283,6 +283,95 @@ public class EdgeResolutionEndpointFetchTests
     }
 
     [Fact]
+    public async Task ResolveEntityEdges_PreservesDuplicateResolvedEdgeAppearances()
+    {
+        var driver = new InMemoryGraphDriver();
+        var alice = new EntityNode
+        {
+            Uuid = "alice-uuid",
+            Name = "Alice",
+            GroupId = "group",
+            Labels = new List<string> { "Entity", "Person" }
+        };
+        var acme = new EntityNode
+        {
+            Uuid = "acme-uuid",
+            Name = "Acme",
+            GroupId = "group",
+            Labels = new List<string> { "Entity", "Organization" }
+        };
+        await driver.SaveNodeAsync(alice);
+        await driver.SaveNodeAsync(acme);
+        var existing = new EntityEdge
+        {
+            Uuid = "existing-edge",
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = acme.Uuid,
+            Name = "WORKS_AT",
+            Fact = "Alice works at Acme.",
+            GroupId = "group"
+        };
+        await driver.SaveEdgeAsync(existing);
+
+        var llm = new PromptResponseLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["dedupe_edges.resolve_edge"] = new()
+            {
+                ["duplicate_facts"] = new JsonArray { 0 },
+                ["contradicted_facts"] = new JsonArray()
+            }
+        });
+        var service = new EdgeResolutionService(
+            () => driver,
+            new GraphitiClients(driver, llm, new HashEmbedder(2), new IdentityCrossEncoderClient()),
+            llm,
+            NullLogger.Instance);
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode-1",
+            Name = "episode",
+            Content = "Alice works at Acme.",
+            Source = EpisodeType.Message,
+            GroupId = "group",
+            ValidAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc)
+        };
+        var newEdgeUuids = new HashSet<string>(StringComparer.Ordinal);
+
+        var resolved = await service.ResolveEntityEdgesAsync(
+            new[]
+            {
+                new EntityEdge
+                {
+                    Uuid = "candidate-1",
+                    SourceNodeUuid = alice.Uuid,
+                    TargetNodeUuid = acme.Uuid,
+                    Name = "WORKS_AT",
+                    Fact = "Alice works at Acme.",
+                    GroupId = "group"
+                },
+                new EntityEdge
+                {
+                    Uuid = "candidate-2",
+                    SourceNodeUuid = alice.Uuid,
+                    TargetNodeUuid = acme.Uuid,
+                    Name = "WORKS_AT",
+                    Fact = "Alice works at Acme as an engineer.",
+                    GroupId = "group"
+                }
+            },
+            episode,
+            "group",
+            now: episode.ValidAt,
+            CancellationToken.None,
+            existingEdgesOverride: null,
+            nodes: new[] { alice, acme },
+            newlyCreatedEdgeUuids: newEdgeUuids);
+
+        Assert.Equal(new[] { existing.Uuid, existing.Uuid }, resolved.Select(edge => edge.Uuid));
+        Assert.Empty(newEdgeUuids);
+    }
+
+    [Fact]
     public void FindEdgeTypeDefinition_MissingEndpoint_UsesEntityFallbackInsteadOfReturningNull()
     {
         var edge = BuildWorksAtEdge();

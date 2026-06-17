@@ -162,7 +162,7 @@ negative `max_chars`, and node/edge extraction prompt contexts plus entity-summa
 maps use dictionary keys for custom type names like Python. MMR reranking now receives node, edge,
 and community candidates in Python's first-seen retrieval order, and edge episode-mentions scores
 stay in pre-sort RRF order like Python.
-`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1047` passed,
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1048` passed,
 `3` skipped; both shippable packages packed and both fresh package-consumer smoke builds succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
@@ -309,7 +309,8 @@ scope drift, the entity UUID group-filter drift, the in-memory episodic-metadata
 entity/episodic-edge group-miss drift, the semaphore default-concurrency drift, the entity-type-id key
 mapping/schema drift, the base edge-delete scope drift, the eager search-config numeric validation
 drift, the negative-limit text truncation drift, the entity/fact prompt type-key drift, and the MMR
-candidate-order drift, and the edge episode-mentions score-order drift:
+candidate-order drift, the edge episode-mentions score-order drift, and the edge-resolution
+duplicate-result drift:
 namespace `SaveAsync` regenerates entity/community node and entity-edge embeddings even when prefilled,
 namespace `SaveBulkAsync` now preserves supplied null/precomputed embeddings without calling the
 embedder, and `AddTripletAsync` creates a fresh entity-edge UUID when the default in-memory backend
@@ -353,10 +354,12 @@ MMR node, edge, and community search now feed tied reranker candidates in first-
 instead of preliminary-score order, matching Python's UUID-map input order.
 Edge episode-mentions reranking now sorts only returned edges by episode count while leaving the
 returned score list in pre-sort RRF order, matching Python's returned tuple behavior.
+Edge resolution now appends resolved and invalidated edge appearances directly in input order instead
+of deduping by UUID, matching Python's result-list shape.
 Top-level community search now supplies Python's zero query vector fallback when no real embedding
 path is configured, so BM25/RRF community searches still execute vector retrieval like Python.
 Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests
-(`1047` passed, `3` skipped, `1050` total), both shippable package packs, and both package-consumer
+(`1048` passed, `3` skipped, `1051` total), both shippable package packs, and both package-consumer
 smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
@@ -366,10 +369,9 @@ community-edge `save_bulk`, while C# exposes `SaveBulkAsync` publicly and pins i
 plus Ladybug package runtime tests. Treat this as an ask-user public API decision before changing the
 surface. A separate read-only maintenance audit found that C# entity attribute definitions do not
 currently expose Python's per-field `max_length` and required-field metadata; adding that shape would
-also be a public API decision. Separate concrete parity candidates found in the same audit pass,
-but not changed in this prompt/text slice: resolved/invalidated edge result duplicate preservation.
-Continue the broader full-pipeline parity audit against current Python; new candidates should be
-added here as they are confirmed.
+also be a public API decision. The concrete non-decision candidates found in this audit mini-pass
+have been split into separate slices and closed; continue the broader full-pipeline parity audit
+against current Python, and add new candidates here as they are confirmed.
 
 Latest checkpoint, 2026-06-13:
 
