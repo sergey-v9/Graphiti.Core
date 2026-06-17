@@ -104,8 +104,8 @@ First successful end-to-end run against the real OpenAI API (key supplied locall
       to `.gitignore`. No provider quirks or schema failures were found; the one extraction
       observation is recorded above for the future eval comparison.
 
-## Done when — MET 2026-06-13
+## Done when — MET 2026-06-14
 
 Sample app demonstrates a sane real-provider graph; env-gated tests passed at least once (checkpoint
-recorded); cross-encoder default decided; findings recorded. Remaining item 4 (eval harness) stays
-optional and gated on explicit user approval.
+recorded); cross-encoder default decided; findings recorded; eval harness built and run live after
+explicit user approval. No plan 03 checklist items remain open.

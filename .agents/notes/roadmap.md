@@ -111,19 +111,19 @@ now LadybugDB-free and restores from nuget.org alone, with the LadybugDB driver 
 `Graphiti.Core.Drivers.Ladybug` package. The public-API snapshot and package-readiness tests guard
 both assemblies.
 
-Remaining (release infra): **E.2 follow-through** — Graphiti now points at the
-`sergey-v9/ladybug-dotnet` GitHub Packages feed and pins the fork-published
+Remaining (release infra): Step F's plan-folder sweep is recorded in plan 05. E.2 is complete:
+Graphiti points at the `sergey-v9/ladybug-dotnet` GitHub Packages feed and pins the fork-published
 `0.17.1-dev.1.1.g6f3dbed` LadybugDB package family; full local verification requires a NuGet
 credential for source `github_ladybug` with `read:packages`. **Versioning** (2.0.0 line /
-alpha→beta cadence) remains decision-gated. CI has both a `Graphiti.Core`-only GitHub Actions lane
-running `eng\Verify-GraphitiCoreOnly.ps1` and a full Ladybug-inclusive Windows lane running
-`eng\Verify-GraphitiCore.ps1` with authenticated GitHub Packages restore. NuGet metadata, README
-packing, XML docs, symbol package generation, and package-consumption smoke checks are present for
-both packages. The "Stable public API
-release" candidate milestone in `evolution.md` is the target. A WS-1 audit on 2026-06-14 found local
-LadybugDB `0.17.1` artifacts with the needed binding and Unix-loader repairs; the 2026-06-17 bump now
-uses the fork workflow's published dev package version rather than those local artifacts. The
-public-API snapshot stays a drift guard (not a freeze); surface changes regenerate the baseline.
+alpha→beta cadence), publish path, and metapackage shape remain decision-gated. CI has both a
+`Graphiti.Core`-only GitHub Actions lane running `eng\Verify-GraphitiCoreOnly.ps1` and a full
+Ladybug-inclusive Windows lane running `eng\Verify-GraphitiCore.ps1` with authenticated GitHub
+Packages restore. NuGet metadata, README packing, XML docs, symbol package generation, and
+package-consumption smoke checks are present for both packages. The "Stable public API release"
+candidate milestone in `evolution.md` is the target. A WS-1 audit on 2026-06-14 found local LadybugDB
+`0.17.1` artifacts with the needed binding and Unix-loader repairs; the 2026-06-17 bump now uses the
+fork workflow's published dev package version rather than those local artifacts. The public-API
+snapshot stays a drift guard (not a freeze); surface changes regenerate the baseline.
 
 NOTE for future parallel batches: do NOT run multiple worktree agents' `dotnet test` concurrently —
 the LadybugDB native package serializes poorly across worktrees and deadlocks. Stagger the test step

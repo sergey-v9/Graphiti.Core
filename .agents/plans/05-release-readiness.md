@@ -207,27 +207,31 @@ full Verify green; both packages `pack`. This is a milestone (`evolution.md`:
 its own stream before release-version/publish decisions. This is a coordination step, not a request to
 fold unrelated work into plan 05.
 
-Current classification, 2026-06-17:
+Recorded sweep result, 2026-06-17:
 
-1. Plans 01-04 have no unchecked checklist items and remain closed. Reopen only for a confirmed
-   Python-vs-C# regression or upstream `graphiti_core/` delta.
+1. Plans 01-04 have no unchecked checklist items and remain closed. Plan 03's stale "remaining eval
+   harness" wording was corrected after rechecking the checked item and roadmap state. Reopen these
+   plans only for a confirmed Python-vs-C# regression or upstream `graphiti_core/` delta.
 2. Plan 05 A-E and E.2 are implemented; CI wiring is present. Remaining release infrastructure is
    decision-gated: version cadence, publish path, and whether to ship a metapackage.
-3. Non-decision implementation work should land as separate slices before release decisions when it
-   is concrete and parity-safe: focused Python parity fixes from the ongoing audit, repeatable
-   upstream-sync checks, deterministic hardening of any confirmed flaky test, and benchmark-first
-   performance wins.
-4. Decision-gated follow-ups stay separate and should be surfaced explicitly before implementation:
+3. Concrete parity fixes surfaced during this gate landed as separate slices, not as release-infra
+   work: Python `normalize_l2` non-finite behavior and `EntityEdge.get_by_group_ids` empty-result
+   exceptions.
+4. Non-decision implementation work should continue to land as separate slices before release
+   decisions when it is concrete and parity-safe: focused Python parity fixes from ongoing audits,
+   repeatable upstream-sync checks, deterministic hardening of any confirmed flaky test, and
+   benchmark-first performance wins.
+5. Decision-gated follow-ups stay separate and should be surfaced explicitly before implementation:
+   `CommunityEdgeNamespace.SaveBulkAsync` public API shape, empty node-label filter bug-compatibility,
    `GRPH0002` / `AddGraphitiCore` alias migration, larger real-provider eval expansion, Linux/CI
    validation scope, Neo4j retirement, versioning, publish path, and metapackage shape.
-5. `kuzu-driver-port.md` remaining-work bullets are conditional provider follow-ups, not unhandled
+6. `kuzu-driver-port.md` remaining-work bullets are conditional provider follow-ups, not unhandled
    release-plan tasks: broaden Ladybug workflow coverage only for uncovered behavior, add
    host-facing options only for real runtime needs, and add native-gated smoke tests only for a new
    platform/CI requirement or coverage gap.
 
-**Verify:** this step is done when the plan sweep is recorded here and any resulting actionable item
-has a separate owner/slice. Code changes from those slices get their own tests and commits; this
-coordination step needs only a docs review.
+**Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
+tests and commits; this coordination step needs only a docs review.
 
 ---
 
