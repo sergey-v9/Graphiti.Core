@@ -464,6 +464,7 @@ public class ExtractNodesPromptsTests
         // spaces); after the GOOD example line that renders an interior line of exactly 8 spaces before
         // the blank line and <MESSAGES> (extract_nodes.py:521-523). That interior trailing-space line is
         // reproduced verbatim here. entity_type_descriptions is absent, so that section renders empty.
+        const string summaryInstructionsTailPlaceholder = "__SUMMARY_INSTRUCTIONS_TAIL__";
         var expected = """
 
             Given the MESSAGES and a list of ENTITIES, generate an updated summary for each entity that needs one.
@@ -484,11 +485,7 @@ public class ExtractNodesPromptsTests
                     Example summary:
                     BAD: "The context shows John ordered pizza. Due to length constraints, other details are omitted from this summary."
                     GOOD: "John ordered pepperoni pizza from Mario's at 7:30 PM and had it delivered to the office."
-            """
-            // Interior line of exactly 8 spaces: the "\n        " tail of summary_instructions
-            // (snippets.py closing """ at 8-space indent), made explicit so it is not stripped.
-            + "\n        \n"
-            + """
+            __SUMMARY_INSTRUCTIONS_TAIL__
 
             <MESSAGES>
             [{"content":"Alice joined Acme.","timestamp":"2026-01-02T03:04:05.0000000Z"}]
@@ -504,6 +501,7 @@ public class ExtractNodesPromptsTests
             If an entity has no relevant information in the messages and no existing summary, you may skip it.
 
             """;
+        expected = expected.Replace(summaryInstructionsTailPlaceholder, "        ", StringComparison.Ordinal);
         Assert.Equal(expected, messages[1].Content);
     }
 

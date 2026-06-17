@@ -26,6 +26,14 @@
     <PackageReference Include="LadybugDB.Native" />
   </ItemGroup>
 
+  <Target Name="RemoveUnusedLadybugRowSourceGenerator" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer
+        Remove="@(Analyzer)"
+        Condition="'%(Analyzer.NuGetPackageId)' == 'LadybugDB' and '%(Analyzer.Filename)' == 'LadybugDB.SourceGen'" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <ProjectReference Include="..\Graphiti.Core\Graphiti.Core.csproj" />
   </ItemGroup>
