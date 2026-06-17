@@ -126,8 +126,8 @@ longer earns its keep. **Consequence:** `Graphiti.Core` then depends on the Lady
 `github_ladybug` feed — no more nuget.org-only restore, every consumer pulls natives + needs the
 credential, and Core can't publish to nuget.org until LadybugDB is public there (fine for the current
 private-fork workflow; ties into the still-user-gated release decision). Full plan in
-`kuzu-driver-port.md`; also leverage **self-service bindings** there for any binding gaps found during
-the work.
+`.agents/plans/06-merge-ladybug-into-core.md`; provider context remains in `kuzu-driver-port.md`.
+Also leverage **self-service bindings** there for any binding gaps found during the work.
 
 ## Phase 5 — Release readiness (IN PROGRESS)
 

@@ -120,7 +120,9 @@ no wire/prompt/cache/temporal behavior changed):
   the old "do not push the ladybug repo remotely / keep changes local-only" rule.
   **SCHEDULED — reverse this split:** merge the Ladybug driver back into `Graphiti.Core` (its own
   `Drivers/Ladybug/` folder; one assembly) because LadybugDB is the first-class provider and a separate
-  build has lost its point. Consequence to accept when executed: `Graphiti.Core` will then depend on the
+  build has lost its point. The executable plan is
+  `.agents/plans/06-merge-ladybug-into-core.md`. Consequence to accept when executed:
+  `Graphiti.Core` will then depend on the
   `LadybugDB`/`LadybugDB.Native` packages + the `github_ladybug` feed, so it no longer restores from
   nuget.org alone, every consumer (even InMemory-only) pulls the native binaries and needs the
   credential, and `Graphiti.Core` cannot be published to nuget.org until LadybugDB itself is published

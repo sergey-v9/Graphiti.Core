@@ -231,6 +231,8 @@ Recorded sweep result, 2026-06-17:
    release-plan tasks: broaden Ladybug workflow coverage only for uncovered behavior, add
    host-facing options only for real runtime needs, and add native-gated smoke tests only for a new
    platform/CI requirement or coverage gap.
+   The scheduled reverse plan-05 E merge is now owned by
+   `.agents/plans/06-merge-ladybug-into-core.md` and should be handled as its own pre-release stream.
 7. Follow-up sweep during the 2026-06-17 parity audit split confirmed issues into separate streams.
    Concrete implementation slices now handled: InMemory typed node/edge UUID storage boundaries,
    `BuildCommunitiesAsync` explicit-empty `groupIds` semantics, and default empty-string group

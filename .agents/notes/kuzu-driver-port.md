@@ -109,7 +109,8 @@ inventing new surface.)
 
 ## SCHEDULED: merge the Ladybug driver back into Graphiti.Core (2026-06-17)
 
-Decision (Sergey): the plan-05 E package split is being **reversed**. LadybugDB is the first-class
+Decision (Sergey): the plan-05 E package split is being **reversed**. The executable work order is
+`.agents/plans/06-merge-ladybug-into-core.md`. LadybugDB is the first-class
 provider, so a separate assembly/package (`Graphiti.Core.Drivers.Ladybug`) has lost its point — the
 driver should move into its own `src/Graphiti.Core/Drivers/Ladybug/` folder inside the Core assembly,
 one build. When executed this collapses the two-assembly public-API snapshot to one, retires the
