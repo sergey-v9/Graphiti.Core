@@ -69,6 +69,41 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
+    public async Task SearchAsync_CommunityDefaultMethodsUseZeroVectorWithoutEmbedding()
+    {
+        var textCommunity = new CommunityNode { Uuid = "community", Name = "Community", Summary = "alpha community", GroupId = "group" };
+        var vectorCommunity = new CommunityNode { Uuid = "community-vector", Name = "Vector Community", GroupId = "group" };
+        var driver = new DriverBackedSearchDriver
+        {
+            CommunityFulltextHits = { new SearchHit<CommunityNode>(textCommunity, 2) },
+            CommunityVectorHits = { new SearchHit<CommunityNode>(vectorCommunity, 1) }
+        };
+        var embedder = new RecordingEmbedder(new[] { 1f, 0f });
+        var clients = new GraphitiClients(
+            driver,
+            new NoOpLlmClient(),
+            embedder,
+            new IdentityCrossEncoderClient());
+
+        var results = await SearchEngine.SearchAsync(
+            clients,
+            "alpha",
+            new[] { "group" },
+            new SearchConfig
+            {
+                Limit = 3,
+                CommunityConfig = new CommunitySearchConfig()
+            },
+            new SearchFilters());
+
+        Assert.Empty(embedder.Inputs);
+        Assert.Equal(1, driver.CommunityFulltextCalls);
+        Assert.Equal(1, driver.CommunityVectorCalls);
+        Assert.Equal(new[] { 0f, 0f }, driver.LastCommunityVectorQueryVector!);
+        Assert.Equal(new[] { "community", "community-vector" }, results.Communities.Select(community => community.Uuid));
+    }
+
+    [Fact]
     public async Task SearchAsync_CancelsSiblingScopesWhenOneScopeFails()
     {
         var failure = new InvalidOperationException("node fulltext failed");
@@ -1739,6 +1774,27 @@ public class SearchEngineDriverBackedTests
             }
 
             return Scores.GetValueOrDefault(passage, SearchUtilities.TextScore(query, passage));
+        }
+    }
+
+    private sealed class RecordingEmbedder : EmbedderClient
+    {
+        private readonly IReadOnlyList<float> _vector;
+
+        public RecordingEmbedder(IReadOnlyList<float> vector)
+            : base(new EmbedderConfig(vector.Count))
+        {
+            _vector = vector;
+        }
+
+        public List<string> Inputs { get; } = new();
+
+        public override Task<IReadOnlyList<float>> CreateAsync(
+            string input,
+            CancellationToken cancellationToken = default)
+        {
+            Inputs.Add(input);
+            return Task.FromResult(_vector);
         }
     }
 

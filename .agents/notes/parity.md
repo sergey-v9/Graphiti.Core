@@ -211,7 +211,8 @@ text-only and vector-only candidates like Python. The public search-filter docs 
 to state Python's temporal grouping shape: OR of AND-groups.
 2026-06-17 follow-up: top-level `SearchAsync` now also mirrors Python's fallback
 `[0.0] * EMBEDDING_DIM` query vector for community searches that do not otherwise require embedding,
-so BM25/RRF community configs still execute vector retrieval without calling the embedder.
+including the default empty `CommunitySearchConfig.SearchMethods` + RRF shape, so BM25/RRF
+community configs still execute vector retrieval without calling the embedder.
 
 **2026-06-16 community blank-summary follow-up:** closed a reachable `build_community` drift. Python
 seeds community summary reduction from `[entity.summary for entity in community_cluster]`, preserving

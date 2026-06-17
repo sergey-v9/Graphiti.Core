@@ -23,7 +23,7 @@ lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 > PENDING Sergey's confirmation. See `roadmap.md` → "User-gated". Neo4j removal: DONE (2026-06-17).
 > The library work itself
 > (parity sweep, search/pipeline correctness) is solid and green (latest full verifier:
-> 971 passed / 3 skipped).
+> 972 passed / 3 skipped).
 
 ## Current Layout
 
@@ -168,8 +168,8 @@ maps use dictionary keys for custom type names like Python. MMR reranking now re
 and community candidates in Python's first-seen retrieval order, and edge episode-mentions scores
 stay in pre-sort RRF order like Python. Bulk ingestion skips the extra upfront entity/exclusion type
 validation absent from Python `add_episode_bulk` while single `AddEpisodeAsync` still validates.
-`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`971` passed,
-`3` skipped, `974` total; both shippable packages packed and both fresh package-consumer smoke builds
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`972` passed,
+`3` skipped, `975` total; both shippable packages packed and both fresh package-consumer smoke builds
 succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
@@ -370,9 +370,10 @@ Bulk ingestion now mirrors Python's validation asymmetry: `AddEpisodeAsync` stil
 Ladybug `ClearDataAsync` now mirrors Python's null-vs-empty `clear_data` split: null clears all,
 while an empty group-id list is scoped deletion that preserves existing records.
 Top-level community search now supplies Python's zero query vector fallback when no real embedding
-path is configured, so BM25/RRF community searches still execute vector retrieval like Python.
+path is configured, including the default empty community method list plus RRF, so BM25/RRF
+community searches still execute vector retrieval without calling the embedder like Python.
 Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests
-(`971` passed, `3` skipped, `974` total), both shippable package packs, and both package-consumer
+(`972` passed, `3` skipped, `975` total), both shippable package packs, and both package-consumer
 smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 

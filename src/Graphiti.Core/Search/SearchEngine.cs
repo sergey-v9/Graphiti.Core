@@ -1195,7 +1195,7 @@ internal static class SearchEngine
 
     private static bool CommunityUsesCosine(CommunitySearchConfig? config) =>
         config is not null
-        && (config.SearchMethods.Count == 0 || config.SearchMethods.Contains(CommunitySearchMethod.CosineSimilarity));
+        && config.SearchMethods.Contains(CommunitySearchMethod.CosineSimilarity);
 
     private static IReadOnlyList<string> EdgeBfsOrigins(
         IReadOnlyList<string>? explicitOrigins,
