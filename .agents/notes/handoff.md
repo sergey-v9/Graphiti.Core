@@ -22,7 +22,8 @@ lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 > following the roadmap into user-gated territory. They are
 > PENDING Sergey's confirmation. See `roadmap.md` → "User-gated". Neo4j removal: DONE (2026-06-17).
 > The library work itself
-> (parity sweep, search/pipeline correctness) is solid and green (1048 passed / 3 skipped).
+> (parity sweep, search/pipeline correctness) is solid and green (latest full verifier:
+> 971 passed / 3 skipped).
 
 ## Current Layout
 
@@ -165,9 +166,11 @@ retrieval order. `TextUtilities.TruncateAtSentence` mirrors Python negative-slic
 negative `max_chars`, and node/edge extraction prompt contexts plus entity-summary type-description
 maps use dictionary keys for custom type names like Python. MMR reranking now receives node, edge,
 and community candidates in Python's first-seen retrieval order, and edge episode-mentions scores
-stay in pre-sort RRF order like Python.
-`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1048` passed,
-`3` skipped; both shippable packages packed and both fresh package-consumer smoke builds succeeded).
+stay in pre-sort RRF order like Python. Bulk ingestion skips the extra upfront entity/exclusion type
+validation absent from Python `add_episode_bulk` while single `AddEpisodeAsync` still validates.
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`971` passed,
+`3` skipped, `974` total; both shippable packages packed and both fresh package-consumer smoke builds
+succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
 Packages feed for LadybugDB packages (`0.17.1-dev.1.1.g6f3dbed`) and `NuGet.config` includes package
@@ -361,10 +364,13 @@ Edge episode-mentions reranking now sorts only returned edges by episode count w
 returned score list in pre-sort RRF order, matching Python's returned tuple behavior.
 Edge resolution now appends resolved and invalidated edge appearances directly in input order instead
 of deduping by UUID, matching Python's result-list shape.
+Bulk ingestion now mirrors Python's validation asymmetry: `AddEpisodeAsync` still validates
+`entityTypes` / `excludedEntityTypes`, while `AddEpisodeBulkAsync` no longer adds upfront
+`ValidateEntityTypes` / `ValidateExcludedEntityTypes` calls absent from Python `add_episode_bulk`.
 Top-level community search now supplies Python's zero query vector fallback when no real embedding
 path is configured, so BM25/RRF community searches still execute vector retrieval like Python.
 Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests
-(`1048` passed, `3` skipped, `1051` total), both shippable package packs, and both package-consumer
+(`971` passed, `3` skipped, `974` total), both shippable package packs, and both package-consumer
 smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 

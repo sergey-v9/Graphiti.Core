@@ -238,8 +238,9 @@ Recorded sweep result, 2026-06-17:
    edge namespaces while preserving static model helper exceptions, and lazy search-config numeric
    validation/zero-limit behavior, negative-limit text truncation, and entity/fact prompt type-key
    rendering, MMR first-seen candidate ordering, and edge episode-mentions score-list ordering.
-   The final concrete audit candidate, resolved/invalidated edge result duplicate preservation, was
-   also split out and closed. No concrete non-decision follow-up from this audit remains in plan 05.
+   Resolved/invalidated edge result duplicate preservation and bulk-ingestion type-validation
+   asymmetry were also split out and closed. No concrete non-decision follow-up from this audit
+   remains in plan 05.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

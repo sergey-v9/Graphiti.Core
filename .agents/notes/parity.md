@@ -434,6 +434,12 @@ now preserves those duplicate appearances during the resolution collection pass;
 episode edge UUID lists from the single-episode path therefore see the same duplicate sequence shape
 Python would return.
 
+**2026-06-17 bulk type-validation follow-up:** closed an `add_episode_bulk` entrypoint drift. Python
+validates `entity_types` / `excluded_entity_types` for single `add_episode`, but its bulk path does
+not call `validate_entity_types` or `validate_excluded_entity_types`; it passes the values directly to
+bulk extraction. C# `AddEpisodeBulkAsync` now mirrors that asymmetry by skipping the extra upfront
+validation while `AddEpisodeAsync` keeps the Python single-episode validation behavior.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

@@ -2508,13 +2508,17 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddEpisodeBulk_RejectsUnknownExcludedEntityTypes()
+    public async Task AddEpisodeBulk_SkipsExcludedTypeValidationLikePython()
     {
         var driver = new InMemoryGraphDriver();
-        var llm = new StaticLlmClient(new JsonObject());
+        var llm = new StaticLlmClient(new JsonObject
+        {
+            ["extracted_entities"] = new JsonArray(),
+            ["edges"] = new JsonArray()
+        });
         var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => graphiti.AddEpisodeBulkAsync(
+        var result = await graphiti.AddEpisodeBulkAsync(
             new[]
             {
                 new RawEpisode
@@ -2530,10 +2534,11 @@ public class GraphitiWorkflowTests
             {
                 ["Person"] = new("Person")
             },
-            excludedEntityTypes: new[] { "Location" }));
+            excludedEntityTypes: new[] { "Location" });
 
-        Assert.Contains("Location", exception.Message, StringComparison.Ordinal);
-        Assert.Empty(llm.PromptNames);
+        Assert.Equal(new[] { "extract_nodes.extract_message", "extract_edges.edge" }, llm.PromptNames);
+        Assert.Empty(result.Nodes);
+        Assert.Empty(result.Edges);
     }
 
     [Fact]
@@ -2564,13 +2569,17 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddEpisodeBulk_RejectsEntityAttributesThatUseProtectedNames()
+    public async Task AddEpisodeBulk_SkipsProtectedEntityAttributeValidationLikePython()
     {
         var driver = new InMemoryGraphDriver();
-        var llm = new StaticLlmClient(new JsonObject());
+        var llm = new StaticLlmClient(new JsonObject
+        {
+            ["extracted_entities"] = new JsonArray(),
+            ["edges"] = new JsonArray()
+        });
         var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
 
-        var exception = await Assert.ThrowsAsync<EntityTypeValidationException>(() => graphiti.AddEpisodeBulkAsync(
+        var result = await graphiti.AddEpisodeBulkAsync(
             new[]
             {
                 new RawEpisode
@@ -2590,10 +2599,11 @@ public class GraphitiWorkflowTests
                     {
                         ["summary"] = new("Protected field")
                     })
-            }));
+            });
 
-        Assert.Contains("summary", exception.Message, StringComparison.Ordinal);
-        Assert.Empty(llm.PromptNames);
+        Assert.Equal(new[] { "extract_nodes.extract_message", "extract_edges.edge" }, llm.PromptNames);
+        Assert.Empty(result.Nodes);
+        Assert.Empty(result.Edges);
     }
 
     [Fact]
