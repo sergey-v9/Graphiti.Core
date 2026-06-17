@@ -294,6 +294,17 @@ Invoke-VerifyStep "build" {
     dotnet build $Solution --no-restore --no-incremental --verbosity minimal
 }
 
+$runningOnWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform(
+    [System.Runtime.InteropServices.OSPlatform]::Windows)
+if ($runningOnWindows) {
+    Invoke-VerifyStep "warm ladybug fts extension" {
+        dotnet test $Solution `
+            --no-build `
+            --filter "FullyQualifiedName~LadybugPackageRuntimeTests.PackageRuntime_FtsExtensionLoadingEnablesIndexAndSearchProof" `
+            --verbosity minimal
+    }
+}
+
 Invoke-VerifyStep "test" {
     dotnet test $Solution --no-build --verbosity minimal
 }
