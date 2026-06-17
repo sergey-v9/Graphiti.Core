@@ -50,27 +50,25 @@ package. (FalkorDb/Neptune members stay — they're intentional wire-compat surf
 
 ## C. DI method name (product decision)
 
-The registration method is `AddGraphitiCore(...)`. `AddGraphiti(...)` reads more naturally and matches
-the `AddLadybugDbGraphDriver` style. Rename (or add `AddGraphiti` as the primary and keep
-`AddGraphitiCore` as an alias).
+**RESOLVED 2026-06-14:** `AddGraphiti(...)` is the primary registration method.
+`AddGraphitiCore(...)` remains only as an `[Obsolete]` compatibility alias.
 
 ## D. Constructor ergonomics (product decision)
 
-`Graphiti(string? uri, string? user, string? password, ... IGraphDriver? graphDriver = null, ...)`
-leads with Neo4j connection args and **silently builds a Neo4j driver when `graphDriver` is null**. For
-a port whose primary driver is LadybugDB and whose reference driver is InMemory, a Neo4j default is
-surprising; both samples must pass `graphDriver:` by name. Consider making the driver explicit
-(required, or defaulting to InMemory) and moving the Neo4j-connection convenience to a factory. Also:
-`AddEpisodeAsync` has ~15 optional parameters — a candidate for an extraction-options object.
+**RESOLVED 2026-06-14:** the constructor defaults to the deterministic
+`InMemoryGraphDriver` when no driver or URI is supplied. A supplied `graphDriver` remains the
+first-choice path and should be used for LadybugDB, the first-class backend. Passing `uri:` still builds
+Neo4j only as a temporary legacy compatibility path; Neo4j is not a product provider target and is
+expected to be removed later. `AddEpisodeAsync(AddEpisodeOptions, ct)` was added as the options-object
+entry point while the positional overload remains.
 
 ## E. Packaging (product + effort decision)
 
-`Graphiti.Core` references `LadybugDB`/`LadybugDB.Native` **unconditionally**, so even InMemory/Neo4j-
-only consumers must resolve the local Ladybug feed — a plain off-machine `dotnet restore` fails. A
-separate `Graphiti.Core.Drivers.Ladybug` package (or a conditional/opt-in reference) would let the core
-restore from nuget.org alone. This is the main blocker to publishing a consumable package and ties into
-the LadybugDB-package productization (the local `0.17.0-alpha.2-graphiti.1` family must also be
-published or replaced before a real release).
+**RESOLVED 2026-06-14:** `Graphiti.Core` no longer references `LadybugDB`/`LadybugDB.Native`.
+It carries the driver contract, the InMemory reference/test driver, and temporary legacy Neo4j
+compatibility while restoring from nuget.org alone. The first-class LadybugDB driver moved to
+`Graphiti.Core.Drivers.Ladybug`, which owns the LadybugDB package references, `LadybugDbOptions`,
+`AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory`.
 
 ## Recommended order
 

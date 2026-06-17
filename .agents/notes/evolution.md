@@ -185,13 +185,15 @@ into its own package (plan-05 E):
 - `GraphProvider.LadybugDb` is the driver-facing name; `GraphProvider.Kuzu` is an `[Obsolete]`
   compatibility alias that resolves to the same LadybugDB-backed driver. The concrete driver reports
   `GraphProvider.LadybugDb`; file persistence is configured through `LadybugDbOptions.DatabasePath`.
-- Neo4j is retained only as existing/reference behavior while present, FalkorDB is not a C# provider
-  investment target, and InMemory remains a deterministic reference/test driver.
+- Neo4j is retained only as temporary legacy compatibility while present and is expected to be
+  removed, FalkorDB is not a C# provider investment target, and InMemory remains the deterministic
+  reference/test driver.
 
 ### Evidence
 
-- `decisions.md` names LadybugDB as the primary provider target and limits investment in Neo4j,
-  FalkorDB, and InMemory.
+- `decisions.md` names LadybugDB as the primary provider target, keeps InMemory as the deterministic
+  reference/test backend, and blocks provider investment in temporary Neo4j compatibility,
+  FalkorDB, and Neptune.
 - `kuzu-driver-port.md` records detailed package facts, provider policy, runtime proof, quirks, and
   remaining work.
 - `GraphProvider.cs` confirms `GraphProvider.LadybugDb` (value 5) is the driver-facing name and
@@ -217,7 +219,7 @@ The LadybugDB milestone must still preserve:
 
 ### Follow-Up Decisions
 
-- Whether Neo4j removal becomes its own milestone.
+- When and how to schedule Neo4j removal as its own milestone.
 
 **RESOLVED**
 
@@ -264,7 +266,7 @@ clients" to "empirically validated against the real OpenAI API."
 Use this list as a prompt, not as committed direction:
 
 - **Provider surface freeze:** final naming, DI, package, and support policy for LadybugDB.
-- **Neo4j retirement:** removal or deprecation of Neo4j from the C# product surface.
+- **Neo4j retirement:** remove the temporary legacy Neo4j path from the C# product surface.
 - **Stable public API release:** API, namespace, docs, migration notes, and packaging expectations
   are stable enough for external consumers.
 - **C#-native operations posture:** telemetry, verification scripts, package build, and provider

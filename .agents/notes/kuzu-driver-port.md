@@ -143,7 +143,8 @@ fresh package-consumer smoke builds succeeded).
   driver-facing product surface.
 - Use `GraphProvider.LadybugDb` as the driver-facing provider value. Keep `GraphProvider.Kuzu` only as
   the `[Obsolete]` compatibility alias for callers that have not renamed yet.
-- Keep Neo4j, FalkorDB, InMemory, and Neptune policy in `decisions.md`; do not repeat it here.
+- Keep temporary Neo4j compatibility, FalkorDB, InMemory, and Neptune policy in `decisions.md`; do
+  not repeat it here.
 - If runtime proof exposes behavior that looks like a LadybugDB package or binding bug, mark it
   separately from Graphiti port gaps. Work around proven backend limitations deliberately when useful,
   but keep them visible.
@@ -196,7 +197,7 @@ fresh package-consumer smoke builds succeeded).
 - `src/Graphiti.Core.Drivers.Ladybug/Configuration/LadybugDbServiceCollectionExtensions.cs`: LadybugDB DI helper.
 - `Configuration/GraphitiServiceCollectionExtensions.cs`: core delegates LadybugDb/Kuzu to the
   Ladybug-package-registered `GraphDriverFactory` and throws if absent.
-- `Search/CompiledSearchFilter.cs`: uses the shared Neo4j-style label syntax for generic callers;
+- `Search/CompiledSearchFilter.cs`: uses the shared Cypher-style colon-label syntax for generic callers;
   active Ladybug search owns Ladybug/Kuzu label-filter fragments in
   `Drivers/Ladybug/LadybugSearchFilter`.
 - `Search/SearchUtilities.cs`: no longer has a `GraphProvider.Kuzu` full-text branch because active

@@ -72,9 +72,10 @@ deliberately. Standing decisions from the plan-05 batch-1 cleanup (alpha-stage b
 no wire/prompt/cache/temporal behavior changed):
 
 - `Graphiti` constructor driver selection precedence: explicit `graphDriver` > non-null `uri`
-  (builds Neo4j) > **InMemory default**. It no longer throws when both are omitted, so `new Graphiti()`
-  backs onto the deterministic reference driver. `AddEpisodeAsync(AddEpisodeOptions, ct)` is an additive
-  overload over the 15-parameter positional one (which is unchanged).
+  (temporary Neo4j compatibility) > **InMemory default**. It no longer throws when both are omitted, so
+  `new Graphiti()` backs onto the deterministic reference/test driver. New product/backend work should
+  pass a LadybugDB driver explicitly. `AddEpisodeAsync(AddEpisodeOptions, ct)` is an additive overload
+  over the 15-parameter positional one (which is unchanged).
 - Driver-facing provider value is `GraphProvider.LadybugDb` (new ordinal `5`); `GraphProvider.Kuzu` is an
   `[Obsolete]` alias that still resolves to the LadybugDB driver. The DI method is `AddGraphiti`;
   `AddGraphitiCore` is an `[Obsolete]` alias. `GraphProvider` is not wire/cache-serialized (only an OTel
@@ -92,11 +93,13 @@ no wire/prompt/cache/temporal behavior changed):
   the schema/cache-identity DTOs stay public.
 - `Graphiti.Core` and `Graphiti.Core.Drivers.Ladybug` ship IntelliSense XML docs from their public XML
   comments. Keep docs complete when adding public members to either package.
-- **LadybugDB is a separate package.** `Graphiti.Core` carries only the driver contract (`IGraphDriver`,
-  `GraphProvider`, `GraphDriverBase`, `InMemoryGraphDriver`, `Neo4jGraphDriver`) and depends only on
-  nuget.org packages — it restores off-machine without Ladybug package credentials. The LadybugDB driver,
-  `LadybugDbOptions`, `AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory` live in
-  `src/Graphiti.Core.Drivers.Ladybug/` (which owns the `LadybugDB`/`LadybugDB.Native` package refs).
+- **LadybugDB is a separate package.** `Graphiti.Core` carries the driver contract (`IGraphDriver`,
+  `GraphProvider`, `GraphDriverBase`), the deterministic `InMemoryGraphDriver` reference/test backend,
+  and the temporary legacy `Neo4jGraphDriver` compatibility implementation. It depends only on
+  nuget.org packages and restores off-machine without Ladybug package credentials. The first-class
+  LadybugDB driver, `LadybugDbOptions`, `AddLadybugDbGraphDriver`, and
+  `LadybugDbGraphDriverFactory` live in `src/Graphiti.Core.Drivers.Ladybug/` (which owns the
+  `LadybugDB`/`LadybugDB.Native` package refs).
   Core resolves `GraphProvider.LadybugDb`/`Kuzu` via `GraphitiOptions.GraphDriverFactory` (set by
   `AddLadybugDbGraphDriver`) and throws a clear `InvalidOperationException` if the package is not
   referenced/registered. `Graphiti.Core` adds `InternalsVisibleTo("Graphiti.Core.Drivers.Ladybug")`; the
@@ -124,9 +127,9 @@ no wire/prompt/cache/temporal behavior changed):
   feature-polishing work unless that directly supports tests or LadybugDB.
 - DI-created supported graph drivers should honor `GraphitiOptions.Database`; for InMemory the
   database label remains distinct from `DefaultGroupId`.
-- Keep existing official `Neo4j.Driver` code working while it remains present, but do not invest in
-  Neo4j beyond avoiding regressions. Neo4j is expected to be removed later, not polished into another
-  first-class C# provider.
+- Keep existing official `Neo4j.Driver` code working only while it remains present, but do not invest
+  in Neo4j beyond avoiding regressions. Neo4j is expected to be removed later, not polished into
+  another first-class C# provider.
 
 ## Provider And Infrastructure Choices
 
@@ -364,12 +367,12 @@ strip (#1531) is N/A (no FalkorDB driver).
 - The LadybugDB provider uses the LadybugDB NuGet package, which comes from the alternative Kuzu fork.
   Kuzu remains the Python parity lineage and compatibility vocabulary, while the driver-facing provider
   name is `GraphProvider.LadybugDb`. See `kuzu-driver-port.md`.
-- `GraphProvider.Neo4j` and `GraphProvider.InMemory` may remain in the current provider surface for
-  now. Keep existing Neo4j behavior from regressing, but do not plan provider improvements there:
-  Neo4j is expected to be removed, and InMemory is a reference/test driver rather than a product
-  provider. `GraphProvider.FalkorDb` and `GraphProvider.Neptune` remain enum/helper compatibility
-  surfaces and are rejected by default options validation unless a separate provider decision changes
-  that. LadybugDB is the provider path to invest in.
+- `GraphProvider.Neo4j` may remain temporarily in the current provider surface only for legacy
+  compatibility; keep existing behavior from regressing, but do not plan provider improvements there.
+  Neo4j is expected to be removed. `GraphProvider.InMemory` remains the deterministic reference/test
+  backend rather than a product provider. `GraphProvider.FalkorDb` and `GraphProvider.Neptune` remain
+  enum/helper compatibility surfaces and are rejected by default options validation unless a separate
+  provider decision changes that. LadybugDB is the provider path to invest in.
 - `GraphProvider.Kuzu` is a valid obsolete compatibility alias in core DI/options and, when
   `AddLadybugDbGraphDriver` is registered, resolves to the LadybugDB-backed driver. The concrete
   driver reports `GraphProvider.LadybugDb`; file persistence is configured through

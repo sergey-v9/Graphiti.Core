@@ -13,7 +13,9 @@ Python remains the behavioral source of truth. The C# port should be idiomatic .
 compatible with Graphiti semantics, wire values, cache/schema identity, and performance/allocation
 discipline.
 
-Provider work is focused on LadybugDB. The focused provider state lives in `kuzu-driver-port.md`; do
+Provider work is focused on LadybugDB. InMemory is the deterministic reference/test backend. Neo4j is
+temporary legacy compatibility expected to be removed, so keep it from regressing while present but do
+not pick it for new provider investment. The focused provider state lives in `kuzu-driver-port.md`; do
 not duplicate its proof matrix here.
 
 ## Current Layout
@@ -22,8 +24,9 @@ not duplicate its proof matrix here.
   saga, community, infrastructure, and extraction parsing partials.
 - `Models/`: node, edge, result DTO, entity type, entity attribute, and episode type models.
 - `Drivers/` (in `Graphiti.Core`): only the driver contract/base (`IGraphDriver`, base driver),
-  the deterministic in-memory reference driver, the Neo4j (legacy) driver and its statement
-  builders/record mappers/session/executor helpers, the provider enum, and saga episode content.
+  the deterministic in-memory reference/test driver, temporary legacy Neo4j compatibility and its
+  statement builders/record mappers/session/executor helpers, the provider enum, and saga episode
+  content.
 - `Graphiti.Core.Drivers.Ladybug` (separate project): owns the LadybugDB driver/factory/executor,
   statement builders, search statement/filter, record mapper, schema, and `LadybugDbOptions` +
   `AddLadybugDbGraphDriver`.
@@ -46,7 +49,8 @@ not duplicate its proof matrix here.
 Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the full matrix):
 
 - **Solid and verified:** project/infrastructure shape (net10.0, analyzers, packaging), drivers
-  (InMemory reference, LadybugDB runtime proof, Neo4j legacy), search ranking/fusion/reranking,
+  (InMemory reference/test, LadybugDB runtime proof, temporary Neo4j legacy compatibility),
+  search ranking/fusion/reranking,
   community label propagation, text utilities, serialization/cache identity, DI/options. The
   deterministic suite is green in the latest verification checkpoint below.
 - **Phase 2 complete:** the LLM-facing semantic layer has moved from scaffold prompts to ported
@@ -569,7 +573,8 @@ allocation-sensitive coverage and should not be casually rewritten without targe
 - Search ranking/fusion/reranking: RRF, MMR, cross-encoder ordering, node-distance,
   episode-mentions, fallback BM25, vector scoring, BFS origins, and result splitting.
 - Driver/reference behavior: in-memory deterministic indexes/cloning/search, materialized fallback
-  snapshots, Neo4j query/session telemetry boundaries, and Ladybug statement/mapper/executor shapes.
+  snapshots, temporary Neo4j query/session telemetry boundaries while present, and Ladybug
+  statement/mapper/executor shapes.
 - Ingestion and maintenance: extraction parsing, node/edge dedupe, invalidation windows, episode
   removal, saga association/summarization, community build/rebuild/update, and bulk ingestion.
 - Serialization and provider infrastructure: structured LLM schema/cache identity, response-cache

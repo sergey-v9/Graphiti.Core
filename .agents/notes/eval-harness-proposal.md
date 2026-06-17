@@ -83,7 +83,8 @@ These were resolved when the harness was built (see `parity.md` eval row); recor
   candidate per-episode `AddEpisodeResults` against a persisted baseline artifact (C# current-vs-
   current) via `eval_add_episode_results`.**
 - Backend policy: start with `InMemoryGraphDriver`; add LadybugDB after Phase 4 provider
-  productization work resumes. Strict Python parity uses Neo4j, but C# provider direction should be
-  decided explicitly rather than inherited accidentally. **Resolved: started on `InMemoryGraphDriver`.**
+  productization work resumes. The Python eval harness uses Neo4j, but the C# direction is InMemory for
+  deterministic reference/test runs and LadybugDB for first-class backend proof, not inherited Neo4j
+  usage. **Resolved: started on `InMemoryGraphDriver`.**
 - Scoring threshold: report-only initially, or fail below an approved quality floor. **Resolved:
   report-only (the live 2026-06-14 run reports scores; exits non-zero only on harness failure).**

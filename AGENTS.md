@@ -112,10 +112,10 @@ Port contract:
 - `HybridCache`, Polly `ResiliencePipeline<T>`, `ActivitySource`, `Microsoft.ML.Tokenizers`, and
   tensor primitives are infrastructure choices, not permission to change Graphiti behavior or hide
   avoidable allocations behind fashionable abstractions.
-- Existing Neo4j behavior may stay only as temporary reference coverage. FalkorDB and Neptune are
-  compatibility/helper surfaces, not supported configured C# providers today. Neo4j is expected to
-  be removed later, LadybugDB is the core provider investment target, and the in-memory driver is a
-  real deterministic test/reference backend rather than a product provider.
+- Existing Neo4j behavior may stay only as temporary legacy compatibility coverage.
+  FalkorDB and Neptune are compatibility/helper surfaces, not supported configured C# providers today.
+  Neo4j is expected to be removed later, LadybugDB is the core provider investment target, and the
+  in-memory driver is a real deterministic test/reference backend rather than a product provider.
 
 Generated vs hand-written:
 - There is no ClangSharp/native binding generator and no checked-in generated interop layer.
@@ -126,7 +126,8 @@ Provider/package facts:
 - This is currently a managed `net10.0` library with central package versions in
   `Directory.Packages.props`.
 - `Graphiti.Core` is LadybugDB-free and restores from nuget.org alone. It carries the graph-driver
-  contract plus InMemory and legacy Neo4j coverage.
+  contract plus the deterministic InMemory reference/test driver and temporary legacy Neo4j
+  compatibility coverage.
 - `Graphiti.Core.Drivers.Ladybug` is the opt-in LadybugDB driver package. It owns the
   `LadybugDB`/`LadybugDB.Native` package references, `LadybugDbOptions`,
   `AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory`.

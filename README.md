@@ -10,9 +10,10 @@ JSON), prompt identity, ranking semantics, and cache keys all mirror Python so t
 compatible.
 
 > **Status:** `2.0.0-alpha.1`. The library is functionally complete and validated against a real
-> OpenAI provider, but it is **not yet published to NuGet**. `Graphiti.Core` is now LadybugDB-free —
-> InMemory/Neo4j consumers depend only on nuget.org packages. The optional LadybugDB driver lives in
-> the separate `Graphiti.Core.Drivers.Ladybug` package, which consumes LadybugDB packages from the
+> OpenAI provider, but it is **not yet published to NuGet**. `Graphiti.Core` is now LadybugDB-free:
+> its deterministic InMemory reference driver and temporary legacy Neo4j compatibility path restore
+> from nuget.org alone. The first-class LadybugDB driver lives in the separate
+> `Graphiti.Core.Drivers.Ladybug` package, which consumes LadybugDB packages from the
 > `sergey-v9/ladybug-dotnet` GitHub Packages feed. See [Install / reference](#install--reference).
 
 ## Contents
@@ -60,10 +61,11 @@ Graphiti Core is **not on NuGet yet**. Reference it from source today by adding 
 
 The library targets **`net10.0`**.
 
-`Graphiti.Core` is **LadybugDB-free**: it carries only the driver *contract*
-(`IGraphDriver`, `GraphProvider`, `GraphDriverBase`) plus the InMemory and Neo4j drivers, and depends
-only on packages available from nuget.org. InMemory/Neo4j-only consumers can restore it without any
-GitHub Packages credentials. To use the LadybugDB backend, add a second project/package reference to
+`Graphiti.Core` is **LadybugDB-free**: it carries the driver *contract* (`IGraphDriver`,
+`GraphProvider`, `GraphDriverBase`), the deterministic InMemory reference/test driver, and a temporary
+legacy Neo4j compatibility implementation. It depends only on packages available from nuget.org, so
+core-only consumers do not need GitHub Packages credentials. To use the first-class LadybugDB backend,
+add a second project/package reference to
 `src/Graphiti.Core.Drivers.Ladybug/Graphiti.Core.Drivers.Ladybug.csproj` — that package owns the
 `LadybugDB` / `LadybugDB.Native` references and the `AddLadybugDbGraphDriver` DI helper:
 
@@ -97,8 +99,9 @@ environment variable for the source name:
 $env:NuGetPackageSourceCredentials_github_ladybug = "Username=sergey-v9;Password=<PAT_WITH_read:packages>"
 ```
 
-Referencing only `Graphiti.Core` (InMemory/Neo4j) restores from nuget.org alone and does **not** need
-the GitHub Packages feed. The current pinned Ladybug package family is:
+Referencing only `Graphiti.Core` (InMemory plus temporary Neo4j compatibility) restores from
+nuget.org alone and does **not** need the GitHub Packages feed. The current pinned Ladybug package
+family is:
 
 ```text
 LadybugDB        0.17.1-dev.1.1.g6f3dbed
@@ -169,11 +172,12 @@ public Graphiti(
     string database = "");
 ```
 
-Driver selection by precedence: an explicit `graphDriver` is used as-is (recommended); otherwise a
-non-null `uri` builds a Neo4j driver; otherwise it **defaults to an in-memory `InMemoryGraphDriver`**.
-So `new Graphiti()` and `new Graphiti(llmClient: x, embedder: y)` work out of the box on the
-deterministic reference driver — pass `graphDriver:` (LadybugDB/InMemory) or `uri:` (Neo4j) for a
-specific backend.
+Driver selection by precedence: an explicit `graphDriver` is used as-is (recommended); a non-null
+`uri` still builds a Neo4j driver as a temporary legacy compatibility path; otherwise it defaults to
+an in-memory `InMemoryGraphDriver`. So `new Graphiti()` and
+`new Graphiti(llmClient: x, embedder: y)` work out of the box on the deterministic reference driver.
+Pass a LadybugDB driver for first-class persistent backend work, or an InMemory driver for tests and
+ephemeral graphs. Neo4j is not the investment target and is expected to be removed later.
 
 ## Using a real provider (OpenAI)
 
@@ -273,7 +277,7 @@ services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ =>
 // Graphiti itself:
 services.AddGraphiti(options =>
 {
-    options.Provider = GraphProvider.InMemory;   // or .LadybugDb / .Neo4j
+    options.Provider = GraphProvider.InMemory;   // or .LadybugDb for product backend work
     options.EmbeddingDimension = 1536;
     options.MaxCoroutines = 4;
 });
@@ -319,7 +323,7 @@ A graph driver implements `IGraphDriver` (`Graphiti.Core.Drivers`). Backends are
 |---|---|---|---|
 | **InMemory** | `InMemory` | Deterministic reference/test driver | `new InMemoryGraphDriver(database)`. In-process, fully featured (persistence + search), ideal for tests, samples, and ephemeral graphs. Used by both samples. |
 | **LadybugDB** | `LadybugDb` | Primary provider target (opt-in package) | The C# port's investment backend (a Kuzu-lineage embedded graph DB). Lives in the separate **`Graphiti.Core.Drivers.Ladybug`** package — add it, then build via `LadybugDbGraphDriverFactory.Create(databasePath)` / `.CreateInMemory()`, or wire through DI with `AddLadybugDbGraphDriver`. Selecting `LadybugDb`/`Kuzu` without that package throws a clear `InvalidOperationException`. See the [GitHub Packages feed](#ladybugdb-github-packages-feed). |
-| **Neo4j** | `Neo4j` | Legacy reference | `new Neo4jGraphDriver(uri, user, password, database)` (also built automatically if you pass a `uri` to the `Graphiti` constructor). Kept working as reference coverage; not the investment target. |
+| **Neo4j** | `Neo4j` | Temporary legacy compatibility | `new Neo4jGraphDriver(uri, user, password, database)` (also built automatically if you pass a `uri` to the `Graphiti` constructor). Kept only to avoid regressions while it remains present; expected to be removed later. Use LadybugDB for first-class backend work and InMemory for tests/reference coverage. |
 | FalkorDB / Neptune | `FalkorDb` / `Neptune` | Compatibility surface only | Present on the `GraphProvider` enum for wire compatibility with Python; **not** implemented as configured C# providers. |
 
 The driver-facing provider value is `GraphProvider.LadybugDb`. `GraphProvider.Kuzu` remains as an
@@ -548,9 +552,10 @@ dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~OpenAIProvide
 
 ## Project layout
 
-- `src/Graphiti.Core` — core library: models, the `Graphiti` orchestrator, the graph-driver contract
-  with the InMemory and Neo4j drivers, search, maintenance helpers, and LLM/embedder/reranker
-  contracts. LadybugDB-free (restores from nuget.org alone).
+- `src/Graphiti.Core` — core library: models, the `Graphiti` orchestrator, the graph-driver contract,
+  the deterministic InMemory reference/test driver, temporary legacy Neo4j compatibility, search,
+  maintenance helpers, and LLM/embedder/reranker contracts. LadybugDB-free (restores from nuget.org
+  alone).
 - `src/Graphiti.Core.Drivers.Ladybug` — opt-in LadybugDB graph driver: owns the `LadybugDB` /
   `LadybugDB.Native` package references, the driver/executor/statement implementation, and the
   `AddLadybugDbGraphDriver` DI helper.
@@ -573,7 +578,7 @@ lives under a matching sub-namespace:
 | `Graphiti.Core.Models.Nodes` | `Node`, `EntityNode`, `EpisodicNode`, `CommunityNode`, `SagaNode` |
 | `Graphiti.Core.Models.Edges` | `Edge`, `EntityEdge`, `EpisodicEdge`, `CommunityEdge`, `HasEpisodeEdge`, `NextEpisodeEdge` |
 | `Graphiti.Core.Models.Results` | `AddEpisodeResults`, `AddBulkEpisodeResults`, `AddTripletResults`, `RawEpisode`, `GraphitiClients` |
-| `Graphiti.Core.Drivers` | `IGraphDriver`, `GraphDriverBase`, `InMemoryGraphDriver`, `Neo4jGraphDriver`, `GraphProvider`, `SagaEpisodeContent` |
+| `Graphiti.Core.Drivers` | `IGraphDriver`, `GraphDriverBase`, `InMemoryGraphDriver`, temporary legacy `Neo4jGraphDriver`, `GraphProvider`, `SagaEpisodeContent` |
 | `Graphiti.Core.Drivers.Ladybug` | `LadybugDbGraphDriverFactory` and the LadybugDB driver internals (ships in the separate `Graphiti.Core.Drivers.Ladybug` package) |
 | `Graphiti.Core.Search` | search engine, configuration, filters, and reranking |
 | `Graphiti.Core.LlmClients` | `ILlmClient`, `LlmClient`, `LlmConfig`, response caches, token usage |
@@ -604,9 +609,10 @@ This is a managed C# port of Python [`graphiti_core`](https://github.com/getzep/
 binding. Python remains the **behavioral source of truth**: the C# port keeps the JSON/wire shape
 (snake_case properties, enum wire values such as `fact_triple`), prompt and response-format identity,
 ranking/search semantics (RRF, MMR, cross-encoder, node-distance, episode-mentions), and LLM cache-key
-inputs compatible with Python, while staying idiomatic C# elsewhere. The C# port currently targets the
-in-memory (reference/test) and LadybugDB (primary) drivers, keeps Neo4j as legacy reference coverage,
-and treats FalkorDB/Neptune as compatibility surfaces only.
+inputs compatible with Python, while staying idiomatic C# elsewhere. The C# port currently targets
+LadybugDB as the first-class backend and InMemory as the reference/test backend. Neo4j remains only as
+temporary legacy compatibility expected to be removed, and FalkorDB/Neptune are compatibility surfaces
+only.
 
 ## License
 

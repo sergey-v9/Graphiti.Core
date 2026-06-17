@@ -8,8 +8,10 @@ in `parity.md`. Keep completed history out of this file (`evolution.md` owns mil
 ## Where the port actually is (2026-06-11 reassessment)
 
 The infrastructure is real and green: builds clean, deterministic tests pass, packaging works,
-drivers (InMemory, LadybugDB, Neo4j-legacy) have runtime proof, search/ranking/community algorithms
-have genuine parity coverage, and the live Python prompt instruction text has been ported into C#.
+LadybugDB has runtime proof as the provider target, InMemory is proven as the reference/test backend,
+temporary Neo4j legacy coverage is present only to avoid regressions while it remains, and the
+search/ranking/community algorithms have genuine parity coverage. The live Python prompt instruction
+text has been ported into C#.
 Phase 2 has closed the ingestion semantic gaps: entity summaries, invented fallback removal, broad
 invalidation candidates, multi-episode attribution, true-batch bulk ingestion, combined extraction
 internals with public separate-extraction parity, validation-failure re-prompting, and edge
@@ -86,8 +88,8 @@ Existing direction, unchanged: LadybugDB is the provider investment target. Rema
 naming decision is complete: `GraphProvider.LadybugDb` is driver-facing, and `GraphProvider.Kuzu` is
 only an `[Obsolete]` compatibility alias. Active Ladybug full-text and label-filter behavior now lives
 inside `Drivers/Ladybug/`; direct package parameter binding is covered through the local repaired
-LadybugDB package family; shared Kuzu branches were retired from the generic search helpers. Neo4j
-removal is a user decision; do not remove without asking.
+LadybugDB package family; shared Kuzu branches were retired from the generic search helpers. Neo4j is
+planned for removal, but do not remove it without an explicit user decision.
 
 ## Phase 5 — Release readiness (IN PROGRESS)
 
@@ -134,7 +136,8 @@ or have agents build-only and run the consolidated test centrally.
   adaptation check → verify centrally → adversarial audit → record → advance the local pointer). The
   current sync point is in `parity.md`'s anchor.
 - LadybugDB is the main provider target; InMemory is the deterministic reference/test driver;
-  Neo4j is legacy reference only; FalkorDB/Neptune are enum/wire compatibility surfaces.
+  Neo4j is temporary legacy compatibility expected to be removed; FalkorDB/Neptune are enum/wire
+  compatibility surfaces.
 - Search stays custom and parity-tested: RRF, MMR, cross-encoder ordering, node-distance,
   episode-mentions, filters, BFS, result merge.
 - `Microsoft.Extensions.AI` remains the chat/embedding adapter boundary; `ILlmClient`,
@@ -149,4 +152,4 @@ or have agents build-only and run the consolidated test centrally.
 - Whether to expose external adapters (OpenAI, Azure OpenAI, Qdrant, Semantic Kernel) as separate
   packages.
 - Whether to add a compatibility option defaulting chunking to Python's chars-per-token heuristic.
-- Whether Neo4j removal becomes its own milestone.
+- When and how to schedule the Neo4j removal milestone.
