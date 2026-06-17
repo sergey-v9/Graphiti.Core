@@ -184,6 +184,26 @@ public class SearchResultComposerTests
     }
 
     [Fact]
+    public void MergeCandidatesInFirstSeenOrder_KeepsRetrievalOrderAndMaxScore()
+    {
+        var firstA = new ComposerCandidate("a", "first-a");
+        var secondA = new ComposerCandidate("a", "second-a");
+        var b = new ComposerCandidate("b", "b");
+        var c = new ComposerCandidate("c", "c");
+        var d = new ComposerCandidate("d", "d");
+
+        var merged = SearchResultComposer.MergeCandidatesInFirstSeenOrder(
+            new[] { (firstA, 0.1f), (b, 0.2f) },
+            new[] { (c, 99f), (secondA, 100f) },
+            new[] { (d, 98f) },
+            candidate => candidate.Key);
+
+        Assert.Equal(new[] { "a", "b", "c", "d" }, merged.Select(item => item.Item.Key));
+        Assert.Equal("first-a", merged[0].Item.Label);
+        Assert.Equal(new[] { 100f, 0.2f, 99f, 98f }, merged.Select(item => item.Score));
+    }
+
+    [Fact]
     public async Task CrossEncoderReranker_UsesIndexedRanksAndStableTieOrder()
     {
         var first = new ComposerCandidate("a", "first");

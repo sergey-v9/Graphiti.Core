@@ -193,6 +193,27 @@ internal static class SearchResultComposer
         return ProjectMergedCandidates(merged);
     }
 
+    internal static List<(T Item, float Score)> MergeCandidatesInFirstSeenOrder<T>(
+        IReadOnlyList<(T Item, float Score)> first,
+        IReadOnlyList<(T Item, float Score)> second,
+        IReadOnlyList<(T Item, float Score)> third,
+        Func<T, string> keySelector)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(second);
+        ArgumentNullException.ThrowIfNull(third);
+        ArgumentNullException.ThrowIfNull(keySelector);
+
+        var merged = new Dictionary<string, (T Item, float Score, int Index)>(
+            first.Count + second.Count + third.Count,
+            StringComparer.Ordinal);
+        var index = 0;
+        AddMergedCandidates(first, keySelector, merged, ref index);
+        AddMergedCandidates(second, keySelector, merged, ref index);
+        AddMergedCandidates(third, keySelector, merged, ref index);
+        return ProjectMergedCandidatesByIndex(merged);
+    }
+
     private static void AddMergedCandidates<T>(
         IReadOnlyList<(T Item, float Score)> rankedList,
         Func<T, string> keySelector,
@@ -224,6 +245,21 @@ internal static class SearchResultComposer
                 ? scoreComparison
                 : left.Index.CompareTo(right.Index);
         });
+
+        var results = new List<(T Item, float Score)>(ordered.Count);
+        foreach (var item in ordered)
+        {
+            results.Add((item.Item, item.Score));
+        }
+
+        return results;
+    }
+
+    private static List<(T Item, float Score)> ProjectMergedCandidatesByIndex<T>(
+        Dictionary<string, (T Item, float Score, int Index)> merged)
+    {
+        var ordered = new List<(T Item, float Score, int Index)>(merged.Values);
+        ordered.Sort(static (left, right) => left.Index.CompareTo(right.Index));
 
         var results = new List<(T Item, float Score)>(ordered.Count);
         foreach (var item in ordered)

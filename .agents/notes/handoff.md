@@ -98,8 +98,9 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
 - **Phases 1–3 are DONE.** The performance/allocation moratorium is LIFTED; further performance work
   is evidence-driven (benchmark-first) only (`roadmap.md`).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
-  1–3 are complete; the remaining active work is plan-05 release infrastructure — E.2 now consumes the
-  fork-published LadybugDB dev package family, and CI has both the core-only lane
+  1–3 are complete; the active plan-05 surface now has an explicit Step F plan-folder backlog triage
+  gate before release infrastructure. E.2 now consumes the fork-published LadybugDB dev package family,
+  and CI has both the core-only lane
   (`.github/workflows/core-only.yml`) and full Ladybug-inclusive lane (`.github/workflows/full.yml`)
   wired. Workflow YAML parsing and `.\eng\Verify-GraphitiCoreOnly.ps1` are green locally; the full
   verifier is also green with GitHub Packages credentials. Versioning and publish-path decisions remain
@@ -141,12 +142,13 @@ that published version.
 Rerun verification before claiming the tree is green; historical test counts drift as coverage is
 added.
 
-Latest verification checkpoint, 2026-06-17: `GraphitiHelpers.SemaphoreGatherAsync` now defaults to
-Python's `SEMAPHORE_LIMIT` behavior (20 when `maxConcurrency` is omitted or zero, negative values
-rejected) instead of running unbounded, and extracted `entity_type_id` values now resolve to declared
-entity-type keys instead of display names like Python. `.\eng\Verify-GraphitiCore.ps1` is green with
-the active GitHub Packages credential (`1024` passed, `3` skipped; both shippable packages packed and
-both fresh package-consumer smoke builds succeeded).
+Latest verification checkpoint, 2026-06-17: plan 05 now has an explicit Step F plan-folder backlog
+triage gate before release infrastructure, and search cross-encoder candidate pools now preserve
+Python's first-seen retrieval-result order across BM25/vector/BFS inputs. Edge cross-encoder
+windowing applies the `limit` after that retrieval-order dedupe; node/community cross-encoder inputs
+remain full-pool but use the same retrieval order. `.\eng\Verify-GraphitiCore.ps1` is green with the
+active GitHub Packages credential (`1029` passed, `3` skipped; both shippable packages packed and both
+fresh package-consumer smoke builds succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
 Packages feed for LadybugDB packages (`0.17.1-dev.1.1.g6f3dbed`) and `NuGet.config` includes package
@@ -228,9 +230,10 @@ bounded fan-out under `maxCoroutines` and flattened in episode order, preserving
 appearances across episodes.
 `EdgeSearch_CrossEncoderRanksOnlyLimitedPreliminaryCandidates` and
 `EpisodeSearch_CrossEncoderRanksOnlyLimitedRrfCandidates` pin Python search windowing: edge
-cross-encoder passages are limited to the first `limit` preliminary edge candidates, episode
-cross-encoder passages are limited to the first `limit` RRF-seeded episode candidates, and
-node/community cross-encoder paths remain intentionally unwindowed like Python.
+cross-encoder passages are limited to the first `limit` preliminary edge candidates in first-seen
+retrieval-result order, episode cross-encoder passages are limited to the first `limit` RRF-seeded
+episode candidates, and node/community cross-encoder paths remain intentionally unwindowed like
+Python while preserving first-seen retrieval-result input order across BM25/vector/BFS pools.
 `CommunitySearch_Bm25MmrStillRunsVectorSearchLikePython` pins Python community-search behavior:
 community vector retrieval still runs when a query vector is available even if the custom
 `CommunitySearchConfig.SearchMethods` list contains only `Bm25`, so MMR can see text-only and

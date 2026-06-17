@@ -185,6 +185,9 @@ cross-encoder passages to the first `limit` RRF-seeded episode candidates, while
 cross-encoder rerankers intentionally see the full preliminary candidate set. C# now applies the
 same pre-cross-encoder window only for edge and episode search, with regression coverage proving a
 third low-preliminary-rank candidate cannot be rescued by cross-encoder scoring in those two scopes.
+2026-06-17 follow-up: the edge window and the node/community full cross-encoder inputs now also use
+Python's first-seen retrieval-result order for deduped candidates instead of sorting by preliminary
+BM25/vector/BFS score before the cross-encoder call.
 
 **2026-06-16 community-search method follow-up:** closed a reachable community search drift. Python
 `community_search` always executes both community full-text and vector retrieval; the
@@ -333,6 +336,15 @@ passage-to-result mapping. C# `SearchResultComposer` now ranks unique passages w
 ordering and maps each ranked passage back to the last candidate using that passage. Driver-backed
 tests pin the behavior for duplicate edge facts, node names, episode content, and community names.
 
+**2026-06-17 cross-encoder retrieval-order follow-up:** closed a remaining search-reranker drift in
+multi-method candidate pools. Python builds node, edge, and community cross-encoder maps from
+retrieval result-list order (`search_results` flattening), so a high-scoring vector/BFS candidate does
+not jump ahead of earlier BM25 candidates before the cross-encoder input/window. C# now uses a
+first-seen candidate merge for cross-encoder inputs while preserving max preliminary scores for
+non-cross-encoder merge paths. Edge cross-encoder windowing now takes the first `limit` deduped edge
+candidates in retrieval order, and node/community cross-encoder inputs remain full-pool but in the
+same retrieval order.
+
 **2026-06-17 base edge-delete follow-up:** closed the inherited base edge helper drift. Python base
 `Edge.delete` / `Edge.delete_by_uuids` delete only `MENTIONS`, `RELATES_TO`, and `HAS_MEMBER`;
 `HAS_EPISODE` and `NEXT_EPISODE` have concrete delete paths. C# base `Edge.DeleteByUuidsAsync` now
@@ -462,7 +474,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Area | Status | Notes |
 |---|---|---|
 | Search config recipes, reranker enums, wire values | OK | Verified equivalent, parity-tested |
-| Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | OK | Deterministic parts well tested; edge/episode cross-encoder candidate windows now match Python's pre-rerank `limit` slices, while node/community remain intentionally unwindowed like Python. Duplicate cross-encoder passages now match Python's first-seen passage / last-duplicate-candidate mapping. Community search now mirrors Python's unconditional vector retrieval when a query vector is available. Empty `EdgeTypes`/`EdgeUuids` filters are active match-none predicates like Python. Public search-result context helpers are exposed via `SearchHelpers` |
+| Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | OK | Deterministic parts well tested; edge/episode cross-encoder candidate windows now match Python's pre-rerank `limit` slices, including first-seen retrieval-order edge windowing, while node/community remain intentionally unwindowed like Python and pass full first-seen retrieval-order pools. Duplicate cross-encoder passages now match Python's first-seen passage / last-duplicate-candidate mapping. Community search now mirrors Python's unconditional vector retrieval when a query vector is available. Empty `EdgeTypes`/`EdgeUuids` filters are active match-none predicates like Python. Public search-result context helpers are exposed via `SearchHelpers` |
 | Community label propagation | OK | Algorithmically equivalent |
 | Graph drivers: LadybugDB (first-class investment target), InMemory (reference/test), Neo4j (temporary legacy compatibility) | OK | Runtime proof for Ladybug workflows, direct package binding of list/array/empty-list/null parameters, direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by UUID, public namespace community/saga reads and typed deletes, saga-scoped retrieval/content reads, paged group reads, directed endpoint-pair and incident edge reads, explicit and core file-backed paths, Kuzu `':memory:'` sentinel compatibility, package/native execution, and Ladybug-owned raw full-text query/label-filter construction; Neo4j is kept only to avoid regressions while present and is expected to be removed; see kuzu-driver-port.md |
 | LLM/embedder/reranker adapters via Microsoft.Extensions.AI | DIVERGENT | Documented decision; structured output + Polly retries in place. `MicrosoftExtensionsAICrossEncoderClient` uses structured boolean+confidence scoring because generic M.E.AI lacks OpenAI top-logprob controls |

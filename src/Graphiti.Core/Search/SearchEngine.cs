@@ -704,19 +704,26 @@ internal static class SearchEngine
             : EmptyRanked<EntityEdge>();
 
         var fusionLimit = config.Reranker == EdgeReranker.Rrf ? limit : int.MaxValue;
-        var ranked = config.Reranker is EdgeReranker.Rrf or EdgeReranker.NodeDistance or EdgeReranker.EpisodeMentions
-            ? SearchResultComposer.FuseRanks(
+        var ranked = config.Reranker switch
+        {
+            EdgeReranker.Rrf or EdgeReranker.NodeDistance or EdgeReranker.EpisodeMentions => SearchResultComposer.FuseRanks(
                 textRanked,
                 vectorRanked,
                 bfsRanked,
                 edge => edge.Uuid,
                 fusionLimit,
-                minScore)
-            : SearchResultComposer.MergeRankedCandidates(
+                minScore),
+            EdgeReranker.CrossEncoder => SearchResultComposer.MergeCandidatesInFirstSeenOrder(
                 textRanked,
                 vectorRanked,
                 bfsRanked,
-                edge => edge.Uuid);
+                edge => edge.Uuid),
+            _ => SearchResultComposer.MergeRankedCandidates(
+                textRanked,
+                vectorRanked,
+                bfsRanked,
+                edge => edge.Uuid)
+        };
 
         if (config.Reranker == EdgeReranker.Rrf)
         {
@@ -878,19 +885,26 @@ internal static class SearchEngine
             : EmptyRanked<EntityNode>();
 
         var fusionLimit = config.Reranker == NodeReranker.Rrf ? limit : int.MaxValue;
-        var ranked = config.Reranker is NodeReranker.Rrf or NodeReranker.NodeDistance or NodeReranker.EpisodeMentions
-            ? SearchResultComposer.FuseRanks(
+        var ranked = config.Reranker switch
+        {
+            NodeReranker.Rrf or NodeReranker.NodeDistance or NodeReranker.EpisodeMentions => SearchResultComposer.FuseRanks(
                 textRanked,
                 vectorRanked,
                 bfsRanked,
                 node => node.Uuid,
                 fusionLimit,
-                minScore)
-            : SearchResultComposer.MergeRankedCandidates(
+                minScore),
+            NodeReranker.CrossEncoder => SearchResultComposer.MergeCandidatesInFirstSeenOrder(
                 textRanked,
                 vectorRanked,
                 bfsRanked,
-                node => node.Uuid);
+                node => node.Uuid),
+            _ => SearchResultComposer.MergeRankedCandidates(
+                textRanked,
+                vectorRanked,
+                bfsRanked,
+                node => node.Uuid)
+        };
 
         if (config.Reranker == NodeReranker.Rrf)
         {
@@ -1131,17 +1145,24 @@ internal static class SearchEngine
             methodCancellation).ConfigureAwait(false);
 
         var fusionLimit = config.Reranker == CommunityReranker.Rrf ? limit : int.MaxValue;
-        var ranked = config.Reranker == CommunityReranker.Rrf
-            ? SearchResultComposer.FuseRanks(
+        var ranked = config.Reranker switch
+        {
+            CommunityReranker.Rrf => SearchResultComposer.FuseRanks(
                 textRanked,
                 vectorRanked,
                 community => community.Uuid,
                 fusionLimit,
-                minScore)
-            : SearchResultComposer.MergeRankedCandidates(
+                minScore),
+            CommunityReranker.CrossEncoder => SearchResultComposer.MergeCandidatesInFirstSeenOrder(
                 textRanked,
                 vectorRanked,
-                community => community.Uuid);
+                EmptyRanked<CommunityNode>(),
+                community => community.Uuid),
+            _ => SearchResultComposer.MergeRankedCandidates(
+                textRanked,
+                vectorRanked,
+                community => community.Uuid)
+        };
 
         if (config.Reranker == CommunityReranker.Rrf)
         {
