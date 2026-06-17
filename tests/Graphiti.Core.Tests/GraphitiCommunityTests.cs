@@ -9,7 +9,7 @@ namespace Graphiti.Core.Tests;
 public class GraphitiCommunityTests
 {
     [Fact]
-    public void CommunityClustering_UsesSynchronousPythonSemantics()
+    public void CommunityClustering_UsesSynchronousSemantics()
     {
         var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var a = Entity("A", "group", now, "a");
@@ -117,7 +117,7 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
-    public async Task BuildCommunities_LabelPropagationUsesSynchronousPythonSemantics()
+    public async Task BuildCommunities_LabelPropagationUsesSynchronousSemantics()
     {
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(graphDriver: driver);
@@ -202,7 +202,7 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
-    public async Task BuildCommunities_CapturesTimestampPerCommunityBuildLikePython()
+    public async Task BuildCommunities_CapturesTimestampPerCommunityBuild()
     {
         var driver = new InMemoryGraphDriver();
         var firstNow = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
@@ -253,7 +253,7 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
-    public async Task BuildCommunities_ExplicitEmptyGroupIdsClearsAndBuildsNoneLikePython()
+    public async Task BuildCommunities_ExplicitEmptyGroupIdsClearsAndBuildsNone()
     {
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(graphDriver: driver);
@@ -275,7 +275,7 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
-    public async Task BuildCommunities_NoGroupIdsDiscoversDefaultEmptyGroupLikePython()
+    public async Task BuildCommunities_NoGroupIdsDiscoversDefaultEmptyGroup()
     {
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(graphDriver: driver);
@@ -327,10 +327,10 @@ public class GraphitiCommunityTests
     [Fact]
     public async Task BuildCommunities_SingleNodeClusterPersistsRawEntitySummary()
     {
-        // Python build_community (community_operations.py:177) seeds the pairwise reduction with
-        // the RAW entity.summary, and for a single-node cluster (:199) persists
-        // truncate_at_sentence(entity.summary) verbatim. The community summary must therefore be
-        // the entity's own summary, NOT the name-prefixed "{Name}: {Summary}" deterministic text.
+        // Community building seeds the pairwise reduction with the RAW entity summary, and for a
+        // single-node cluster persists the sentence-truncated entity summary verbatim. The community
+        // summary must therefore be the entity's own summary, NOT the name-prefixed
+        // "{Name}: {Summary}" deterministic text.
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(graphDriver: driver);
         var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);

@@ -1,12 +1,12 @@
 namespace Graphiti.Core.Search;
 
 /// <summary>
-/// Conversions from the search method/reranker enums to the Python-compatible string wire values
+/// Conversions from the search method/reranker enums to the stable string wire values
 /// used when serializing search configuration.
 /// </summary>
 internal static class SearchConfigurationEnumExtensions
 {
-    /// <summary>Returns the Python-compatible wire string for the edge search method.</summary>
+    /// <summary>Returns the wire string for the edge search method.</summary>
     public static string ToWireValue(this EdgeSearchMethod source) =>
         source switch
         {
@@ -16,7 +16,7 @@ internal static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
-    /// <summary>Returns the Python-compatible wire string for the node search method.</summary>
+    /// <summary>Returns the wire string for the node search method.</summary>
     public static string ToWireValue(this NodeSearchMethod source) =>
         source switch
         {
@@ -26,7 +26,7 @@ internal static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
-    /// <summary>Returns the Python-compatible wire string for the episode search method.</summary>
+    /// <summary>Returns the wire string for the episode search method.</summary>
     public static string ToWireValue(this EpisodeSearchMethod source) =>
         source switch
         {
@@ -34,7 +34,7 @@ internal static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
-    /// <summary>Returns the Python-compatible wire string for the community search method.</summary>
+    /// <summary>Returns the wire string for the community search method.</summary>
     public static string ToWireValue(this CommunitySearchMethod source) =>
         source switch
         {
@@ -43,7 +43,7 @@ internal static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
-    /// <summary>Returns the Python-compatible wire string for the edge reranker.</summary>
+    /// <summary>Returns the wire string for the edge reranker.</summary>
     public static string ToWireValue(this EdgeReranker source) =>
         source switch
         {
@@ -55,7 +55,7 @@ internal static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
-    /// <summary>Returns the Python-compatible wire string for the node reranker.</summary>
+    /// <summary>Returns the wire string for the node reranker.</summary>
     public static string ToWireValue(this NodeReranker source) =>
         source switch
         {
@@ -67,7 +67,7 @@ internal static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
-    /// <summary>Returns the Python-compatible wire string for the episode reranker.</summary>
+    /// <summary>Returns the wire string for the episode reranker.</summary>
     public static string ToWireValue(this EpisodeReranker source) =>
         source switch
         {
@@ -76,7 +76,7 @@ internal static class SearchConfigurationEnumExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(source), source, null)
         };
 
-    /// <summary>Returns the Python-compatible wire string for the community reranker.</summary>
+    /// <summary>Returns the wire string for the community reranker.</summary>
     public static string ToWireValue(this CommunityReranker source) =>
         source switch
         {

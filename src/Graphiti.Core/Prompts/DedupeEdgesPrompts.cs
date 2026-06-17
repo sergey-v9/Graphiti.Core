@@ -3,10 +3,9 @@ using System.Text.Json.Nodes;
 namespace Graphiti.Core.Prompts;
 
 /// <summary>
-/// Prompt builders ported from Python <c>graphiti_core/prompts/dedupe_edges.py</c> with context
-/// shaping from <c>utils/maintenance/edge_operations.py::resolve_extracted_edge</c>. The
-/// instruction text is transcribed near-verbatim per the prompt parity contract in
-/// <c>.agents/notes/decisions.md</c>; golden tests pin the rendered output.
+/// Prompt builders for edge deduplication, with the context shaped by extracted-edge resolution. The
+/// instruction text follows the prompt parity contract in <c>.agents/notes/decisions.md</c>; golden
+/// tests pin the rendered output.
 /// </summary>
 internal static class DedupeEdgesPrompts
 {

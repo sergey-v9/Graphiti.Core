@@ -5,10 +5,7 @@ using Graphiti.Core.Prompts;
 namespace Graphiti.Core.Tests.Prompts;
 
 /// <summary>
-/// Golden tests pinning the rendered node-extraction prompts to the Python source
-/// (graphiti_core/prompts/extract_nodes.py). The expected text is transcribed independently from
-/// Python; if a test fails after an edit, reconcile against the Python file, not against the
-/// builder.
+/// Golden tests pin the rendered node-extraction prompt; reconcile against parity.md.
 /// </summary>
 public class ExtractNodesPromptsTests
 {
@@ -26,7 +23,7 @@ public class ExtractNodesPromptsTests
     };
 
     [Fact]
-    public void BuildExtractMessage_RendersPythonParityPrompt()
+    public void BuildExtractMessage_RendersExpectedPrompt()
     {
         var episode = CreateEpisode("Alice: I met Bob at Acme Corp.", EpisodeType.Message);
         var context = ExtractNodesPrompts.BuildContext(
@@ -169,7 +166,7 @@ public class ExtractNodesPromptsTests
     }
 
     [Fact]
-    public void BuildExtractText_RendersPythonParityPrompt()
+    public void BuildExtractText_RendersExpectedPrompt()
     {
         var episode = CreateEpisode("Dr. Amara Osei presented at AAN.", EpisodeType.Text);
         var context = ExtractNodesPrompts.BuildContext(
@@ -248,7 +245,7 @@ public class ExtractNodesPromptsTests
     }
 
     [Fact]
-    public void BuildExtractJson_RendersPythonParityPrompt()
+    public void BuildExtractJson_RendersExpectedPrompt()
     {
         var episode = CreateEpisode("""{"user": "Jordan Lee"}""", EpisodeType.Json);
         var context = ExtractNodesPrompts.BuildContext(
@@ -323,7 +320,7 @@ public class ExtractNodesPromptsTests
     }
 
     [Fact]
-    public void BuildExtractAttributes_RendersPythonParityPrompt()
+    public void BuildExtractAttributes_RendersExpectedPrompt()
     {
         var episode = CreateEpisode("Sam Rivera works at Northwind.", EpisodeType.Message);
         var previous = new[]
@@ -425,7 +422,7 @@ public class ExtractNodesPromptsTests
     }
 
     [Fact]
-    public void BuildExtractSummariesBatch_RendersPythonParityPrompt()
+    public void BuildExtractSummariesBatch_RendersExpectedPrompt()
     {
         var previous = new[]
         {
@@ -457,13 +454,13 @@ public class ExtractNodesPromptsTests
             messages[0].Content);
         Assert.Equal("user", messages[1].Role);
 
-        // Full-string golden transcribed from Python extract_summaries_batch (extract_nodes.py:509-537)
-        // with summary_instructions interpolated (snippets.py:19-34, MAX_SUMMARY_CHARS=1000). Allowed
-        // mechanical divergences only: compact JSON via PromptJson.Serialize. The snippet's closing """
-        // sits at 8-space indentation, so summary_instructions ends with "\n        " (newline + 8
-        // spaces); after the GOOD example line that renders an interior line of exactly 8 spaces before
-        // the blank line and <MESSAGES> (extract_nodes.py:521-523). That interior trailing-space line is
-        // reproduced verbatim here. entity_type_descriptions is absent, so that section renders empty.
+        // Full-string golden of the summaries-batch prompt with summary_instructions interpolated
+        // (MAX_SUMMARY_CHARS=1000). Allowed mechanical divergences only: compact JSON via
+        // PromptJson.Serialize. The snippet's closing """ sits at 8-space indentation, so
+        // summary_instructions ends with "\n        " (newline + 8 spaces); after the GOOD example
+        // line that renders an interior line of exactly 8 spaces before the blank line and
+        // <MESSAGES>. That interior trailing-space line is reproduced verbatim here.
+        // entity_type_descriptions is absent, so that section renders empty.
         const string summaryInstructionsTailPlaceholder = "__SUMMARY_INSTRUCTIONS_TAIL__";
         var expected = """
 
@@ -506,7 +503,7 @@ public class ExtractNodesPromptsTests
     }
 
     [Fact]
-    public void BuildExtractEntitySummariesFromEpisodes_RendersPythonParityPrompt()
+    public void BuildExtractEntitySummariesFromEpisodes_RendersExpectedPrompt()
     {
         var nodes = new[]
         {
@@ -532,11 +529,10 @@ public class ExtractNodesPromptsTests
         Assert.Equal(2, messages.Length);
         Assert.Equal("system", messages[0].Role);
 
-        // Full-string golden of the system prompt transcribed from Python
-        // _entity_episode_summary_system_prompt (extract_nodes.py:542-610). Python joins its
-        // backslash line-continuations into single logical lines; the literal "\n" inside the
-        // EXAMPLES Input (Python source "\\n") is a literal backslash-n (two chars), reproduced
-        // verbatim in this C# raw string (raw strings do not process escapes).
+        // Full-string golden of the entity-episode-summary system prompt. Backslash
+        // line-continuations are joined into single logical lines; the literal "\n" inside the
+        // EXAMPLES Input is a literal backslash-n (two chars), reproduced verbatim in this C# raw
+        // string (raw strings do not process escapes).
         var expectedSystem = """
             You maintain detailed, information-dense entity memories from episode text.
 
@@ -588,12 +584,11 @@ public class ExtractNodesPromptsTests
         Assert.Equal(expectedSystem, messages[0].Content);
         Assert.Equal("user", messages[1].Role);
 
-        // Full-string golden transcribed from Python extract_entity_summaries_from_episodes
-        // (extract_nodes.py:613-642) with _entity_type_descriptions_section (extract_nodes.py:494-506).
-        // The descriptions section is present here (entity_type_descriptions={"Person": ...}) and ends
-        // with a blank line before <ENTITIES>. Allowed mechanical divergences only: compact JSON via
-        // PromptJson.Serialize. Unlike the substring-based prompts, this user prompt does NOT begin with
-        // a leading newline in Python, and the C# builder matches that.
+        // Full-string golden of the extract-entity-summaries-from-episodes user prompt with the
+        // entity-type-descriptions section. The descriptions section is present here
+        // (entity_type_descriptions={"Person": ...}) and ends with a blank line before <ENTITIES>.
+        // Allowed mechanical divergences only: compact JSON via PromptJson.Serialize. Unlike the
+        // substring-based prompts, this user prompt does NOT begin with a leading newline.
         var expected = """
             NEVER include meta-language about the summarization process. Use ONLY facts from the provided EPISODES.
             Each summary must be under 1000 characters. Write 2-6 dense sentences in third person. Preserve all material names, roles, dates, counts, and changes over time that are explicitly supported.
@@ -624,10 +619,10 @@ public class ExtractNodesPromptsTests
     [Fact]
     public void BuildExtractSummaries_RendersEmptyStringEntityTypeDescriptionVerbatim()
     {
-        // Python _entity_type_descriptions_section (extract_nodes.py:494-506) only short-circuits when the
-        // whole descriptions mapping is empty/None ("if not descriptions: return ''"); it then serializes
-        // every entry verbatim via to_prompt_json with no per-value filter. A type whose description is an
-        // empty string must therefore still render as "":"" inside ENTITY_TYPE_DESCRIPTIONS.
+        // The entity-type-descriptions section only short-circuits when the whole descriptions
+        // mapping is empty/null; it then serializes every entry verbatim with no per-value filter. A
+        // type whose description is an empty string must therefore still render as "":"" inside
+        // ENTITY_TYPE_DESCRIPTIONS.
         var nodes = new[]
         {
             new EntityNode
@@ -870,7 +865,7 @@ public class ExtractNodesPromptsTests
     }
 
     [Fact]
-    public void Build_DispatchesOnEpisodeSourceLikePython()
+    public void Build_DispatchesOnEpisodeSource()
     {
         var context = ExtractNodesPrompts.BuildContext(
             CreateEpisode("content", EpisodeType.Message),

@@ -3,27 +3,25 @@ using System.Text.Json.Nodes;
 namespace Graphiti.Core.Prompts;
 
 /// <summary>
-/// Prompt builders ported from Python <c>graphiti_core/prompts/eval.py</c> (the four eval prompt
-/// functions: <c>query_expansion</c>, <c>qa_prompt</c>, <c>eval_prompt</c>, and
-/// <c>eval_add_episode_results</c>). The instruction text is transcribed near-verbatim per the prompt
-/// parity contract in <c>.agents/notes/decisions.md</c>; golden tests pin the rendered output. Do not
-/// reword the prose without a parity reason.
+/// Prompt builders for the four eval prompts: query expansion, QA, answer evaluation, and
+/// add-episode-results evaluation. The instruction text follows the prompt parity contract in
+/// <c>.agents/notes/decisions.md</c>; golden tests pin the rendered output. Do not reword the prose
+/// without a parity reason.
 /// </summary>
 /// <remarks>
-/// These prompts mirror Python f-strings defined at the module-function level, so every content line
-/// carries a 4-space leading indent and the bodies begin with a leading newline, exactly as Python
-/// renders them. <c>to_prompt_json</c> values are rendered as compact JSON (the allowed JSON divergence
-/// from Python's spaced <c>json.dumps</c> output).
+/// Every content line carries a 4-space leading indent and the bodies begin with a leading newline,
+/// which the golden tests pin exactly. Interpolated JSON values are rendered as compact JSON (the
+/// allowed JSON rendering divergence).
 /// </remarks>
 internal static class EvalPrompts
 {
-    // Every Python eval f-string body ends with the 4-space indentation that precedes its closing
-    // triple-quote (e.g. "...</QUESTION>\n    "). C# raw-string literals strip that closing-delimiter
-    // indentation, so the trailing 4 spaces are reattached explicitly to preserve byte parity.
+    // Each eval prompt body ends with 4 spaces of indentation before its closing delimiter (e.g.
+    // "...</QUESTION>\n    "). C# raw-string literals strip that closing-delimiter indentation, so the
+    // trailing 4 spaces are reattached explicitly to preserve the pinned output bytes.
     private const string TrailingIndent = "\n    ";
 
     /// <summary>
-    /// Ports <c>eval.py::query_expansion</c> (eval.py:64-77). Rephrases Bob's question into a
+    /// Builds the query-expansion prompt. Rephrases Bob's question into a
     /// third-person query about Alice for database retrieval. <paramref name="query"/> is rendered via
     /// <c>to_prompt_json</c>.
     /// </summary>
@@ -48,7 +46,7 @@ internal static class EvalPrompts
     }
 
     /// <summary>
-    /// Ports <c>eval.py::qa_prompt</c> (eval.py:80-99). Answers the question as Alice using the supplied
+    /// Builds the QA prompt. Answers the question as Alice using the supplied
     /// entity summaries and facts. <paramref name="entitySummaries"/> and <paramref name="facts"/> are
     /// rendered via <c>to_prompt_json</c>; <paramref name="query"/> is interpolated verbatim.
     /// </summary>
@@ -79,7 +77,7 @@ internal static class EvalPrompts
     }
 
     /// <summary>
-    /// Ports <c>eval.py::eval_prompt</c> (eval.py:102-124). Judges whether <paramref name="response"/>
+    /// Builds the answer-evaluation prompt. Judges whether <paramref name="response"/>
     /// matches the gold standard <paramref name="answer"/> for <paramref name="query"/>. All three values
     /// are interpolated verbatim.
     /// </summary>
@@ -111,7 +109,7 @@ internal static class EvalPrompts
     }
 
     /// <summary>
-    /// Ports <c>eval.py::eval_add_episode_results</c> (eval.py:127-156). Judges whether the BASELINE graph
+    /// Builds the add-episode-results evaluation prompt. Judges whether the BASELINE graph
     /// extraction is higher quality than the CANDIDATE for the same message. Returns <c>candidate_is_worse
     /// = False</c> when the baseline is better and <c>True</c> otherwise (including near-identical quality).
     /// All four values are interpolated verbatim.

@@ -6,7 +6,7 @@ namespace Graphiti.Core.Search;
 /// Top-level search configuration. Enable any combination of edge, node, episode, and community
 /// search by supplying the corresponding per-type config; results are limited and score-filtered by
 /// <see cref="Limit"/> and <see cref="RerankerMinScore"/>. See <c>SearchConfigRecipes</c> for ready-made
-/// presets matching the Python implementation.
+/// presets.
 /// </summary>
 public sealed class SearchConfig
 {

@@ -95,7 +95,7 @@ public sealed partial class Graphiti
 
     /// <summary>
     /// Full hybrid graph search returning edges, nodes, episodes, and communities. When
-    /// <paramref name="config"/> is omitted this uses the Python <c>search_</c> default recipe:
+    /// <paramref name="config"/> is omitted this uses the default recipe:
     /// combined hybrid search with cross-encoder reranking.
     /// </summary>
     /// <param name="query">Natural-language search query.</param>

@@ -18,7 +18,7 @@ public sealed class GraphitiOptions
     /// <summary>Whether to persist raw episode content.</summary>
     public bool StoreRawEpisodeContent { get; set; } = true;
 
-    /// <summary>Optional cap on concurrent operations; null or zero uses the Python-compatible default.</summary>
+    /// <summary>Optional cap on concurrent operations; null or zero uses the default.</summary>
     public int? MaxCoroutines { get; set; }
 
     /// <summary>Embedding vector dimension used when no embedder-specific value is set.</summary>

@@ -79,7 +79,7 @@ public class InMemoryGraphDriverDeleteTests
 
     [Theory]
     [MemberData(nameof(DanglingTypedEdges))]
-    public async Task SaveEdgeAsync_SkipsEdgesWhenTypedEndpointsAreMissingLikePython(Edge edge)
+    public async Task SaveEdgeAsync_SkipsEdgesWhenTypedEndpointsAreMissing(Edge edge)
     {
         var driver = new InMemoryGraphDriver();
 
@@ -89,7 +89,7 @@ public class InMemoryGraphDriverDeleteTests
     }
 
     [Fact]
-    public async Task SaveEdgeAsync_MissingEndpointOverwriteLeavesExistingEdgeLikePython()
+    public async Task SaveEdgeAsync_MissingEndpointOverwriteLeavesExistingEdge()
     {
         var driver = new InMemoryGraphDriver();
         await driver.SaveNodeAsync(new EntityNode { Uuid = "source", Name = "Source", GroupId = "tenant" });
@@ -121,7 +121,7 @@ public class InMemoryGraphDriverDeleteTests
     }
 
     [Fact]
-    public async Task SaveEdgeAsync_SkipsEdgesWhenEndpointTypesDoNotMatchLikePython()
+    public async Task SaveEdgeAsync_SkipsEdgesWhenEndpointTypesDoNotMatch()
     {
         var driver = new InMemoryGraphDriver();
         await driver.SaveNodeAsync(new EntityNode { Uuid = "entity", Name = "Entity", GroupId = "group" });

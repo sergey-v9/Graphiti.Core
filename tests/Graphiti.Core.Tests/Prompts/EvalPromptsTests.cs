@@ -4,26 +4,21 @@ using Graphiti.Core.Prompts;
 namespace Graphiti.Core.Tests.Prompts;
 
 /// <summary>
-/// Golden tests pinning the rendered eval prompts to the Python source
-/// (graphiti_core/prompts/eval.py). The expected text is transcribed independently from Python (the
-/// four module functions <c>query_expansion</c>, <c>qa_prompt</c>, <c>eval_prompt</c>, and
-/// <c>eval_add_episode_results</c>); if a test fails after an edit, reconcile against the Python file,
-/// not against the builder.
+/// Golden tests pin the rendered eval prompt; reconcile against parity.md.
 /// </summary>
 /// <remarks>
 /// Every expected string is assembled from explicit line parts joined by <c>"\n"</c> so the exact
-/// whitespace each Python f-string produces is visible and verifiable. The Python f-strings here live
-/// at the module-function indentation level, so every content line carries a 4-space leading indent
-/// (<see cref="Indent"/>), bodies begin with a leading newline, and bodies end with a bare 4-space line
-/// (the indentation that precedes the closing triple-quote). The <c>to_prompt_json</c> values render as
-/// compact JSON, the documented divergence from Python's spaced <c>json.dumps</c>.
+/// whitespace each prompt produces is visible and verifiable. Every content line carries a 4-space
+/// leading indent (<see cref="Indent"/>), bodies begin with a leading newline, and bodies end with a
+/// bare 4-space line (the indentation that precedes the closing triple-quote). Interpolated collections
+/// render as compact JSON, the accepted rendering divergence.
 /// </remarks>
 public class EvalPromptsTests
 {
     private const string Indent = "    ";
 
     [Fact]
-    public void BuildQueryExpansion_RendersPythonParityPrompt()
+    public void BuildQueryExpansion_RendersExpectedPrompt()
     {
         var messages = EvalPrompts.BuildQueryExpansion("Who does Bob report to?");
 
@@ -48,7 +43,7 @@ public class EvalPromptsTests
     }
 
     [Fact]
-    public void BuildQa_RendersPythonParityPrompt()
+    public void BuildQa_RendersExpectedPrompt()
     {
         var summaries = new JsonArray("Alice manages the Acme launch.");
         var facts = new JsonArray("Alice reports to Carol.");
@@ -81,7 +76,7 @@ public class EvalPromptsTests
     }
 
     [Fact]
-    public void BuildEval_RendersPythonParityPrompt()
+    public void BuildEval_RendersExpectedPrompt()
     {
         var messages = EvalPrompts.BuildEval(
             "Who owns the Atlas rollout?",
@@ -116,7 +111,7 @@ public class EvalPromptsTests
     }
 
     [Fact]
-    public void BuildEvalAddEpisodeResults_RendersPythonParityPrompt()
+    public void BuildEvalAddEpisodeResults_RendersExpectedPrompt()
     {
         var messages = EvalPrompts.BuildEvalAddEpisodeResults(
             "User: Leo owns Atlas.",

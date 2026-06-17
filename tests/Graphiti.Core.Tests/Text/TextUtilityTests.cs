@@ -28,7 +28,7 @@ public class TextUtilityTests
     [InlineData("Alpha. Beta gamma", -6, "Alpha.")]
     [InlineData("Alpha. Beta gamma", -1, "Alpha.")]
     [InlineData("", -1, "")]
-    public void TruncateAtSentence_UsesPythonSliceSemanticsForNegativeMaxChars(
+    public void TruncateAtSentence_UsesSliceSemanticsForNegativeMaxChars(
         string text,
         int maxChars,
         string expected)
@@ -72,7 +72,7 @@ public class TextUtilityTests
     }
 
     [Fact]
-    public void MaxSummaryChars_MatchesPythonConstant()
+    public void MaxSummaryChars_MatchesExpectedConstant()
     {
         Assert.Equal(1000, TextUtilities.MaxSummaryChars);
     }
@@ -107,7 +107,7 @@ public class TextUtilityTests
     }
 
     [Fact]
-    public void ConcatenateEpisodes_FormatsTimestampsLikePythonIsoformat()
+    public void ConcatenateEpisodes_FormatsTimestampsAsIsoformat()
     {
         var naiveTimestamp = new DateTime(2025, 1, 1, 10, 0, 0, DateTimeKind.Unspecified)
             .AddTicks(123_456 * 10);

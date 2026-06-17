@@ -105,7 +105,7 @@ public class GraphitiHelperTests
     }
 
     [Fact]
-    public void LuceneSanitize_EscapesSpecialCharactersLikePython()
+    public void LuceneSanitize_EscapesSpecialCharacters()
     {
         var sanitized = GraphitiHelpers.LuceneSanitize(
             "This has every escape character + - && || ! ( ) { } [ ] ^ \" ~ * ? : \\ /");
@@ -117,10 +117,10 @@ public class GraphitiHelperTests
     }
 
     [Fact]
-    public void GetDefaultGroupId_MatchesPythonProviderDefaults()
+    public void GetDefaultGroupId_MatchesExpectedProviderDefaults()
     {
         // '_' (not the old '\_') after upstream #1549 (ff7e29c): the backslash failed
-        // validate_group_id and broke the FalkorDB quickstart. Mirrors get_default_group_id.
+        // group-id validation and broke the FalkorDB quickstart.
         Assert.Equal("_", GraphitiHelpers.GetDefaultGroupId(GraphProvider.FalkorDb));
         Assert.Equal(string.Empty, GraphitiHelpers.GetDefaultGroupId(GraphProvider.LadybugDb));
         // Kuzu remains the LadybugDB parity/compatibility alias; assert defaults for existing enum values.
@@ -149,7 +149,7 @@ public class GraphitiHelperTests
     }
 
     [Fact]
-    public void ValidateGroupId_MatchesPythonSafeIdentifierRules()
+    public void ValidateGroupId_AcceptsSafeIdentifiers()
     {
         GraphitiHelpers.ValidateGroupId(null);
         GraphitiHelpers.ValidateGroupId(string.Empty);
@@ -163,7 +163,7 @@ public class GraphitiHelperTests
     [InlineData("tenant/bad")]
     [InlineData("tenant:bad")]
     [InlineData(" tenant")]
-    public void ValidateGroupId_RejectsCharactersPythonRejects(string groupId)
+    public void ValidateGroupId_RejectsInvalidCharacters(string groupId)
     {
         var exception = Assert.Throws<GroupIdValidationException>(() =>
             GraphitiHelpers.ValidateGroupId(groupId));
@@ -172,7 +172,7 @@ public class GraphitiHelperTests
     }
 
     [Fact]
-    public void ValidateNodeLabels_MatchesPythonCypherIdentifierRules()
+    public void ValidateNodeLabels_MatchesCypherIdentifierRules()
     {
         GraphitiHelpers.ValidateNodeLabels(null);
         GraphitiHelpers.ValidateNodeLabels(Array.Empty<string>());
@@ -205,7 +205,7 @@ public class GraphitiHelperTests
     }
 
     [Fact]
-    public void ValidateExcludedEntityTypes_RejectsDeclaredDisplayNamesLikePython()
+    public void ValidateExcludedEntityTypes_RejectsDeclaredDisplayNames()
     {
         var exception = Assert.Throws<ArgumentException>(() =>
             GraphitiHelpers.ValidateExcludedEntityTypes(
@@ -313,7 +313,7 @@ public class GraphitiHelperTests
     }
 
     [Fact]
-    public void NormalizeL2_PropagatesNonFiniteNormLikePython()
+    public void NormalizeL2_PropagatesNonFiniteNorm()
     {
         var normalized = GraphitiHelpers.NormalizeL2(new[] { float.NaN, 1f });
 
@@ -332,7 +332,7 @@ public class GraphitiHelperTests
     }
 
     [Fact]
-    public void NormalizeL2InPlace_MatchesPythonZeroAndNonFiniteNorms()
+    public void NormalizeL2InPlace_MatchesZeroAndNonFiniteNorms()
     {
         var zero = new[] { 0f, 0f };
         var nan = new[] { float.NaN, 1f };
@@ -354,7 +354,7 @@ public class GraphitiHelperTests
     [InlineData("  ACME   Corp  ", "acme corp")]
     [InlineData("Alice\tBob\r\nCarol", "alice bob carol")]
     [InlineData("Café  NAÏVE_2", "café naïve_2")]
-    public void NormalizeEntityKey_MatchesPythonWhitespaceAndLowercaseBehavior(
+    public void NormalizeEntityKey_MatchesWhitespaceAndLowercaseBehavior(
         string? input,
         string expected)
     {
@@ -386,7 +386,7 @@ public class GraphitiHelperTests
     }
 
     [Fact]
-    public void ParseDbDate_AcceptsPythonIsoformatVariants()
+    public void ParseDbDate_AcceptsIsoformatVariants()
     {
         Assert.Equal(
             new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
@@ -406,7 +406,7 @@ public class GraphitiHelperTests
     }
 
     [Fact]
-    public void ParseDbDate_RejectsPythonInvalidStringsWithFormatException()
+    public void ParseDbDate_RejectsInvalidStringsWithFormatException()
     {
         foreach (var value in new[] { "", "  ", " 2026-01-02T03:04:05 ", "01/02/2026", "not-a-date" })
         {

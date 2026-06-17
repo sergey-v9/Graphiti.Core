@@ -1,9 +1,8 @@
 namespace Graphiti.Core.Prompts;
 
 /// <summary>
-/// Prompt builder ported from Python <c>graphiti_core/prompts/summarize_sagas.py</c>. The
-/// instruction text is transcribed near-verbatim per the prompt parity contract in
-/// <c>.agents/notes/decisions.md</c>; golden tests pin the rendered output.
+/// Prompt builder for saga summarization. The instruction text follows the prompt parity contract
+/// in <c>.agents/notes/decisions.md</c>; golden tests pin the rendered output.
 /// </summary>
 internal static class SummarizeSagasPrompts
 {

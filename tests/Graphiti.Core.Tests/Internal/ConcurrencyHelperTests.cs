@@ -37,7 +37,7 @@ public class ConcurrencyHelperTests
     [Theory]
     [InlineData(null)]
     [InlineData(0)]
-    public async Task SemaphoreGatherAsync_DefaultModeUsesPythonSemaphoreLimit(int? maxConcurrency)
+    public async Task SemaphoreGatherAsync_DefaultModeUsesDefaultSemaphoreLimit(int? maxConcurrency)
     {
         const int DefaultLimit = 20;
         var started = 0;

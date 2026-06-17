@@ -40,10 +40,10 @@ public class LadybugSearchExecutorTests
     [Fact]
     public async Task FulltextSearch_UsesKuzuVerbatimOrEmptyQuerySemantics()
     {
-        // Mirrors graphiti_core/search/search_utils.py:88-92 (KUZU branch of fulltext_query):
-        // the query is returned VERBATIM (no whitespace normalization, no per-term truncation), and
-        // when the single-space word count exceeds MAX_QUERY_LENGTH the search is skipped entirely
-        // (empty string => LadybugSearchExecutor returns no results without querying the index).
+        // The LadybugDB full-text query is used VERBATIM (no whitespace normalization, no per-term
+        // truncation), and when the single-space word count exceeds MaxQueryLength the search is
+        // skipped entirely (empty string => LadybugSearchExecutor returns no results without querying
+        // the index).
         var recorder = new RecordingLadybugExecutor();
         var search = new LadybugSearchExecutor(recorder);
 
@@ -86,8 +86,8 @@ public class LadybugSearchExecutorTests
     [Fact]
     public async Task FulltextSearch_AllowsExactlyMaxQueryLengthWords()
     {
-        // Boundary check: 128 single-space-separated words equals MAX_QUERY_LENGTH and is NOT over
-        // the limit (Python uses a strict `>` comparison at search_utils.py:90), so it still searches.
+        // Boundary check: 128 single-space-separated words equals MaxQueryLength and is NOT over
+        // the limit (a strict `>` comparison), so it still searches.
         var recorder = new RecordingLadybugExecutor();
         var search = new LadybugSearchExecutor(recorder);
         var atLimitQuery = string.Join(" ", Enumerable.Repeat("term", SearchUtilities.MaxQueryLength));
@@ -147,7 +147,7 @@ public class LadybugSearchExecutorTests
     }
 
     [Fact]
-    public async Task BfsSearch_ExecutesStatementPlanDeduplicatesAndLimitsInPythonOrder()
+    public async Task BfsSearch_ExecutesStatementPlanDeduplicatesAndLimitsInExpectedOrder()
     {
         var recorder = new RecordingLadybugExecutor();
         recorder.EnqueueQuery(EntityRecord("node-a", "A"));

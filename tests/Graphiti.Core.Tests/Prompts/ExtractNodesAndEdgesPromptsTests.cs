@@ -5,18 +5,16 @@ using Graphiti.Core.Prompts;
 namespace Graphiti.Core.Tests.Prompts;
 
 /// <summary>
-/// Golden test pinning the rendered combined node+edge extraction prompt to the Python source
-/// (graphiti_core/prompts/extract_nodes_and_edges.py:91-307). The expected text is transcribed
-/// directly from Python, applying ONLY allowed mechanical divergences (compact JSON, ISO-8601
-/// timestamps, em-dash rendered as hyphen). The Unicode glyphs Python uses (U+00B0 degree, U+2264
-/// less-than-or-equal, U+2192 rightwards arrow) are preserved verbatim. A full-string equality
-/// assertion is used deliberately so prose/whitespace drift is caught; if this test fails after an
-/// edit, reconcile against the Python file, not against the builder.
+/// Golden tests pin the rendered combined node+edge extraction prompt; reconcile against parity.md.
+/// Allowed mechanical divergences only: compact JSON, ISO-8601 timestamps, em-dash rendered as
+/// hyphen. The Unicode glyphs used (U+00B0 degree, U+2264 less-than-or-equal, U+2192 rightwards
+/// arrow) are preserved verbatim. A full-string equality assertion is used deliberately so
+/// prose/whitespace drift is caught.
 /// </summary>
 public class ExtractNodesAndEdgesPromptsTests
 {
     [Fact]
-    public void BuildExtractMessage_RendersPythonParityPrompt()
+    public void BuildExtractMessage_RendersExpectedPrompt()
     {
         var episode = new EpisodicNode
         {

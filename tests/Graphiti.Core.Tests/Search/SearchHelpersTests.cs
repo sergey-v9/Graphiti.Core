@@ -3,7 +3,7 @@ namespace Graphiti.Core.Tests.Search;
 public sealed class SearchHelpersTests
 {
     [Fact]
-    public void FormatEdgeDateRange_UsesPythonFallbackLabels()
+    public void FormatEdgeDateRange_UsesFallbackLabels()
     {
         var edge = new EntityEdge();
 
@@ -11,7 +11,7 @@ public sealed class SearchHelpersTests
     }
 
     [Fact]
-    public void FormatEdgeDateRange_RendersInvariantPythonLikeDateTimes()
+    public void FormatEdgeDateRange_RendersInvariantDateTimes()
     {
         var edge = new EntityEdge
         {
@@ -25,7 +25,7 @@ public sealed class SearchHelpersTests
     }
 
     [Fact]
-    public void SearchResultsToContextString_RendersPythonSearchHelperSections()
+    public void SearchResultsToContextString_RendersSearchHelperSections()
     {
         var results = new SearchResults
         {

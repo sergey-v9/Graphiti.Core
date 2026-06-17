@@ -4,10 +4,9 @@ using System.Text.Json.Nodes;
 namespace Graphiti.Core.Prompts;
 
 /// <summary>
-/// Prompt builders ported from Python <c>graphiti_core/prompts/extract_edges.py</c> with context
-/// shaping from <c>utils/maintenance/edge_operations.py::extract_edges</c>. The instruction text is
-/// transcribed near-verbatim per the prompt parity contract in <c>.agents/notes/decisions.md</c>;
-/// golden tests pin the rendered output. Do not reword the prose without a parity reason.
+/// Prompt builders for edge extraction, with the context shaped by the edge-extraction pipeline. The
+/// instruction text follows the prompt parity contract in <c>.agents/notes/decisions.md</c>; golden
+/// tests pin the rendered output. Do not reword the prose without a parity reason.
 /// </summary>
 internal static class ExtractEdgesPrompts
 {
@@ -291,11 +290,11 @@ internal static class ExtractEdgesPrompts
     }
 
     /// <summary>
-    /// Mirrors Python's <c>edge_types_context</c> entries: <c>fact_type_name</c>,
+    /// Builds the <c>edge_types_context</c> entries: <c>fact_type_name</c>,
     /// <c>fact_type_signatures</c> as two-element arrays, and <c>fact_type_description</c>.
     /// Signatures default to <c>["Entity", "Entity"]</c> when the edge type has no mapping. Edge
-    /// types and signatures are emitted in a deterministic sorted order (Python preserves caller
-    /// insertion order, which <c>IReadOnlyDictionary</c> does not guarantee).
+    /// types and signatures are emitted in a deterministic sorted order, since
+    /// <c>IReadOnlyDictionary</c> does not guarantee a stable iteration order.
     /// </summary>
     internal static JsonArray BuildEdgeTypesContext(
         IReadOnlyDictionary<string, EntityTypeDefinition> edgeTypes,

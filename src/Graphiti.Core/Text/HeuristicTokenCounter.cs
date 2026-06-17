@@ -1,8 +1,8 @@
 namespace Graphiti.Core.Text;
 
 /// <summary>
-/// A tokenizer-free token estimator that approximates token count as <c>floor(length / charsPerToken)</c>,
-/// matching Python's fallback chunking heuristic. Used when a real tiktoken model cannot be loaded.
+/// A tokenizer-free token estimator that approximates token count as <c>floor(length / charsPerToken)</c>.
+/// Used as the fallback chunking heuristic when a real tiktoken model cannot be loaded.
 /// </summary>
 public sealed class HeuristicTokenCounter : ITokenCounter
 {

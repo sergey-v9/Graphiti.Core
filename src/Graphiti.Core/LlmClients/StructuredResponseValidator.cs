@@ -35,7 +35,7 @@ internal static class StructuredResponseValidator
             return;
         }
 
-        if (TryGetPythonCoercedResponseElement(response, responseModel, out var coercedElement)
+        if (TryGetCoercedResponseElement(response, responseModel, out var coercedElement)
             && schema.Evaluate(coercedElement).IsValid)
         {
             return;
@@ -106,7 +106,7 @@ internal static class StructuredResponseValidator
     private static JsonElement ToJsonElement(JsonObject response) =>
         JsonSerializer.SerializeToElement(response, GraphitiJsonSerializer.Options);
 
-    private static bool TryGetPythonCoercedResponseElement(
+    private static bool TryGetCoercedResponseElement(
         JsonObject response,
         Type responseModel,
         out JsonElement responseElement)

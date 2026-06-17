@@ -585,7 +585,7 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
-    public async Task NodeSearch_CrossEncoderCollapsesSameNameCandidatesLikePython()
+    public async Task NodeSearch_CrossEncoderCollapsesSameNameCandidates()
     {
         var first = new EntityNode { Uuid = "node-first", Name = "Same", GroupId = "group" };
         var second = new EntityNode { Uuid = "node-second", Name = "Same", GroupId = "group" };
@@ -926,7 +926,7 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
-    public async Task EdgeSearch_CrossEncoderCollapsesDuplicateFactsLikePython()
+    public async Task EdgeSearch_CrossEncoderCollapsesDuplicateFacts()
     {
         var first = new EntityEdge { Uuid = "edge-first", Fact = "same fact", GroupId = "group" };
         var second = new EntityEdge { Uuid = "edge-second", Fact = "same fact", GroupId = "group" };
@@ -1312,7 +1312,7 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
-    public async Task EpisodeSearch_CrossEncoderCollapsesDuplicateContentLikePython()
+    public async Task EpisodeSearch_CrossEncoderCollapsesDuplicateContent()
     {
         var first = new EpisodicNode { Uuid = "episode-first", Name = "First", Content = "same content", GroupId = "group" };
         var second = new EpisodicNode { Uuid = "episode-second", Name = "Second", Content = "same content", GroupId = "group" };
@@ -1417,7 +1417,7 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
-    public async Task CommunitySearch_Bm25MmrStillRunsVectorSearchLikePython()
+    public async Task CommunitySearch_Bm25MmrStillRunsVectorSearch()
     {
         var textCommunity = new CommunityNode
         {
@@ -1661,7 +1661,7 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
-    public async Task CommunitySearch_CrossEncoderCollapsesSameNameCandidatesLikePython()
+    public async Task CommunitySearch_CrossEncoderCollapsesSameNameCandidates()
     {
         var first = new CommunityNode { Uuid = "community-first", Name = "Same", GroupId = "group" };
         var second = new CommunityNode { Uuid = "community-second", Name = "Same", GroupId = "group" };

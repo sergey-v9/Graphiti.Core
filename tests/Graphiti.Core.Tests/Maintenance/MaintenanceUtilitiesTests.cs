@@ -68,7 +68,7 @@ public class MaintenanceUtilitiesTests
     }
 
     [Fact]
-    public void BuildEpisodicEdges_UnmappedResolvedNodeDefaultsToAllEpisodesLikePython()
+    public void BuildEpisodicEdges_UnmappedResolvedNodeDefaultsToAllEpisodes()
     {
         var createdAt = new DateTime(2026, 5, 31, 12, 0, 0, DateTimeKind.Utc);
         var resolvedNode = new EntityNode { Uuid = "resolved-node", GroupId = "group" };

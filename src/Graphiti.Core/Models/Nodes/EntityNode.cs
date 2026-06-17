@@ -61,7 +61,7 @@ public sealed class EntityNode : Node
 
     /// <summary>
     /// Retrieves the entity nodes with the given UUIDs. The optional <paramref name="groupId"/>
-    /// parameter is accepted for Python signature parity but is not applied by Python's fallback query.
+    /// parameter is accepted for signature compatibility but is not applied by the fallback query.
     /// </summary>
     public static Task<IReadOnlyList<EntityNode>> GetByUuidsAsync(
         IGraphDriver driver,

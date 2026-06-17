@@ -5,15 +5,12 @@ using Graphiti.Core.Prompts;
 namespace Graphiti.Core.Tests.Prompts;
 
 /// <summary>
-/// Golden tests pinning the rendered saga summary prompt to the Python source
-/// (graphiti_core/prompts/summarize_sagas.py). The expected text is transcribed independently from
-/// Python; if a test fails after an edit, reconcile against the Python file, not against the
-/// builder.
+/// Golden tests pin the rendered saga summary prompt; reconcile against parity.md.
 /// </summary>
 public class SummarizeSagasPromptsTests
 {
     [Fact]
-    public void BuildSummarizeSaga_RendersPythonParityPrompt()
+    public void BuildSummarizeSaga_RendersExpectedPrompt()
     {
         var saga = new SagaNode
         {
@@ -90,10 +87,10 @@ BAD: "Sam and Dana discussed their work preferences. They talked about morning p
     }
 
     [Fact]
-    public void BuildSummarizeSaga_RendersWhitespaceExistingSummaryLikePython()
+    public void BuildSummarizeSaga_RendersWhitespaceExistingSummary()
     {
-        // Python summarize_sagas.py checks `if existing_summary`, so whitespace-only summaries are
-        // still rendered as existing knowledge. Do not use whitespace-trimming truthiness here.
+        // Whitespace-only existing summaries are still rendered as existing knowledge. Do not use
+        // whitespace-trimming truthiness here.
         var saga = new SagaNode
         {
             Name = "launch",

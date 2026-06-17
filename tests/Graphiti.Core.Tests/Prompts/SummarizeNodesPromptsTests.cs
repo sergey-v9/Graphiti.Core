@@ -3,15 +3,12 @@ using Graphiti.Core.Prompts;
 namespace Graphiti.Core.Tests.Prompts;
 
 /// <summary>
-/// Golden tests pinning the rendered community/node summary prompts to the Python source
-/// (graphiti_core/prompts/summarize_nodes.py). The expected text is transcribed independently from
-/// Python; if a test fails after an edit, reconcile against the Python file, not against the
-/// builder.
+/// Golden tests pin the rendered community/node summary prompt; reconcile against parity.md.
 /// </summary>
 public class SummarizeNodesPromptsTests
 {
     [Fact]
-    public void BuildSummarizePair_RendersPythonParityPrompt()
+    public void BuildSummarizePair_RendersExpectedPrompt()
     {
         var messages = SummarizeNodesPrompts.BuildSummarizePair(
             "Alice manages the Acme launch.",
@@ -43,7 +40,7 @@ public class SummarizeNodesPromptsTests
     }
 
     [Fact]
-    public void BuildSummaryDescription_RendersPythonParityPrompt()
+    public void BuildSummaryDescription_RendersExpectedPrompt()
     {
         var messages = SummarizeNodesPrompts.BuildSummaryDescription(
             "Alice and Bob coordinate the Acme launch.");

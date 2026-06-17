@@ -806,7 +806,7 @@ public class LlmClientTests
     }
 
     [Fact]
-    public async Task GenerateResponse_StopsStructuredValidationRetriesAfterPythonLimit()
+    public async Task GenerateResponse_StopsStructuredValidationRetriesAfterLimit()
     {
         var client = new SequencedStructuredLlmClient(
             new JsonObject { ["ok"] = "first" },
@@ -830,10 +830,10 @@ public class LlmClientTests
     [Fact]
     public async Task GenerateResponse_RetriesEmptyProviderResponseWithFeedback()
     {
-        // Mirrors openai_base_client.py:131-136: an empty/whitespace model response is treated as
-        // "Invalid response from LLM" and routed through the re-prompt-with-feedback retry (line 275),
-        // not silently turned into an empty JSON object. The first provider reply here is whitespace,
-        // so MicrosoftExtensionsAIChatClient raises JsonException and re-prompts; the second is valid.
+        // An empty/whitespace model response is treated as "Invalid response from LLM" and routed
+        // through the re-prompt-with-feedback retry, not silently turned into an empty JSON object.
+        // The first provider reply here is whitespace, so MicrosoftExtensionsAIChatClient raises
+        // JsonException and re-prompts; the second is valid.
         var chatClient = new ScriptedChatClient(
             new ScriptedReply("   "),
             new ScriptedReply("{\"ok\":true}"));
@@ -858,9 +858,9 @@ public class LlmClientTests
     [Fact]
     public async Task GenerateResponse_DoesNotRetryContentFilterRefusal()
     {
-        // Mirrors openai_base_client.py:133-134,263-266: a refusal (RefusalError) is surfaced and NOT
-        // retried. Microsoft.Extensions.AI exposes the refusal only via the ContentFilter finish
-        // reason; that must propagate as a non-retryable LlmRefusalException with no re-prompt.
+        // A refusal is surfaced and NOT retried. Microsoft.Extensions.AI exposes the refusal only via
+        // the ContentFilter finish reason; that must propagate as a non-retryable LlmRefusalException
+        // with no re-prompt.
         var chatClient = new ScriptedChatClient(
             new ScriptedReply("{\"ok\":false}", ChatFinishReason.ContentFilter),
             new ScriptedReply("{\"ok\":true}"));

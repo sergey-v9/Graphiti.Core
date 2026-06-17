@@ -1,7 +1,7 @@
 namespace Graphiti.Core;
 
 /// <summary>
-/// Base exception type for all Graphiti Core errors. Mirrors Python's <c>GraphitiError</c>.
+/// Base exception type for all Graphiti Core errors.
 /// </summary>
 public class GraphitiException : Exception
 {

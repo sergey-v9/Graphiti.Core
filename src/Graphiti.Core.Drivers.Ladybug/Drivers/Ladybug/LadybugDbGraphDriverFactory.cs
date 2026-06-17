@@ -18,7 +18,7 @@ public static class LadybugDbGraphDriverFactory
     /// Creates a LadybugDB-backed graph driver for <paramref name="databasePath"/>.
     /// </summary>
     /// <param name="databasePath">
-    /// The LadybugDB database path. Use an empty string or the Python Kuzu <c>:memory:</c>
+    /// The LadybugDB database path. Use an empty string or the <c>:memory:</c>
     /// sentinel for an in-memory database.
     /// </param>
     public static IGraphDriver Create(string databasePath)

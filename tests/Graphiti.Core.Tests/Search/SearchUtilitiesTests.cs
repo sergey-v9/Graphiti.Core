@@ -5,7 +5,7 @@ namespace Graphiti.Core.Tests.Search;
 public class SearchUtilitiesTests
 {
     [Fact]
-    public void ReciprocalRankFusion_UsesPythonRankConstantAndScoreFormula()
+    public void ReciprocalRankFusion_UsesExpectedRankConstantAndScoreFormula()
     {
         var ranked = SearchUtilities.ReciprocalRankFusion(
             new IReadOnlyList<string>[]
@@ -337,7 +337,7 @@ public class SearchUtilitiesTests
     }
 
     [Fact]
-    public void MaximalMarginalRelevanceWithScores_MatchesPythonScoringShape()
+    public void MaximalMarginalRelevanceWithScores_MatchesExpectedScoringShape()
     {
         var candidates = new[]
         {

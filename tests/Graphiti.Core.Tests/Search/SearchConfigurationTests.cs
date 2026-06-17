@@ -6,7 +6,7 @@ namespace Graphiti.Core.Tests.Search;
 public sealed class SearchConfigurationTests
 {
     [Fact]
-    public void SearchConfig_UsesPythonDefaults()
+    public void SearchConfig_UsesExpectedDefaults()
     {
         var edgeConfig = new EdgeSearchConfig();
         var nodeConfig = new NodeSearchConfig();
@@ -34,7 +34,7 @@ public sealed class SearchConfigurationTests
     }
 
     [Fact]
-    public void Enums_ExposePythonWireValues()
+    public void Enums_ExposeWireValues()
     {
         Assert.Equal("cosine_similarity", EdgeSearchMethod.CosineSimilarity.ToWireValue());
         Assert.Equal("breadth_first_search", NodeSearchMethod.Bfs.ToWireValue());
@@ -45,7 +45,7 @@ public sealed class SearchConfigurationTests
     }
 
     [Fact]
-    public void SearchConfigJson_UsesPythonSnakeCaseAndStringEnums()
+    public void SearchConfigJson_UsesSnakeCaseAndStringEnums()
     {
         var config = new SearchConfig
         {
@@ -77,7 +77,7 @@ public sealed class SearchConfigurationTests
     }
 
     [Fact]
-    public void SearchConfigJson_ReadsPythonSnakeCaseAndStringEnums()
+    public void SearchConfigJson_ReadsSnakeCaseAndStringEnums()
     {
         const string json = """
             {
@@ -105,7 +105,7 @@ public sealed class SearchConfigurationTests
     }
 
     [Fact]
-    public void SearchFiltersJson_UsesPythonSnakeCaseAndComparisonOperators()
+    public void SearchFiltersJson_UsesSnakeCaseAndComparisonOperators()
     {
         var date = new DateTime(2026, 5, 27, 12, 0, 0, DateTimeKind.Utc);
         var filters = new SearchFilters
@@ -131,7 +131,7 @@ public sealed class SearchConfigurationTests
     }
 
     [Fact]
-    public void SearchFiltersJson_ReadsPythonSnakeCaseAndComparisonOperators()
+    public void SearchFiltersJson_ReadsSnakeCaseAndComparisonOperators()
     {
         const string json = """
             {
@@ -192,7 +192,7 @@ public sealed class SearchConfigurationTests
     }
 
     [Fact]
-    public void Recipes_MatchPythonCombinedMmrRecipe()
+    public void Recipes_MatchCombinedMmrRecipe()
     {
         var config = SearchConfigRecipes.CombinedHybridSearchMmr;
 
@@ -211,7 +211,7 @@ public sealed class SearchConfigurationTests
     }
 
     [Fact]
-    public void Recipes_MatchPythonCrossEncoderLimitsAndMethods()
+    public void Recipes_MatchCrossEncoderLimitsAndMethods()
     {
         var edgeConfig = SearchConfigRecipes.EdgeHybridSearchCrossEncoder;
         var nodeConfig = SearchConfigRecipes.NodeHybridSearchCrossEncoder;
@@ -281,7 +281,7 @@ public sealed class SearchConfigurationTests
     }
 
     [Fact]
-    public async Task SearchEngine_AllowsInactiveNumericSearchKnobsLikePython()
+    public async Task SearchEngine_AllowsInactiveNumericSearchKnobs()
     {
         var results = await SearchEngine.NodeSearchAsync(
             new InMemoryGraphDriver(),

@@ -5,14 +5,13 @@ using System.Text.Json.Nodes;
 namespace Graphiti.Core.Search;
 
 /// <summary>
-/// Public formatting helpers for turning search results into LLM-ready context, mirroring
-/// <c>graphiti_core.search.search_helpers</c>.
+/// Public formatting helpers for turning search results into LLM-ready context.
 /// </summary>
 public static class SearchHelpers
 {
     /// <summary>
     /// Formats an entity edge's validity window as
-    /// <c>"valid_at - invalid_at"</c>, using Python's fallback labels for missing dates.
+    /// <c>"valid_at - invalid_at"</c>, using fallback labels for missing dates.
     /// </summary>
     public static string FormatEdgeDateRange(EntityEdge edge)
     {
@@ -21,8 +20,8 @@ public static class SearchHelpers
     }
 
     /// <summary>
-    /// Reformats a <see cref="SearchResults"/> object into the same sectioned context string that
-    /// Python's <c>search_results_to_context_string</c> returns for direct use in LLM prompts.
+    /// Reformats a <see cref="SearchResults"/> object into a sectioned context string
+    /// for direct use in LLM prompts.
     /// </summary>
     public static string SearchResultsToContextString(SearchResults searchResults)
     {

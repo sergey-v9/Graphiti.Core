@@ -145,9 +145,8 @@ public sealed class MicrosoftExtensionsAIChatClient : LlmClient
         new(new ChatRole(message.Role), message.Content);
 
     /// <summary>
-    /// Surfaces a non-retryable refusal when the provider signals a content filter. Mirrors Python's
-    /// RefusalError path (openai_base_client.py:133-134), which is excluded from the retry loop
-    /// (line 263-266). Microsoft.Extensions.AI does not expose a structured refusal field through the
+    /// Surfaces a non-retryable refusal when the provider signals a content filter, excluding it from
+    /// the retry loop. Microsoft.Extensions.AI does not expose a structured refusal field through the
     /// abstraction, so the only refusal signal reliably available is
     /// <see cref="ChatFinishReason.ContentFilter"/>; an explicit textual refusal that the provider
     /// reports with a normal finish reason cannot be distinguished here and falls through to JSON
@@ -166,11 +165,9 @@ public sealed class MicrosoftExtensionsAIChatClient : LlmClient
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            // Mirrors openai_base_client.py:131-136: an empty/whitespace model response is NOT a
-            // valid (empty) object but a failure -- Python raises `Exception('Invalid response from
-            // LLM')`, which routes through its generic-Exception retry (line 275) to re-prompt with
-            // feedback. Throwing JsonException here routes the same way through
-            // LlmClient.GenerateValidatedResponseWithRetryAsync instead of silently returning {}.
+            // An empty/whitespace model response is a failure, not a valid (empty) object. Throwing
+            // JsonException here routes through LlmClient.GenerateValidatedResponseWithRetryAsync to
+            // re-prompt with feedback instead of silently returning {}.
             throw new JsonException("Invalid response from LLM: the model returned an empty response.");
         }
 

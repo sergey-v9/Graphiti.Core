@@ -236,7 +236,7 @@ public class NamespaceTests
     }
 
     [Fact]
-    public async Task InMemoryNodeStorage_PreservesCrossTypeUuidBoundariesLikePython()
+    public async Task InMemoryNodeStorage_PreservesCrossTypeUuidBoundaries()
     {
         var driver = new InMemoryGraphDriver();
         const string uuid = "shared-node";
@@ -389,7 +389,7 @@ public class NamespaceTests
     }
 
     [Fact]
-    public async Task EdgeModel_DeleteByUuidsDoesNotDeleteSagaEdgesLikePython()
+    public async Task EdgeModel_DeleteByUuidsDoesNotDeleteSagaEdges()
     {
         var driver = new InMemoryGraphDriver();
         var entity = new EntityEdge
@@ -455,7 +455,7 @@ public class NamespaceTests
     }
 
     [Fact]
-    public async Task InMemoryEdgeStorage_PreservesCrossTypeUuidBoundariesLikePython()
+    public async Task InMemoryEdgeStorage_PreservesCrossTypeUuidBoundaries()
     {
         var driver = new InMemoryGraphDriver();
         const string uuid = "shared-edge";
@@ -557,7 +557,7 @@ public class NamespaceTests
     }
 
     [Fact]
-    public async Task EdgeNamespaces_ReturnEmptyForAllMissingPluralReadsLikePythonNamespaces()
+    public async Task EdgeNamespaces_ReturnEmptyForAllMissingPluralReads()
     {
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(graphDriver: driver);

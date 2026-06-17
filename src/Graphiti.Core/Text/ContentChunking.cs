@@ -187,7 +187,7 @@ public static partial class ContentChunking
             if (wordIndex > 0 && !previousWordEndsSentence)
             {
                 var cleaned = TrimDensityWord(word);
-                if (cleaned.Length > 0 && char.IsUpper(cleaned[0]) && !IsUpperLikePython(cleaned))
+                if (cleaned.Length > 0 && char.IsUpper(cleaned[0]) && !IsAllUpperWord(cleaned))
                 {
                     capitalizedCount++;
                 }
@@ -1202,7 +1202,7 @@ public static partial class ContentChunking
     private static bool PreviousWordEndsSentence(ReadOnlySpan<char> word) =>
         word.Length > 0 && word[^1] is '.' or '!' or '?';
 
-    private static bool IsUpperLikePython(ReadOnlySpan<char> text)
+    private static bool IsAllUpperWord(ReadOnlySpan<char> text)
     {
         var hasLetter = false;
         foreach (var character in text)

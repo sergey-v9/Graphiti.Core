@@ -5,7 +5,7 @@ namespace Graphiti.Core.Tests.Models;
 public class NodeModelTests
 {
     [Fact]
-    public async Task DeleteByGroupIdAsync_DoesNotDeleteSagaNodesLikePython()
+    public async Task DeleteByGroupIdAsync_DoesNotDeleteSagaNodes()
     {
         var driver = new InMemoryGraphDriver();
         var entity = new EntityNode { Uuid = "entity", Name = "Entity", GroupId = "tenant" };
@@ -24,7 +24,7 @@ public class NodeModelTests
     }
 
     [Fact]
-    public async Task DeleteByUuidsAsync_DoesNotDeleteSagaNodesLikePython()
+    public async Task DeleteByUuidsAsync_DoesNotDeleteSagaNodes()
     {
         var driver = new InMemoryGraphDriver();
         var entity = new EntityNode { Uuid = "entity", Name = "Entity", GroupId = "tenant" };
@@ -46,7 +46,7 @@ public class NodeModelTests
     }
 
     [Fact]
-    public async Task EntityNodeGetByUuidsAsync_IgnoresGroupIdLikePython()
+    public async Task EntityNodeGetByUuidsAsync_IgnoresGroupId()
     {
         var driver = new InMemoryGraphDriver();
         var entity = new EntityNode { Uuid = "entity", Name = "Entity", GroupId = "tenant-a" };

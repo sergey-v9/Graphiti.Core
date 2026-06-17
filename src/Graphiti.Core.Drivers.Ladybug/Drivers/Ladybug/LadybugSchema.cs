@@ -1,9 +1,8 @@
 namespace Graphiti.Core.Drivers.Ladybug;
 
 /// <summary>
-/// Foundation LadybugDB schema ported from Python's Kuzu driver. Entity facts are represented as
-/// intermediate <c>RelatesToNode_</c> nodes because Kuzu/Ladybug cannot index relationship
-/// properties the same way Neo4j can.
+/// Foundation LadybugDB schema. Entity facts are represented as intermediate
+/// <c>RelatesToNode_</c> nodes because LadybugDB cannot index relationship properties directly.
 /// </summary>
 internal static class LadybugSchema
 {

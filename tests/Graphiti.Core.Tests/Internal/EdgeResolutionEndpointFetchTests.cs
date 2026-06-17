@@ -7,13 +7,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Graphiti.Core.Tests.Internal;
 
 /// <summary>
-/// Covers the edge-type signature resolution endpoint fetch ported from Python
-/// <c>resolve_extracted_edges</c> (edge_operations.py:439-486): an edge endpoint absent from the
-/// resolved-node set is DB-fetched by UUID only (Python's default-driver
-/// <c>EntityNode.get_by_uuids</c>, nodes.py:609-632, ignores group_id on the core path) so its real
-/// labels participate in signature matching, and an endpoint that is still missing falls back to
-/// ["Entity"] labels. Without these, a custom edge type for an override/cross-pair endpoint was
-/// silently lost.
+/// Covers edge-type signature resolution's endpoint fetch: an edge endpoint absent from the
+/// resolved-node set is DB-fetched by UUID only (no group filter) so its real labels participate in
+/// signature matching, and an endpoint that is still missing falls back to ["Entity"] labels.
+/// Without these, a custom edge type for an override/cross-pair endpoint was silently lost.
 /// </summary>
 public class EdgeResolutionEndpointFetchTests
 {
@@ -92,7 +89,7 @@ public class EdgeResolutionEndpointFetchTests
     {
         var driver = new InMemoryGraphDriver();
         // The target endpoint (Acme, an Organization) lives ONLY in the database - it is not part of
-        // the resolved-node set passed to resolution. Python DB-fetches it before signature matching.
+        // the resolved-node set passed to resolution. It is DB-fetched before signature matching.
         await driver.SaveNodeAsync(new EntityNode
         {
             Uuid = "acme-uuid",
@@ -155,9 +152,9 @@ public class EdgeResolutionEndpointFetchTests
     {
         var driver = new InMemoryGraphDriver();
         // The target endpoint (Acme, an Organization) lives in a DIFFERENT group than the edge/episode.
-        // Python's default-driver EntityNode.get_by_uuids (nodes.py:609-632) matches by UUID only and
-        // ignores group_id on the core path, so this cross-group endpoint is still fetched and its real
-        // Organization label survives. Scoping the fetch by the edge's group_id would drop it and the
+        // The endpoint fetch matches by UUID only and ignores group_id, so this cross-group endpoint
+        // is still fetched and its real Organization label survives. Scoping the fetch by the edge's
+        // group_id would drop it and the
         // custom WORKS_AT edge type (with its confidence attribute) would be silently lost.
         await driver.SaveNodeAsync(new EntityNode
         {
@@ -248,7 +245,7 @@ public class EdgeResolutionEndpointFetchTests
         };
 
         // Signature requires (Person, Entity): the missing target endpoint (never saved, so not in the
-        // DB either) must still match because Python falls back to labels=['Entity'] for it.
+        // DB either) must still match because a missing endpoint falls back to labels=['Entity'].
         var edgeTypes = new Dictionary<string, EntityTypeDefinition>
         {
             ["WORKS_AT"] = new(
@@ -533,7 +530,7 @@ public class EdgeResolutionEndpointFetchTests
     }
 
     [Fact]
-    public async Task ResolveEdgeWithLlm_SortsInvalidatedEdgesByValidAtLikePython()
+    public async Task ResolveEdgeWithLlm_SortsInvalidatedEdgesByValidAt()
     {
         var driver = new InMemoryGraphDriver();
         var fixedNow = new DateTime(2026, 4, 1, 12, 0, 0, DateTimeKind.Utc);

@@ -36,7 +36,7 @@ public sealed class SearchFilterTests
     }
 
     [Fact]
-    public void SearchFilterCompiler_IgnoresPropertyFiltersLikePython()
+    public void SearchFilterCompiler_IgnoresPropertyFilters()
     {
         var filters = new SearchFilters
         {
@@ -166,7 +166,7 @@ public sealed class SearchFilterTests
     }
 
     [Fact]
-    public void CompiledSearchFilter_DateFiltersUsePythonOrOfAndGroups()
+    public void CompiledSearchFilter_DateFiltersUseOrOfAndGroups()
     {
         var januaryStart = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var februaryStart = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);

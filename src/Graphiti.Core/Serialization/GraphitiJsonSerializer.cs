@@ -7,7 +7,7 @@ namespace Graphiti.Core.Serialization;
 /// <summary>
 /// Provides the canonical <see cref="JsonSerializerOptions"/> used across the library. Configures
 /// snake_case property naming, relaxed escaping, source-generated type metadata, and the wire-value
-/// enum converters so serialized output matches the Python implementation's JSON shape.
+/// enum converters that produce the library's stable JSON wire shape.
 /// </summary>
 public static class GraphitiJsonSerializer
 {

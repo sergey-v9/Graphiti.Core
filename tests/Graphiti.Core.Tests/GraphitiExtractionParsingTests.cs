@@ -59,7 +59,7 @@ public class GraphitiExtractionParsingTests
     [Theory]
     [InlineData("EpisodeNode")]
     [InlineData("Combined")]
-    public void ExtractionResponseSchemas_RequireCoercibleEntityTypeIdsLikePython(string responseKind)
+    public void ExtractionResponseSchemas_RequireCoercibleEntityTypeIds(string responseKind)
     {
         var responseModel = responseKind == "Combined"
             ? typeof(Graphiti.CombinedExtractionResponse)
@@ -102,7 +102,7 @@ public class GraphitiExtractionParsingTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ExtractEntityNames_RejectsMissingOrInvalidEntityTypeIdsLikePython(bool includeInvalidId)
+    public void ExtractEntityNames_RejectsMissingOrInvalidEntityTypeIds(bool includeInvalidId)
     {
         var entity = new JsonObject { ["name"] = "Alice" };
         if (includeInvalidId)
@@ -119,7 +119,7 @@ public class GraphitiExtractionParsingTests
     }
 
     [Fact]
-    public void ExtractEntityNames_ResolvesEntityTypeIdsToDeclaredKeysLikePython()
+    public void ExtractEntityNames_ResolvesEntityTypeIdsToDeclaredKeys()
     {
         var response = new JsonObject
         {
@@ -247,10 +247,9 @@ public class GraphitiExtractionParsingTests
     [Fact]
     public void ExtractEdges_SkipsEdgesMissingRelationTypeInsteadOfFabricatingRelatesTo()
     {
-        // relation_type is a required Pydantic field on Edge (extract_edges.py:32-35) and CombinedFact
-        // (extract_nodes_and_edges.py:44-48); Python rejects a response whose edge lacks one. The C#
-        // parser must NOT invent a "RELATES_TO" default — it skips the edge instead (no-fabrication
-        // parity contract in .agents/notes/decisions.md).
+        // relation_type is a required field on both the edge and combined-fact shapes; a response whose
+        // edge lacks one is rejected. The C# parser must NOT invent a "RELATES_TO" default — it skips
+        // the edge instead (no-fabrication parity contract in .agents/notes/decisions.md).
         var response = new JsonObject
         {
             ["edges"] = new JsonArray
@@ -349,7 +348,7 @@ public class GraphitiExtractionParsingTests
     }
 
     [Fact]
-    public void EpisodeAttribution_NormalizesIndicesLikePythonExtraction()
+    public void EpisodeAttribution_NormalizesIndices()
     {
         Assert.Equal(
             new[] { 2, 0 },
@@ -363,7 +362,7 @@ public class GraphitiExtractionParsingTests
     }
 
     [Fact]
-    public void EpisodeAttribution_ReferenceTimeUsesFirstRawIndexLikePython()
+    public void EpisodeAttribution_ReferenceTimeUsesFirstRawIndex()
     {
         var fallback = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var second = new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc);

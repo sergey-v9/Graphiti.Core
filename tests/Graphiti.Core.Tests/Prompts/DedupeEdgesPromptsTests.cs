@@ -4,10 +4,7 @@ using Graphiti.Core.Prompts;
 namespace Graphiti.Core.Tests.Prompts;
 
 /// <summary>
-/// Golden tests pinning the rendered edge-deduplication prompt to the Python source
-/// (graphiti_core/prompts/dedupe_edges.py). The expected text is transcribed independently from
-/// Python; if a test fails after an edit, reconcile against the Python file, not against the
-/// builder.
+/// Golden tests pin the rendered edge-deduplication prompt; reconcile against parity.md.
 /// </summary>
 public class DedupeEdgesPromptsTests
 {
@@ -19,7 +16,7 @@ public class DedupeEdgesPromptsTests
     };
 
     [Fact]
-    public void BuildResolveEdge_RendersPythonParityPrompt()
+    public void BuildResolveEdge_RendersExpectedPrompt()
     {
         var newEdge = CreateEdge("Alice works at Acme Corp as a senior engineer.");
         var relatedEdges = new[]

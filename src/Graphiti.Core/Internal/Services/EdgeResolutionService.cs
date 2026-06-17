@@ -99,11 +99,10 @@ internal sealed class EdgeResolutionService(
             var skippedEdges = 0;
             var nodesByUuid = BuildNodesByUuid(nodes);
 
-            // Python edge_operations.py:439-455 augments uuid_entity_map by DB-fetching any edge
-            // endpoint UUID absent from the resolved-node set (by UUID only on the default-driver path)
-            // before signature resolution, so an override/cross-pair endpoint that is not in `nodes`
-            // still contributes its real labels and a custom edge type is not silently lost. Mirror that
-            // here; FindEdgeTypeDefinition then falls back to ["Entity"] only when still missing.
+            // Augment the resolved-node map by DB-fetching any edge endpoint UUID absent from it (by
+            // UUID only) before signature resolution, so an override/cross-pair endpoint that is not
+            // in `nodes` still contributes its real labels and a custom edge type is not silently
+            // lost. FindEdgeTypeDefinition then falls back to ["Entity"] only when still missing.
             await FetchMissingEndpointNodesAsync(
                 extractedEdges,
                 nodesByUuid,
@@ -112,11 +111,10 @@ internal sealed class EdgeResolutionService(
 
             var attributeSchemaCache = new ConcurrentDictionary<EntityTypeDefinition, StructuredResponseSchema>();
 
-            // Serial preparation pass (mirrors Python resolve_extracted_edges:344-358 fast-path
-            // dedup): keep the first occurrence of each (source, target, normalized fact) within the
-            // batch, drop later duplicates (attaching only this episode's uuid to the kept edge), and
-            // initialise per-edge fields. Ordering is preserved so the concurrent gather and result
-            // collection below remain deterministic.
+            // Serial preparation pass (fast-path dedup): keep the first occurrence of each (source,
+            // target, normalized fact) within the batch, drop later duplicates (attaching only this
+            // episode's uuid to the kept edge), and initialise per-edge fields. Ordering is preserved
+            // so the concurrent gather and result collection below remain deterministic.
             var prepared = new List<EntityEdge>(extractedEdges.Count);
             foreach (var candidate in extractedEdges)
             {
@@ -135,10 +133,9 @@ internal sealed class EdgeResolutionService(
                     NormalizedFact: NormalizeFact(candidate.Fact));
                 if (seen.TryGetValue(key, out var duplicateCandidate))
                 {
-                    // Python resolve_extracted_edges (edge_operations.py:344-358) keeps the first
-                    // occurrence and drops later within-batch duplicates without merging their
-                    // episode lists; the kept edge picks up the current episode's uuid during its
-                    // own resolution. Attach only the resolution episode here.
+                    // Keep the first occurrence and drop later within-batch duplicates without merging
+                    // their episode lists; the kept edge picks up the current episode's uuid during
+                    // its own resolution. Attach only the resolution episode here.
                     EdgeMergeHelpers.AddEpisodeIfMissing(duplicateCandidate, episode.Uuid);
                     resolvedEdgeUuidMap?.TryAdd(candidate.Uuid, duplicateCandidate.Uuid);
                     skippedEdges++;
@@ -159,13 +156,12 @@ internal sealed class EdgeResolutionService(
                 prepared.Add(candidate);
             }
 
-            // Concurrent resolve pass (mirrors Python's semaphore_gather over resolve_extracted_edge,
-            // edge_operations.py:489-509). Each prepared edge runs its independent between-nodes
-            // fetch, duplicate/invalidation searches, and LLM resolution. Mutations to existing graph
-            // edges shared across candidates (episode attribution, contradiction expiry) are
-            // serialised under sharedEdgeMutationLock so real-thread parallelism stays as safe as
-            // Python's cooperative single-thread async. SelectAsync preserves input order in the
-            // returned array, keeping the result collection deterministic.
+            // Concurrent resolve pass over the prepared edges. Each prepared edge runs its independent
+            // between-nodes fetch, duplicate/invalidation searches, and LLM resolution. Mutations to
+            // existing graph edges shared across candidates (episode attribution, contradiction
+            // expiry) are serialised under sharedEdgeMutationLock so real-thread parallelism stays
+            // safe. SelectAsync preserves input order in the returned array, keeping the result
+            // collection deterministic.
             var sharedEdgeMutationLock = new object();
             var outcomes = await ThrottledWork.SelectAsync(
                 prepared,
@@ -183,7 +179,7 @@ internal sealed class EdgeResolutionService(
                 getMaxDegreeOfParallelism?.Invoke() ?? GraphitiHelpers.DefaultSemaphoreLimit,
                 cancellationToken).ConfigureAwait(false);
 
-            // Serial collection pass in input order (mirrors edge_operations.py:511-526).
+            // Serial collection pass in input order.
             foreach (var outcome in outcomes)
             {
                 resolvedEdgeUuidMap?.TryAdd(outcome.ExtractedEdgeUuid, outcome.ResolvedEdge.Uuid);
@@ -232,17 +228,16 @@ internal sealed class EdgeResolutionService(
             candidate.SourceNodeUuid,
             candidate.TargetNodeUuid,
             cancellationToken).ConfigureAwait(false);
-        // Python edge_operations.py:376-390 appends per-pair override edges onto the
-        // between-nodes (valid_edges) list before the duplicate-candidate hybrid search.
+        // Append per-pair override edges onto the between-nodes (valid_edges) list before the
+        // duplicate-candidate hybrid search.
         betweenNodesEdges = EdgeMergeHelpers.MergeEdgeOverrides(
             betweenNodesEdges,
             existingEdgesOverride,
             edge => edge.SourceNodeUuid == candidate.SourceNodeUuid && edge.TargetNodeUuid == candidate.TargetNodeUuid);
 
-        // Python edge_operations.py:392-405 re-searches the valid_edges via
-        // EDGE_HYBRID_SEARCH_RRF (SearchFilters(edge_uuids=[...]), default limit 10,
-        // sim_min_score 0.6) and feeds the reranked/truncated result (in relevance order)
-        // to the resolve_edge prompt as the EXISTING FACTS / duplicate candidates.
+        // Re-search the valid_edges via EDGE_HYBRID_SEARCH_RRF (SearchFilters(edge_uuids=[...]),
+        // default limit 10, sim_min_score 0.6) and feed the reranked/truncated result (in relevance
+        // order) to the resolve_edge prompt as the EXISTING FACTS / duplicate candidates.
         var relatedEdges = await GetEdgeDuplicateCandidatesAsync(
             candidate,
             groupId,
@@ -327,9 +322,9 @@ internal sealed class EdgeResolutionService(
                 TargetNodeUuid = targetNode.Uuid,
                 GroupId = groupId,
                 CreatedAt = now,
-                // Python uses name=edge_data.relation_type with no fallback (edge_operations.py:302);
-                // relation_type is a required field, and ExtractEdges/BuildCombinedEdges now skip any
-                // edge lacking one, so there is no empty value to fabricate a "RELATES_TO" name from.
+                // Use relation_type directly with no fallback: it is a required field, and
+                // ExtractEdges/BuildCombinedEdges already skip any edge lacking one, so there is no
+                // empty value to fabricate a "RELATES_TO" name from.
                 Name = extracted.RelationType,
                 Fact = extracted.Fact,
                 Episodes = EpisodeAttribution.MapIndicesToEpisodeUuids(extracted.EpisodeIndices, episodes),
@@ -352,10 +347,10 @@ internal sealed class EdgeResolutionService(
         string extractedName,
         out EntityNode node)
     {
-        // Python extract_edges builds a plain dict keyed by node.name and validates LLM edge
-        // endpoints through exact string membership before resolving UUIDs. Some C# node-resolution
-        // maps are case-insensitive for other dedupe paths, so enumerate keys here to preserve the
-        // separate edge-extraction validation contract.
+        // Edge endpoints are validated through exact, case-sensitive string membership against the
+        // by-name map before resolving UUIDs. Some node-resolution maps are case-insensitive for
+        // other dedupe paths, so enumerate keys here to preserve the separate edge-extraction
+        // validation contract.
         foreach (var pair in nodesByExtractedName)
         {
             if (string.Equals(pair.Key, extractedName, StringComparison.Ordinal))
@@ -406,8 +401,8 @@ internal sealed class EdgeResolutionService(
         IReadOnlyList<EntityEdge>? existingEdgesOverride,
         CancellationToken cancellationToken)
     {
-        // Python edge_operations.py:392-405 builds the duplicate-candidate list by re-searching the
-        // valid_edges (between-nodes edges plus per-pair overrides) via EDGE_HYBRID_SEARCH_RRF with
+        // Build the duplicate-candidate list by re-searching the valid_edges (between-nodes edges
+        // plus per-pair overrides) via EDGE_HYBRID_SEARCH_RRF with
         // SearchFilters(edge_uuids=[valid_edges uuids]). The reranked, limit-10 result (in relevance
         // order) is what the resolve_edge prompt sees as EXISTING FACTS.
         var validEdgeUuids = new List<string>(betweenNodesEdges.Count);
@@ -421,9 +416,9 @@ internal sealed class EdgeResolutionService(
             }
         }
 
-        // Python applies the edge_uuids filter whenever it is not None (search_filters.py:132), so an
-        // empty valid_edges list yields zero matches. Short-circuit the same case here to avoid doing
-        // a backend search whose active empty edge_uuids predicate cannot return candidates.
+        // The edge_uuids filter is applied whenever it is set, so an empty valid_edges list yields
+        // zero matches. Short-circuit that case here to avoid a backend search whose active empty
+        // edge_uuids predicate cannot return candidates.
         if (validEdgeUuids.Count == 0)
         {
             return Array.Empty<EntityEdge>();
@@ -509,10 +504,9 @@ internal sealed class EdgeResolutionService(
             }
         }
 
-        // Python edge_operations.py:407-418 runs the invalidation search with a plain
-        // SearchFilters() and never injects existing_edges_override into the invalidation
-        // candidate list (overrides are merged only into the duplicate/related path,
-        // edge_operations.py:376-390). The benign override object-substitution above is kept
+        // The invalidation search runs with a plain SearchFilters() and never injects
+        // existing_edges_override into the invalidation candidate list (overrides are merged only
+        // into the duplicate/related path). The benign override object-substitution above is kept
         // because it only swaps richer override instances in for search-returned UUIDs.
         return candidates;
     }
@@ -548,8 +542,8 @@ internal sealed class EdgeResolutionService(
             return (extractedEdge, Array.Empty<EntityEdge>());
         }
 
-        // Python resolve_extracted_edge fast-paths exact duplicate facts only after the
-        // duplicate-candidate search, scanning the reranked/truncated related_edges set.
+        // Fast-path exact duplicate facts only after the duplicate-candidate search, scanning the
+        // reranked/truncated related_edges set.
         var duplicate = FindDuplicateFact(
             relatedEdges,
             NormalizeFact(extractedEdge.Fact),
@@ -581,9 +575,9 @@ internal sealed class EdgeResolutionService(
             : extractedEdge;
         if (resolvedEdge.Uuid != extractedEdge.Uuid)
         {
-            // Python resolve_extracted_edge LLM path (edge_operations.py:751-752) appends only
-            // episode.uuid to the matched existing (duplicate) edge. This mutates a shared graph
-            // edge, so guard the append when running under the concurrent gather.
+            // The LLM path appends only episode.uuid to the matched existing (duplicate) edge. This
+            // mutates a shared graph edge, so guard the append when running under the concurrent
+            // gather.
             RunSharedEdgeMutation(
                 sharedEdgeMutationLock,
                 () => EdgeMergeHelpers.AddEpisodeIfMissing(resolvedEdge, episode.Uuid));
@@ -628,9 +622,9 @@ internal sealed class EdgeResolutionService(
         }
 
         // Expiry of the resolved edge and contradiction handling write invalid_at/expired_at on the
-        // resolved edge and on shared invalidation-candidate edges (Python edge_operations.py:820-840
-        // and resolve_edge_contradictions:538-573). Serialise under the gather lock to keep these
-        // in-place mutations atomic; the returned invalidated set is still collected in input order.
+        // resolved edge and on shared invalidation-candidate edges. Serialise under the gather lock
+        // to keep these in-place mutations atomic; the returned invalidated set is still collected in
+        // input order.
         List<EntityEdge> invalidatedEdges;
         if (sharedEdgeMutationLock is null)
         {
@@ -651,8 +645,8 @@ internal sealed class EdgeResolutionService(
 
     private static void SortInvalidationCandidatesByValidAt(List<EntityEdge> invalidationCandidates)
     {
-        // Python uses list.sort(key=lambda c: (c.valid_at is None, ensure_utc(c.valid_at))).
-        // Keep the sort stable so equal timestamps preserve the LLM/index order.
+        // Sort by (valid_at is null, valid_at as UTC). Keep the sort stable so equal timestamps
+        // preserve the LLM/index order.
         for (var i = 1; i < invalidationCandidates.Count; i++)
         {
             var candidate = invalidationCandidates[i];
@@ -774,12 +768,11 @@ internal sealed class EdgeResolutionService(
 
     /// <summary>
     /// DB-fetches edge endpoint nodes that are referenced by the extracted edges but absent from the
-    /// resolved-node set, adding them to <paramref name="nodesByUuid"/>. Mirrors Python
-    /// <c>resolve_extracted_edges</c> (edge_operations.py:439-455): it only matters for node-signature
-    /// resolution, so the fetch is skipped when there is no edge-type map to match against. The lookup
-    /// matches by UUID only, like Python's default-driver <c>EntityNode.get_by_uuids</c>
-    /// (nodes.py:609-632), so cross-group endpoints are still fetched. Endpoints still missing after
-    /// the fetch are handled by <c>FindEdgeTypeDefinition</c>'s ["Entity"] fallback.
+    /// resolved-node set, adding them to <paramref name="nodesByUuid"/>. This only matters for
+    /// node-signature resolution, so the fetch is skipped when there is no edge-type map to match
+    /// against. The lookup matches by UUID only, so cross-group endpoints are still fetched. Endpoints
+    /// still missing after the fetch are handled by <c>FindEdgeTypeDefinition</c>'s ["Entity"]
+    /// fallback.
     /// </summary>
     private async Task FetchMissingEndpointNodesAsync(
         IReadOnlyList<EntityEdge> extractedEdges,
@@ -811,13 +804,10 @@ internal sealed class EdgeResolutionService(
             return;
         }
 
-        // Python's default-driver EntityNode.get_by_uuids (nodes.py:609-632) matches by UUID ONLY:
-        // "MATCH (n:Entity) WHERE n.uuid IN $uuids". The group_id forwarded by edge_operations.py:450
-        // is consumed solely by the optional graph_operations_interface (nodes.py:611-614) and is
-        // ignored on the core path. Scoping the C# fetch by group_id would drop a cross-group endpoint
-        // that Python would fetch (losing the node labels that select the edge's custom type), so we
-        // fetch by UUID only. All C# drivers treat a null groupId as "no group filter"
-        // (InMemoryGraphDriver.cs:342, LadybugGraphDriver.cs:389).
+        // The endpoint fetch matches by UUID ONLY ("MATCH (n:Entity) WHERE n.uuid IN $uuids"); no
+        // group filter is applied. Scoping the fetch by group_id would drop a cross-group endpoint
+        // (losing the node labels that select the edge's custom type), so fetch by UUID only. All
+        // drivers treat a null groupId as "no group filter".
         var fetched = await driverAccessor()
             .GetNodesByUuidsAsync<EntityNode>(missing, groupId: null, cancellationToken)
             .ConfigureAwait(false);

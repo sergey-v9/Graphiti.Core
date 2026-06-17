@@ -88,7 +88,7 @@ public sealed class InMemoryGraphDriverCloneTests
     }
 
     [Fact]
-    public async Task SaveNodeAsync_DoesNotPersistEpisodeMetadataLikePython()
+    public async Task SaveNodeAsync_DoesNotPersistEpisodeMetadata()
     {
         var driver = new InMemoryGraphDriver();
         var nested = new Dictionary<string, object?> { ["source"] = "stored" };

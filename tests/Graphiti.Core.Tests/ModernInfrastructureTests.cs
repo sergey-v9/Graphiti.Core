@@ -1246,7 +1246,7 @@ public class ModernInfrastructureTests
 
     [Theory]
     [MemberData(nameof(EpisodeTypeWireValues))]
-    public void EpisodeTypeExtensions_RoundTripPythonWireValues(
+    public void EpisodeTypeExtensions_RoundTripWireValues(
         EpisodeType episodeType,
         string wireValue)
     {
@@ -1296,7 +1296,7 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public void GraphitiJsonSerializer_UsesPythonSnakeCaseForCoreModels()
+    public void GraphitiJsonSerializer_UsesSnakeCaseForCoreModels()
     {
         var node = new EntityNode
         {
@@ -1322,7 +1322,7 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public void GraphitiJsonSerializer_ReadsPythonSnakeCaseForCoreModels()
+    public void GraphitiJsonSerializer_ReadsSnakeCaseForCoreModels()
     {
         const string nodeJson = """
             {

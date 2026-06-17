@@ -1,9 +1,10 @@
 namespace Graphiti.Core.Prompts;
 
 /// <summary>
-/// Prompt builder ported from Python <c>graphiti_core/prompts/extract_nodes_and_edges.py</c>.
-/// The combined path extracts entities and relationship facts in one response. Keep the prose in
-/// sync with Python; compact JSON formatting is the same accepted divergence as other prompt ports.
+/// Prompt builder for combined extraction: the combined path extracts entities and relationship
+/// facts in one response. The instruction text follows the prompt parity contract in
+/// <c>.agents/notes/decisions.md</c>; compact JSON formatting is the same accepted rendering
+/// divergence as the other prompt builders. Golden tests pin the rendered output.
 /// </summary>
 internal static class ExtractNodesAndEdgesPrompts
 {

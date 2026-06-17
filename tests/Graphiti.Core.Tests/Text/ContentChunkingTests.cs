@@ -189,7 +189,7 @@ public class ContentChunkingTests
     }
 
     [Fact]
-    public void ChunkJsonContent_ExplicitZeroOverlapUsesPythonDefaultOverlap()
+    public void ChunkJsonContent_ExplicitZeroOverlapUsesDefaultOverlap()
     {
         var original = ContentChunking.TokenCounter;
         try
@@ -522,7 +522,7 @@ public class ContentChunkingTests
     }
 
     [Fact]
-    public void TextLikelyDense_PreservesPythonWhitespaceSplitting()
+    public void TextLikelyDense_PreservesWhitespaceSplitting()
     {
         Assert.True(ContentChunking.TextLikelyDense("  Alice Bob", tokens: 100, densityThreshold: 0.01));
         Assert.True(ContentChunking.TextLikelyDense("x\tAlice\nBob", tokens: 100, densityThreshold: 0.01));
@@ -543,7 +543,7 @@ public class ContentChunkingTests
     }
 
     [Fact]
-    public void TextLikelyDense_TrimsPythonPunctuationForEntityWords()
+    public void TextLikelyDense_TrimsPunctuationForEntityWords()
     {
         const string text = "lead Alice met Carol near (Delta) and [Eve] while NASA stayed quiet.";
 
@@ -623,7 +623,7 @@ public class ContentChunkingTests
     [InlineData(30, 15, 5)]
     [InlineData(50, 5, 0)]
     [InlineData(100, 4, 0)]
-    public void GenerateCoveringChunks_CoversPythonSampledEdgeCases(
+    public void GenerateCoveringChunks_CoversSampledEdgeCases(
         int n,
         int k,
         int minimumChunkCount)

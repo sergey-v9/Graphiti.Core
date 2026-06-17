@@ -335,7 +335,7 @@ public class InMemorySearchGraphDriverTests
     }
 
     [Fact]
-    public async Task InMemorySearchDriver_IgnoresPropertyFiltersLikePython()
+    public async Task InMemorySearchDriver_IgnoresPropertyFilters()
     {
         var driver = new InMemoryGraphDriver();
         var searchDriver = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);

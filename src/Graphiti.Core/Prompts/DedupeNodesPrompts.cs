@@ -4,10 +4,9 @@ using System.Text.Json.Nodes;
 namespace Graphiti.Core.Prompts;
 
 /// <summary>
-/// Prompt builders ported from Python <c>graphiti_core/prompts/dedupe_nodes.py</c> with context
-/// shaping from <c>utils/maintenance/node_operations.py::_resolve_with_llm</c>. The instruction
-/// text is transcribed near-verbatim per the prompt parity contract in
-/// <c>.agents/notes/decisions.md</c>; golden tests pin the rendered output.
+/// Prompt builders for node deduplication, with the context shaped by LLM node resolution. The
+/// instruction text follows the prompt parity contract in <c>.agents/notes/decisions.md</c>; golden
+/// tests pin the rendered output.
 /// </summary>
 internal static class DedupeNodesPrompts
 {
@@ -151,10 +150,8 @@ internal static class DedupeNodesPrompts
         EntityNode node,
         IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
     {
-        // Python _get_entity_type_description (node_operations.py:184-189) selects ONLY the
-        // first label != "Entity" (default ""), does a SINGLE lookup, and returns its
-        // description if non-empty else "Default Entity Type". It never falls through to
-        // later labels.
+        // Select ONLY the first label != "Entity" (default ""), do a SINGLE lookup, and return its
+        // description if non-empty else "Default Entity Type". Never fall through to later labels.
         var typeName = string.Empty;
         for (var i = 0; i < node.Labels.Count; i++)
         {

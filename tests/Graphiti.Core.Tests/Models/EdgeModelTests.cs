@@ -5,7 +5,7 @@ namespace Graphiti.Core.Tests.Models;
 public class EdgeModelTests
 {
     [Fact]
-    public async Task EntityEdgeGetByGroupIdsAsync_ThrowsWhenNoEdgesLikePython()
+    public async Task EntityEdgeGetByGroupIdsAsync_ThrowsWhenNoEdges()
     {
         var driver = new InMemoryGraphDriver();
 
@@ -14,7 +14,7 @@ public class EdgeModelTests
     }
 
     [Fact]
-    public async Task EpisodicEdgeGetByGroupIdsAsync_ThrowsWhenNoEdgesLikePython()
+    public async Task EpisodicEdgeGetByGroupIdsAsync_ThrowsWhenNoEdges()
     {
         var driver = new InMemoryGraphDriver();
 

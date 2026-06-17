@@ -20,12 +20,12 @@ public enum EpisodeType
 }
 
 /// <summary>
-/// Conversions between <see cref="EpisodeType"/> and the lowercase string wire values used by the
-/// Python implementation (for example <c>"fact_triple"</c>), preserving cross-language compatibility.
+/// Conversions between <see cref="EpisodeType"/> and the lowercase string wire values
+/// (for example <c>"fact_triple"</c>), preserving cross-language compatibility.
 /// </summary>
 public static class EpisodeTypeExtensions
 {
-    /// <summary>Returns the Python-compatible wire string for the episode type.</summary>
+    /// <summary>Returns the wire string for the episode type.</summary>
     public static string ToWireValue(this EpisodeType source) =>
         source switch
         {

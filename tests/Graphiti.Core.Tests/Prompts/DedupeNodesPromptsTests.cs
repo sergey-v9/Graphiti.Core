@@ -5,10 +5,7 @@ using Graphiti.Core.Prompts;
 namespace Graphiti.Core.Tests.Prompts;
 
 /// <summary>
-/// Golden tests pinning the rendered node-deduplication prompt to the Python source
-/// (graphiti_core/prompts/dedupe_nodes.py). The expected text is transcribed independently from
-/// Python; if a test fails after an edit, reconcile against the Python file, not against the
-/// builder.
+/// Golden tests pin the rendered node-deduplication prompt; reconcile against parity.md.
 /// </summary>
 public class DedupeNodesPromptsTests
 {
@@ -30,7 +27,7 @@ public class DedupeNodesPromptsTests
     };
 
     [Fact]
-    public void BuildNodes_RendersPythonParityPrompt()
+    public void BuildNodes_RendersExpectedPrompt()
     {
         var episode = CreateEpisode(
             "Alice: I saw NYC and Java mentioned together.",
@@ -143,10 +140,10 @@ public class DedupeNodesPromptsTests
     [Fact]
     public void BuildNodes_EntityTypeDescription_UsesFirstNonEntityLabelOnly()
     {
-        // Python _get_entity_type_description (node_operations.py:184-189) selects ONLY the first
-        // label != "Entity", does a SINGLE lookup, and falls back to "Default Entity Type" when
-        // that label is absent from entity_types. It NEVER falls through to later labels, even if a
-        // later label (here "Location") IS present with a description.
+        // Only the first label != "Entity" is selected; a SINGLE lookup is done, and it falls back
+        // to "Default Entity Type" when that label is absent from entity_types. It NEVER falls
+        // through to later labels, even if a later label (here "Location") IS present with a
+        // description.
         var episode = CreateEpisode(
             "Alice mentioned an unknown place.",
             new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc));

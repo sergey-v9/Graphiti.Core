@@ -4,8 +4,8 @@ namespace Graphiti.Core.Search;
 
 /// <summary>
 /// Constraints applied to search candidates before ranking. The temporal fields use a list-of-lists
-/// shape where each inner list is combined with AND and the outer list is combined with OR (matching
-/// the Python filter semantics). Setting <see cref="NodeLabels"/> validates the labels.
+/// shape where each inner list is combined with AND and the outer list is combined with OR. Setting
+/// <see cref="NodeLabels"/> validates the labels.
 /// </summary>
 public sealed class SearchFilters
 {

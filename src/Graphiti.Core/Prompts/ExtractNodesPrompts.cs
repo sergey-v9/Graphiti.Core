@@ -5,10 +5,9 @@ using Graphiti.Core.Text;
 namespace Graphiti.Core.Prompts;
 
 /// <summary>
-/// Prompt builders ported from Python <c>graphiti_core/prompts/extract_nodes.py</c> with context
-/// shaping from <c>utils/maintenance/node_operations.py::extract_nodes</c>. The instruction text is
-/// transcribed near-verbatim per the prompt parity contract in <c>.agents/notes/decisions.md</c>;
-/// golden tests pin the rendered output. Do not reword the prose without a parity reason.
+/// Prompt builders for node extraction, with the context shaped by the node-extraction pipeline. The
+/// instruction text follows the prompt parity contract in <c>.agents/notes/decisions.md</c>; golden
+/// tests pin the rendered output. Do not reword the prose without a parity reason.
 /// </summary>
 internal static class ExtractNodesPrompts
 {
@@ -121,8 +120,8 @@ internal static class ExtractNodesPrompts
     }
 
     /// <summary>
-    /// Dispatches on the episode source the way Python <c>node_operations.py</c> selects the
-    /// prompt version: message, json, or text (the fallback for every other source).
+    /// Selects the prompt version by episode source: message, json, or text (the fallback for every
+    /// other source).
     /// </summary>
     internal static Message[] Build(EpisodeType source, in NodeExtractionContext context) =>
         source switch
@@ -656,10 +655,9 @@ internal static class ExtractNodesPrompts
             return string.Empty;
         }
 
-        // Python (extract_nodes.py:494-498) only short-circuits when the whole descriptions mapping is
-        // empty/None ("if not descriptions: return ''"); it then serializes every entry verbatim via
-        // to_prompt_json with no per-value filter. Mirror that: keep the whole-section check above but
-        // render each description (including empty strings) in the input's iteration order.
+        // Only the whole-mapping empty case short-circuits (handled above): when any descriptions are
+        // present, every entry is serialized verbatim with no per-value filter. Each description
+        // (including empty strings) is rendered in the input's iteration order.
         var descriptions = new JsonObject();
         foreach (var pair in entityTypeDescriptions)
         {

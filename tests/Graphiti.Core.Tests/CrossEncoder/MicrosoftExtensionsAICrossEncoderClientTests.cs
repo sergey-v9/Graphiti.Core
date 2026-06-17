@@ -52,8 +52,8 @@ public class MicrosoftExtensionsAICrossEncoderClientTests
         Assert.Equal(3, chatClient.Calls.Count);
         Assert.All(chatClient.Options, option =>
         {
-            // Mirrors openai_reranker_client.py:87 `model=self.config.model or DEFAULT_MODEL`: the
-            // reranker uses the PRIMARY model, never the configured small model.
+            // The reranker uses the configured model, falling back to the default reranker model when
+            // unset: the reranker uses the PRIMARY model, never the configured small model.
             Assert.Equal("large-model", option.ModelId);
             Assert.Equal(64, option.MaxOutputTokens);
             Assert.Equal(0f, option.Temperature);
@@ -72,10 +72,10 @@ public class MicrosoftExtensionsAICrossEncoderClientTests
     public async Task RankIndexedAsync_RendersExactRerankerSystemAndUserPrompt()
     {
         // Golden full-string assertion of the reranker system + user prompt. The system prompt and the
-        // first user sentence are transcribed VERBATIM from Python openai_reranker_client.py:61-78. The
-        // single added sentence ("Return your decision and confidence as JSON matching the provided
-        // schema.") is the one documented divergence required by the structured boolean+confidence
-        // scoring (decisions.md, "the M.E.AI cross-encoder user prompt adds one sentence"). Python's
+        // first user sentence are transcribed VERBATIM from the upstream reranker prompt. The single
+        // added sentence ("Return your decision and confidence as JSON matching the provided schema.")
+        // is the one documented divergence required by the structured boolean+confidence scoring
+        // (decisions.md, "the M.E.AI cross-encoder user prompt adds one sentence"). The upstream
         // leading indentation on each user line is an allowed mechanical whitespace divergence.
         var chatClient = new RelevanceChatClient(static _ => "{\"is_relevant\":true,\"confidence\":0.5}");
         var client = new MicrosoftExtensionsAICrossEncoderClient(chatClient, maxConcurrency: 1);
@@ -124,9 +124,8 @@ public class MicrosoftExtensionsAICrossEncoderClientTests
     [Fact]
     public async Task RankIndexedAsync_DefaultsToPrimaryRerankerModelWhenNoConfig()
     {
-        // Mirrors openai_reranker_client.py:87 with config.model unset: `config.model or DEFAULT_MODEL`
-        // falls back to gpt-4.1-nano (DEFAULT_MODEL, line 31). The no-config constructor sets the
-        // primary model to DefaultModel, so requests must target gpt-4.1-nano.
+        // With config.model unset, the reranker falls back to the default reranker model.
+        // The no-config constructor sets the primary model to DefaultModel, so requests must target it.
         var chatClient = new RelevanceChatClient(static _ => "{\"is_relevant\":true,\"confidence\":0.5}");
         var client = new MicrosoftExtensionsAICrossEncoderClient(chatClient, maxConcurrency: 1);
 

@@ -3,9 +3,8 @@ using System.Text.Json.Nodes;
 namespace Graphiti.Core.Prompts;
 
 /// <summary>
-/// Prompt builders ported from Python <c>graphiti_core/prompts/summarize_nodes.py</c>. The
-/// instruction text is transcribed near-verbatim per the prompt parity contract in
-/// <c>.agents/notes/decisions.md</c>; golden tests pin the rendered output.
+/// Prompt builders for node summarization. The instruction text follows the prompt parity contract
+/// in <c>.agents/notes/decisions.md</c>; golden tests pin the rendered output.
 /// </summary>
 internal static class SummarizeNodesPrompts
 {

@@ -13,18 +13,17 @@ using Microsoft.Extensions.AI;
 
 // Eval harness for the Graphiti C# port. Two modes:
 //
-//   (default)  GRAPH-BUILDING regression eval. Mirrors Python
-//              tests/evals/eval_e2e_graph_building.py::eval_graph. Ingests the fixture episodes to
+//   (default)  GRAPH-BUILDING regression eval. Ingests the fixture episodes to
 //              build a CANDIDATE graph, capturing each AddEpisodeResults. A persisted baseline
 //              artifact (eval-artifacts/baseline_graph_results.json) provides the BASELINE: if it
-//              exists it is loaded and the ported eval_add_episode_results LLM judge
-//              (graphiti_core/prompts/eval.py) decides, per episode, whether the candidate extraction
-//              is WORSE than the baseline; otherwise this run writes the artifact and establishes the
-//              baseline (no judging). Score = fraction of episodes whose candidate is NOT worse.
+//              exists it is loaded and the eval_add_episode_results LLM judge decides, per episode,
+//              whether the candidate extraction is WORSE than the baseline; otherwise this run writes
+//              the artifact and establishes the baseline (no judging). Score = fraction of episodes
+//              whose candidate is NOT worse.
 //
 //   --qa       RETRIEVAL-QA eval. Ingests the same fixture, and for each gold (question, answer) pair
 //              retrieves facts, forms a candidate answer from the TOP-1 retrieved fact only, and scores
-//              it with the ported eval_prompt LLM judge. Includes a distractor question whose gold
+//              it with the eval_prompt LLM judge. Includes a distractor question whose gold
 //              answer is NOT in the fixture: a perfect pass there would signal a retrieval/judge leak.
 //
 // Both modes are gated on OPENAI_API_KEY (exit 2 if absent), use temperature 0, and bound the
@@ -174,20 +173,20 @@ return qaMode
     : await RunGraphBuildingAsync();
 
 // ===============================================================================================
-// GRAPH-BUILDING regression eval (default). Mirrors eval_e2e_graph_building.py::eval_graph.
+// GRAPH-BUILDING regression eval (default).
 // ===============================================================================================
 async Task<int> RunGraphBuildingAsync()
 {
     // Persisted-artifact baseline: stable, gitignored path. The first run establishes it; later runs
     // load it and judge the current (candidate) extraction against it for cross-run regression
-    // detection (Python writes baseline_graph_results.json / candidate_graph_results.json).
+    // detection, writing baseline_graph_results.json / candidate_graph_results.json.
     var artifactDir = Path.Combine(AppContext.BaseDirectory, "eval-artifacts");
     Directory.CreateDirectory(artifactDir);
     var baselinePath = Path.Combine(artifactDir, "baseline_graph_results.json");
     var candidatePath = Path.Combine(artifactDir, "candidate_graph_results.json");
 
     // Serialize the candidate per-episode extraction results with stable snake_case Graphiti JSON,
-    // nulling embeddings first (Python eval_e2e clears name_embedding/fact_embedding before dumping).
+    // nulling embeddings first (name_embedding/fact_embedding are cleared before serializing).
     var candidateJsonByEpisode = episodes
         .Select((episode, index) => SerializeResult(addResults[index]))
         .ToList();
@@ -235,10 +234,8 @@ async Task<int> RunGraphBuildingAsync()
     var notWorse = 0;
     for (var i = 0; i < episodeCount; i++)
     {
-        // Context mirrors eval_e2e_graph_building.py:161-166: the current MESSAGE plus the PREVIOUS
-        // messages, with the BASELINE and CANDIDATE graph extractions to compare. (Python slices the
-        // message string char-wise via episodes[0]/episodes[1:], a latent bug; we pass the real message
-        // body and the joined prior bodies, which is the clearly-intended meaning.)
+        // Context is the current MESSAGE plus the PREVIOUS messages, with the BASELINE and CANDIDATE
+        // graph extractions to compare. Pass the real message body and the joined prior bodies.
         var message = episodes[i].Body;
         var previousMessages = i == 0
             ? "[]"
@@ -373,8 +370,8 @@ async Task<int> RunRetrievalQaAsync()
 
 string SerializeResult(AddEpisodeResults result)
 {
-    // Clear embeddings so the artifact is stable and free of float noise (Python eval_e2e nulls
-    // name_embedding/fact_embedding before model_dump). Only the result graph shape is compared.
+    // Clear embeddings so the artifact is stable and free of float noise (name_embedding/
+    // fact_embedding are nulled before serializing). Only the result graph shape is compared.
     foreach (var node in result.Nodes)
     {
         node.NameEmbedding = null;

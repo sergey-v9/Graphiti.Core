@@ -19,10 +19,9 @@ internal static class EntityTypeResolver
             return edgeType;
         }
 
-        // Python edge_operations.py:464-469 treats an endpoint missing from uuid_entity_map (even after
-        // the DB fetch in resolve_extracted_edges:447-455) as labels=['Entity'] rather than dropping the
-        // custom edge type. Mirror that: a null node behaves as an Entity-only node, so a signature whose
-        // relevant side is "Entity" still matches.
+        // An endpoint missing from the resolved-node map (even after the DB fetch) is treated as
+        // labels=['Entity'] rather than dropping the custom edge type: a null node behaves as an
+        // Entity-only node, so a signature whose relevant side is "Entity" still matches.
         nodesByUuid.TryGetValue(edge.SourceNodeUuid, out var source);
         nodesByUuid.TryGetValue(edge.TargetNodeUuid, out var target);
 
@@ -111,9 +110,8 @@ internal static class EntityTypeResolver
 
     private static bool NodeHasEffectiveLabel(EntityNode? node, string label)
     {
-        // "Entity" is appended to every node's labels in Python (source_node.labels + ['Entity']),
-        // and a node missing from uuid_entity_map is treated as ['Entity'] only — so a null node
-        // matches only the "Entity" label.
+        // "Entity" is an effective label on every node, and a node missing from the resolved-node
+        // map is treated as ['Entity'] only — so a null node matches only the "Entity" label.
         if (string.Equals(label, "Entity", StringComparison.OrdinalIgnoreCase))
         {
             return true;

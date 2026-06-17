@@ -7,7 +7,7 @@ namespace Graphiti.Core.Tests.Drivers.Ladybug;
 public class LadybugFoundationTests
 {
     [Fact]
-    public void LadybugSchema_PortsPythonKuzuTablesWithoutClaimingFulltext()
+    public void LadybugSchema_DefinesTablesWithoutClaimingFulltext()
     {
         foreach (var table in LadybugSchema.NodeTables)
         {
@@ -436,7 +436,7 @@ public class LadybugFoundationTests
     }
 
     [Fact]
-    public void RecordMapper_DeserializesAttributesLikePythonKuzuParser()
+    public void RecordMapper_DeserializesAttributes()
     {
         var entity = LadybugRecordMapper.MapEntityNode(new Dictionary<string, object?>
         {

@@ -233,10 +233,9 @@ internal sealed class CommunityService(
         foreach (var node in cluster)
         {
             // Seed the pairwise reduction with the RAW entity summary, not name-prefixed
-            // text or a filtered subset. Python build_community
-            // (community_operations.py:177) uses `entity.summary` directly, including
-            // empty strings; for a single-node cluster this seed is persisted verbatim
-            // via truncate_at_sentence (:199).
+            // text or a filtered subset: the entity summary is used directly, including
+            // empty strings. For a single-node cluster this seed is persisted verbatim
+            // (sentence-truncated).
             summaries.Add(node.Summary);
         }
         if (summaries.Count == 0)
@@ -344,9 +343,7 @@ internal sealed class CommunityService(
             return (Array.Empty<CommunityNode>(), Array.Empty<CommunityEdge>());
         }
 
-        // Pair the RAW entity summary with the existing community summary, matching
-        // Python update_community (community_operations.py:336):
-        // summarize_pair(llm_client, (entity.summary, community.summary)).
+        // Pair the RAW entity summary with the existing community summary and summarize the pair.
         var newSummary = await GeneratePairSummaryAsync(
             entity.Summary,
             community.Summary,

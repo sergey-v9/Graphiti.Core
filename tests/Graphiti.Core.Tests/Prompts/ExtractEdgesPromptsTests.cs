@@ -5,10 +5,7 @@ using Graphiti.Core.Prompts;
 namespace Graphiti.Core.Tests.Prompts;
 
 /// <summary>
-/// Golden tests pinning the rendered edge-extraction prompt to the Python source
-/// (graphiti_core/prompts/extract_edges.py). The expected text is transcribed independently from
-/// Python; if a test fails after an edit, reconcile against the Python file, not against the
-/// builder.
+/// Golden tests pin the rendered edge-extraction prompt; reconcile against parity.md.
 /// </summary>
 public class ExtractEdgesPromptsTests
 {
@@ -30,7 +27,7 @@ public class ExtractEdgesPromptsTests
     };
 
     [Fact]
-    public void BuildEdge_RendersPythonParityPrompt()
+    public void BuildEdge_RendersExpectedPrompt()
     {
         var episode = CreateEpisode("Alice: I met Bob at Acme Corp.");
         var context = ExtractEdgesPrompts.BuildContext(
@@ -272,7 +269,7 @@ public class ExtractEdgesPromptsTests
     }
 
     [Fact]
-    public void BuildExtractTimestamps_RendersPythonParityPrompt()
+    public void BuildExtractTimestamps_RendersExpectedPrompt()
     {
         var messages = ExtractEdgesPrompts.BuildExtractTimestamps(
             "Alice worked at Acme until February.",
@@ -311,7 +308,7 @@ public class ExtractEdgesPromptsTests
     }
 
     [Fact]
-    public void BuildExtractTimestampsBatch_RendersPythonParityPrompt()
+    public void BuildExtractTimestampsBatch_RendersExpectedPrompt()
     {
         var edges = new[]
         {
@@ -365,7 +362,7 @@ public class ExtractEdgesPromptsTests
     }
 
     [Fact]
-    public void BuildExtractAttributes_RendersPythonParityPrompt()
+    public void BuildExtractAttributes_RendersExpectedPrompt()
     {
         var messages = ExtractEdgesPrompts.BuildExtractAttributes(
             "Alice works at Acme as a senior engineer since last week.",

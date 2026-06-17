@@ -366,10 +366,9 @@ public sealed partial class Graphiti
                     entityTypes,
                     EdgeMergeHelpers.FilterEdgesByUuid(entityEdges, newEdgeUuids),
                     cancellationToken).ConfigureAwait(false);
-                // Bulk summaries must NOT append edge facts. Python _resolve_nodes_and_edges_bulk
-                // (graphiti.py:875-886) calls extract_attributes_from_nodes with no edges argument
-                // (edges defaults to None -> _build_edges_by_node returns {} -> nodes with short
-                // summaries keep them verbatim). Pass an empty edge collection to match.
+                // Bulk summaries must NOT append edge facts: attribute extraction runs with no edges,
+                // so nodes with short summaries keep them verbatim. Pass an empty edge collection so
+                // no edge facts are appended in the bulk path.
                 await _entitySummaryService.ExtractEntitySummariesAsync(
                     resolvedNodes,
                     episode,
@@ -499,11 +498,9 @@ public sealed partial class Graphiti
             extractedEpisodes.ToList(),
             async (extraction, token) =>
             {
-                // Do NOT widen the candidate pool with the whole group. Python
-                // dedupe_nodes_bulk first pass (bulk_utils.py:389-400) calls
-                // resolve_extracted_nodes with no existing_nodes_override, so candidates come
-                // solely from the driver's per-name semantic search
-                // (node_operations.py:407-450). Pass null to mirror the FINAL pass and rely on
+                // Do NOT widen the candidate pool with the whole group. The bulk first pass resolves
+                // nodes with no existing-nodes override, so candidates come solely from the driver's
+                // per-name semantic search. Pass null to match the final pass and rely on
                 // NodeResolutionService's ISearchGraphDriver search for candidates.
                 var resolution = await _nodeResolutionService.ResolveExtractedNodesAsync(
                     extraction.Nodes,
@@ -916,7 +913,7 @@ public sealed partial class Graphiti
             }
             catch (EdgeNotFoundException)
             {
-                // Python only treats same-type entity edges as UUID collisions here.
+                // Only same-type entity edges are treated as UUID collisions here.
             }
 
             var betweenNodesEdges = await tripletDriver.GetEntityEdgesBetweenNodesAsync(

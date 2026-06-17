@@ -61,7 +61,7 @@ public class GraphitiOptionsValidationTests
     }
 
     [Fact]
-    public async Task MaxCoroutines_ZeroIsAcceptedLikePythonDefault()
+    public async Task MaxCoroutines_ZeroIsAcceptedAsDefault()
     {
         await using var graphiti = new Graphiti(
             graphDriver: new InMemoryGraphDriver(),
@@ -225,7 +225,7 @@ public class GraphitiOptionsValidationTests
         };
 
     [Fact]
-    public void ResilienceDefaults_MatchPythonRetryShape()
+    public void ResilienceDefaults_MatchExpectedRetryShape()
     {
         var options = new GraphitiResilienceOptions();
 

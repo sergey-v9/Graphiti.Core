@@ -69,7 +69,7 @@ public static partial class GraphitiHelpers
 
     /// <summary>
     /// Parses a date value returned from a graph backend (a <see cref="DateTime"/>,
-    /// <see cref="DateTimeOffset"/>, or Python-compatible ISO string) into UTC, returning
+    /// <see cref="DateTimeOffset"/>, or ISO-8601 string) into UTC, returning
     /// <c>null</c> for null input.
     /// </summary>
     public static DateTime? ParseDbDate(object? input)
@@ -125,7 +125,7 @@ public static partial class GraphitiHelpers
             return false;
         }
 
-        if (!TryParsePythonIsoDateTime(text.AsSpan(), out var dateTime))
+        if (!TryParseIsoDateTime(text.AsSpan(), out var dateTime))
         {
             return false;
         }
@@ -134,7 +134,7 @@ public static partial class GraphitiHelpers
         return true;
     }
 
-    private static bool TryParsePythonIsoDateTime(ReadOnlySpan<char> text, out DateTime parsed)
+    private static bool TryParseIsoDateTime(ReadOnlySpan<char> text, out DateTime parsed)
     {
         parsed = default;
         if (!TryParseIsoDate(text, out var date, out var consumed))
@@ -551,11 +551,9 @@ public static partial class GraphitiHelpers
     /// <summary>Returns the provider-specific default group id (FalkorDB needs a non-empty value).</summary>
     public static string GetDefaultGroupId(GraphProvider provider)
     {
-        // FalkorDB's default group id is '_' (a clean, validator-safe value). Mirrors
-        // graphiti_core/helpers.py get_default_group_id after upstream #1549 (ff7e29c): the old
-        // '\_' failed validate_group_id (backslashes are rejected) and broke the FalkorDB
-        // quickstart out of the box. '_' passes ValidateGroupId below, removing that latent
-        // self-inconsistency here too.
+        // FalkorDB's default group id is '_': a clean, validator-safe value. A backslash-prefixed
+        // value would fail ValidateGroupId below (backslashes are rejected), so '_' keeps the
+        // default group id self-consistent with the validator and usable out of the box.
         return provider == GraphProvider.FalkorDb ? "_" : string.Empty;
     }
 
@@ -670,7 +668,7 @@ public static partial class GraphitiHelpers
 
             sortedAvailableTypes.Sort(StringComparer.Ordinal);
             throw new ArgumentException(
-                $"Invalid excluded entity types: {FormatPythonStringList(invalidTypes)}. Available types: {FormatPythonStringList(sortedAvailableTypes)}",
+                $"Invalid excluded entity types: {FormatStringList(invalidTypes)}. Available types: {FormatStringList(sortedAvailableTypes)}",
                 nameof(excludedEntityTypes));
         }
     }
@@ -698,7 +696,7 @@ public static partial class GraphitiHelpers
         }
     }
 
-    private static string FormatPythonStringList(List<string> values)
+    private static string FormatStringList(List<string> values)
     {
         if (values.Count == 0)
         {
@@ -707,18 +705,18 @@ public static partial class GraphitiHelpers
 
         var builder = new StringBuilder();
         builder.Append('[');
-        AppendPythonStringLiteral(builder, values[0]);
+        AppendStringLiteral(builder, values[0]);
         for (var i = 1; i < values.Count; i++)
         {
             builder.Append(", ");
-            AppendPythonStringLiteral(builder, values[i]);
+            AppendStringLiteral(builder, values[i]);
         }
 
         builder.Append(']');
         return builder.ToString();
     }
 
-    private static void AppendPythonStringLiteral(StringBuilder builder, string value)
+    private static void AppendStringLiteral(StringBuilder builder, string value)
     {
         var quote = value.Contains('\'')
             && !value.Contains('"')
@@ -756,9 +754,8 @@ public static partial class GraphitiHelpers
     }
 
     /// <summary>
-    /// Escapes Lucene query special characters so a raw query can be passed to a full-text index.
-    /// Mirrors the Python implementation exactly, including escaping the uppercase letters used by
-    /// Lucene boolean operators (O, R, N, T, A, D).
+    /// Escapes Lucene query special characters so a raw query can be passed to a full-text index,
+    /// including the uppercase letters used by Lucene boolean operators (O, R, N, T, A, D).
     /// </summary>
     public static string LuceneSanitize(string query)
     {
@@ -871,7 +868,7 @@ public static partial class GraphitiHelpers
 
     /// <summary>
     /// Runs the operations concurrently and returns their results in input order. When
-    /// <paramref name="maxConcurrency"/> is null or zero, the Python-compatible default cap of
+    /// <paramref name="maxConcurrency"/> is null or zero, the default cap of
     /// 20 is used; otherwise concurrency is capped at the supplied positive value.
     /// </summary>
     public static async Task<IReadOnlyList<T>> SemaphoreGatherAsync<T>(

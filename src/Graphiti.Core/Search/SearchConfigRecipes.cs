@@ -1,8 +1,8 @@
 namespace Graphiti.Core.Search;
 
 /// <summary>
-/// Ready-made <see cref="SearchConfig"/> presets mirroring the Python <c>search_config_recipes</c>
-/// module. Each recipe selects which result types are searched (edges/nodes/episodes/communities),
+/// Ready-made <see cref="SearchConfig"/> presets. Each recipe selects which result types are
+/// searched (edges/nodes/episodes/communities),
 /// the retrieval methods (BM25 full-text, cosine-similarity embeddings, and breadth-first traversal),
 /// and the reranker (RRF, MMR, graph node-distance, episode-mention count, or cross-encoder). Use
 /// these as a starting point and customize the returned config as needed.

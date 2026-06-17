@@ -331,7 +331,7 @@ public class SearchResultComposerTests
     }
 
     [Fact]
-    public void EpisodeMentionsSort_OrdersEdgesButKeepsScoresInPreSortOrderLikePython()
+    public void EpisodeMentionsSort_OrdersEdgesButKeepsScoresInPreSortOrder()
     {
         var firstTie = new EntityEdge { Uuid = "first", Episodes = { "a" } };
         var most = new EntityEdge { Uuid = "most", Episodes = { "a", "b" } };

@@ -515,7 +515,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddTriplet_EdgeUuidCollisionWithNonEntityEdgePreservesUuidLikePython()
+    public async Task AddTriplet_EdgeUuidCollisionWithNonEntityEdgePreservesUuid()
     {
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(graphDriver: driver, llmClient: new StaticLlmClient(new JsonObject()));
@@ -818,7 +818,7 @@ public class GraphitiWorkflowTests
     [Theory]
     [InlineData(null)]
     [InlineData(0)]
-    public async Task GetNodesAndEdgesByEpisode_NullOrZeroMaxCoroutinesUsesPythonSemaphoreLimit(int? maxCoroutines)
+    public async Task GetNodesAndEdgesByEpisode_NullOrZeroMaxCoroutinesUsesDefaultSemaphoreLimit(int? maxCoroutines)
     {
         var driver = new EmptyEdgeSearchGraphDriver
         {
@@ -1233,7 +1233,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddEpisode_MapsPythonStyleEntityTypeIdsToLabels()
+    public async Task AddEpisode_MapsEntityTypeIdsToLabels()
     {
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(
@@ -2123,7 +2123,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddEpisodeBulk_UsesPythonDefaultBulkConcurrencyAndPreservesInputOrder()
+    public async Task AddEpisodeBulk_UsesDefaultBulkConcurrencyAndPreservesInputOrder()
     {
         var driver = new InMemoryGraphDriver();
         var llm = new BulkExtractionTrackingLlmClient();
@@ -2550,7 +2550,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddEpisodeBulk_SkipsExcludedTypeValidationLikePython()
+    public async Task AddEpisodeBulk_SkipsExcludedTypeValidation()
     {
         var driver = new InMemoryGraphDriver();
         var llm = new StaticLlmClient(new JsonObject
@@ -2611,7 +2611,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddEpisodeBulk_SkipsProtectedEntityAttributeValidationLikePython()
+    public async Task AddEpisodeBulk_SkipsProtectedEntityAttributeValidation()
     {
         var driver = new InMemoryGraphDriver();
         var llm = new StaticLlmClient(new JsonObject
@@ -3370,12 +3370,9 @@ public class GraphitiWorkflowTests
     [Fact]
     public async Task AddEpisodeBulk_DoesNotAppendEdgeFactsToExistingShortSummary()
     {
-        // Python _resolve_nodes_and_edges_bulk (graphiti.py:875-886) calls
-        // extract_attributes_from_nodes with NO edges argument, so the bulk summary path runs
-        // _build_edges_by_node(None) -> {} (node_operations.py:714-715) and a node with an
-        // existing short summary keeps it verbatim (node_operations.py:868-878). Bulk ingestion
-        // must therefore NOT concatenate edge facts onto an entity's existing summary, unlike the
-        // single-episode path (graphiti.py:1166 passes edges=new_edges).
+        // The bulk attribute-extraction path receives NO edges, so a node with an existing short
+        // summary keeps it verbatim. Bulk ingestion must therefore NOT concatenate edge facts onto
+        // an entity's existing summary, unlike the single-episode path, which passes the new edges.
         var driver = new InMemoryGraphDriver();
         var existing = new EntityNode
         {
@@ -4721,7 +4718,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task SummarizeSaga_HardTruncatesLongSummaryLikePython()
+    public async Task SummarizeSaga_HardTruncatesLongSummary()
     {
         var driver = new InMemoryGraphDriver();
         var longSummary = "Complete sentence. " + new string('x', TextUtilities.MaxSummaryChars + 50);
@@ -4760,7 +4757,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task SummarizeSaga_PreservesEmptyTypedLlmSummaryLikePython()
+    public async Task SummarizeSaga_PreservesEmptyTypedLlmSummary()
     {
         var driver = new InMemoryGraphDriver();
         var llm = new StaticLlmClient(new JsonObject { ["summary"] = string.Empty });
