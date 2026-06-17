@@ -1807,7 +1807,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         var groupIds = new List<string>(index.Count);
         foreach (var pair in index)
         {
-            if (pair.Value.Count > 0 && !string.IsNullOrEmpty(pair.Key))
+            if (pair.Value.Count > 0)
             {
                 groupIds.Add(pair.Key);
             }

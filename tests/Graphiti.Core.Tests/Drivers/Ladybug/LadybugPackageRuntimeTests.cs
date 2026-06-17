@@ -868,8 +868,8 @@ public class LadybugPackageRuntimeTests
         var entityGroupIds = await driver.GetEntityGroupIdsAsync();
         var communityGroupIds = await driver.GetCommunityGroupIdsAsync();
 
-        Assert.Equal(new[] { "tenant-a", "tenant-b" }, entityGroupIds);
-        Assert.Equal(new[] { "community-a", "community-z" }, communityGroupIds);
+        Assert.Equal(new[] { string.Empty, "tenant-a", "tenant-b" }, entityGroupIds);
+        Assert.Equal(new[] { string.Empty, "community-a", "community-z" }, communityGroupIds);
     }
 
     [Fact]

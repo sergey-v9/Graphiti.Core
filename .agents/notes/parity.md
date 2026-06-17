@@ -114,6 +114,12 @@ share a UUID without overwriting each other; entity, episodic, community, has-ep
 next-episode edges can do the same. `AddTripletAsync` now preserves a submitted EntityEdge UUID when
 only a non-entity edge has that UUID, matching Python's same-type collision check.
 
+**2026-06-17 build-communities group-discovery follow-up:** closed the public workflow group-selection
+drift. Python discovers entity groups only when `group_ids is None`; an explicit `[]` clears existing
+communities and builds none. C# now preserves that null-vs-empty distinction. InMemory and LadybugDB
+group discovery also now include the default empty-string group like Python's `WHERE n.group_id IS
+NOT NULL` discovery query, so omitted `BuildCommunitiesAsync()` rebuilds default-group graphs.
+
 **2026-06-14 saga prompt truthiness follow-up:** closed a small prompt-rendering drift in
 `summarize_sagas.summarize_saga`. Python renders `<EXISTING_KNOWLEDGE>` whenever
 `existing_summary` is a non-empty string, including whitespace-only strings. C# now uses the same
@@ -475,7 +481,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 |---|---|---|---|---|
 | Lifecycle | `close` | `CloseAsync` / `DisposeAsync` | DIVERGENT | C# closes only owned drivers; explicit/DI drivers are caller/container-owned |
 | Episode retrieval | `retrieve_episodes` | `RetrieveEpisodesAsync` | OK | |
-| Communities | `build_communities` | `BuildCommunitiesAsync` | OK | Community summary reduction preserves raw entity summaries, including blank strings, like Python |
+| Communities | `build_communities` | `BuildCommunitiesAsync` | OK | Community summary reduction preserves raw entity summaries, including blank strings, like Python. Omitted group IDs discover all entity groups, including the default empty-string group; explicit `[]` clears existing communities and builds none like Python |
 | Basic fact search | `search` | `SearchAsync(query, ...)` | OK | |
 | Advanced graph search | `search_` | `SearchAdvancedAsync` / `SearchAsync(query, SearchConfig, ...)` | OK | Idiomatic C# names; Python-style aliases intentionally not added |
 | Episode contribution lookup | `get_nodes_and_edges_by_episode` | `GetNodesAndEdgesByEpisodeAsync` | OK + DIVERGENT | Per-episode entity-edge loads use bounded fan-out like Python `semaphore_gather`, then flatten in episode order. Bulk episodes own entity-edge UUIDs in C#, so bulk episode contribution lookup is more complete than Python |
@@ -498,7 +504,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Search config recipes, reranker enums, wire values | OK | Verified equivalent, parity-tested |
 | Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | OK | Deterministic parts well tested; edge/episode cross-encoder candidate windows now match Python's pre-rerank `limit` slices, including first-seen retrieval-order edge windowing, while node/community remain intentionally unwindowed like Python and pass full first-seen retrieval-order pools. Duplicate cross-encoder passages now match Python's first-seen passage / last-duplicate-candidate mapping. Community search now mirrors Python's unconditional vector retrieval when a query vector is available. Empty `EdgeTypes`/`EdgeUuids` filters are active match-none predicates like Python. Public search-result context helpers are exposed via `SearchHelpers` |
 | Community label propagation | OK | Algorithmically equivalent |
-| Graph drivers: LadybugDB (first-class investment target), InMemory (reference/test), Neo4j (temporary legacy compatibility) | OK | Runtime proof for Ladybug workflows, direct package binding of list/array/empty-list/null parameters, direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by UUID, public namespace community/saga reads and typed deletes, saga-scoped retrieval/content reads, paged group reads, directed endpoint-pair and incident entity-edge reads, InMemory concrete node/edge type UUID boundaries, explicit and core file-backed paths, Kuzu `':memory:'` sentinel compatibility, package/native execution, and Ladybug-owned raw full-text query/label-filter construction; Neo4j is kept only to avoid regressions while present and is expected to be removed; see kuzu-driver-port.md |
+| Graph drivers: LadybugDB (first-class investment target), InMemory (reference/test), Neo4j (temporary legacy compatibility) | OK | Runtime proof for Ladybug workflows, direct package binding of list/array/empty-list/null parameters, direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by UUID, public namespace community/saga reads and typed deletes, saga-scoped retrieval/content reads, paged/default-empty group reads, directed endpoint-pair and incident entity-edge reads, InMemory concrete node/edge type UUID boundaries, explicit and core file-backed paths, Kuzu `':memory:'` sentinel compatibility, package/native execution, and Ladybug-owned raw full-text query/label-filter construction; Neo4j is kept only to avoid regressions while present and is expected to be removed; see kuzu-driver-port.md |
 | LLM/embedder/reranker adapters via Microsoft.Extensions.AI | DIVERGENT | Documented decision; structured output + Polly retries in place. `MicrosoftExtensionsAICrossEncoderClient` uses structured boolean+confidence scoring because generic M.E.AI lacks OpenAI top-logprob controls |
 | Retry-on-validation-failure with error feedback message | llm_client/client.py retry loop | OK | Ported 2026-06-11 in base `LlmClient`: `JsonException` parse/schema failures get two Python-style validation-feedback re-prompts, cache keys remain based on the original prepared messages, and only validated final responses are cached |
 | GLiNER2 local extraction client | N/A | Specialized optional Python feature; out of scope unless requested |

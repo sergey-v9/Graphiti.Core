@@ -85,7 +85,7 @@ public class LadybugGraphDriverTests
         var groupIds = await driver.GetEntityGroupIdsAsync();
 
         Assert.Equal(new[] { "entity-2", "entity-1" }, nodes.Select(node => node.Uuid));
-        Assert.Equal(new[] { "tenant", "other" }, groupIds);
+        Assert.Equal(new[] { "tenant", string.Empty, "other" }, groupIds);
         Assert.Equal(2, executor.Queried.Count);
         Assert.Contains("WHERE n.uuid IN $uuids", executor.Queried[0].Query, StringComparison.Ordinal);
         Assert.Contains("RETURN DISTINCT n.group_id AS group_id", executor.Queried[1].Query, StringComparison.Ordinal);

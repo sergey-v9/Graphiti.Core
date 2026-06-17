@@ -143,7 +143,7 @@ internal sealed class CommunityService(
         IReadOnlyList<string>? groupIds,
         CancellationToken cancellationToken)
     {
-        if (groupIds is { Count: > 0 })
+        if (groupIds is not null)
         {
             return groupIds;
         }

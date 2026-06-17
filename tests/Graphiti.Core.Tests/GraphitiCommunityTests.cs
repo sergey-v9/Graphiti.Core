@@ -205,6 +205,52 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
+    public async Task BuildCommunities_ExplicitEmptyGroupIdsClearsAndBuildsNoneLikePython()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group", now);
+        var bob = Entity("Bob", "group", now);
+        await alice.SaveAsync(driver);
+        await bob.SaveAsync(driver);
+        await Relates(alice, bob, "group", now).SaveAsync(driver);
+
+        await graphiti.BuildCommunitiesAsync(new[] { "group" });
+
+        var (communities, communityEdges) = await graphiti.BuildCommunitiesAsync(Array.Empty<string>());
+
+        Assert.Empty(communities);
+        Assert.Empty(communityEdges);
+        Assert.Empty(await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group" }));
+        Assert.Empty(await CommunityEdge.GetByGroupIdsAsync(driver, new[] { "group" }));
+    }
+
+    [Fact]
+    public async Task BuildCommunities_NoGroupIdsDiscoversDefaultEmptyGroupLikePython()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", string.Empty, now);
+        var bob = Entity("Bob", string.Empty, now);
+        await alice.SaveAsync(driver);
+        await bob.SaveAsync(driver);
+        await Relates(alice, bob, string.Empty, now).SaveAsync(driver);
+
+        var (communities, communityEdges) = await graphiti.BuildCommunitiesAsync();
+
+        Assert.Equal(new[] { string.Empty }, await driver.GetEntityGroupIdsAsync());
+        Assert.Equal(new[] { string.Empty }, await driver.GetCommunityGroupIdsAsync());
+        Assert.Single(communities);
+        Assert.Equal(2, communityEdges.Count);
+        Assert.Equal(string.Empty, communities[0].GroupId);
+        Assert.All(communityEdges, edge => Assert.Equal(string.Empty, edge.GroupId));
+        Assert.Single(await CommunityNode.GetByGroupIdsAsync(driver, new[] { string.Empty }));
+        Assert.Equal(2, (await CommunityEdge.GetByGroupIdsAsync(driver, new[] { string.Empty })).Count);
+    }
+
+    [Fact]
     public async Task BuildCommunities_UsesStructuredSummaryAndNameResponses()
     {
         var driver = new InMemoryGraphDriver();

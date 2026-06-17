@@ -874,7 +874,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         for (var i = 0; i < records.Count; i++)
         {
             var groupId = GetString(records[i], "group_id");
-            if (!string.IsNullOrEmpty(groupId) && seen.Add(groupId))
+            if (groupId is not null && seen.Add(groupId))
             {
                 groupIds.Add(groupId);
             }

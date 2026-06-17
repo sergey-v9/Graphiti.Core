@@ -93,7 +93,7 @@ public sealed class InMemoryGraphDriverReadTests
         await driver.SaveEdgeAsync(Relates("edge-c", nodeC, nodeA, "third", "group-a", [1f, 1f]));
         await driver.SaveEdgeAsync(Relates("edge-other", nodeA, nodeC, "other", "group-b", [0.5f, 0.5f]));
 
-        Assert.Equal(new[] { "group-a", "group-b" }, await driver.GetEntityGroupIdsAsync());
+        Assert.Equal(new[] { string.Empty, "group-a", "group-b" }, await driver.GetEntityGroupIdsAsync());
         Assert.Equal(new[] { "community-a", "community-z" }, await driver.GetCommunityGroupIdsAsync());
 
         var nodes = await driver.GetNodesByGroupIdsAsync<EntityNode>(

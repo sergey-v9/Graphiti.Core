@@ -151,11 +151,18 @@ nodes in separate and combined extraction now require `entity_type_id` like Pyth
 numeric-string coercion, and still fall back to `Entity` for valid out-of-range IDs. InMemory storage
 now preserves Python's concrete node-label and relationship-type UUID boundaries, so cross-type
 nodes/edges can share a UUID and `AddTripletAsync` preserves an EntityEdge UUID when only a
-non-entity edge has that UUID. Edge cross-encoder windowing applies the `limit` after
+non-entity edge has that UUID. `BuildCommunitiesAsync` now treats explicit empty `groupIds` as build
+none, while omitted group IDs discover all entity groups including the default empty-string group for
+InMemory and LadybugDB. Edge cross-encoder windowing applies the `limit` after
 retrieval-order dedupe; node/community cross-encoder inputs remain full-pool but use the same
 retrieval order.
-`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1037` passed,
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1039` passed,
 `3` skipped; both shippable packages packed and both fresh package-consumer smoke builds succeeded).
+
+Open follow-up from the latest namespace audit: public entity/episodic edge namespaces should return
+empty lists for all-missing plural UUID/group reads like Python namespaces, while static model helper
+exceptions remain separately pinned. Treat this as a separate non-decision implementation slice if
+Python public namespace behavior remains the source of truth.
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
 Packages feed for LadybugDB packages (`0.17.1-dev.1.1.g6f3dbed`) and `NuGet.config` includes package
