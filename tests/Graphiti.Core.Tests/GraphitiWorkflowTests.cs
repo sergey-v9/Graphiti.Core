@@ -2120,7 +2120,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddEpisodeBulk_ExtractsEpisodesConcurrentlyAndPreservesInputOrder()
+    public async Task AddEpisodeBulk_UsesPythonDefaultBulkConcurrencyAndPreservesInputOrder()
     {
         var driver = new InMemoryGraphDriver();
         var llm = new BulkExtractionTrackingLlmClient();
@@ -2128,40 +2128,26 @@ public class GraphitiWorkflowTests
             graphDriver: driver,
             llmClient: llm,
             maxCoroutines: 2);
-
-        var result = await graphiti.AddEpisodeBulkAsync(
-            new[]
+        var rawEpisodes = Enumerable.Range(0, 25)
+            .Select(index => new RawEpisode
             {
-                new RawEpisode
-                {
-                    Name = "first",
-                    Content = "Alpha event",
-                    SourceDescription = "message",
-                    ReferenceTime = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)
-                },
-                new RawEpisode
-                {
-                    Name = "second",
-                    Content = "Beta event",
-                    SourceDescription = "message",
-                    ReferenceTime = new DateTime(2026, 1, 1, 12, 1, 0, DateTimeKind.Utc)
-                },
-                new RawEpisode
-                {
-                    Name = "third",
-                    Content = "Gamma event",
-                    SourceDescription = "message",
-                    ReferenceTime = new DateTime(2026, 1, 1, 12, 2, 0, DateTimeKind.Utc)
-                }
-            },
-            groupId: "group");
+                Name = $"episode-{index}",
+                Content = index == 0 ? "Alpha event" : $"Beta{index} event",
+                SourceDescription = "message",
+                ReferenceTime = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)
+                    .AddMinutes(index)
+            })
+            .ToArray();
 
-        Assert.Equal(new[] { "first", "second", "third" }, result.Episodes.Select(episode => episode.Name));
-        Assert.Equal(new[] { "Alpha", "Beta", "Gamma" }, result.Nodes.Select(node => node.Name));
-        Assert.Equal(3, llm.TrackedPromptCalls);
-        Assert.InRange(llm.MaxObservedConcurrency, 2, 2);
-        Assert.Equal(3, llm.CompletedContents.Count);
-        Assert.Equal("Beta event", llm.CompletedContents[0]);
+        var result = await graphiti.AddEpisodeBulkAsync(rawEpisodes, groupId: "group");
+
+        Assert.Equal(rawEpisodes.Select(episode => episode.Name), result.Episodes.Select(episode => episode.Name));
+        Assert.Equal(
+            rawEpisodes.Select(episode => episode.Content.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0]),
+            result.Nodes.Select(node => node.Name));
+        Assert.Equal(rawEpisodes.Length, llm.TrackedPromptCalls);
+        Assert.Equal(20, llm.MaxObservedConcurrency);
+        Assert.Equal(rawEpisodes.Length, llm.CompletedContents.Count);
     }
 
     [Fact]

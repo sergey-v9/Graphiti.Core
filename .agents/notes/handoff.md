@@ -401,12 +401,15 @@ to Python's default semaphore limit of 20 before calling `ThrottledWork`, matchi
 `max_coroutines or SEMAPHORE_LIMIT` behavior for Graphiti-level fan-outs. InMemory UUID reads now
 match Python entity/fact projections by omitting `NameEmbedding` / `FactEmbedding` from
 `GetByUuidAsync` / `GetByUuidsAsync` while explicit embedding loaders still hydrate cloned stored
-vectors.
+vectors. Positive `maxCoroutines` bulk scoping was also split out and closed: C# bulk extraction,
+first-pass bulk node resolution, and final bulk node resolution now use the Python bare
+`semaphore_gather` default cap of 20 instead of the instance cap, while Graphiti-level fan-outs still
+use `maxCoroutines`.
 
-Open concrete follow-up candidates from the 2026-06-17 read-only audit, to handle as separate
-verified slices: positive `maxCoroutines` scoping should be audited separately because C# applies the
-Graphiti-level cap through some bulk-ingestion fan-outs where Python bulk helpers use bare
-`semaphore_gather` defaults.
+Open concrete follow-up candidates from the 2026-06-17 read-only audit: none currently remain after
+the verified slices above. Continue the broader Python-vs-C# audit and add new candidates here as
+they are confirmed; decision-gated release/API/provider items remain separate in plan 05 and the
+provider notes.
 
 Latest checkpoint, 2026-06-13:
 

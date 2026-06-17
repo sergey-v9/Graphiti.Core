@@ -375,7 +375,10 @@ vectors for `LoadNameEmbeddingAsync`, `LoadFactEmbeddingAsync`, and namespace bu
 or zero, preserves explicit positive caps, and rejects negative direct helper input instead of
 running unbounded. Follow-up: Graphiti workflow-level throttling now uses the same null/zero
 resolution, so the constructor and DI options accept zero like Python and feed `ThrottledWork` a
-positive cap of 20.
+positive cap of 20. Positive bulk-scoping follow-up: C# bulk extraction, first-pass bulk node
+resolution, and final bulk node resolution now use the default cap of 20 even when the Graphiti
+instance has a positive `maxCoroutines`, matching Python bulk helpers that call bare
+`semaphore_gather`; Graphiti-level fan-outs still use the instance cap.
 
 **2026-06-17 normalize_l2 follow-up:** closed the remaining vector-normalization helper drift.
 Python `normalize_l2` preserves only zero-norm embeddings; non-finite norms divide through NumPy and

@@ -265,7 +265,7 @@ public sealed partial class Graphiti
                 Array.Empty<EntityEdge>(),
                 cancellationToken).ConfigureAwait(false);
 
-            var extractedEpisodes = await SelectThrottledAsync(
+            var extractedEpisodes = await SelectWithDefaultThrottlingAsync(
                 episodes,
                 async (episode, token) => await ExtractBulkEpisodeAsync(
                     episode,
@@ -495,7 +495,7 @@ public sealed partial class Graphiti
         IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes,
         CancellationToken cancellationToken)
     {
-        var firstPassResults = await SelectThrottledAsync(
+        var firstPassResults = await SelectWithDefaultThrottlingAsync(
             extractedEpisodes.ToList(),
             async (extraction, token) =>
             {
@@ -808,7 +808,7 @@ public sealed partial class Graphiti
             uniqueNodesByEpisode[episodeUuid] = uniqueNodes;
         }
 
-        var resolutionResults = await SelectThrottledAsync(
+        var resolutionResults = await SelectWithDefaultThrottlingAsync(
             extractedEpisodes.ToList(),
             async (extraction, token) =>
             {

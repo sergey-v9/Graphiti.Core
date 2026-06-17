@@ -36,6 +36,12 @@ public sealed partial class Graphiti
         CancellationToken cancellationToken) =>
         ThrottledWork.SelectAsync(items, operation, GetMaxDegreeOfParallelism(), cancellationToken);
 
+    private static Task<TResult[]> SelectWithDefaultThrottlingAsync<TSource, TResult>(
+        List<TSource> items,
+        Func<TSource, CancellationToken, Task<TResult>> operation,
+        CancellationToken cancellationToken) =>
+        ThrottledWork.SelectAsync(items, operation, GraphitiHelpers.DefaultSemaphoreLimit, cancellationToken);
+
     private int GetMaxDegreeOfParallelism() =>
         _maxCoroutines is null or 0
             ? GraphitiHelpers.DefaultSemaphoreLimit
