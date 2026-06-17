@@ -3,8 +3,9 @@
 Created 2026-06-14. The library is functionally complete and validated (Phases 1–3), documented, and
 guarded by a public-API snapshot test. This plan turns the pre-freeze review
 (`.agents/notes/api-freeze-review.md`) into an ordered implementation plan. **Decision (user,
-2026-06-14): no API freeze — implement all of A–E**, then the release infrastructure. The snapshot
-test is kept as a drift guard, not a freeze: each step that changes the public surface regenerates
+2026-06-14): no API freeze — implement all of A–E**, then triage any remaining `.agents/plans/`
+backlog separately before release infrastructure. The snapshot test is kept as a drift guard, not a
+freeze: each step that changes the public surface regenerates
 `tests/Graphiti.Core.Tests/Api/Graphiti.Core.approved.txt` in the same commit.
 
 ## Status — A–E COMPLETE (2026-06-14)
@@ -30,7 +31,11 @@ from strict package sources:
   expected provider plus inserted hit UUID.
 - The public-API snapshot now guards BOTH assemblies (`Graphiti.Core` + `Graphiti.Core.Drivers.Ladybug`).
 
-**Remaining (release infra):**
+**Remaining (separate backlog + release infra):**
+- **Plan-folder backlog triage (Step F below):** before asking for release/version decisions, sweep
+  `.agents/plans/` and the directly linked notes, separate actionable parity/provider/perf slices
+  from decision-gated release work, and close or record each item in its owning note. Do not blend
+  those follow-ups into the versioning/publish decision.
 - **Versioning** (confirm 2.0.0 line / alpha→beta cadence). NuGet metadata, README packing,
   XML docs, symbol package generation, and package-consumption smoke checks are now present and guarded
   for both shippable packages. CI now has both a `Graphiti.Core`-only lane
@@ -73,9 +78,11 @@ Packages credentials (`1025` passed, `3` skipped; both packages and consumer smo
 
 ## Execution order & parallelizability
 
-A → (B + C together) → D → E → release infra. A/B/C are independent edits and could run on parallel
-branches IF the test-concurrency rule above is honored; D and E are larger and should land on their
-own reviewed branches. Each is one coherent slice with the snapshot-baseline update included.
+A → (B + C together) → D → E → F → release infra. A/B/C are independent edits and could run on
+parallel branches IF the test-concurrency rule above is honored; D and E are larger and should land
+on their own reviewed branches. F is a documentation/coordination gate that may produce separate
+implementation slices; keep those slices independent from release-version and publish decisions.
+Each public-surface step is one coherent slice with the snapshot-baseline update included.
 
 ---
 
@@ -194,7 +201,37 @@ full Verify green; both packages `pack`. This is a milestone (`evolution.md`:
 
 ---
 
-## Release infrastructure (after A–E)
+## Step F — Plan-folder backlog triage (before release infra)
+
+**Goal:** anything still visible from `.agents/plans/` or directly linked plan notes is handled as
+its own stream before release-version/publish decisions. This is a coordination step, not a request to
+fold unrelated work into plan 05.
+
+Current classification, 2026-06-17:
+
+1. Plans 01-04 have no unchecked checklist items and remain closed. Reopen only for a confirmed
+   Python-vs-C# regression or upstream `graphiti_core/` delta.
+2. Plan 05 A-E and E.2 are implemented; CI wiring is present. Remaining release infrastructure is
+   decision-gated: version cadence, publish path, and whether to ship a metapackage.
+3. Non-decision implementation work should land as separate slices before release decisions when it
+   is concrete and parity-safe: focused Python parity fixes from the ongoing audit, repeatable
+   upstream-sync checks, deterministic hardening of any confirmed flaky test, and benchmark-first
+   performance wins.
+4. Decision-gated follow-ups stay separate and should be surfaced explicitly before implementation:
+   `GRPH0002` / `AddGraphitiCore` alias migration, larger real-provider eval expansion, Linux/CI
+   validation scope, Neo4j retirement, versioning, publish path, and metapackage shape.
+5. `kuzu-driver-port.md` remaining-work bullets are conditional provider follow-ups, not unhandled
+   release-plan tasks: broaden Ladybug workflow coverage only for uncovered behavior, add
+   host-facing options only for real runtime needs, and add native-gated smoke tests only for a new
+   platform/CI requirement or coverage gap.
+
+**Verify:** this step is done when the plan sweep is recorded here and any resulting actionable item
+has a separate owner/slice. Code changes from those slices get their own tests and commits; this
+coordination step needs only a docs review.
+
+---
+
+## Release infrastructure (after A–E and Step F)
 
 - **Versioning:** confirm the `2.0.0` line (the namespace migration is already documented as 2.0.0). Decide
   alpha→beta→rc cadence. Package metadata (authors, license=Apache-2.0, repo URL, README as
@@ -212,7 +249,8 @@ full Verify green; both packages `pack`. This is a milestone (`evolution.md`:
 
 ## Done when
 
-A–E implemented (each with snapshot baseline updated and Verify green), the constructor/naming/packaging
-shapes are the intended public contract, `Graphiti.Core` restores from nuget.org alone, the LadybugDB
-package is separately consumable, and the release-infra decisions (versioning, CI, publish path) are
-recorded. Then re-snapshot as the de facto stable surface and update `evolution.md` with the milestone.
+A–E implemented (each with snapshot baseline updated and Verify green), the plan-folder backlog
+triaged into separate streams, the constructor/naming/packaging shapes are the intended public
+contract, `Graphiti.Core` restores from nuget.org alone, the LadybugDB package is separately
+consumable, and the release-infra decisions (versioning, CI, publish path) are recorded. Then
+re-snapshot as the de facto stable surface and update `evolution.md` with the milestone.
