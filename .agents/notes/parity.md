@@ -336,6 +336,13 @@ dictionary key (`type_name`), not the model/display class name. C#
 `entityTypes` key, so aliased types such as `person_alias -> Person` flow into labels and exclusion
 matching like Python.
 
+**2026-06-17 entity-type-id schema follow-up:** closed the response-boundary half of the same
+extraction contract. Python Pydantic requires `entity_type_id: int` for both separate
+`ExtractedEntity` and combined `CombinedEntity` responses before nodes are materialized. C# response
+DTOs now require `entity_type_id`, reject missing or nonnumeric values during structured-response
+validation/direct parsing, preserve Pydantic-style numeric-string coercion, and still let valid
+out-of-range integers fall back to `Entity` like Python node creation.
+
 **2026-06-17 cross-encoder duplicate follow-up:** closed the duplicate-passage search drift. Python's
 search rerankers collapse duplicate cross-encoder passage strings through dict-comprehension behavior:
 passages are sent once in first-seen passage order, while the last duplicate candidate wins the

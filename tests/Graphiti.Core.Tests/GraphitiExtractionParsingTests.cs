@@ -1,5 +1,7 @@
 using System.Collections;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using Graphiti.Core.LlmClients;
 using Graphiti.Core.Internal.Helpers;
 
 namespace Graphiti.Core.Tests;
@@ -36,8 +38,7 @@ public class GraphitiExtractionParsingTests
             {
                 new JsonObject { ["name"] = "Alice", ["entity_type_id"] = "1" },
                 new JsonObject { ["name"] = "Generic", ["entity_type_id"] = "0" },
-                new JsonObject { ["name"] = "Out of range", ["entity_type_id"] = "9" },
-                new JsonObject { ["name"] = "Invalid", ["entity_type_id"] = "not-number" }
+                new JsonObject { ["name"] = "Out of range", ["entity_type_id"] = "9" }
             }
         };
 
@@ -52,8 +53,69 @@ public class GraphitiExtractionParsingTests
             extracted,
             item => Assert.Equal(("Alice", "Person"), item),
             item => Assert.Equal(("Generic", "Entity"), item),
-            item => Assert.Equal(("Out of range", "Entity"), item),
-            item => Assert.Equal(("Invalid", "Entity"), item));
+            item => Assert.Equal(("Out of range", "Entity"), item));
+    }
+
+    [Theory]
+    [InlineData("EpisodeNode")]
+    [InlineData("Combined")]
+    public void ExtractionResponseSchemas_RequireCoercibleEntityTypeIdsLikePython(string responseKind)
+    {
+        var responseModel = responseKind == "Combined"
+            ? typeof(Graphiti.CombinedExtractionResponse)
+            : typeof(Graphiti.EpisodeNodeExtractionResponse);
+        var includeEdges = responseKind == "Combined";
+        var missing = NodeExtractionResponse(
+            includeEdges,
+            new JsonObject { ["name"] = "Alice" });
+        var invalid = NodeExtractionResponse(
+            includeEdges,
+            new JsonObject { ["name"] = "Alice", ["entity_type_id"] = "not-number" });
+        var numericString = NodeExtractionResponse(
+            includeEdges,
+            new JsonObject { ["name"] = "Alice", ["entity_type_id"] = "1" });
+        var validOutOfRange = NodeExtractionResponse(
+            includeEdges,
+            new JsonObject { ["name"] = "Alice", ["entity_type_id"] = 99 });
+
+        Assert.Throws<JsonException>(() => StructuredResponseValidator.Validate(missing, responseModel));
+        Assert.Throws<JsonException>(() => StructuredResponseValidator.Validate(invalid, responseModel));
+
+        StructuredResponseValidator.Validate(numericString, responseModel);
+        StructuredResponseValidator.Validate(validOutOfRange, responseModel);
+    }
+
+    private static JsonObject NodeExtractionResponse(bool includeEdges, JsonObject entity)
+    {
+        var response = new JsonObject
+        {
+            ["extracted_entities"] = new JsonArray(entity)
+        };
+        if (includeEdges)
+        {
+            response["edges"] = new JsonArray();
+        }
+
+        return response;
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ExtractEntityNames_RejectsMissingOrInvalidEntityTypeIdsLikePython(bool includeInvalidId)
+    {
+        var entity = new JsonObject { ["name"] = "Alice" };
+        if (includeInvalidId)
+        {
+            entity["entity_type_id"] = "not-number";
+        }
+
+        var response = new JsonObject
+        {
+            ["extracted_entities"] = new JsonArray(entity)
+        };
+
+        Assert.Throws<JsonException>(() => Graphiti.ExtractEntityNames(response, entityTypes: null));
     }
 
     [Fact]

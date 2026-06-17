@@ -423,8 +423,8 @@ public class GraphitiCommunityTests
                 return new JsonObject
                 {
                     ["entities"] = new JsonArray(
-                        new JsonObject { ["name"] = "Carol", ["type"] = "Person" },
-                        new JsonObject { ["name"] = "Alice", ["type"] = "Person" }),
+                        new JsonObject { ["name"] = "Carol", ["entity_type_id"] = 0 },
+                        new JsonObject { ["name"] = "Alice", ["entity_type_id"] = 0 }),
                     ["edges"] = new JsonArray(
                         new JsonObject
                         {

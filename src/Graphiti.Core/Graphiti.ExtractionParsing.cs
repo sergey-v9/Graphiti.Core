@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 
 namespace Graphiti.Core;
 
@@ -83,7 +85,7 @@ public sealed partial class Graphiti
     {
         if (!item.TryGetPropertyValue("entity_type_id", out var node) || node is null)
         {
-            return null;
+            throw new JsonException("Extracted entity is missing required entity_type_id.");
         }
 
         if (TryReadInt(node, out var id))
@@ -92,7 +94,7 @@ public sealed partial class Graphiti
             return id >= 0 && id < entityTypeNamesById.Count ? entityTypeNamesById[id] : null;
         }
 
-        return null;
+        throw new JsonException("Extracted entity entity_type_id must be an integer.");
     }
 
     private static bool TryReadInt(JsonNode node, out int id)
@@ -274,7 +276,9 @@ public sealed partial class Graphiti
 
         public string? Type { get; set; }
 
-        public int? EntityTypeId { get; set; }
+        [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+        [JsonRequired]
+        public int EntityTypeId { get; set; }
 
         public List<int>? EpisodeIndices { get; set; }
     }
@@ -366,7 +370,9 @@ public sealed partial class Graphiti
     {
         public string? Name { get; set; }
 
-        public int? EntityTypeId { get; set; }
+        [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+        [JsonRequired]
+        public int EntityTypeId { get; set; }
     }
 
     internal sealed class CombinedExtractedEdgeResponse

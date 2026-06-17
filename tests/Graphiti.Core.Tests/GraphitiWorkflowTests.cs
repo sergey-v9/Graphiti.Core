@@ -3622,8 +3622,8 @@ public class GraphitiWorkflowTests
                 {
                     ["extracted_entities"] = new JsonArray
                     {
-                        new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
-                        new JsonObject { ["name"] = "Acme", ["entity_type"] = "Organization" }
+                        new JsonObject { ["name"] = "Alice", ["entity_type_id"] = 0 },
+                        new JsonObject { ["name"] = "Acme", ["entity_type_id"] = 0 }
                     },
                     ["edges"] = new JsonArray
                     {
@@ -3760,8 +3760,8 @@ public class GraphitiWorkflowTests
                 {
                     ["extracted_entities"] = new JsonArray
                     {
-                        new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
-                        new JsonObject { ["name"] = "Acme", ["entity_type"] = "Organization" }
+                        new JsonObject { ["name"] = "Alice", ["entity_type_id"] = 0 },
+                        new JsonObject { ["name"] = "Acme", ["entity_type_id"] = 0 }
                     },
                     ["edges"] = new JsonArray
                     {
@@ -5235,8 +5235,8 @@ public class GraphitiWorkflowTests
                 {
                     ["extracted_entities"] = new JsonArray
                     {
-                        new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
-                        new JsonObject { ["name"] = "Acme", ["entity_type"] = "Organization" }
+                        new JsonObject { ["name"] = "Alice", ["entity_type_id"] = 0 },
+                        new JsonObject { ["name"] = "Acme", ["entity_type_id"] = 0 }
                     },
                 });
             }

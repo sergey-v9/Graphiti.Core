@@ -228,8 +228,8 @@ public class TelemetryTests
                         {
                             ["extracted_entities"] = new JsonArray
                             {
-                                new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
-                                new JsonObject { ["name"] = "Bob", ["entity_type"] = "Person" }
+                                new JsonObject { ["name"] = "Alice", ["entity_type_id"] = 0 },
+                                new JsonObject { ["name"] = "Bob", ["entity_type_id"] = 0 }
                             }
                         };
                     }

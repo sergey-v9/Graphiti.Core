@@ -146,10 +146,12 @@ Latest verification checkpoint, 2026-06-17: plan 05 now has an explicit Step F p
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
 first-seen retrieval-result order across BM25/vector/BFS inputs, and `NormalizeL2` preserves only
 zero-norm embeddings while propagating non-finite norms like Python. `EntityEdge.GetByGroupIdsAsync`
-and `EpisodicEdge.GetByGroupIdsAsync` now both throw on empty group results like Python. Edge
-cross-encoder windowing applies the `limit` after that retrieval-order dedupe; node/community
+and `EpisodicEdge.GetByGroupIdsAsync` now both throw on empty group results like Python. Extracted
+nodes in separate and combined extraction now require `entity_type_id` like Python Pydantic, preserve
+numeric-string coercion, and still fall back to `Entity` for valid out-of-range IDs. Edge
+cross-encoder windowing applies the `limit` after retrieval-order dedupe; node/community
 cross-encoder inputs remain full-pool but use the same retrieval order.
-`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1031` passed,
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1035` passed,
 `3` skipped; both shippable packages packed and both fresh package-consumer smoke builds succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
@@ -293,8 +295,8 @@ keeps those shapes as no-op filters via existing `CompiledSearchFilter`/query-bu
 Current audit follow-up closed namespace embedding drift, an in-memory triplet collision drift, the
 typed node-delete Saga boundary, the duplicate-passage cross-encoder drift, the base node-delete
 scope drift, the entity UUID group-filter drift, the in-memory episodic-metadata drift, the
-episodic-edge group-miss drift, the semaphore default-concurrency drift, the entity-type-id key
-mapping drift, and the base edge-delete scope drift:
+entity/episodic-edge group-miss drift, the semaphore default-concurrency drift, the entity-type-id key
+mapping/schema drift, and the base edge-delete scope drift:
 namespace `SaveAsync` regenerates entity/community node and entity-edge embeddings even when prefilled,
 namespace `SaveBulkAsync` now preserves supplied null/precomputed embeddings without calling the
 embedder, and `AddTripletAsync` creates a fresh entity-edge UUID when the default in-memory backend
@@ -305,14 +307,17 @@ inherited base helper no longer removes saga nodes across that boundary. `Entity
 keeps the Python-compatible optional `groupId` parameter but no longer applies it, because Python's
 normal entity UUID query filters only by UUID. InMemory no longer persists `EpisodicNode.EpisodeMetadata`,
 matching Python's episodic save/projection/record-parser behavior and the Neo4j/Ladybug persistence
-shape. `EpisodicEdge.GetByGroupIdsAsync` now throws `GroupsEdgesNotFoundException` on empty group
-results, matching Python's `GroupsEdgesNotFoundError` branch for episodic-edge group reads.
+shape. `EntityEdge.GetByGroupIdsAsync` and `EpisodicEdge.GetByGroupIdsAsync` now throw
+`GroupsEdgesNotFoundException` on empty group results, matching Python's `GroupsEdgesNotFoundError`
+branches for those group reads.
 `GraphitiHelpers.SemaphoreGatherAsync` now uses Python's default semaphore limit of 20 when callers
 omit the cap or pass zero, while rejecting negative direct helper input instead of treating every
 non-positive cap as unbounded.
 Extracted `entity_type_id` values now map back to the declared `entityTypes` dictionary keys instead
 of `EntityTypeDefinition.Name`, so custom type aliases flow into labels and exclusions like Python's
-`entity_types` context.
+`entity_types` context. Extracted-node response DTOs now also require `entity_type_id` for separate
+and combined extraction like Python Pydantic, preserve numeric-string coercion, and still fall back
+to `Entity` for valid out-of-range IDs.
 Excluded-entity validation error messages now format invalid and available type names like Python's
 sorted string-list representation.
 Node dedupe label promotion now matches Python's `_promote_resolved_node`: an extracted specific

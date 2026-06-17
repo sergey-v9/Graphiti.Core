@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -30,6 +31,12 @@ internal static class StructuredResponseValidator
         var responseElement = ToJsonElement(response);
         var results = schema.Evaluate(responseElement);
         if (results.IsValid)
+        {
+            return;
+        }
+
+        if (TryGetPythonCoercedResponseElement(response, responseModel, out var coercedElement)
+            && schema.Evaluate(coercedElement).IsValid)
         {
             return;
         }
@@ -98,6 +105,48 @@ internal static class StructuredResponseValidator
 
     private static JsonElement ToJsonElement(JsonObject response) =>
         JsonSerializer.SerializeToElement(response, GraphitiJsonSerializer.Options);
+
+    private static bool TryGetPythonCoercedResponseElement(
+        JsonObject response,
+        Type responseModel,
+        out JsonElement responseElement)
+    {
+        responseElement = default;
+        if (responseModel != typeof(global::Graphiti.Core.Graphiti.EpisodeNodeExtractionResponse)
+            && responseModel != typeof(global::Graphiti.Core.Graphiti.CombinedExtractionResponse))
+        {
+            return false;
+        }
+
+        var clone = response.DeepClone().AsObject();
+        if (clone["extracted_entities"] is not JsonArray entities)
+        {
+            return false;
+        }
+
+        var changed = false;
+        foreach (var item in entities)
+        {
+            if (item is not JsonObject entity
+                || entity["entity_type_id"] is not JsonValue value
+                || !value.TryGetValue<string>(out var idText)
+                || !int.TryParse(idText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
+            {
+                continue;
+            }
+
+            entity["entity_type_id"] = id;
+            changed = true;
+        }
+
+        if (!changed)
+        {
+            return false;
+        }
+
+        responseElement = ToJsonElement(clone);
+        return true;
+    }
 
     private static ResponseSchemaContract BuildContract(Type responseModel)
     {
