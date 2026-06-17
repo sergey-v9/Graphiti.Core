@@ -84,7 +84,7 @@ public sealed class InMemoryGraphDriverCloneTests
     }
 
     [Fact]
-    public async Task SaveNodeAsync_DeepClonesEpisodeMetadata()
+    public async Task SaveNodeAsync_DoesNotPersistEpisodeMetadataLikePython()
     {
         var driver = new InMemoryGraphDriver();
         var nested = new Dictionary<string, object?> { ["source"] = "stored" };
@@ -101,14 +101,10 @@ public sealed class InMemoryGraphDriverCloneTests
         };
 
         await driver.SaveNodeAsync(episode);
-        nested["source"] = "mutated";
-        flags.Add(false);
 
         var fetched = await driver.GetNodeByUuidAsync<EpisodicNode>("episode");
-        var metadata = Assert.IsType<Dictionary<string, object?>>(fetched.EpisodeMetadata);
 
-        Assert.Equal("stored", NestedDictionary(metadata, "nested")["source"]);
-        Assert.Equal(new object?[] { true }, NestedList(metadata, "flags"));
+        Assert.Null(fetched.EpisodeMetadata);
     }
 
     private static Dictionary<string, object?> NestedDictionary(

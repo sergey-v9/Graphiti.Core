@@ -2188,8 +2188,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
                 SourceDescription = episode.SourceDescription,
                 Content = episode.Content,
                 ValidAt = episode.ValidAt,
-                EntityEdges = CopyList(episode.EntityEdges),
-                EpisodeMetadata = episode.EpisodeMetadata is null ? null : CloneDictionary(episode.EpisodeMetadata)
+                EntityEdges = CopyList(episode.EntityEdges)
             },
             CommunityNode community => new CommunityNode
             {

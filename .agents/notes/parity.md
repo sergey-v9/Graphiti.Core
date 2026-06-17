@@ -296,6 +296,12 @@ signature compatibility but ignores it before calling the driver, so model-helpe
 requested entity UUIDs regardless of group like Python. Lower-level `IGraphDriver.GetNodesByUuidsAsync`
 still keeps its optional group filter for callers that use the driver contract directly.
 
+**2026-06-17 in-memory episodic metadata follow-up:** closed a reference-driver drift. Python's
+`EpisodicNode` model has `episode_metadata`, but episodic node save, bulk-save, return projection, and
+record parsing do not persist or hydrate it. C# Neo4j and Ladybug already followed that storage shape;
+the in-memory reference driver now does too by dropping `EpisodeMetadata` when cloning episodic nodes
+into storage.
+
 **2026-06-17 cross-encoder duplicate follow-up:** closed the duplicate-passage search drift. Python's
 search rerankers collapse duplicate cross-encoder passage strings through dict-comprehension behavior:
 passages are sent once in first-seen passage order, while the last duplicate candidate wins the
