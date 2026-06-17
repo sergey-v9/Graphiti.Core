@@ -713,7 +713,7 @@ internal static class SearchEngine
                 edge => edge.Uuid,
                 fusionLimit,
                 minScore),
-            EdgeReranker.CrossEncoder => SearchResultComposer.MergeCandidatesInFirstSeenOrder(
+            EdgeReranker.CrossEncoder or EdgeReranker.Mmr => SearchResultComposer.MergeCandidatesInFirstSeenOrder(
                 textRanked,
                 vectorRanked,
                 bfsRanked,
@@ -894,7 +894,7 @@ internal static class SearchEngine
                 node => node.Uuid,
                 fusionLimit,
                 minScore),
-            NodeReranker.CrossEncoder => SearchResultComposer.MergeCandidatesInFirstSeenOrder(
+            NodeReranker.CrossEncoder or NodeReranker.Mmr => SearchResultComposer.MergeCandidatesInFirstSeenOrder(
                 textRanked,
                 vectorRanked,
                 bfsRanked,
@@ -1153,7 +1153,7 @@ internal static class SearchEngine
                 community => community.Uuid,
                 fusionLimit,
                 minScore),
-            CommunityReranker.CrossEncoder => SearchResultComposer.MergeCandidatesInFirstSeenOrder(
+            CommunityReranker.CrossEncoder or CommunityReranker.Mmr => SearchResultComposer.MergeCandidatesInFirstSeenOrder(
                 textRanked,
                 vectorRanked,
                 EmptyRanked<CommunityNode>(),

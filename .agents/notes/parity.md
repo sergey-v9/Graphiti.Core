@@ -411,13 +411,19 @@ maps use the same keys. C# prompt builders and `EntitySummaryService` now use th
 `EntityTypeDefinition.Name`, so aliased type definitions render the same identifiers the parser
 already treats as canonical.
 
+**2026-06-17 MMR retrieval-order follow-up:** closed the MMR candidate-order drift for node, edge,
+and community search. Python builds UUID maps from retrieval results in method/result order and
+passes `list(..._uuid_map.values())` into `maximal_marginal_relevance`, so tied MMR scores keep
+first-seen retrieval order rather than preliminary BM25/vector scores. C# now feeds MMR through the
+first-seen merge path for all three scopes while still preserving max preliminary scores for the
+non-MMR merge path.
+
 **2026-06-17 separate audit candidates not changed in this pass:** keep these as independent slices
 with their own tests before changing behavior. Python preserves duplicate resolved/invalidated edge
 appearances in `resolve_extracted_edges`, while C# currently dedupes the returned edge list by UUID
 during collection. Python's `EdgeReranker.episode_mentions` sorts only the returned edge list by
 episode-count after RRF, leaving the returned score list in pre-sort RRF order; C# currently sorts
-edge/score pairs together. Python MMR candidate input preserves first-seen retrieval-result order
-from the UUID maps; C# currently feeds MMR through score-sorted merged candidates.
+edge/score pairs together.
 
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 

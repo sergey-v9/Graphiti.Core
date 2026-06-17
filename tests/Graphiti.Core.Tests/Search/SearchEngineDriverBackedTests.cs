@@ -494,6 +494,62 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
+    public async Task NodeSearch_MmrTieUsesRetrievalOrderAcrossMethods()
+    {
+        var textFirst = new EntityNode
+        {
+            Uuid = "node-text-first",
+            Name = "Text First",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 1f, 0f }
+        };
+        var textSecond = new EntityNode
+        {
+            Uuid = "node-text-second",
+            Name = "Text Second",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 1f, 0f }
+        };
+        var vectorOnly = new EntityNode
+        {
+            Uuid = "node-vector-only",
+            Name = "Vector Only",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 1f, 0f }
+        };
+        var driver = new DriverBackedSearchDriver
+        {
+            NodeFulltextHits =
+            {
+                new SearchHit<EntityNode>(textFirst, 0.1f),
+                new SearchHit<EntityNode>(textSecond, 0.2f)
+            },
+            NodeVectorHits =
+            {
+                new SearchHit<EntityNode>(vectorOnly, 99f)
+            }
+        };
+
+        var ranked = await SearchEngine.NodeSearchAsync(
+            driver,
+            new IdentityCrossEncoderClient(),
+            "query",
+            new[] { 1f, 0f },
+            new[] { "group" },
+            new NodeSearchConfig
+            {
+                SearchMethods = { NodeSearchMethod.Bm25, NodeSearchMethod.CosineSimilarity },
+                Reranker = NodeReranker.Mmr,
+                MmrLambda = 1
+            },
+            new SearchFilters(),
+            limit: 2);
+
+        Assert.Equal(new[] { "node-text-first", "node-text-second" }, ranked.Select(item => item.Item.Uuid));
+        Assert.Equal(new[] { 1f, 1f }, ranked.Select(item => item.Score));
+    }
+
+    [Fact]
     public async Task NodeSearch_CrossEncoderCollapsesSameNameCandidatesLikePython()
     {
         var first = new EntityNode { Uuid = "node-first", Name = "Same", GroupId = "group" };
@@ -947,6 +1003,62 @@ public class SearchEngineDriverBackedTests
 
         Assert.Equal(new[] { "text first fact", "text second fact" }, crossEncoder.LastPassages);
         Assert.Equal(new[] { "edge-text-first", "edge-text-second" }, ranked.Select(item => item.Item.Uuid));
+    }
+
+    [Fact]
+    public async Task EdgeSearch_MmrTieUsesRetrievalOrderAcrossMethods()
+    {
+        var textFirst = new EntityEdge
+        {
+            Uuid = "edge-text-first",
+            Fact = "text first fact",
+            GroupId = "group",
+            FactEmbedding = new List<float> { 1f, 0f }
+        };
+        var textSecond = new EntityEdge
+        {
+            Uuid = "edge-text-second",
+            Fact = "text second fact",
+            GroupId = "group",
+            FactEmbedding = new List<float> { 1f, 0f }
+        };
+        var vectorOnly = new EntityEdge
+        {
+            Uuid = "edge-vector-only",
+            Fact = "vector only fact",
+            GroupId = "group",
+            FactEmbedding = new List<float> { 1f, 0f }
+        };
+        var driver = new DriverBackedSearchDriver
+        {
+            EdgeFulltextHits =
+            {
+                new SearchHit<EntityEdge>(textFirst, 0.1f),
+                new SearchHit<EntityEdge>(textSecond, 0.2f)
+            },
+            EdgeVectorHits =
+            {
+                new SearchHit<EntityEdge>(vectorOnly, 99f)
+            }
+        };
+
+        var ranked = await SearchEngine.EdgeSearchAsync(
+            driver,
+            new IdentityCrossEncoderClient(),
+            "query",
+            new[] { 1f, 0f },
+            new[] { "group" },
+            new EdgeSearchConfig
+            {
+                SearchMethods = { EdgeSearchMethod.Bm25, EdgeSearchMethod.CosineSimilarity },
+                Reranker = EdgeReranker.Mmr,
+                MmrLambda = 1
+            },
+            new SearchFilters(),
+            limit: 2);
+
+        Assert.Equal(new[] { "edge-text-first", "edge-text-second" }, ranked.Select(item => item.Item.Uuid));
+        Assert.Equal(new[] { 1f, 1f }, ranked.Select(item => item.Score));
     }
 
     [Fact]
@@ -1454,6 +1566,63 @@ public class SearchEngineDriverBackedTests
 
         Assert.Equal(new[] { "Text First", "Text Second", "Vector Only" }, crossEncoder.LastPassages);
         Assert.Equal(new[] { "community-vector-only", "community-text-first" }, ranked.Select(item => item.Item.Uuid));
+    }
+
+    [Fact]
+    public async Task CommunitySearch_MmrTieUsesRetrievalOrderAcrossMethods()
+    {
+        var textFirst = new CommunityNode
+        {
+            Uuid = "community-text-first",
+            Name = "Text First",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 1f, 0f }
+        };
+        var textSecond = new CommunityNode
+        {
+            Uuid = "community-text-second",
+            Name = "Text Second",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 1f, 0f }
+        };
+        var vectorOnly = new CommunityNode
+        {
+            Uuid = "community-vector-only",
+            Name = "Vector Only",
+            GroupId = "group",
+            NameEmbedding = new List<float> { 1f, 0f }
+        };
+        var driver = new DriverBackedSearchDriver
+        {
+            CommunityFulltextHits =
+            {
+                new SearchHit<CommunityNode>(textFirst, 0.1f),
+                new SearchHit<CommunityNode>(textSecond, 0.2f)
+            },
+            CommunityVectorHits =
+            {
+                new SearchHit<CommunityNode>(vectorOnly, 99f)
+            }
+        };
+
+        var ranked = await SearchEngine.CommunitySearchAsync(
+            driver,
+            new IdentityCrossEncoderClient(),
+            "query",
+            new[] { 1f, 0f },
+            new[] { "group" },
+            new CommunitySearchConfig
+            {
+                SearchMethods = { CommunitySearchMethod.Bm25, CommunitySearchMethod.CosineSimilarity },
+                Reranker = CommunityReranker.Mmr,
+                MmrLambda = 1
+            },
+            limit: 2);
+
+        Assert.Equal(
+            new[] { "community-text-first", "community-text-second" },
+            ranked.Select(item => item.Item.Uuid));
+        Assert.Equal(new[] { 1f, 1f }, ranked.Select(item => item.Score));
     }
 
     [Fact]

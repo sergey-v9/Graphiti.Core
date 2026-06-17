@@ -159,8 +159,9 @@ Edge cross-encoder windowing applies the `limit` after
 retrieval-order dedupe; node/community cross-encoder inputs remain full-pool but use the same
 retrieval order. `TextUtilities.TruncateAtSentence` mirrors Python negative-slice behavior for
 negative `max_chars`, and node/edge extraction prompt contexts plus entity-summary type-description
-maps use dictionary keys for custom type names like Python.
-`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1043` passed,
+maps use dictionary keys for custom type names like Python. MMR reranking now receives node, edge,
+and community candidates in Python's first-seen retrieval order.
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1046` passed,
 `3` skipped; both shippable packages packed and both fresh package-consumer smoke builds succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
@@ -306,7 +307,8 @@ typed node-delete Saga boundary, the duplicate-passage cross-encoder drift, the 
 scope drift, the entity UUID group-filter drift, the in-memory episodic-metadata drift, the
 entity/episodic-edge group-miss drift, the semaphore default-concurrency drift, the entity-type-id key
 mapping/schema drift, the base edge-delete scope drift, the eager search-config numeric validation
-drift, the negative-limit text truncation drift, and the entity/fact prompt type-key drift:
+drift, the negative-limit text truncation drift, the entity/fact prompt type-key drift, and the MMR
+candidate-order drift:
 namespace `SaveAsync` regenerates entity/community node and entity-edge embeddings even when prefilled,
 namespace `SaveBulkAsync` now preserves supplied null/precomputed embeddings without calling the
 embedder, and `AddTripletAsync` creates a fresh entity-edge UUID when the default in-memory backend
@@ -346,10 +348,12 @@ dispatch.
 of throwing before truncation.
 Node/edge extraction prompt contexts and entity-summary type-description maps now render custom type
 dictionary keys instead of `EntityTypeDefinition.Name`, matching Python's aliased type identity.
+MMR node, edge, and community search now feed tied reranker candidates in first-seen retrieval order
+instead of preliminary-score order, matching Python's UUID-map input order.
 Top-level community search now supplies Python's zero query vector fallback when no real embedding
 path is configured, so BM25/RRF community searches still execute vector retrieval like Python.
 Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests
-(`1043` passed, `3` skipped, `1046` total), both shippable package packs, and both package-consumer
+(`1046` passed, `3` skipped, `1049` total), both shippable package packs, and both package-consumer
 smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
@@ -361,9 +365,8 @@ surface. A separate read-only maintenance audit found that C# entity attribute d
 currently expose Python's per-field `max_length` and required-field metadata; adding that shape would
 also be a public API decision. Separate concrete parity candidates found in the same audit pass,
 but not changed in this prompt/text slice: resolved/invalidated edge result duplicate preservation,
-`EdgeReranker.EpisodeMentions` score-list ordering, and first-seen candidate ordering before MMR.
-Continue the broader full-pipeline parity audit against current Python; new candidates should be
-added here as they are confirmed.
+and `EdgeReranker.EpisodeMentions` score-list ordering. Continue the broader full-pipeline parity
+audit against current Python; new candidates should be added here as they are confirmed.
 
 Latest checkpoint, 2026-06-13:
 
