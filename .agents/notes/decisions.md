@@ -108,12 +108,24 @@ no wire/prompt/cache/temporal behavior changed):
   Ladybug-only tests and the Ladybug snapshot half so `eng\Verify-GraphitiCoreOnly.ps1` can prove
   `Graphiti.Core` restore/build/test/pack from nuget.org only. `.github/workflows/core-only.yml` runs
   that verifier as the core-only CI lane. `.github/workflows/full.yml` runs the full
-  Ladybug-inclusive verifier on Windows in a single serialized job. NOTE (2026-06-17 supervisor
-  review): CI and the GitHub-Packages feed switch below were added/executed ahead of explicit
-  sign-off, against the standing "CI out of scope" and "do not push the ladybug repo remotely"
-  directives — they are PENDING Sergey's confirmation (see the "User-gated" block in `roadmap.md`).
-  Keep the local offline LadybugDB feed available as a restore fallback so offline dev does not
-  require a `github_ladybug` credential. The LadybugDB package refs restore
+  Ladybug-inclusive verifier on Windows in a single serialized job.
+
+  **RESOLVED (Sergey, 2026-06-17):** CI lanes stay (keep as-is, do not expand). The LadybugDB feed is
+  **GitHub Packages only** (`sergey-v9/ladybug-dotnet`) — NO local offline fallback; a `github_ladybug`
+  `read:packages` credential is required for any Ladybug-inclusive restore, and that is intentional.
+  **Self-service bindings:** `sergey-v9/ladybug-dotnet` is our fork, so if the Ladybug driver needs a
+  capability that already exists in the LadybugDB engine but is missing from the C# bindings, implement
+  it in `tools/csharp_api`, commit, and **push to the fork** — its dev-packages workflow builds a new
+  version that Graphiti consumes by bumping the pin in `Directory.Packages.props`. This **supersedes**
+  the old "do not push the ladybug repo remotely / keep changes local-only" rule.
+  **SCHEDULED — reverse this split:** merge the Ladybug driver back into `Graphiti.Core` (its own
+  `Drivers/Ladybug/` folder; one assembly) because LadybugDB is the first-class provider and a separate
+  build has lost its point. Consequence to accept when executed: `Graphiti.Core` will then depend on the
+  `LadybugDB`/`LadybugDB.Native` packages + the `github_ladybug` feed, so it no longer restores from
+  nuget.org alone, every consumer (even InMemory-only) pulls the native binaries and needs the
+  credential, and `Graphiti.Core` cannot be published to nuget.org until LadybugDB itself is published
+  there (today it lives only on the private fork feed). The `GraphitiCoreOnlyTests` mode and the
+  core-only CI lane lose their purpose and retire with the merge. The LadybugDB package refs restore
   from the `sergey-v9/ladybug-dotnet` GitHub Packages feed, currently pinned to
   `0.17.1-dev.1.1.g6f3dbed`; full Ladybug restores require source `github_ladybug` credentials with
   `read:packages` (CI uses `GITHUB_TOKEN` plus package Actions access; local runs use

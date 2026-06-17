@@ -21,6 +21,13 @@ These were taken by the agent ahead of sign-off; Sergey has now ruled on them:
    `GraphProvider.Neo4j` enum member, the `uri`/`user`/`password` constructor parameters,
    `GraphitiOptions.Uri`/`User`/`Password`, the `Neo4j.Driver` package reference, and all Neo4j tests
    are gone; the public-API baseline was regenerated and the parity matrix and docs were updated.
+4. **Merge Ladybug into Core — SCHEDULED (reverse plan-05 E).** LadybugDB is first-class, so a separate
+   assembly/package has lost its point: move the driver into `src/Graphiti.Core/Drivers/Ladybug/` (one
+   build). See Phase 4 + `kuzu-driver-port.md` for the steps and the consequence (Core then depends on
+   the LadybugDB packages/feed and can't be published to nuget.org until LadybugDB is public there).
+5. **Self-service bindings (standing).** `sergey-v9/ladybug-dotnet` is our fork: a capability the
+   LadybugDB engine has but the C# bindings lack can be implemented in `tools/csharp_api`, pushed to the
+   fork (builds a new dev package), and consumed by bumping the pin. Supersedes "do not push remotely."
 
 Still user-gated (do not self-authorize): **release publishing / versioning** of the Graphiti packages
 themselves (2.0.0 line, alpha→beta cadence, metapackage shape).
@@ -109,6 +116,18 @@ only an `[Obsolete]` compatibility alias. Active Ladybug full-text and label-fil
 inside `Drivers/Ladybug/`; direct package parameter binding is covered through the local repaired
 LadybugDB package family; shared Kuzu branches were retired from the generic search helpers. Neo4j was
 removed 2026-06-17 and is no longer a provider.
+
+**SCHEDULED (2026-06-17): merge the Ladybug driver back into `Graphiti.Core`.** Reverse the plan-05 E
+split — move `src/Graphiti.Core.Drivers.Ladybug/*` into `src/Graphiti.Core/Drivers/Ladybug/`, fold the
+`LadybugDB`/`LadybugDB.Native` package refs + `AddLadybugDbGraphDriver`/`LadybugDbOptions`/factory into
+`Graphiti.Core`, collapse the two-assembly API snapshot to one, and retire the `GraphitiCoreOnlyTests`
+mode + the core-only CI lane. Rationale: LadybugDB is the first-class provider, so a separate build no
+longer earns its keep. **Consequence:** `Graphiti.Core` then depends on the LadybugDB packages + the
+`github_ladybug` feed — no more nuget.org-only restore, every consumer pulls natives + needs the
+credential, and Core can't publish to nuget.org until LadybugDB is public there (fine for the current
+private-fork workflow; ties into the still-user-gated release decision). Full plan in
+`kuzu-driver-port.md`; also leverage **self-service bindings** there for any binding gaps found during
+the work.
 
 ## Phase 5 — Release readiness (IN PROGRESS)
 

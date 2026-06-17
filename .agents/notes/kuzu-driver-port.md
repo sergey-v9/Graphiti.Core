@@ -93,10 +93,39 @@ active `read:packages` GitHub token passed as `NuGetPackageSourceCredentials_git
 and `.\eng\Verify-GraphitiCore.ps1` are green (`1021` passed, `3` skipped; both Graphiti packages and
 fresh package-consumer smoke builds succeeded).
 
+## Self-service bindings (2026-06-17)
+
+`sergey-v9/ladybug-dotnet` is **our fork** — we own it and publish from it. The LadybugDB *engine*
+already supports far more than the C# bindings currently wrap. So when the Ladybug driver needs a
+capability that exists in the engine but is **missing from the C# bindings** (we just haven't wrapped
+it yet), we don't have to wait on anyone: implement the wrapper in `W:\code\ladybug\tools\csharp_api`,
+commit, and **push to `sergey-v9/ladybug-dotnet`**. Its dev-packages GitHub Actions workflow builds a
+new normalized dev package version (e.g. `0.17.1-dev.N.g<sha>`), which Graphiti consumes by bumping the
+pin in `Directory.Packages.props` and restoring from the `github_ladybug` feed. This **supersedes** the
+earlier "patch locally, do not push remotely, keep a local-only package" rule. (Binding changes belong
+in the binding repo, not in Graphiti; first verify the capability really exists in the LadybugDB
+engine — bindings gap, not an engine gap — and prefer wrapping the existing engine feature over
+inventing new surface.)
+
+## SCHEDULED: merge the Ladybug driver back into Graphiti.Core (2026-06-17)
+
+Decision (Sergey): the plan-05 E package split is being **reversed**. LadybugDB is the first-class
+provider, so a separate assembly/package (`Graphiti.Core.Drivers.Ladybug`) has lost its point — the
+driver should move into its own `src/Graphiti.Core/Drivers/Ladybug/` folder inside the Core assembly,
+one build. When executed this collapses the two-assembly public-API snapshot to one, retires the
+`GraphitiCoreOnlyTests` mode and the core-only CI lane, folds the `LadybugDB`/`LadybugDB.Native`
+package refs into `Graphiti.Core.csproj`, and moves `AddLadybugDbGraphDriver`/`LadybugDbOptions`/the
+factory into Core. **Consequence to accept:** `Graphiti.Core` then depends on the LadybugDB packages +
+the `github_ladybug` feed — it no longer restores from nuget.org alone, every consumer pulls the
+native binaries and needs the credential, and Core can't be published to nuget.org until LadybugDB is
+public there. Acceptable for the current private-fork workflow; revisit only if public nuget.org
+publishing of `Graphiti.Core` becomes a goal (that is the still-user-gated release decision).
+
 ## Current Status
 
 - The LadybugDB package and native references are owned by the `Graphiti.Core.Drivers.Ladybug` project
-  (superseding the historical "`Graphiti.Core` owns" bullets below).
+  (superseding the historical "`Graphiti.Core` owns" bullets below). **(Scheduled to change — see the
+  merge-into-Core decision above.)**
 - `Drivers/Ladybug/` owns schema, statement construction, record mapping,
   full-text query construction, Ladybug label-filter fragments, the concrete package executor, and
   executor-backed graph/search behavior.
