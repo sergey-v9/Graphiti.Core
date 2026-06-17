@@ -147,7 +147,12 @@ that published version.
 Rerun verification before claiming the tree is green; historical test counts drift as coverage is
 added.
 
-Latest verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
+Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
+credentials for the Ladybug feed: `976` passed, `3` skipped, `979` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice aligns name-based saga association with
+Python's minimal existing-saga projection before save.
+
+Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
 first-seen retrieval-result order across BM25/vector/BFS inputs, and `NormalizeL2` preserves only
 zero-norm embeddings while propagating non-finite norms like Python. `EntityEdge.GetByGroupIdsAsync`
@@ -418,12 +423,13 @@ applying it in the node or edge search filter constructors.
 Open concrete follow-up candidates from the latest read-only audits: plan-folder inventory found
 only plan 06 unchecked, and that LadybugDB merge remains a separate optional stream under
 `.agents/plans/06-merge-ladybug-into-core.md`, not release/versioning work. The endpoint-gated
-InMemory edge-save drift is now closed. Two saga candidates remain separate: existing saga-by-name
-association hydrates/preserves more saga state than Python's minimal `_get_or_create_saga` return, and
+InMemory edge-save drift is now closed. Existing saga-by-name association is now aligned with
+Python's minimal `_get_or_create_saga` return before save. One saga candidate remains separate:
 bulk saga predecessor lookup excludes the first bulk episode where Python passes an empty
-`current_episode_uuid`. Verify either against Python behavior before changing it; the second may be a
-cycle-avoidance divergence that needs an explicit decision. Decision-gated release/API/provider items
-remain separate in plan 05 and the provider notes.
+`current_episode_uuid`; matching Python can create a `NEXT_EPISODE` self-loop when the only bulk item
+reuses an already-linked saga episode UUID, so treat that as a decision-gated cycle-avoidance question
+before changing it. Decision-gated release/API/provider items remain separate in plan 05 and the
+provider notes.
 
 Latest checkpoint, 2026-06-13:
 

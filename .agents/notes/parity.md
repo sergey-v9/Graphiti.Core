@@ -130,6 +130,13 @@ existing relationship. `InMemoryGraphDriver.SaveEdgeAsync` now applies the same 
 for `EntityEdge`, `EpisodicEdge`, `CommunityEdge` (entity or community target), `HasEpisodeEdge`,
 and `NextEpisodeEdge`; delete cleanup also recognizes community-to-community membership targets.
 
+**2026-06-18 saga-name association follow-up:** closed a saga hydration drift. Python
+`_get_or_create_saga` returns only `uuid`, `name`, `group_id`, and `created_at` for an existing saga,
+then later saves that partial `SagaNode`; C# name-based saga association now projects existing driver
+results to that same minimal shape. Existing summaries, first/last pointers, and summarization
+watermarks are therefore overwritten from the partial model when callers pass a saga name, matching
+Python. Passing an explicit `SagaNode` remains the caller-supplied object path.
+
 **2026-06-17 build-communities group-discovery follow-up:** closed the public workflow group-selection
 drift. Python discovers entity groups only when `group_ids is None`; an explicit `[]` clears existing
 communities and builds none. C# now preserves that null-vs-empty distinction. InMemory and LadybugDB
@@ -575,7 +582,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Edge attribute extraction during add_episode | edge_operations.resolve_extracted_edge | EdgeResolutionService | OK | Aligned 2026-06-11: structured edge attributes are extracted during edge resolution only. There is no post-resolution ingestion-stage edge attribute pass; exact duplicate reuse skips the prompt and preserves existing attributes, while non-fast-path resolution replaces/clears attributes like Python |
 | Episodic edge building | edge_operations.build_episodic_edges | MaintenanceUtilities | OK | |
 | Bulk ingestion (true batch dedup/resolve) | bulk_utils, graphiti.py:1230+ | Graphiti.Ingestion.cs:195+ | OK + DIVERGENT | Staged extraction, cross-batch node/edge dedupe, final resolution, pointer remapping, per-episode provenance. 2026-06-13 fixes: bulk summaries no longer append edge facts (Python `edges=None`); first-pass node dedup no longer over-widens the candidate pool. Behaviors KEPT as documented DIVERGENT (see `decisions.md`): cross-episode edge invalidation is more aggressive than Python, bulk episodes own `episode.EntityEdges` where Python's bulk leaves it empty, and `storeRawEpisodeContent: false` also scrubs stored bulk episode content after extraction |
-| Saga association + episode-time watermarks | graphiti.py | SagaService | OK | Watermarks present |
+| Saga association + episode-time watermarks | graphiti.py | SagaService | OK | Watermarks present. Name-based existing saga association uses Python's minimal `_get_or_create_saga` projection before save |
 | Community update on ingest | graphiti.py | CommunityService | OK | Flow parity; community summary/name prompts ported 2026-06-11; blank entity summaries are preserved when summarized into communities |
 
 ## Public Graphiti workflows

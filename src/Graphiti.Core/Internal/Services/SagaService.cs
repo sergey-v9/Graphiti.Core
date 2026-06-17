@@ -170,7 +170,7 @@ internal sealed class SagaService(
         var existing = await driver.FindSagaByNameAsync(sagaName, groupId, cancellationToken).ConfigureAwait(false);
         if (existing is not null)
         {
-            return existing;
+            return ProjectExistingSagaForNameAssociation(existing);
         }
 
         var saga = new SagaNode
@@ -182,6 +182,16 @@ internal sealed class SagaService(
         await saga.SaveAsync(driver, cancellationToken).ConfigureAwait(false);
         return saga;
     }
+
+    private static SagaNode ProjectExistingSagaForNameAssociation(SagaNode existing) =>
+        new()
+        {
+            // Python _get_or_create_saga returns only these fields for an existing saga.
+            Uuid = existing.Uuid,
+            Name = existing.Name,
+            GroupId = existing.GroupId,
+            CreatedAt = existing.CreatedAt
+        };
 
     private static async Task<SagaNode> ResolveSagaAsync(
         IGraphDriver driver,

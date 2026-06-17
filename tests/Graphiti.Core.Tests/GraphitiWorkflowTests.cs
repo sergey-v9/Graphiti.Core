@@ -2271,7 +2271,7 @@ public class GraphitiWorkflowTests
         var byName = result.Episodes.ToDictionary(episode => episode.Name, StringComparer.Ordinal);
 
         Assert.Equal(new[] { "latest-new", "earliest-new" }, result.Episodes.Select(episode => episode.Name));
-        Assert.Equal(existingEpisode.Uuid, storedSaga.FirstEpisodeUuid);
+        Assert.Equal(byName["earliest-new"].Uuid, storedSaga.FirstEpisodeUuid);
         Assert.Equal(byName["latest-new"].Uuid, storedSaga.LastEpisodeUuid);
         Assert.Contains(nextEdges, edge =>
             edge.SourceNodeUuid == existingEpisode.Uuid && edge.TargetNodeUuid == byName["earliest-new"].Uuid);
@@ -4518,6 +4518,68 @@ public class GraphitiWorkflowTests
         Assert.Single(nextEpisodeEdges);
         Assert.Equal(first.Episode.Uuid, nextEpisodeEdges[0].SourceNodeUuid);
         Assert.Equal(second.Episode.Uuid, nextEpisodeEdges[0].TargetNodeUuid);
+    }
+
+    [Fact]
+    public async Task SagaAssociation_ByNameProjectsExistingSagaLikePython()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var existingTime = new DateTime(2026, 1, 1, 9, 0, 0, DateTimeKind.Utc);
+        var newTime = existingTime.AddHours(1);
+        var existingEpisode = new EpisodicNode
+        {
+            Name = "existing",
+            GroupId = "group",
+            Source = EpisodeType.Message,
+            SourceDescription = "message",
+            Content = "Existing event.",
+            CreatedAt = existingTime,
+            ValidAt = existingTime
+        };
+        var saga = new SagaNode
+        {
+            Uuid = "saga-existing",
+            Name = "launch",
+            GroupId = "group",
+            CreatedAt = existingTime,
+            Summary = "Existing summary",
+            FirstEpisodeUuid = existingEpisode.Uuid,
+            LastEpisodeUuid = existingEpisode.Uuid,
+            LastSummarizedAt = existingTime.AddMinutes(30),
+            LastSummarizedEpisodeValidAt = existingTime
+        };
+        await saga.SaveAsync(driver);
+        await existingEpisode.SaveAsync(driver);
+        await new HasEpisodeEdge
+        {
+            SourceNodeUuid = saga.Uuid,
+            TargetNodeUuid = existingEpisode.Uuid,
+            GroupId = "group",
+            CreatedAt = existingTime
+        }.SaveAsync(driver);
+
+        var result = await graphiti.AddEpisodeAsync(
+            "new",
+            "New event.",
+            "message",
+            newTime,
+            groupId: "group",
+            saga: "launch");
+
+        var storedSaga = await SagaNode.GetByUuidAsync(driver, saga.Uuid);
+        var nextEpisodeEdge = Assert.Single(await NextEpisodeEdge.GetByGroupIdsAsync(driver, new[] { "group" }));
+        var hasEpisodeEdges = await HasEpisodeEdge.GetByGroupIdsAsync(driver, new[] { "group" });
+
+        Assert.Equal(string.Empty, storedSaga.Summary);
+        Assert.Equal(result.Episode.Uuid, storedSaga.FirstEpisodeUuid);
+        Assert.Equal(result.Episode.Uuid, storedSaga.LastEpisodeUuid);
+        Assert.Null(storedSaga.LastSummarizedAt);
+        Assert.Null(storedSaga.LastSummarizedEpisodeValidAt);
+        Assert.Equal(existingEpisode.Uuid, nextEpisodeEdge.SourceNodeUuid);
+        Assert.Equal(result.Episode.Uuid, nextEpisodeEdge.TargetNodeUuid);
+        Assert.Contains(hasEpisodeEdges, edge => edge.TargetNodeUuid == existingEpisode.Uuid);
+        Assert.Contains(hasEpisodeEdges, edge => edge.TargetNodeUuid == result.Episode.Uuid);
     }
 
     [Fact]

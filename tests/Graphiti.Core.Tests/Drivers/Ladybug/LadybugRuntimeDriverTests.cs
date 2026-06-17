@@ -305,7 +305,7 @@ public class LadybugRuntimeDriverTests
         var previousEpisodeUuid = await driver.GetSagaPreviousEpisodeUuidAsync(saga.Uuid, second.Episode.Uuid);
         var contents = await driver.GetSagaEpisodeContentsAsync(saga.Uuid);
 
-        Assert.Equal(first.Episode.Uuid, saga.FirstEpisodeUuid);
+        Assert.Equal(second.Episode.Uuid, saga.FirstEpisodeUuid);
         Assert.Equal(second.Episode.Uuid, saga.LastEpisodeUuid);
         Assert.Equal(first.Episode.Uuid, previousEpisodeUuid);
         Assert.Equal(2, hasEpisodeEdges.Count);
