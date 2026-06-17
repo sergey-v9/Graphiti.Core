@@ -23,7 +23,7 @@ public sealed class SearchFilterTests
     }
 
     [Fact]
-    public void NodeSearchFilterQueryConstructor_BuildsNeo4jAnyLabelQuery()
+    public void NodeSearchFilterQueryConstructor_BuildsAnyLabelQuery()
     {
         var filters = new SearchFilters
         {
@@ -31,7 +31,7 @@ public sealed class SearchFilterTests
         };
 
         var (queries, parameters) =
-            SearchFilterQueryBuilder.NodeSearchFilterQueryConstructor(filters, GraphProvider.Neo4j);
+            SearchFilterQueryBuilder.NodeSearchFilterQueryConstructor(filters);
 
         Assert.Equal(new[] { "n:Person|Company" }, queries);
         Assert.Empty(parameters);
@@ -51,7 +51,7 @@ public sealed class SearchFilterTests
         };
 
         var (queries, parameters) =
-            SearchFilterQueryBuilder.NodeSearchFilterQueryConstructor(filters, GraphProvider.Neo4j);
+            SearchFilterQueryBuilder.NodeSearchFilterQueryConstructor(filters);
 
         Assert.Equal(
             new[]
@@ -313,8 +313,8 @@ public sealed class SearchFilterTests
         };
 
         var compiled = CompiledSearchFilter.Compile(filters);
-        var (nodeQueries, nodeParameters) = compiled.BuildNodeQuery(GraphProvider.Neo4j);
-        var (edgeQueries, edgeParameters) = compiled.BuildEdgeQuery(GraphProvider.Neo4j);
+        var (nodeQueries, nodeParameters) = compiled.BuildNodeQuery();
+        var (edgeQueries, edgeParameters) = compiled.BuildEdgeQuery();
 
         Assert.Empty(nodeQueries);
         Assert.Empty(nodeParameters);
@@ -345,7 +345,7 @@ public sealed class SearchFilterTests
         };
 
         var compiled = CompiledSearchFilter.Compile(filters);
-        var (queries, parameters) = compiled.BuildEdgeQuery(GraphProvider.Neo4j);
+        var (queries, parameters) = compiled.BuildEdgeQuery();
 
         Assert.Empty(queries);
         Assert.Empty(parameters);
@@ -482,7 +482,7 @@ public sealed class SearchFilterTests
         };
 
         var (queries, parameters) =
-            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters, GraphProvider.Neo4j);
+            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters);
 
         Assert.Equal("e.name in $edge_types", queries[0]);
         Assert.Equal("e.uuid in $edge_uuids", queries[1]);
@@ -521,7 +521,7 @@ public sealed class SearchFilterTests
         };
 
         var (queries, parameters) =
-            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters, GraphProvider.Neo4j);
+            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters);
 
         Assert.Equal(
             "((e.valid_at >= $valid_at_0) AND (e.valid_at < $valid_at_1) OR " +
@@ -543,7 +543,7 @@ public sealed class SearchFilterTests
         };
 
         var (queries, parameters) =
-            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters, GraphProvider.Neo4j);
+            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters);
 
         Assert.DoesNotContain("()", queries);
         Assert.Empty(queries);
@@ -569,7 +569,7 @@ public sealed class SearchFilterTests
         };
 
         var (queries, parameters) =
-            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters, GraphProvider.Neo4j);
+            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters);
 
         Assert.Equal(new[] { "e.name in $edge_types" }, queries);
         Assert.Same(filters.EdgeTypes, parameters["edge_types"]);
@@ -579,7 +579,7 @@ public sealed class SearchFilterTests
     }
 
     [Fact]
-    public void EdgeSearchFilterQueryConstructor_BuildsNeo4jAnyLabelQuery()
+    public void EdgeSearchFilterQueryConstructor_BuildsAnyLabelQuery()
     {
         var filters = new SearchFilters
         {
@@ -587,7 +587,7 @@ public sealed class SearchFilterTests
         };
 
         var (queries, parameters) =
-            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters, GraphProvider.Neo4j);
+            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters);
 
         Assert.Equal(new[] { "n:Person|Company AND m:Person|Company" }, queries);
         Assert.Empty(parameters);
@@ -607,7 +607,7 @@ public sealed class SearchFilterTests
         };
 
         var (queries, parameters) =
-            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters, GraphProvider.Neo4j);
+            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters);
 
         Assert.Equal(
             new[]
@@ -638,7 +638,7 @@ public sealed class SearchFilterTests
         var filters = JsonSerializer.Deserialize<SearchFilters>(json, GraphitiJsonSerializer.Options)!;
 
         var (queries, parameters) =
-            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters, GraphProvider.Neo4j);
+            SearchFilterQueryBuilder.EdgeSearchFilterQueryConstructor(filters);
 
         Assert.Equal(new[] { "(e[$edge_property_name_0] < $edge_property_value_0)" }, queries);
         Assert.Equal("confidence", parameters["edge_property_name_0"]);

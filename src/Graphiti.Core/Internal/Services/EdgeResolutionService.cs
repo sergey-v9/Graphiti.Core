@@ -781,7 +781,7 @@ internal sealed class EdgeResolutionService(
         // ignored on the core path. Scoping the C# fetch by group_id would drop a cross-group endpoint
         // that Python would fetch (losing the node labels that select the edge's custom type), so we
         // fetch by UUID only. All C# drivers treat a null groupId as "no group filter"
-        // (Neo4jGraphDriver.cs:295-297, InMemoryGraphDriver.cs:342, LadybugGraphDriver.cs:389).
+        // (InMemoryGraphDriver.cs:342, LadybugGraphDriver.cs:389).
         var fetched = await driverAccessor()
             .GetNodesByUuidsAsync<EntityNode>(missing, groupId: null, cancellationToken)
             .ConfigureAwait(false);

@@ -119,7 +119,6 @@ public class GraphitiHelperTests
     [Fact]
     public void GetDefaultGroupId_MatchesPythonProviderDefaults()
     {
-        Assert.Equal(string.Empty, GraphitiHelpers.GetDefaultGroupId(GraphProvider.Neo4j));
         // '_' (not the old '\_') after upstream #1549 (ff7e29c): the backslash failed
         // validate_group_id and broke the FalkorDB quickstart. Mirrors get_default_group_id.
         Assert.Equal("_", GraphitiHelpers.GetDefaultGroupId(GraphProvider.FalkorDb));

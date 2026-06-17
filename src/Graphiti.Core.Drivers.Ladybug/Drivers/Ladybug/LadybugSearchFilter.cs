@@ -9,7 +9,7 @@ internal static class LadybugSearchFilter
         var labels = searchFilter.NodeLabels;
         var (filterQueries, filterParams) = CompiledSearchFilter
             .Compile(WithoutNodeLabels(searchFilter))
-            .BuildNodeQuery(GraphProvider.Neo4j);
+            .BuildNodeQuery();
         AddLabelFilter(filterQueries, filterParams, labels, includeTarget: false, insertIndex: 0);
         return (filterQueries, filterParams);
     }
@@ -21,7 +21,7 @@ internal static class LadybugSearchFilter
         var labels = searchFilter.NodeLabels;
         var (filterQueries, filterParams) = CompiledSearchFilter
             .Compile(WithoutNodeLabels(searchFilter))
-            .BuildEdgeQuery(GraphProvider.Neo4j);
+            .BuildEdgeQuery();
         var insertIndex = (searchFilter.EdgeTypes is not null ? 1 : 0)
             + (searchFilter.EdgeUuids is not null ? 1 : 0);
         AddLabelFilter(filterQueries, filterParams, labels, includeTarget: true, insertIndex);

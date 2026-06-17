@@ -17,10 +17,10 @@ internal static class SearchFilterQueryBuilder
             _ => op.ToWireValue()
         };
 
-    /// <summary>Builds the node-search filter query fragments and parameters for a provider.</summary>
+    /// <summary>Builds the node-search filter query fragments and parameters.</summary>
     public static (List<string> FilterQueries, Dictionary<string, object?> FilterParams)
-        NodeSearchFilterQueryConstructor(SearchFilters filters, GraphProvider provider) =>
-        CompiledSearchFilter.Compile(filters).BuildNodeQuery(provider);
+        NodeSearchFilterQueryConstructor(SearchFilters filters) =>
+        CompiledSearchFilter.Compile(filters).BuildNodeQuery();
 
     /// <summary>Builds a single date-comparison query fragment for a field/parameter pair.</summary>
     public static string DateFilterQueryConstructor(
@@ -36,8 +36,8 @@ internal static class SearchFilterQueryBuilder
         return $"({valueName} {comparisonOperator.ToWireValue()} {paramName})";
     }
 
-    /// <summary>Builds the edge-search filter query fragments and parameters for a provider.</summary>
+    /// <summary>Builds the edge-search filter query fragments and parameters.</summary>
     public static (List<string> FilterQueries, Dictionary<string, object?> FilterParams)
-        EdgeSearchFilterQueryConstructor(SearchFilters filters, GraphProvider provider) =>
-        CompiledSearchFilter.Compile(filters).BuildEdgeQuery(provider);
+        EdgeSearchFilterQueryConstructor(SearchFilters filters) =>
+        CompiledSearchFilter.Compile(filters).BuildEdgeQuery();
 }

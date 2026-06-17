@@ -82,10 +82,8 @@ internal sealed class CompiledSearchFilter
             && NodeLabelsMatch(target);
     }
 
-    public (List<string> FilterQueries, Dictionary<string, object?> FilterParams) BuildNodeQuery(
-        GraphProvider provider)
+    public (List<string> FilterQueries, Dictionary<string, object?> FilterParams) BuildNodeQuery()
     {
-        _ = provider;
         var filterQueries = new List<string>(EstimateNodeQueryCount());
         var filterParams = new Dictionary<string, object?>(
             EstimateNodeParameterCount(),
@@ -96,10 +94,8 @@ internal sealed class CompiledSearchFilter
         return (filterQueries, filterParams);
     }
 
-    public (List<string> FilterQueries, Dictionary<string, object?> FilterParams) BuildEdgeQuery(
-        GraphProvider provider)
+    public (List<string> FilterQueries, Dictionary<string, object?> FilterParams) BuildEdgeQuery()
     {
-        _ = provider;
         var filterQueries = new List<string>(EstimateEdgeQueryCount());
         var filterParams = new Dictionary<string, object?>(
             EstimateEdgeParameterCount(),

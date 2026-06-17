@@ -1,16 +1,13 @@
 using System.Buffers;
-using System.Collections.Frozen;
 using System.Numerics.Tensors;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Graphiti.Core.Search;
 
 /// <summary>
 /// Low-level helpers shared by the search pipeline: vector math (cosine similarity, normalization),
-/// reranking primitives (RRF, MMR, score combination), tokenization, and full-text query construction
-/// and sanitization for the various graph backends.
+/// reranking primitives (RRF, MMR, score combination), and tokenization.
 /// </summary>
 internal static partial class SearchUtilities
 {
@@ -28,46 +25,6 @@ internal static partial class SearchUtilities
 
     /// <summary>Maximum backend full-text query term/part count used when constructing queries.</summary>
     public const int MaxQueryLength = 128;
-
-    private static readonly SearchValues<char> FalkorFulltextSeparators =
-        SearchValues.Create(",.<>{}[]\"':;!@#$%^&*()-+=~?|/\\");
-
-    private static readonly FrozenSet<string> FalkorStopwords = new[]
-    {
-        "a",
-        "is",
-        "the",
-        "an",
-        "and",
-        "are",
-        "as",
-        "at",
-        "be",
-        "but",
-        "by",
-        "for",
-        "if",
-        "in",
-        "into",
-        "it",
-        "no",
-        "not",
-        "of",
-        "on",
-        "or",
-        "such",
-        "that",
-        "their",
-        "then",
-        "there",
-        "these",
-        "they",
-        "this",
-        "to",
-        "was",
-        "will",
-        "with"
-    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Computes cosine similarity of two vectors; returns 0 if either is null/empty and throws when
@@ -301,187 +258,6 @@ internal static partial class SearchUtilities
         }
 
         return results;
-    }
-
-    /// <summary>
-    /// Builds a backend-specific full-text query string from a natural-language query and optional
-    /// group-id scope, applying the sanitization and stopword rules appropriate to the driver's provider.
-    /// </summary>
-    public static string FulltextQuery(string query, IReadOnlyList<string>? groupIds, IGraphDriver driver)
-    {
-        ArgumentNullException.ThrowIfNull(driver);
-        return FulltextQuery(query, groupIds, driver.Provider);
-    }
-
-    internal static string FulltextQuery(string query, IReadOnlyList<string>? groupIds, GraphProvider provider)
-    {
-        GraphitiHelpers.ValidateGroupIds(groupIds);
-
-        return provider switch
-        {
-            GraphProvider.FalkorDb => BuildFalkorFulltextQuery(query, groupIds),
-            _ => BuildLuceneFulltextQuery(query, groupIds)
-        };
-    }
-
-    private static string BuildLuceneFulltextQuery(string query, IReadOnlyList<string>? groupIds)
-    {
-        var sanitized = GraphitiHelpers.LuceneSanitize(query ?? string.Empty);
-        if (string.IsNullOrWhiteSpace(sanitized))
-        {
-            return string.Empty;
-        }
-
-        if (CountPythonSpaceSplitParts(sanitized) + (groupIds?.Count ?? 0) >= MaxQueryLength)
-        {
-            return string.Empty;
-        }
-
-        if (groupIds is null || groupIds.Count == 0)
-        {
-            return $"({sanitized})";
-        }
-
-        var groupFilter = BuildLuceneGroupFilter(groupIds);
-        return $"({groupFilter}) AND ({sanitized})";
-    }
-
-    private static string BuildLuceneGroupFilter(IReadOnlyList<string> groupIds)
-    {
-        var builder = new StringBuilder(groupIds.Count * 24);
-        for (var i = 0; i < groupIds.Count; i++)
-        {
-            if (i > 0)
-            {
-                builder.Append(" OR ");
-            }
-
-            builder.Append("group_id:\"");
-            builder.Append(groupIds[i]);
-            builder.Append('"');
-        }
-
-        return builder.ToString();
-    }
-
-    private static string BuildFalkorFulltextQuery(string query, IReadOnlyList<string>? groupIds)
-    {
-        var groupFilter = groupIds is { Count: > 0 }
-            ? BuildFalkorGroupFilter(groupIds)
-            : string.Empty;
-
-        var queryPart = BuildFalkorQueryPart(
-            SanitizeFalkorFulltextQuery(query ?? string.Empty),
-            out var queryPartSplitCount);
-
-        if (queryPartSplitCount + (groupIds?.Count ?? 0) >= MaxQueryLength)
-        {
-            return string.Empty;
-        }
-
-        return $"{groupFilter} ({queryPart})";
-    }
-
-    private static string BuildFalkorGroupFilter(IReadOnlyList<string> groupIds)
-    {
-        var builder = new StringBuilder(groupIds.Count * 16);
-        builder.Append("(@group_id:");
-        for (var i = 0; i < groupIds.Count; i++)
-        {
-            if (i > 0)
-            {
-                builder.Append('|');
-            }
-
-            builder.Append('"');
-            builder.Append(groupIds[i]);
-            builder.Append('"');
-        }
-
-        builder.Append(')');
-        return builder.ToString();
-    }
-
-    private static string SanitizeFalkorFulltextQuery(string query)
-    {
-        var builder = new StringBuilder(query.Length);
-        var pendingSpace = false;
-        foreach (var character in query)
-        {
-            var normalized = FalkorFulltextSeparators.Contains(character) ? ' ' : character;
-            if (char.IsWhiteSpace(normalized))
-            {
-                pendingSpace = builder.Length > 0;
-                continue;
-            }
-
-            if (pendingSpace)
-            {
-                builder.Append(' ');
-                pendingSpace = false;
-            }
-
-            builder.Append(normalized);
-        }
-
-        return builder.ToString();
-    }
-
-    private static int CountPythonSpaceSplitParts(string value)
-    {
-        var count = 1;
-        foreach (var character in value)
-        {
-            if (character == ' ')
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private static string BuildFalkorQueryPart(string sanitizedQuery, out int queryPartSplitCount)
-    {
-        var source = sanitizedQuery.AsSpan();
-        var builder = new StringBuilder(sanitizedQuery.Length);
-        var filteredTermCount = 0;
-        var index = 0;
-        while (index < source.Length)
-        {
-            while (index < source.Length && source[index] == ' ')
-            {
-                index++;
-            }
-
-            if (index >= source.Length)
-            {
-                break;
-            }
-
-            var start = index;
-            while (index < source.Length && source[index] != ' ')
-            {
-                index++;
-            }
-
-            var term = sanitizedQuery[start..index];
-            if (FalkorStopwords.Contains(term))
-            {
-                continue;
-            }
-
-            if (filteredTermCount > 0)
-            {
-                builder.Append(" | ");
-            }
-
-            builder.Append(term);
-            filteredTermCount++;
-        }
-
-        queryPartSplitCount = filteredTermCount == 0 ? 1 : (filteredTermCount * 2) - 1;
-        return builder.ToString();
     }
 
     /// <summary>Convenience one-shot term-overlap score of <paramref name="text"/> against a query.</summary>

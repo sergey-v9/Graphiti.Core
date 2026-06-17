@@ -1038,32 +1038,6 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task AddGraphiti_PassesConfiguredDatabaseToNeo4jDriver()
-    {
-        var configuration = new ConfigurationManager
-        {
-            ["Provider"] = "Neo4j",
-            ["Uri"] = "bolt://localhost:7687",
-            ["User"] = "neo4j",
-            ["Password"] = "password",
-            ["Database"] = "tenant-db"
-        };
-        var services = new ServiceCollection();
-        services.AddGraphiti(configuration);
-
-        await using var provider = services.BuildServiceProvider();
-        await using var scope = provider.CreateAsyncScope();
-
-        var options = scope.ServiceProvider.GetRequiredService<IOptions<GraphitiOptions>>().Value;
-        var driver = Assert.IsType<Neo4jGraphDriver>(scope.ServiceProvider.GetRequiredService<IGraphDriver>());
-        var graphiti = scope.ServiceProvider.GetRequiredService<Graphiti>();
-
-        Assert.Equal("tenant-db", options.Database);
-        Assert.Equal("tenant-db", driver.Database);
-        Assert.Same(driver, graphiti.Driver);
-    }
-
-    [Fact]
     public async Task AddGraphiti_BindsLlmConfigFromConfiguration()
     {
         var configuration = new ConfigurationManager
