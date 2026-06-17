@@ -29,10 +29,9 @@ internal sealed class CommunityService(
             var nodes = await GetEntityNodesForCommunityAsync(driver, resolvedGroupIds, cancellationToken).ConfigureAwait(false);
             var edges = await GetEntityEdgesForCommunityAsync(driver, nodes, cancellationToken).ConfigureAwait(false);
             var clusters = CommunityClustering.BuildClusters(nodes, edges);
-            var now = UtcNow();
             var builtCommunities = await SelectThrottledAsync(
                 clusters,
-                (cluster, token) => BuildCommunityAsync(cluster, now, token),
+                BuildCommunityAsync,
                 cancellationToken).ConfigureAwait(false);
             var communities = new List<CommunityNode>(builtCommunities.Length);
             var communityEdgeCapacity = 0;
@@ -100,11 +99,11 @@ internal sealed class CommunityService(
 
     private async Task<CommunityBuildResult> BuildCommunityAsync(
         List<EntityNode> cluster,
-        DateTime now,
         CancellationToken cancellationToken)
     {
         var summary = await GenerateCommunitySummaryAsync(cluster, cancellationToken).ConfigureAwait(false);
         var name = await GenerateCommunityNameAsync(summary, cluster, cancellationToken).ConfigureAwait(false);
+        var now = UtcNow();
         var community = new CommunityNode
         {
             Name = name,

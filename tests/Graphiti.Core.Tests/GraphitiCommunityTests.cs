@@ -202,6 +202,34 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
+    public async Task BuildCommunities_CapturesTimestampPerCommunityBuildLikePython()
+    {
+        var driver = new InMemoryGraphDriver();
+        var firstNow = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            maxCoroutines: 1,
+            timeProvider: new SteppingTimeProvider(firstNow, TimeSpan.FromMinutes(7)));
+        var createdAt = new DateTime(2026, 1, 1, 11, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group", createdAt, "alice");
+        var bob = Entity("Bob", "group", createdAt, "bob");
+        await alice.SaveAsync(driver);
+        await bob.SaveAsync(driver);
+
+        var (communities, communityEdges) = await graphiti.BuildCommunitiesAsync(new[] { "group" });
+
+        Assert.Equal(2, communities.Count);
+        Assert.Equal(
+            new[] { firstNow.UtcDateTime, firstNow.AddMinutes(7).UtcDateTime },
+            communities.Select(community => community.CreatedAt).Order());
+        foreach (var community in communities)
+        {
+            var membership = Assert.Single(communityEdges, edge => edge.SourceNodeUuid == community.Uuid);
+            Assert.Equal(community.CreatedAt, membership.CreatedAt);
+        }
+    }
+
+    [Fact]
     public async Task BuildCommunities_RemovesExistingCommunitiesBeforeRebuild()
     {
         var driver = new InMemoryGraphDriver();
@@ -1077,6 +1105,25 @@ public class GraphitiCommunityTests
             }
 
             return new[] { 1f, 0f };
+        }
+    }
+
+    private sealed class SteppingTimeProvider : TimeProvider
+    {
+        private readonly DateTimeOffset _first;
+        private readonly TimeSpan _step;
+        private int _calls = -1;
+
+        public SteppingTimeProvider(DateTimeOffset first, TimeSpan step)
+        {
+            _first = first;
+            _step = step;
+        }
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            var index = Interlocked.Increment(ref _calls);
+            return _first.AddTicks(_step.Ticks * index);
         }
     }
 

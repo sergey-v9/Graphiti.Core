@@ -129,6 +129,9 @@ NOT NULL` discovery query, so omitted `BuildCommunitiesAsync()` rebuilds default
 entity membership in the selected group(s), not by the edge's own `GroupId`. This matches Python's
 `MATCH (n:Entity {group_id})-[e]-(m:Entity {group_id})` shape and keeps a same-group entity pair
 connected even when the stored edge has a different group id.
+2026-06-17 timestamp follow-up: community rebuild now captures `UtcNow()` inside each
+`BuildCommunityAsync` call after summary/name generation and reuses that value for the community
+node plus its membership edges, matching Python's `build_community` timestamp scope.
 
 **2026-06-14 saga prompt truthiness follow-up:** closed a small prompt-rendering drift in
 `summarize_sagas.summarize_saga`. Python renders `<EXISTING_KNOWLEDGE>` whenever
