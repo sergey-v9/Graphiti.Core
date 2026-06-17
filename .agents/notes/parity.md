@@ -440,6 +440,11 @@ not call `validate_entity_types` or `validate_excluded_entity_types`; it passes 
 bulk extraction. C# `AddEpisodeBulkAsync` now mirrors that asymmetry by skipping the extra upfront
 validation while `AddEpisodeAsync` keeps the Python single-episode validation behavior.
 
+**2026-06-17 Ladybug clear-data empty-list follow-up:** closed a provider clear-flow drift. Python
+`clear_data` treats only `group_ids is None` as clear-all; a non-null empty list runs scoped deletion
+and matches nothing. The Ladybug driver now distinguishes null from an empty group list, preserving
+all nodes/edges for `ClearDataAsync(Array.Empty<string>())` while retaining null clear-all behavior.
+
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
 Reviewed the 5 `graphiti_core` commits upstream added since our anchor. **None touched

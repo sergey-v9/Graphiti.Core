@@ -1808,6 +1808,12 @@ public class LadybugPackageRuntimeTests
             CreatedAt = createdAt
         });
 
+        await driver.ClearDataAsync(Array.Empty<string>());
+        var sourceAfterEmptyClear = await driver.GetNodeByUuidAsync<EntityNode>(source.Uuid);
+        var edgeAfterEmptyClear = await driver.GetEdgeByUuidAsync<EntityEdge>("edge-delete");
+        Assert.Equal(source.Uuid, sourceAfterEmptyClear.Uuid);
+        Assert.Equal("edge-delete", edgeAfterEmptyClear.Uuid);
+
         var memberships = await driver.GetEdgesByUuidsAsync<CommunityEdge>(
             ["member-entity", "member-community"]);
         var membershipTargets = memberships.Select(edge => edge.TargetNodeUuid).ToHashSet(StringComparer.Ordinal);

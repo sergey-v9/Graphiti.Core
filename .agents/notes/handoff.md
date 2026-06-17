@@ -367,6 +367,8 @@ of deduping by UUID, matching Python's result-list shape.
 Bulk ingestion now mirrors Python's validation asymmetry: `AddEpisodeAsync` still validates
 `entityTypes` / `excludedEntityTypes`, while `AddEpisodeBulkAsync` no longer adds upfront
 `ValidateEntityTypes` / `ValidateExcludedEntityTypes` calls absent from Python `add_episode_bulk`.
+Ladybug `ClearDataAsync` now mirrors Python's null-vs-empty `clear_data` split: null clears all,
+while an empty group-id list is scoped deletion that preserves existing records.
 Top-level community search now supplies Python's zero query vector fallback when no real embedding
 path is configured, so BM25/RRF community searches still execute vector retrieval like Python.
 Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests

@@ -380,7 +380,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         IReadOnlyList<string>? groupIds = null,
         CancellationToken cancellationToken = default)
     {
-        if (groupIds is { Count: > 0 })
+        if (groupIds is not null)
         {
             foreach (var groupId in groupIds)
             {
