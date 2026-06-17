@@ -2,16 +2,14 @@ namespace Graphiti.Core.Drivers;
 
 /// <summary>Identifies the graph storage backend a driver targets.</summary>
 /// <remarks>
-/// Numeric values are assigned explicitly and are stable. Existing members keep their original
-/// implicit ordinals (Neo4j=0, FalkorDb=1, Kuzu=2, Neptune=3, InMemory=4); <see cref="LadybugDb"/>
-/// is appended as a new value (5) rather than reusing the <see cref="Kuzu"/> ordinal so that any
-/// caller persisting the numeric value sees a distinct, stable identity for each name.
+/// Numeric values are assigned explicitly and are stable. Ordinal 0 is retired and unused (it once
+/// belonged to a removed provider); the remaining members keep their original ordinals (FalkorDb=1,
+/// Kuzu=2, Neptune=3, InMemory=4). <see cref="LadybugDb"/> is appended as a new value (5) rather than
+/// reusing the <see cref="Kuzu"/> ordinal so that any caller persisting the numeric value sees a
+/// distinct, stable identity for each name.
 /// </remarks>
 public enum GraphProvider
 {
-    /// <summary>Neo4j graph database.</summary>
-    Neo4j = 0,
-
     /// <summary>FalkorDB graph database.</summary>
     FalkorDb = 1,
 

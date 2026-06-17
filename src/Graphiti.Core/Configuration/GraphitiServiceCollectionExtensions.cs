@@ -237,11 +237,6 @@ public static class GraphitiServiceCollectionExtensions
         return options.Provider switch
         {
             GraphProvider.InMemory => new InMemoryGraphDriver(options.Database),
-            GraphProvider.Neo4j => new Neo4jGraphDriver(
-                options.Uri ?? throw new InvalidOperationException("GraphitiOptions.Uri is required for Neo4j."),
-                options.User,
-                options.Password,
-                options.Database),
 #pragma warning disable GRPH0001
             // LadybugDb is the driver-facing value; Kuzu is the obsolete compatibility alias. Both
             // are backed by the LadybugDB-backed driver, which now lives in the separate

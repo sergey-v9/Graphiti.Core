@@ -31,29 +31,22 @@ public sealed partial class Graphiti : IAsyncDisposable
 
     /// <summary>
     /// Initializes a Graphiti instance. The graph backend is selected by precedence: an explicit
-    /// <paramref name="graphDriver"/> is used as-is; otherwise a non-null <paramref name="uri"/> (with
-    /// optional <paramref name="user"/>/<paramref name="password"/>) builds a Neo4j driver; otherwise,
-    /// when both are omitted, an in-process <see cref="InMemoryGraphDriver"/> (the deterministic
-    /// reference driver) is created so <c>new Graphiti()</c> works out of the box. When clients are
-    /// omitted, a no-op LLM, hash embedder, and identity cross-encoder are used so the instance is
-    /// usable without external providers.
+    /// <paramref name="graphDriver"/> is used as-is; otherwise an in-process
+    /// <see cref="InMemoryGraphDriver"/> (the deterministic reference driver) is created so
+    /// <c>new Graphiti()</c> works out of the box. When clients are omitted, a no-op LLM, hash
+    /// embedder, and identity cross-encoder are used so the instance is usable without external
+    /// providers.
     /// </summary>
-    /// <param name="uri">Connection URI used to build a default Neo4j driver when no driver is given. When null (and no driver is given), an in-memory driver is used instead.</param>
-    /// <param name="user">Username for the default Neo4j driver.</param>
-    /// <param name="password">Password for the default Neo4j driver.</param>
     /// <param name="llmClient">LLM client for extraction/summarization; defaults to a no-op client.</param>
     /// <param name="embedder">Embedder client; defaults to a deterministic hash embedder.</param>
     /// <param name="crossEncoder">Reranker client; defaults to an identity lexical reranker.</param>
     /// <param name="storeRawEpisodeContent">Whether to persist raw episode content.</param>
-    /// <param name="graphDriver">An explicit graph driver. When provided, the connection arguments are ignored.</param>
+    /// <param name="graphDriver">An explicit graph driver. When omitted, an in-memory driver is used.</param>
     /// <param name="maxCoroutines">Optional cap on concurrent operations.</param>
     /// <param name="timeProvider">Time source used for timestamps; defaults to the system clock.</param>
     /// <param name="logger">Logger; defaults to a null logger.</param>
-    /// <param name="database">Database name (group/db label) for the default driver, whether Neo4j or in-memory.</param>
+    /// <param name="database">Database name (group/db label) for the default in-memory driver.</param>
     public Graphiti(
-        string? uri = null,
-        string? user = null,
-        string? password = null,
         ILlmClient? llmClient = null,
         IEmbedderClient? embedder = null,
         ICrossEncoderClient? crossEncoder = null,
@@ -72,12 +65,9 @@ public sealed partial class Graphiti : IAsyncDisposable
         var ownsDriver = false;
         if (graphDriver is null)
         {
-            // No explicit driver: an explicit uri builds a Neo4j driver (deliberate convenience);
-            // with neither supplied, default to the in-process reference driver so the instance is
+            // No explicit driver: default to the in-process reference driver so the instance is
             // usable out of the box.
-            graphDriver = uri is null
-                ? new InMemoryGraphDriver(database)
-                : new Neo4jGraphDriver(uri, user, password, database);
+            graphDriver = new InMemoryGraphDriver(database);
             ownsDriver = true;
         }
 

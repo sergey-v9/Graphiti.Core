@@ -13,8 +13,8 @@ public class PackageReadinessTests
 
         AssertShippablePackageMetadata(project, properties, "Graphiti.Core");
         Assert.Contains("temporal-graph", properties["PackageTags"], StringComparison.Ordinal);
-        Assert.Contains("neo4j", properties["PackageTags"], StringComparison.Ordinal);
-        Assert.Contains("Neo4j.Driver", packageReferences);
+        Assert.DoesNotContain("neo4j", properties["PackageTags"], StringComparison.Ordinal);
+        Assert.DoesNotContain("Neo4j.Driver", packageReferences);
         // After the Step E package split, Graphiti.Core is LadybugDB-free so it restores from
         // nuget.org alone; the LadybugDB packages live in Graphiti.Core.Drivers.Ladybug instead.
         Assert.DoesNotContain("LadybugDB", packageReferences);

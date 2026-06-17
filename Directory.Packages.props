@@ -20,7 +20,6 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.8" />
     <PackageVersion Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
-    <PackageVersion Include="Neo4j.Driver" Version="6.1.2" />
     <PackageVersion Include="Polly.Core" Version="8.6.6" />
     <PackageVersion Include="System.IO.Hashing" Version="10.0.8" />
     <PackageVersion Include="System.Numerics.Tensors" Version="10.0.8" />

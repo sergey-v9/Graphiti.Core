@@ -59,17 +59,6 @@ public class GraphitiConstructorDefaultTests
     }
 
     [Fact]
-    public async Task Constructor_WithUri_StillSelectsNeo4jDriver()
-    {
-        // Constructing the Neo4j driver does not open a connection eagerly, so this asserts driver
-        // selection without requiring a running Neo4j instance.
-        await using var graphiti = new Graphiti(uri: "bolt://localhost:7687");
-
-        Assert.IsType<Neo4jGraphDriver>(graphiti.Driver);
-        Assert.Equal(GraphProvider.Neo4j, graphiti.Driver.Provider);
-    }
-
-    [Fact]
     public async Task AddEpisodeAsync_OptionsOverload_DelegatesToParameterListOverload()
     {
         await using var graphiti = new Graphiti();

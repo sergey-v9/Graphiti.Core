@@ -12,15 +12,6 @@ public sealed class GraphitiOptions
     /// <summary>Graph backend to use. Defaults to the in-memory driver.</summary>
     public GraphProvider Provider { get; set; } = GraphProvider.InMemory;
 
-    /// <summary>Connection URI (required for Neo4j).</summary>
-    public string? Uri { get; set; }
-
-    /// <summary>Username for the graph backend.</summary>
-    public string? User { get; set; }
-
-    /// <summary>Password for the graph backend.</summary>
-    public string? Password { get; set; }
-
     /// <summary>Database name; empty uses the driver default.</summary>
     public string Database { get; set; } = string.Empty;
 
@@ -76,13 +67,6 @@ internal sealed class GraphitiOptionsValidator : IValidateOptions<GraphitiOption
             // LadybugDb is the driver-facing value; Kuzu is the obsolete compatibility alias.
             case GraphProvider.Kuzu:
 #pragma warning restore GRPH0001
-                break;
-            case GraphProvider.Neo4j:
-                if (string.IsNullOrWhiteSpace(options.Uri))
-                {
-                    failures.Add("GraphitiOptions.Uri is required for Neo4j.");
-                }
-
                 break;
             default:
                 failures.Add($"{options.Provider} is not supported by the C# port yet.");

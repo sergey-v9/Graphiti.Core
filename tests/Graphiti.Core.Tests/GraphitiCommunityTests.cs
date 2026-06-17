@@ -1001,7 +1001,7 @@ public class GraphitiCommunityTests
     {
         private readonly InMemoryGraphDriver _inner;
 
-        public DelegatingGraphDriver(InMemoryGraphDriver inner) : base(GraphProvider.Neo4j) => _inner = inner;
+        public DelegatingGraphDriver(InMemoryGraphDriver inner) : base(GraphProvider.LadybugDb) => _inner = inner;
 
         public override Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, CancellationToken cancellationToken = default) =>
             _inner.BuildIndicesAndConstraintsAsync(deleteExisting, cancellationToken);

@@ -15,7 +15,6 @@ public class GraphitiOptionsValidationTests
             options => options.MaxCoroutines = 0,
             options => options.MaxCoroutines = -1,
             options => options.Database = "   ",
-            options => options.Provider = GraphProvider.Neo4j,
             options => options.Provider = GraphProvider.FalkorDb,
             options => options.Provider = GraphProvider.Neptune,
             options => options.Provider = (GraphProvider)999
@@ -64,34 +63,8 @@ public class GraphitiOptionsValidationTests
         Assert.Equal("maxCoroutines", exception.ParamName);
     }
 
-    [Fact]
-    public void Neo4jOptions_WithDatabase_AreValidWhenUriProvided()
-    {
-        using var provider = BuildProvider(options =>
-        {
-            options.Provider = GraphProvider.Neo4j;
-            options.Uri = "bolt://localhost:7687";
-            options.Database = "tenant-db";
-        });
-
-        var options = provider.GetRequiredService<IOptions<GraphitiOptions>>().Value;
-
-        Assert.Equal(GraphProvider.Neo4j, options.Provider);
-        Assert.Equal("tenant-db", options.Database);
-    }
-
-    [Fact]
-    public async Task Constructor_PassesDatabaseToOwnedNeo4jDriver()
-    {
-        await using var graphiti = new Graphiti(
-            uri: "bolt://localhost:7687",
-            database: "tenant-db");
-
-        Assert.Equal("tenant-db", graphiti.Driver.Database);
-    }
-
     [Theory]
-    [InlineData(GraphProvider.Neo4j)]
+    [InlineData(GraphProvider.Neptune)]
     [InlineData((GraphProvider)999)]
     public async Task GraphDriverFactory_BypassesProviderValidation(GraphProvider provider)
     {
