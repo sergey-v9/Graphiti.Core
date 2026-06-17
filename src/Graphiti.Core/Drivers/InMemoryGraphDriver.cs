@@ -12,15 +12,16 @@ namespace Graphiti.Core.Drivers;
 public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, ITypedNodeDeleteGraphDriver, ITypedEdgeDeleteGraphDriver
 {
     private readonly Lock _gate;
-    private readonly Dictionary<string, Node> _nodes = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, Edge> _edges = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, HashSet<string>> _nodeUuidsByGroup = new(StringComparer.Ordinal);
+    private readonly Dictionary<(Type Type, string Uuid), Node> _nodes = new();
+    private readonly Dictionary<(Type Type, string Uuid), Edge> _edges = new();
+    private readonly Dictionary<string, HashSet<(Type Type, string Uuid)>> _nodeKeysByGroup = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _entityNodeUuidsByGroup = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _episodicNodeUuidsByGroup = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _communityNodeUuidsByGroup = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, HashSet<string>> _sagaNodeUuidsByGroup = new(StringComparer.Ordinal);
     private readonly Dictionary<(string GroupId, string Name), HashSet<string>> _sagaNodeUuidsByGroupAndName = new();
-    private readonly Dictionary<string, HashSet<string>> _edgeUuidsByGroup = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, HashSet<string>> _incidentEdgeUuidsByNodeUuid = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, HashSet<(Type Type, string Uuid)>> _edgeKeysByGroup = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, HashSet<(Type Type, string Uuid)>> _incidentEdgeKeysByNodeUuid = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _entityEdgeUuidsByNodeUuid = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _entityEdgeUuidsBySourceNodeUuid = new(StringComparer.Ordinal);
     private readonly Dictionary<(string SourceNodeUuid, string TargetNodeUuid), HashSet<string>> _entityEdgeUuidsByEndpoints = new();
@@ -37,16 +38,17 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
 
     private InMemoryGraphDriver(
         string database,
-        Dictionary<string, Node> nodes,
-        Dictionary<string, Edge> edges,
+        Dictionary<(Type Type, string Uuid), Node> nodes,
+        Dictionary<(Type Type, string Uuid), Edge> edges,
         Lock gate,
-        Dictionary<string, HashSet<string>> nodeUuidsByGroup,
+        Dictionary<string, HashSet<(Type Type, string Uuid)>> nodeKeysByGroup,
         Dictionary<string, HashSet<string>> entityNodeUuidsByGroup,
         Dictionary<string, HashSet<string>> episodicNodeUuidsByGroup,
         Dictionary<string, HashSet<string>> communityNodeUuidsByGroup,
+        Dictionary<string, HashSet<string>> sagaNodeUuidsByGroup,
         Dictionary<(string GroupId, string Name), HashSet<string>> sagaNodeUuidsByGroupAndName,
-        Dictionary<string, HashSet<string>> edgeUuidsByGroup,
-        Dictionary<string, HashSet<string>> incidentEdgeUuidsByNodeUuid,
+        Dictionary<string, HashSet<(Type Type, string Uuid)>> edgeKeysByGroup,
+        Dictionary<string, HashSet<(Type Type, string Uuid)>> incidentEdgeKeysByNodeUuid,
         Dictionary<string, HashSet<string>> entityEdgeUuidsByNodeUuid,
         Dictionary<string, HashSet<string>> entityEdgeUuidsBySourceNodeUuid,
         Dictionary<(string SourceNodeUuid, string TargetNodeUuid), HashSet<string>> entityEdgeUuidsByEndpoints,
@@ -58,13 +60,14 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         _nodes = nodes;
         _edges = edges;
         _gate = gate;
-        _nodeUuidsByGroup = nodeUuidsByGroup;
+        _nodeKeysByGroup = nodeKeysByGroup;
         _entityNodeUuidsByGroup = entityNodeUuidsByGroup;
         _episodicNodeUuidsByGroup = episodicNodeUuidsByGroup;
         _communityNodeUuidsByGroup = communityNodeUuidsByGroup;
+        _sagaNodeUuidsByGroup = sagaNodeUuidsByGroup;
         _sagaNodeUuidsByGroupAndName = sagaNodeUuidsByGroupAndName;
-        _edgeUuidsByGroup = edgeUuidsByGroup;
-        _incidentEdgeUuidsByNodeUuid = incidentEdgeUuidsByNodeUuid;
+        _edgeKeysByGroup = edgeKeysByGroup;
+        _incidentEdgeKeysByNodeUuid = incidentEdgeKeysByNodeUuid;
         _entityEdgeUuidsByNodeUuid = entityEdgeUuidsByNodeUuid;
         _entityEdgeUuidsBySourceNodeUuid = entityEdgeUuidsBySourceNodeUuid;
         _entityEdgeUuidsByEndpoints = entityEdgeUuidsByEndpoints;
@@ -94,13 +97,14 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         _nodes,
         _edges,
         _gate,
-        _nodeUuidsByGroup,
+        _nodeKeysByGroup,
         _entityNodeUuidsByGroup,
         _episodicNodeUuidsByGroup,
         _communityNodeUuidsByGroup,
+        _sagaNodeUuidsByGroup,
         _sagaNodeUuidsByGroupAndName,
-        _edgeUuidsByGroup,
-        _incidentEdgeUuidsByNodeUuid,
+        _edgeKeysByGroup,
+        _incidentEdgeKeysByNodeUuid,
         _entityEdgeUuidsByNodeUuid,
         _entityEdgeUuidsBySourceNodeUuid,
         _entityEdgeUuidsByEndpoints,
@@ -136,12 +140,13 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         lock (_gate)
         {
             var clone = CloneNode(node);
-            if (_nodes.TryGetValue(clone.Uuid, out var existing))
+            var key = GetNodeKey(clone);
+            if (_nodes.TryGetValue(key, out var existing))
             {
                 RemoveNodeIndexes(existing);
             }
 
-            _nodes[clone.Uuid] = clone;
+            _nodes[key] = clone;
             AddNodeIndexes(clone);
         }
 
@@ -155,12 +160,13 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         lock (_gate)
         {
             var clone = CloneEdge(edge);
-            if (_edges.TryGetValue(clone.Uuid, out var existing))
+            var key = GetEdgeKey(clone);
+            if (_edges.TryGetValue(key, out var existing))
             {
                 RemoveEdgeIndexes(existing);
             }
 
-            _edges[clone.Uuid] = clone;
+            _edges[key] = clone;
             AddEdgeIndexes(clone);
         }
 
@@ -173,15 +179,16 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            if (_nodes.Remove(uuid, out var node))
+            var nodes = RemoveNodesByUuid(uuid);
+            for (var i = 0; i < nodes.Count; i++)
             {
-                RemoveNodeIndexes(node);
+                RemoveNodeIndexes(nodes[i]);
             }
 
-            var edgeUuids = MaterializeUuids(GetIndexedUuids(_incidentEdgeUuidsByNodeUuid, uuid));
-            for (var i = 0; i < edgeUuids.Count; i++)
+            var edgeKeys = MaterializeEdgeKeys(GetIndexedEdgeKeys(_incidentEdgeKeysByNodeUuid, uuid));
+            for (var i = 0; i < edgeKeys.Count; i++)
             {
-                RemoveEdgeByUuid(edgeUuids[i]);
+                RemoveEdgeByKey(edgeKeys[i]);
             }
         }
 
@@ -244,18 +251,13 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            if (!_nodes.TryGetValue(uuid, out var node) || node is not TNode)
+            if (!_nodes.Remove(GetNodeKey<TNode>(uuid), out var node))
             {
                 return Task.CompletedTask;
             }
 
-            _nodes.Remove(uuid);
             RemoveNodeIndexes(node);
-            var edgeUuids = MaterializeUuids(GetIndexedUuids(_incidentEdgeUuidsByNodeUuid, uuid));
-            for (var i = 0; i < edgeUuids.Count; i++)
-            {
-                RemoveEdgeByUuid(edgeUuids[i]);
-            }
+            RemoveIncidentEdgesForDeletedNode(GetNodeKey<TNode>(uuid));
         }
 
         return Task.CompletedTask;
@@ -263,24 +265,131 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
 
     private void RemoveEdgeByUuid(string uuid)
     {
-        if (_edges.Remove(uuid, out var edge))
+        RemoveEdgeByKey<EpisodicEdge>(uuid);
+        RemoveEdgeByKey<EntityEdge>(uuid);
+        RemoveEdgeByKey<CommunityEdge>(uuid);
+        RemoveEdgeByKey<HasEpisodeEdge>(uuid);
+        RemoveEdgeByKey<NextEpisodeEdge>(uuid);
+    }
+
+    private void RemoveEdgeByKey<TEdge>(string uuid)
+        where TEdge : Edge =>
+        RemoveEdgeByKey(GetEdgeKey<TEdge>(uuid));
+
+    private void RemoveEdgeByKey((Type Type, string Uuid) key)
+    {
+        if (_edges.Remove(key, out var edge))
         {
             RemoveEdgeIndexes(edge);
         }
     }
+
+    private static (Type Type, string Uuid) GetNodeKey(Node node) => (node.GetType(), node.Uuid);
+
+    private static (Type Type, string Uuid) GetNodeKey<TNode>(string uuid)
+        where TNode : Node =>
+        (typeof(TNode), uuid);
+
+    private bool TryGetNode<TNode>(string uuid, out TNode node)
+        where TNode : Node
+    {
+        if (_nodes.TryGetValue(GetNodeKey<TNode>(uuid), out var stored) && stored is TNode typed)
+        {
+            node = typed;
+            return true;
+        }
+
+        node = null!;
+        return false;
+    }
+
+    private static (Type Type, string Uuid) GetEdgeKey(Edge edge) => (edge.GetType(), edge.Uuid);
+
+    private static (Type Type, string Uuid) GetEdgeKey<TEdge>(string uuid)
+        where TEdge : Edge =>
+        (typeof(TEdge), uuid);
+
+    private bool TryGetEdge<TEdge>(string uuid, out TEdge edge)
+        where TEdge : Edge
+    {
+        if (_edges.TryGetValue(GetEdgeKey<TEdge>(uuid), out var stored) && stored is TEdge typed)
+        {
+            edge = typed;
+            return true;
+        }
+
+        edge = null!;
+        return false;
+    }
+
+    private List<Node> RemoveNodesByUuid(string uuid)
+    {
+        var nodes = new List<Node>(4);
+        RemoveNodeByKey<EntityNode>(uuid, nodes);
+        RemoveNodeByKey<EpisodicNode>(uuid, nodes);
+        RemoveNodeByKey<CommunityNode>(uuid, nodes);
+        RemoveNodeByKey<SagaNode>(uuid, nodes);
+        return nodes;
+    }
+
+    private void RemoveNodeByKey<TNode>(string uuid, List<Node> nodes)
+        where TNode : Node
+    {
+        if (_nodes.Remove(GetNodeKey<TNode>(uuid), out var node))
+        {
+            nodes.Add(node);
+        }
+    }
+
+    private void RemoveIncidentEdgesForDeletedNode((Type Type, string Uuid) nodeKey)
+    {
+        var edgeKeys = MaterializeEdgeKeys(GetIndexedEdgeKeys(_incidentEdgeKeysByNodeUuid, nodeKey.Uuid));
+        for (var i = 0; i < edgeKeys.Count; i++)
+        {
+            var edgeKey = edgeKeys[i];
+            if (_edges.TryGetValue(edgeKey, out var edge) && EdgeCanAttachToNode(edge, nodeKey))
+            {
+                RemoveEdgeByKey(edgeKey);
+            }
+        }
+    }
+
+    private static bool EdgeCanAttachToNode(Edge edge, (Type Type, string Uuid) nodeKey) =>
+        edge switch
+        {
+            EntityEdge entity => nodeKey.Type == typeof(EntityNode)
+                && (string.Equals(entity.SourceNodeUuid, nodeKey.Uuid, StringComparison.Ordinal)
+                    || string.Equals(entity.TargetNodeUuid, nodeKey.Uuid, StringComparison.Ordinal)),
+            EpisodicEdge episodic => (nodeKey.Type == typeof(EpisodicNode)
+                    && string.Equals(episodic.SourceNodeUuid, nodeKey.Uuid, StringComparison.Ordinal))
+                || (nodeKey.Type == typeof(EntityNode)
+                    && string.Equals(episodic.TargetNodeUuid, nodeKey.Uuid, StringComparison.Ordinal)),
+            CommunityEdge community => (nodeKey.Type == typeof(CommunityNode)
+                    && string.Equals(community.SourceNodeUuid, nodeKey.Uuid, StringComparison.Ordinal))
+                || (nodeKey.Type == typeof(EntityNode)
+                    && string.Equals(community.TargetNodeUuid, nodeKey.Uuid, StringComparison.Ordinal)),
+            HasEpisodeEdge hasEpisode => (nodeKey.Type == typeof(SagaNode)
+                    && string.Equals(hasEpisode.SourceNodeUuid, nodeKey.Uuid, StringComparison.Ordinal))
+                || (nodeKey.Type == typeof(EpisodicNode)
+                    && string.Equals(hasEpisode.TargetNodeUuid, nodeKey.Uuid, StringComparison.Ordinal)),
+            NextEpisodeEdge nextEpisode => nodeKey.Type == typeof(EpisodicNode)
+                && (string.Equals(nextEpisode.SourceNodeUuid, nodeKey.Uuid, StringComparison.Ordinal)
+                    || string.Equals(nextEpisode.TargetNodeUuid, nodeKey.Uuid, StringComparison.Ordinal)),
+            _ => false
+        };
 
     /// <inheritdoc />
     public override Task DeleteNodesByGroupIdAsync(string groupId, int batchSize = 100, CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         cancellationToken.ThrowIfCancellationRequested();
-        List<string> uuids;
+        List<(Type Type, string Uuid)> nodeKeys;
         lock (_gate)
         {
-            uuids = MaterializeUuids(GetIndexedUuids(_nodeUuidsByGroup, groupId));
+            nodeKeys = MaterializeNodeKeys(GetIndexedNodeKeys(_nodeKeysByGroup, groupId));
         }
 
-        return DeleteNodesByUuidsAsync(uuids, batchSize, cancellationToken);
+        return DeleteNodesByKeysAsync(nodeKeys, batchSize, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -299,6 +408,42 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
                 await DeleteNodeAsync(uuidList[i], cancellationToken).ConfigureAwait(false);
             }
         }
+    }
+
+    private async Task DeleteNodesByKeysAsync(
+        List<(Type Type, string Uuid)> nodeKeys,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
+        for (var batchStart = 0; batchStart < nodeKeys.Count; batchStart += batchSize)
+        {
+            var batchEnd = batchStart + Math.Min(batchSize, nodeKeys.Count - batchStart);
+            for (var i = batchStart; i < batchEnd; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await DeleteNodeByKeyAsync(nodeKeys[i], cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private Task DeleteNodeByKeyAsync(
+        (Type Type, string Uuid) nodeKey,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_gate)
+        {
+            if (!_nodes.Remove(nodeKey, out var node))
+            {
+                return Task.CompletedTask;
+            }
+
+            RemoveNodeIndexes(node);
+            RemoveIncidentEdgesForDeletedNode(nodeKey);
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
@@ -340,9 +485,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            if (_edges.TryGetValue(uuid, out var edge) && edge is TEdge)
+            if (_edges.ContainsKey(GetEdgeKey<TEdge>(uuid)))
             {
-                RemoveEdgeByUuid(uuid);
+                RemoveEdgeByKey<TEdge>(uuid);
             }
         }
 
@@ -386,40 +531,43 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             }
             else
             {
-                var nodeUuids = new HashSet<string>(StringComparer.Ordinal);
+                var nodeKeys = new HashSet<(Type Type, string Uuid)>();
                 foreach (var groupId in groupIds)
                 {
-                    foreach (var nodeUuid in GetIndexedUuids(_nodeUuidsByGroup, groupId))
+                    foreach (var nodeKey in GetIndexedNodeKeys(_nodeKeysByGroup, groupId))
                     {
-                        nodeUuids.Add(nodeUuid);
+                        nodeKeys.Add(nodeKey);
                     }
                 }
 
-                if (nodeUuids.Count == 0)
+                if (nodeKeys.Count == 0)
                 {
                     return Task.CompletedTask;
                 }
 
-                var edgeUuids = new HashSet<string>(StringComparer.Ordinal);
-                foreach (var nodeUuid in nodeUuids)
+                var edgeKeys = new HashSet<(Type Type, string Uuid)>();
+                foreach (var nodeKey in nodeKeys)
                 {
-                    foreach (var edgeUuid in GetIndexedUuids(_incidentEdgeUuidsByNodeUuid, nodeUuid))
+                    foreach (var edgeKey in GetIndexedEdgeKeys(_incidentEdgeKeysByNodeUuid, nodeKey.Uuid))
                     {
-                        edgeUuids.Add(edgeUuid);
+                        if (_edges.TryGetValue(edgeKey, out var edge) && EdgeCanAttachToNode(edge, nodeKey))
+                        {
+                            edgeKeys.Add(edgeKey);
+                        }
                     }
                 }
 
-                foreach (var nodeUuid in nodeUuids)
+                foreach (var nodeKey in nodeKeys)
                 {
-                    if (_nodes.Remove(nodeUuid, out var node))
+                    if (_nodes.Remove(nodeKey, out var node))
                     {
                         RemoveNodeIndexes(node);
                     }
                 }
 
-                foreach (var edgeUuid in edgeUuids)
+                foreach (var edgeKey in edgeKeys)
                 {
-                    RemoveEdgeByUuid(edgeUuid);
+                    RemoveEdgeByKey(edgeKey);
                 }
             }
         }
@@ -433,7 +581,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            if (_nodes.TryGetValue(uuid, out var node) && node is TNode typed)
+            if (TryGetNode<TNode>(uuid, out var typed))
             {
                 return Task.FromResult((TNode)CloneNode(typed));
             }
@@ -461,9 +609,8 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             var nodes = new List<TNode>(uuidList.Count);
             foreach (var uuid in uuidList)
             {
-                if (_nodes.TryGetValue(uuid, out var node)
-                    && node is TNode typed
-                    && (groupId is null || string.Equals(node.GroupId, groupId, StringComparison.Ordinal)))
+                if (TryGetNode<TNode>(uuid, out var typed)
+                    && (groupId is null || string.Equals(typed.GroupId, groupId, StringComparison.Ordinal)))
                 {
                     nodes.Add((TNode)CloneNode(typed));
                 }
@@ -499,7 +646,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            if (_edges.TryGetValue(uuid, out var edge) && edge is T typed)
+            if (TryGetEdge<T>(uuid, out var typed))
             {
                 return Task.FromResult((T)CloneEdge(typed));
             }
@@ -524,7 +671,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             var edges = new List<T>(uuidList.Count);
             foreach (var uuid in uuidList)
             {
-                if (_edges.TryGetValue(uuid, out var edge) && edge is T typed)
+                if (TryGetEdge<T>(uuid, out var typed))
                 {
                     edges.Add((T)CloneEdge(typed));
                 }
@@ -569,7 +716,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             var edges = new List<EntityEdge>(edgeUuids.Count);
             foreach (var uuid in edgeUuids)
             {
-                if (_edges.TryGetValue(uuid, out var edge) && edge is EntityEdge entityEdge)
+                if (TryGetEdge<EntityEdge>(uuid, out var entityEdge))
                 {
                     edges.Add((EntityEdge)CloneEdge(entityEdge));
                 }
@@ -591,7 +738,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             var edges = new List<EntityEdge>(edgeUuids.Count);
             foreach (var uuid in edgeUuids)
             {
-                if (_edges.TryGetValue(uuid, out var edge) && edge is EntityEdge entityEdge)
+                if (TryGetEdge<EntityEdge>(uuid, out var entityEdge))
                 {
                     edges.Add((EntityEdge)CloneEdge(entityEdge));
                 }
@@ -616,11 +763,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             var episodes = new List<EpisodicNode>();
             foreach (var edgeUuid in edgeUuids)
             {
-                if (!_edges.TryGetValue(edgeUuid, out var edge)
-                    || edge is not EpisodicEdge episodicEdge
+                if (!TryGetEdge<EpisodicEdge>(edgeUuid, out var episodicEdge)
                     || !episodeUuids.Add(episodicEdge.SourceNodeUuid)
-                    || !_nodes.TryGetValue(episodicEdge.SourceNodeUuid, out var node)
-                    || node is not EpisodicNode episode)
+                    || !TryGetNode<EpisodicNode>(episodicEdge.SourceNodeUuid, out var episode))
                 {
                     continue;
                 }
@@ -738,11 +883,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
                     episodeUuid));
                 foreach (var edgeUuid in edgeUuids)
                 {
-                    if (!_edges.TryGetValue(edgeUuid, out var edge)
-                        || edge is not EpisodicEdge episodicEdge
+                    if (!TryGetEdge<EpisodicEdge>(edgeUuid, out var episodicEdge)
                         || !nodeUuids.Add(episodicEdge.TargetNodeUuid)
-                        || !_nodes.TryGetValue(episodicEdge.TargetNodeUuid, out var node)
-                        || node is not EntityNode entityNode)
+                        || !TryGetNode<EntityNode>(episodicEdge.TargetNodeUuid, out var entityNode))
                     {
                         continue;
                     }
@@ -782,11 +925,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
                     nodeUuid));
                 foreach (var edgeUuid in edgeUuids)
                 {
-                    if (!_edges.TryGetValue(edgeUuid, out var edge)
-                        || edge is not CommunityEdge communityEdge
+                    if (!TryGetEdge<CommunityEdge>(edgeUuid, out var communityEdge)
                         || !communityUuids.Add(communityEdge.SourceNodeUuid)
-                        || !_nodes.TryGetValue(communityEdge.SourceNodeUuid, out var node)
-                        || node is not CommunityNode communityNode)
+                        || !TryGetNode<CommunityNode>(communityEdge.SourceNodeUuid, out var communityNode))
                     {
                         continue;
                     }
@@ -823,12 +964,10 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             EpisodicNode? previous = null;
             foreach (var edgeUuid in GetIndexedUuids(_hasEpisodeEdgeUuidsBySagaUuid, sagaUuid))
             {
-                if (!_edges.TryGetValue(edgeUuid, out var edge)
-                    || edge is not HasEpisodeEdge hasEpisodeEdge
+                if (!TryGetEdge<HasEpisodeEdge>(edgeUuid, out var hasEpisodeEdge)
                     || string.Equals(hasEpisodeEdge.TargetNodeUuid, currentEpisodeUuid, StringComparison.Ordinal)
                     || !seenEpisodeUuids.Add(hasEpisodeEdge.TargetNodeUuid)
-                    || !_nodes.TryGetValue(hasEpisodeEdge.TargetNodeUuid, out var node)
-                    || node is not EpisodicNode episode)
+                    || !TryGetNode<EpisodicNode>(hasEpisodeEdge.TargetNodeUuid, out var episode))
                 {
                     continue;
                 }
@@ -866,11 +1005,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             var index = 0;
             foreach (var edgeUuid in GetIndexedUuids(_hasEpisodeEdgeUuidsBySagaUuid, sagaUuid))
             {
-                if (!_edges.TryGetValue(edgeUuid, out var edge)
-                    || edge is not HasEpisodeEdge hasEpisodeEdge
+                if (!TryGetEdge<HasEpisodeEdge>(edgeUuid, out var hasEpisodeEdge)
                     || !seenEpisodeUuids.Add(hasEpisodeEdge.TargetNodeUuid)
-                    || !_nodes.TryGetValue(hasEpisodeEdge.TargetNodeUuid, out var node)
-                    || node is not EpisodicNode episode)
+                    || !TryGetNode<EpisodicNode>(hasEpisodeEdge.TargetNodeUuid, out var episode))
                 {
                     continue;
                 }
@@ -1251,7 +1388,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
 
     private void AddNodeIndexes(Node node)
     {
-        AddToIndex(_nodeUuidsByGroup, node.GroupId, node.Uuid);
+        AddNodeToIndex(_nodeKeysByGroup, node.GroupId, node);
         switch (node)
         {
             case EntityNode:
@@ -1264,6 +1401,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
                 AddToIndex(_communityNodeUuidsByGroup, node.GroupId, node.Uuid);
                 break;
             case SagaNode saga:
+                AddToIndex(_sagaNodeUuidsByGroup, saga.GroupId, saga.Uuid);
                 AddToIndex(_sagaNodeUuidsByGroupAndName, (saga.GroupId, saga.Name), saga.Uuid);
                 break;
         }
@@ -1271,7 +1409,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
 
     private void RemoveNodeIndexes(Node node)
     {
-        RemoveFromIndex(_nodeUuidsByGroup, node.GroupId, node.Uuid);
+        RemoveNodeFromIndex(_nodeKeysByGroup, node.GroupId, node);
         switch (node)
         {
             case EntityNode:
@@ -1284,6 +1422,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
                 RemoveFromIndex(_communityNodeUuidsByGroup, node.GroupId, node.Uuid);
                 break;
             case SagaNode saga:
+                RemoveFromIndex(_sagaNodeUuidsByGroup, saga.GroupId, saga.Uuid);
                 RemoveFromIndex(_sagaNodeUuidsByGroupAndName, (saga.GroupId, saga.Name), saga.Uuid);
                 break;
         }
@@ -1291,9 +1430,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
 
     private void AddEdgeIndexes(Edge edge)
     {
-        AddToIndex(_edgeUuidsByGroup, edge.GroupId, edge.Uuid);
-        AddToIndex(_incidentEdgeUuidsByNodeUuid, edge.SourceNodeUuid, edge.Uuid);
-        AddToIndex(_incidentEdgeUuidsByNodeUuid, edge.TargetNodeUuid, edge.Uuid);
+        AddEdgeToIndex(_edgeKeysByGroup, edge.GroupId, edge);
+        AddEdgeToIndex(_incidentEdgeKeysByNodeUuid, edge.SourceNodeUuid, edge);
+        AddEdgeToIndex(_incidentEdgeKeysByNodeUuid, edge.TargetNodeUuid, edge);
 
         switch (edge)
         {
@@ -1318,9 +1457,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
 
     private void RemoveEdgeIndexes(Edge edge)
     {
-        RemoveFromIndex(_edgeUuidsByGroup, edge.GroupId, edge.Uuid);
-        RemoveFromIndex(_incidentEdgeUuidsByNodeUuid, edge.SourceNodeUuid, edge.Uuid);
-        RemoveFromIndex(_incidentEdgeUuidsByNodeUuid, edge.TargetNodeUuid, edge.Uuid);
+        RemoveEdgeFromIndex(_edgeKeysByGroup, edge.GroupId, edge);
+        RemoveEdgeFromIndex(_incidentEdgeKeysByNodeUuid, edge.SourceNodeUuid, edge);
+        RemoveEdgeFromIndex(_incidentEdgeKeysByNodeUuid, edge.TargetNodeUuid, edge);
 
         switch (edge)
         {
@@ -1345,13 +1484,14 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
 
     private void ClearIndexes()
     {
-        _nodeUuidsByGroup.Clear();
+        _nodeKeysByGroup.Clear();
         _entityNodeUuidsByGroup.Clear();
         _episodicNodeUuidsByGroup.Clear();
         _communityNodeUuidsByGroup.Clear();
+        _sagaNodeUuidsByGroup.Clear();
         _sagaNodeUuidsByGroupAndName.Clear();
-        _edgeUuidsByGroup.Clear();
-        _incidentEdgeUuidsByNodeUuid.Clear();
+        _edgeKeysByGroup.Clear();
+        _incidentEdgeKeysByNodeUuid.Clear();
         _entityEdgeUuidsByNodeUuid.Clear();
         _entityEdgeUuidsBySourceNodeUuid.Clear();
         _entityEdgeUuidsByEndpoints.Clear();
@@ -1371,7 +1511,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         var nodes = new List<TNode>(uuids.Count);
         foreach (var uuid in uuids)
         {
-            if (_nodes.TryGetValue(uuid, out var node) && node is TNode typed)
+            if (TryGetNode<TNode>(uuid, out var typed))
             {
                 nodes.Add(typed);
             }
@@ -1385,11 +1525,12 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         bool allWhenNoGroups)
         where TEdge : Edge
     {
-        var uuids = GetUuidsByGroups(_edgeUuidsByGroup, groupIds, allWhenNoGroups);
-        var edges = new List<TEdge>(uuids.Count);
-        foreach (var uuid in uuids)
+        var edgeKeys = GetEdgeKeysByGroups(_edgeKeysByGroup, groupIds, allWhenNoGroups);
+        var edges = new List<TEdge>(edgeKeys.Count);
+        var edgeType = typeof(TEdge);
+        foreach (var edgeKey in edgeKeys)
         {
-            if (_edges.TryGetValue(uuid, out var edge) && edge is TEdge typed)
+            if (edgeKey.Type == edgeType && _edges.TryGetValue(edgeKey, out var edge) && edge is TEdge typed)
             {
                 edges.Add(typed);
             }
@@ -1448,7 +1589,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         var sagaUuids = MaterializeSortedUuids(GetIndexedUuids(_sagaNodeUuidsByGroupAndName, (groupId, name)));
         foreach (var uuid in sagaUuids)
         {
-            if (_nodes.TryGetValue(uuid, out var node) && node is SagaNode saga)
+            if (TryGetNode<SagaNode>(uuid, out var saga))
             {
                 return saga;
             }
@@ -1468,7 +1609,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
 
             foreach (var uuid in pair.Value)
             {
-                if (_nodes.TryGetValue(uuid, out var node) && node is SagaNode saga)
+                if (TryGetNode<SagaNode>(uuid, out var saga))
                 {
                     return saga;
                 }
@@ -1483,7 +1624,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         var episodeUuids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var edgeUuid in GetIndexedUuids(_hasEpisodeEdgeUuidsBySagaUuid, sagaUuid))
         {
-            if (_edges.TryGetValue(edgeUuid, out var edge) && edge is HasEpisodeEdge hasEpisodeEdge)
+            if (TryGetEdge<HasEpisodeEdge>(edgeUuid, out var hasEpisodeEdge))
             {
                 episodeUuids.Add(hasEpisodeEdge.TargetNodeUuid);
             }
@@ -1532,7 +1673,12 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             return _communityNodeUuidsByGroup;
         }
 
-        return _nodeUuidsByGroup;
+        if (typeof(TNode) == typeof(SagaNode))
+        {
+            return _sagaNodeUuidsByGroup;
+        }
+
+        return new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
     }
 
     private List<string> BuildTypedNodeUuidsByGroup<TNode>(string groupId)
@@ -1542,7 +1688,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         var results = new List<string>();
         foreach (var uuid in uuids)
         {
-            if (_nodes.TryGetValue(uuid, out var node) && node is TNode)
+            if (TryGetNode<TNode>(uuid, out _))
             {
                 results.Add(uuid);
             }
@@ -1583,6 +1729,38 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         return results;
     }
 
+    private static List<(Type Type, string Uuid)> GetEdgeKeysByGroups(
+        Dictionary<string, HashSet<(Type Type, string Uuid)>> index,
+        IEnumerable<string>? groupIds,
+        bool allWhenNoGroups)
+    {
+        if (groupIds is null)
+        {
+            return allWhenNoGroups ? MaterializeAllIndexedEdgeKeys(index) : [];
+        }
+
+        var groups = MaterializeDistinctUuids(groupIds, CancellationToken.None);
+        if (groups.Count == 0)
+        {
+            return allWhenNoGroups ? MaterializeAllIndexedEdgeKeys(index) : [];
+        }
+
+        var results = new List<(Type Type, string Uuid)>();
+        var seen = new HashSet<(Type Type, string Uuid)>();
+        foreach (var groupId in groups)
+        {
+            foreach (var edgeKey in GetIndexedEdgeKeys(index, groupId))
+            {
+                if (seen.Add(edgeKey))
+                {
+                    results.Add(edgeKey);
+                }
+            }
+        }
+
+        return results;
+    }
+
     private static List<string> MaterializeAllIndexedUuids(Dictionary<string, HashSet<string>> index)
     {
         var capacity = 0;
@@ -1597,6 +1775,27 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             foreach (var uuid in pair.Value)
             {
                 results.Add(uuid);
+            }
+        }
+
+        return results;
+    }
+
+    private static List<(Type Type, string Uuid)> MaterializeAllIndexedEdgeKeys(
+        Dictionary<string, HashSet<(Type Type, string Uuid)>> index)
+    {
+        var capacity = 0;
+        foreach (var pair in index)
+        {
+            capacity += pair.Value.Count;
+        }
+
+        var results = new List<(Type Type, string Uuid)>(capacity);
+        foreach (var pair in index)
+        {
+            foreach (var edgeKey in pair.Value)
+            {
+                results.Add(edgeKey);
             }
         }
 
@@ -1718,6 +1917,68 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         }
     }
 
+    private static void AddNodeToIndex(
+        Dictionary<string, HashSet<(Type Type, string Uuid)>> index,
+        string key,
+        Node node)
+    {
+        if (!index.TryGetValue(key, out var nodeKeys))
+        {
+            nodeKeys = [];
+            index[key] = nodeKeys;
+        }
+
+        nodeKeys.Add(GetNodeKey(node));
+    }
+
+    private static void RemoveNodeFromIndex(
+        Dictionary<string, HashSet<(Type Type, string Uuid)>> index,
+        string key,
+        Node node)
+    {
+        if (!index.TryGetValue(key, out var nodeKeys))
+        {
+            return;
+        }
+
+        nodeKeys.Remove(GetNodeKey(node));
+        if (nodeKeys.Count == 0)
+        {
+            index.Remove(key);
+        }
+    }
+
+    private static void AddEdgeToIndex(
+        Dictionary<string, HashSet<(Type Type, string Uuid)>> index,
+        string key,
+        Edge edge)
+    {
+        if (!index.TryGetValue(key, out var edgeKeys))
+        {
+            edgeKeys = [];
+            index[key] = edgeKeys;
+        }
+
+        edgeKeys.Add(GetEdgeKey(edge));
+    }
+
+    private static void RemoveEdgeFromIndex(
+        Dictionary<string, HashSet<(Type Type, string Uuid)>> index,
+        string key,
+        Edge edge)
+    {
+        if (!index.TryGetValue(key, out var edgeKeys))
+        {
+            return;
+        }
+
+        edgeKeys.Remove(GetEdgeKey(edge));
+        if (edgeKeys.Count == 0)
+        {
+            index.Remove(key);
+        }
+    }
+
     private readonly struct IndexedEpisode(EpisodicNode episode, int index)
     {
         public EpisodicNode Episode { get; } = episode;
@@ -1763,6 +2024,20 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             ? uuids
             : Array.Empty<string>();
 
+    private static IEnumerable<(Type Type, string Uuid)> GetIndexedNodeKeys(
+        Dictionary<string, HashSet<(Type Type, string Uuid)>> index,
+        string key) =>
+        index.TryGetValue(key, out var nodeKeys)
+            ? nodeKeys
+            : Array.Empty<(Type Type, string Uuid)>();
+
+    private static IEnumerable<(Type Type, string Uuid)> GetIndexedEdgeKeys(
+        Dictionary<string, HashSet<(Type Type, string Uuid)>> index,
+        string key) =>
+        index.TryGetValue(key, out var edgeKeys)
+            ? edgeKeys
+            : Array.Empty<(Type Type, string Uuid)>();
+
     private static List<string> MaterializeUuids(IEnumerable<string> uuids)
     {
         var capacity = uuids.TryGetNonEnumeratedCount(out var count) ? count : 0;
@@ -1770,6 +2045,30 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         foreach (var uuid in uuids)
         {
             results.Add(uuid);
+        }
+
+        return results;
+    }
+
+    private static List<(Type Type, string Uuid)> MaterializeNodeKeys(IEnumerable<(Type Type, string Uuid)> nodeKeys)
+    {
+        var capacity = nodeKeys.TryGetNonEnumeratedCount(out var count) ? count : 0;
+        var results = capacity == 0 ? new List<(Type Type, string Uuid)>() : new List<(Type Type, string Uuid)>(capacity);
+        foreach (var nodeKey in nodeKeys)
+        {
+            results.Add(nodeKey);
+        }
+
+        return results;
+    }
+
+    private static List<(Type Type, string Uuid)> MaterializeEdgeKeys(IEnumerable<(Type Type, string Uuid)> edgeKeys)
+    {
+        var capacity = edgeKeys.TryGetNonEnumeratedCount(out var count) ? count : 0;
+        var results = capacity == 0 ? new List<(Type Type, string Uuid)>() : new List<(Type Type, string Uuid)>(capacity);
+        foreach (var edgeKey in edgeKeys)
+        {
+            results.Add(edgeKey);
         }
 
         return results;
@@ -1832,10 +2131,19 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
 
     private Dictionary<string, string> BuildNodeGroupLookup()
     {
-        var groupIdsByUuid = new Dictionary<string, string>(_nodes.Count, StringComparer.Ordinal);
-        foreach (var node in _nodes.Values)
+        var entityNodes = GetNodesFromIndex<EntityNode>(null, allWhenNoGroups: true);
+        var episodicNodes = GetNodesFromIndex<EpisodicNode>(null, allWhenNoGroups: true);
+        var groupIdsByUuid = new Dictionary<string, string>(
+            entityNodes.Count + episodicNodes.Count,
+            StringComparer.Ordinal);
+        foreach (var node in entityNodes)
         {
             groupIdsByUuid.Add(node.Uuid, node.GroupId);
+        }
+
+        foreach (var node in episodicNodes)
+        {
+            groupIdsByUuid.TryAdd(node.Uuid, node.GroupId);
         }
 
         return groupIdsByUuid;
@@ -1960,7 +2268,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         var adjacentNodeUuids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var edgeUuid in GetIndexedUuids(_entityEdgeUuidsByNodeUuid, centerNodeUuid))
         {
-            if (!_edges.TryGetValue(edgeUuid, out var stored) || stored is not EntityEdge edge)
+            if (!TryGetEdge<EntityEdge>(edgeUuid, out var edge))
             {
                 continue;
             }

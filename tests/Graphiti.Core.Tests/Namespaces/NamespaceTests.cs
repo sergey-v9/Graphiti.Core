@@ -228,6 +228,31 @@ public class NamespaceTests
     }
 
     [Fact]
+    public async Task InMemoryNodeStorage_PreservesCrossTypeUuidBoundariesLikePython()
+    {
+        var driver = new InMemoryGraphDriver();
+        const string uuid = "shared-node";
+        var entity = new EntityNode { Uuid = uuid, Name = "Alice", GroupId = "group" };
+        var episode = new EpisodicNode { Uuid = uuid, Name = "episode", GroupId = "group" };
+        var community = new CommunityNode { Uuid = uuid, Name = "community", GroupId = "group" };
+        var saga = new SagaNode { Uuid = uuid, Name = "saga", GroupId = "group" };
+
+        await entity.SaveAsync(driver);
+        await episode.SaveAsync(driver);
+        await community.SaveAsync(driver);
+        await saga.SaveAsync(driver);
+
+        Assert.Equal("Alice", (await EntityNode.GetByUuidAsync(driver, uuid)).Name);
+        Assert.Equal("episode", (await EpisodicNode.GetByUuidAsync(driver, uuid)).Name);
+        Assert.Equal("community", (await CommunityNode.GetByUuidAsync(driver, uuid)).Name);
+        Assert.Equal("saga", (await SagaNode.GetByUuidAsync(driver, uuid)).Name);
+        Assert.Single(await EntityNode.GetByGroupIdsAsync(driver, ["group"]));
+        Assert.Single(await EpisodicNode.GetByGroupIdsAsync(driver, ["group"]));
+        Assert.Single(await CommunityNode.GetByGroupIdsAsync(driver, ["group"]));
+        Assert.Single(await SagaNode.GetByGroupIdsAsync(driver, ["group"]));
+    }
+
+    [Fact]
     public async Task NamespaceSaveBulk_ValidatesBatchSizeBeforeEnumeration()
     {
         var driver = new DelayedNamespaceSaveDriver();
@@ -418,6 +443,67 @@ public class NamespaceTests
 
         await Assert.ThrowsAsync<EdgeNotFoundException>(() => HasEpisodeEdge.GetByUuidAsync(driver, hasEpisode.Uuid));
         await Assert.ThrowsAsync<EdgeNotFoundException>(() => NextEpisodeEdge.GetByUuidAsync(driver, nextEpisode.Uuid));
+    }
+
+    [Fact]
+    public async Task InMemoryEdgeStorage_PreservesCrossTypeUuidBoundariesLikePython()
+    {
+        var driver = new InMemoryGraphDriver();
+        const string uuid = "shared-edge";
+        var entity = new EntityEdge
+        {
+            Uuid = uuid,
+            SourceNodeUuid = "entity-a",
+            TargetNodeUuid = "entity-b",
+            GroupId = "group",
+            Name = "KNOWS",
+            Fact = "Alice knows Bob."
+        };
+        var mention = new EpisodicEdge
+        {
+            Uuid = uuid,
+            SourceNodeUuid = "episode",
+            TargetNodeUuid = "entity-a",
+            GroupId = "group"
+        };
+        var membership = new CommunityEdge
+        {
+            Uuid = uuid,
+            SourceNodeUuid = "community",
+            TargetNodeUuid = "entity-a",
+            GroupId = "group"
+        };
+        var hasEpisode = new HasEpisodeEdge
+        {
+            Uuid = uuid,
+            SourceNodeUuid = "saga",
+            TargetNodeUuid = "episode-a",
+            GroupId = "group"
+        };
+        var nextEpisode = new NextEpisodeEdge
+        {
+            Uuid = uuid,
+            SourceNodeUuid = "episode-a",
+            TargetNodeUuid = "episode-b",
+            GroupId = "group"
+        };
+
+        await entity.SaveAsync(driver);
+        await mention.SaveAsync(driver);
+        await membership.SaveAsync(driver);
+        await hasEpisode.SaveAsync(driver);
+        await nextEpisode.SaveAsync(driver);
+
+        Assert.Equal("KNOWS", (await EntityEdge.GetByUuidAsync(driver, uuid)).Name);
+        Assert.Equal("episode", (await EpisodicEdge.GetByUuidAsync(driver, uuid)).SourceNodeUuid);
+        Assert.Equal("community", (await CommunityEdge.GetByUuidAsync(driver, uuid)).SourceNodeUuid);
+        Assert.Equal("saga", (await HasEpisodeEdge.GetByUuidAsync(driver, uuid)).SourceNodeUuid);
+        Assert.Equal("episode-a", (await NextEpisodeEdge.GetByUuidAsync(driver, uuid)).SourceNodeUuid);
+        Assert.Single(await EntityEdge.GetByGroupIdsAsync(driver, ["group"]));
+        Assert.Single(await EpisodicEdge.GetByGroupIdsAsync(driver, ["group"]));
+        Assert.Single(await CommunityEdge.GetByGroupIdsAsync(driver, ["group"]));
+        Assert.Single(await HasEpisodeEdge.GetByGroupIdsAsync(driver, ["group"]));
+        Assert.Single(await NextEpisodeEdge.GetByGroupIdsAsync(driver, ["group"]));
     }
 
     [Fact]

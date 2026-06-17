@@ -460,7 +460,7 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
-    public async Task AddTriplet_EdgeUuidCollisionWithNonEntityEdgeCreatesNewEdge()
+    public async Task AddTriplet_EdgeUuidCollisionWithNonEntityEdgePreservesUuidLikePython()
     {
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(graphDriver: driver, llmClient: new StaticLlmClient(new JsonObject()));
@@ -504,13 +504,11 @@ public class GraphitiWorkflowTests
         var result = await graphiti.AddTripletAsync(alice, collidingEntityEdge, bob);
 
         var entityEdge = Assert.Single(result.Edges);
-        Assert.NotEqual(mention.Uuid, entityEdge.Uuid);
+        Assert.Equal(mention.Uuid, entityEdge.Uuid);
         Assert.Equal(alice.Uuid, entityEdge.SourceNodeUuid);
         Assert.Equal(bob.Uuid, entityEdge.TargetNodeUuid);
         Assert.Equal(mention.Uuid, (await EpisodicEdge.GetByUuidAsync(driver, mention.Uuid)).Uuid);
-        await Assert.ThrowsAsync<EdgeNotFoundException>(() => EntityEdge.GetByUuidAsync(driver, mention.Uuid));
-
-        var storedEntityEdge = await EntityEdge.GetByUuidAsync(driver, entityEdge.Uuid);
+        var storedEntityEdge = await EntityEdge.GetByUuidAsync(driver, mention.Uuid);
         Assert.Equal("Alice knows Bob", storedEntityEdge.Fact);
     }
 

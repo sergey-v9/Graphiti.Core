@@ -106,6 +106,14 @@ candidate list, while `AddTripletAsync` mirrors Python by deriving `relatedEdges
 exists on a different source/target pair, C# keeps the original edge untouched and assigns a fresh UUID
 to the new edge before saving, matching Python `graphiti.py` and `test_add_triplet.py`.
 
+**2026-06-17 in-memory typed UUID-boundary follow-up:** closed a reference-driver storage drift.
+Python stores nodes by concrete label and relationships by concrete relationship type, so different
+node/edge kinds can coexist with the same `uuid`. `InMemoryGraphDriver` now keys primary storage and
+group/incident indexes by concrete type plus UUID. Entity, episodic, community, and saga nodes can
+share a UUID without overwriting each other; entity, episodic, community, has-episode, and
+next-episode edges can do the same. `AddTripletAsync` now preserves a submitted EntityEdge UUID when
+only a non-entity edge has that UUID, matching Python's same-type collision check.
+
 **2026-06-14 saga prompt truthiness follow-up:** closed a small prompt-rendering drift in
 `summarize_sagas.summarize_saga`. Python renders `<EXISTING_KNOWLEDGE>` whenever
 `existing_summary` is a non-empty string, including whitespace-only strings. C# now uses the same
@@ -471,7 +479,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Basic fact search | `search` | `SearchAsync(query, ...)` | OK | |
 | Advanced graph search | `search_` | `SearchAdvancedAsync` / `SearchAsync(query, SearchConfig, ...)` | OK | Idiomatic C# names; Python-style aliases intentionally not added |
 | Episode contribution lookup | `get_nodes_and_edges_by_episode` | `GetNodesAndEdgesByEpisodeAsync` | OK + DIVERGENT | Per-episode entity-edge loads use bounded fan-out like Python `semaphore_gather`, then flatten in episode order. Bulk episodes own entity-edge UUIDs in C#, so bulk episode contribution lookup is more complete than Python |
-| Triplet ingest | `add_triplet` | `AddTripletAsync` | OK | Exact duplicate reuse scans the reranked/limited related-edge set after `EDGE_HYBRID_SEARCH_RRF`, matching Python; edge UUID collisions on different endpoint pairs generate a fresh UUID and preserve the original edge; in-memory cross-type UUID collisions also generate a fresh entity-edge UUID so non-entity edges are not overwritten |
+| Triplet ingest | `add_triplet` | `AddTripletAsync` | OK | Exact duplicate reuse scans the reranked/limited related-edge set after `EDGE_HYBRID_SEARCH_RRF`, matching Python; same-type entity-edge UUID collisions on different endpoint pairs generate a fresh UUID and preserve the original edge; cross-type in-memory edge UUID collisions preserve the submitted EntityEdge UUID like Python labels/relationship types |
 | Episode removal | `remove_episode` | `RemoveEpisodeAsync` | DIVERGENT | C# prunes shared edge support and repairs saga membership/adjacency; Python only deletes first-supporting edges and the episode |
 
 ## Invented C# behaviors (not in Python)
@@ -490,7 +498,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Search config recipes, reranker enums, wire values | OK | Verified equivalent, parity-tested |
 | Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | OK | Deterministic parts well tested; edge/episode cross-encoder candidate windows now match Python's pre-rerank `limit` slices, including first-seen retrieval-order edge windowing, while node/community remain intentionally unwindowed like Python and pass full first-seen retrieval-order pools. Duplicate cross-encoder passages now match Python's first-seen passage / last-duplicate-candidate mapping. Community search now mirrors Python's unconditional vector retrieval when a query vector is available. Empty `EdgeTypes`/`EdgeUuids` filters are active match-none predicates like Python. Public search-result context helpers are exposed via `SearchHelpers` |
 | Community label propagation | OK | Algorithmically equivalent |
-| Graph drivers: LadybugDB (first-class investment target), InMemory (reference/test), Neo4j (temporary legacy compatibility) | OK | Runtime proof for Ladybug workflows, direct package binding of list/array/empty-list/null parameters, direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by UUID, public namespace community/saga reads and typed deletes, saga-scoped retrieval/content reads, paged group reads, directed endpoint-pair and incident edge reads, explicit and core file-backed paths, Kuzu `':memory:'` sentinel compatibility, package/native execution, and Ladybug-owned raw full-text query/label-filter construction; Neo4j is kept only to avoid regressions while present and is expected to be removed; see kuzu-driver-port.md |
+| Graph drivers: LadybugDB (first-class investment target), InMemory (reference/test), Neo4j (temporary legacy compatibility) | OK | Runtime proof for Ladybug workflows, direct package binding of list/array/empty-list/null parameters, direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by UUID, public namespace community/saga reads and typed deletes, saga-scoped retrieval/content reads, paged group reads, directed endpoint-pair and incident entity-edge reads, InMemory concrete node/edge type UUID boundaries, explicit and core file-backed paths, Kuzu `':memory:'` sentinel compatibility, package/native execution, and Ladybug-owned raw full-text query/label-filter construction; Neo4j is kept only to avoid regressions while present and is expected to be removed; see kuzu-driver-port.md |
 | LLM/embedder/reranker adapters via Microsoft.Extensions.AI | DIVERGENT | Documented decision; structured output + Polly retries in place. `MicrosoftExtensionsAICrossEncoderClient` uses structured boolean+confidence scoring because generic M.E.AI lacks OpenAI top-logprob controls |
 | Retry-on-validation-failure with error feedback message | llm_client/client.py retry loop | OK | Ported 2026-06-11 in base `LlmClient`: `JsonException` parse/schema failures get two Python-style validation-feedback re-prompts, cache keys remain based on the original prepared messages, and only validated final responses are cached |
 | GLiNER2 local extraction client | N/A | Specialized optional Python feature; out of scope unless requested |

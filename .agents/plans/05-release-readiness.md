@@ -229,6 +229,11 @@ Recorded sweep result, 2026-06-17:
    release-plan tasks: broaden Ladybug workflow coverage only for uncovered behavior, add
    host-facing options only for real runtime needs, and add native-gated smoke tests only for a new
    platform/CI requirement or coverage gap.
+7. Follow-up sweep during the 2026-06-17 parity audit split confirmed issues into separate streams:
+   the concrete implementation slice is InMemory typed node/edge UUID storage boundaries; remaining
+   separately handled follow-ups are `BuildCommunitiesAsync` explicit-empty `groupIds` semantics,
+   default empty-string group discovery for community builds, and namespace all-miss plural-read
+   behavior where static model parity and namespace parity need a deliberate decision.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

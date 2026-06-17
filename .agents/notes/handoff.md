@@ -148,10 +148,13 @@ first-seen retrieval-result order across BM25/vector/BFS inputs, and `NormalizeL
 zero-norm embeddings while propagating non-finite norms like Python. `EntityEdge.GetByGroupIdsAsync`
 and `EpisodicEdge.GetByGroupIdsAsync` now both throw on empty group results like Python. Extracted
 nodes in separate and combined extraction now require `entity_type_id` like Python Pydantic, preserve
-numeric-string coercion, and still fall back to `Entity` for valid out-of-range IDs. Edge
-cross-encoder windowing applies the `limit` after retrieval-order dedupe; node/community
-cross-encoder inputs remain full-pool but use the same retrieval order.
-`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1035` passed,
+numeric-string coercion, and still fall back to `Entity` for valid out-of-range IDs. InMemory storage
+now preserves Python's concrete node-label and relationship-type UUID boundaries, so cross-type
+nodes/edges can share a UUID and `AddTripletAsync` preserves an EntityEdge UUID when only a
+non-entity edge has that UUID. Edge cross-encoder windowing applies the `limit` after
+retrieval-order dedupe; node/community cross-encoder inputs remain full-pool but use the same
+retrieval order.
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1037` passed,
 `3` skipped; both shippable packages packed and both fresh package-consumer smoke builds succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub

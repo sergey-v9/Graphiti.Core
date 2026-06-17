@@ -87,18 +87,17 @@ public class InMemoryGraphDriverDeleteTests
         };
         await driver.SaveNodeAsync(node);
 
-        await driver.SaveNodeAsync(new CommunityNode
+        await driver.SaveNodeAsync(new EntityNode
         {
             Uuid = node.Uuid,
-            Name = "Community",
+            Name = "Alice",
             GroupId = "tenant-b"
         });
 
         Assert.Empty(await driver.GetNodesByGroupIdsAsync<EntityNode>(new[] { "tenant-a" }));
-        Assert.Empty(await driver.GetEntityGroupIdsAsync());
-        var communities = await driver.GetNodesByGroupIdsAsync<CommunityNode>(new[] { "tenant-b" });
-        Assert.Equal(node.Uuid, Assert.Single(communities).Uuid);
-        Assert.Equal(new[] { "tenant-b" }, await driver.GetCommunityGroupIdsAsync());
+        var entities = await driver.GetNodesByGroupIdsAsync<EntityNode>(new[] { "tenant-b" });
+        Assert.Equal(node.Uuid, Assert.Single(entities).Uuid);
+        Assert.Equal(new[] { "tenant-b" }, await driver.GetEntityGroupIdsAsync());
     }
 
     [Fact]

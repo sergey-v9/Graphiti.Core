@@ -918,11 +918,7 @@ public sealed partial class Graphiti
             }
             catch (EdgeNotFoundException)
             {
-                if (tripletDriver is InMemoryGraphDriver &&
-                    await NonEntityEdgeExistsByUuidAsync(tripletDriver, edge.Uuid, cancellationToken).ConfigureAwait(false))
-                {
-                    edge.Uuid = GraphitiHelpers.NewUuid();
-                }
+                // Python only treats same-type entity edges as UUID collisions here.
             }
 
             var betweenNodesEdges = await tripletDriver.GetEntityEdgesBetweenNodesAsync(
@@ -985,32 +981,6 @@ public sealed partial class Graphiti
         {
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
-        }
-    }
-
-    private static async Task<bool> NonEntityEdgeExistsByUuidAsync(
-        IGraphDriver driver,
-        string uuid,
-        CancellationToken cancellationToken) =>
-        await EdgeExistsByUuidAsync<EpisodicEdge>(driver, uuid, cancellationToken).ConfigureAwait(false) ||
-        await EdgeExistsByUuidAsync<CommunityEdge>(driver, uuid, cancellationToken).ConfigureAwait(false) ||
-        await EdgeExistsByUuidAsync<HasEpisodeEdge>(driver, uuid, cancellationToken).ConfigureAwait(false) ||
-        await EdgeExistsByUuidAsync<NextEpisodeEdge>(driver, uuid, cancellationToken).ConfigureAwait(false);
-
-    private static async Task<bool> EdgeExistsByUuidAsync<TEdge>(
-        IGraphDriver driver,
-        string uuid,
-        CancellationToken cancellationToken)
-        where TEdge : Edge
-    {
-        try
-        {
-            await driver.GetEdgeByUuidAsync<TEdge>(uuid, cancellationToken).ConfigureAwait(false);
-            return true;
-        }
-        catch (EdgeNotFoundException)
-        {
-            return false;
         }
     }
 
