@@ -2220,7 +2220,8 @@ public class GraphitiWorkflowTests
         Assert.Equal("extraction failed", exception.Message);
         Assert.Equal(2, (await EpisodicNode.GetByGroupIdsAsync(driver, new[] { "group" })).Count);
         Assert.Empty(await EntityNode.GetByGroupIdsAsync(driver, new[] { "group" }));
-        Assert.Empty(await EntityEdge.GetByGroupIdsAsync(driver, new[] { "group" }));
+        await Assert.ThrowsAsync<GroupsEdgesNotFoundException>(() =>
+            EntityEdge.GetByGroupIdsAsync(driver, new[] { "group" }));
         await Assert.ThrowsAsync<GroupsEdgesNotFoundException>(() =>
             EpisodicEdge.GetByGroupIdsAsync(driver, new[] { "group" }));
     }

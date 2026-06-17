@@ -145,11 +145,12 @@ added.
 Latest verification checkpoint, 2026-06-17: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
 first-seen retrieval-result order across BM25/vector/BFS inputs, and `NormalizeL2` preserves only
-zero-norm embeddings while propagating non-finite norms like Python. Edge cross-encoder windowing
-applies the `limit` after that retrieval-order dedupe; node/community cross-encoder inputs remain
-full-pool but use the same retrieval order. `.\eng\Verify-GraphitiCore.ps1` is green with the active
-GitHub Packages credential (`1030` passed, `3` skipped; both shippable packages packed and both fresh
-package-consumer smoke builds succeeded).
+zero-norm embeddings while propagating non-finite norms like Python. `EntityEdge.GetByGroupIdsAsync`
+and `EpisodicEdge.GetByGroupIdsAsync` now both throw on empty group results like Python. Edge
+cross-encoder windowing applies the `limit` after that retrieval-order dedupe; node/community
+cross-encoder inputs remain full-pool but use the same retrieval order.
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`1031` passed,
+`3` skipped; both shippable packages packed and both fresh package-consumer smoke builds succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
 Packages feed for LadybugDB packages (`0.17.1-dev.1.1.g6f3dbed`) and `NuGet.config` includes package
@@ -163,9 +164,9 @@ Current core-only checkpoint, 2026-06-17: typed node deletes now preserve Python
 direct model `DeleteAsync`, base `Node.DeleteByGroupIdAsync` / `Node.DeleteByUuidsAsync`, and typed
 node namespaces; `EntityNode.GetByUuidsAsync` now accepts but ignores `groupId` like Python's fallback
 query; InMemory episodic-node persistence now drops `EpisodeMetadata` like Python's queries and
-record parser; `EpisodicEdge.GetByGroupIdsAsync` now raises on empty group results like Python; and
-cross-encoder search now collapses duplicate passage strings like Python while mapping each passage
-back to the last duplicate candidate. Base
+record parser; `EntityEdge.GetByGroupIdsAsync` and `EpisodicEdge.GetByGroupIdsAsync` now raise on
+empty group results like Python; and cross-encoder search now collapses duplicate passage strings like
+Python while mapping each passage back to the last duplicate candidate. Base
 `Edge.DeleteByUuidsAsync` now matches Python's inherited base helper scope by excluding
 `HAS_EPISODE`/`NEXT_EPISODE`, while concrete saga edge deletes and episode-removal saga repair still
 delete those relationship types through typed paths. `.\eng\Verify-GraphitiCoreOnly.ps1` is green

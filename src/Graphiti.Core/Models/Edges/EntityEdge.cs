@@ -92,14 +92,32 @@ public sealed class EntityEdge : Edge
     /// Loads entity edges (facts) across the given group partitions, with optional UUID-cursor paging
     /// and optional inclusion of fact embeddings.
     /// </summary>
-    public static Task<IReadOnlyList<EntityEdge>> GetByGroupIdsAsync(
+    public static async Task<IReadOnlyList<EntityEdge>> GetByGroupIdsAsync(
         IGraphDriver driver,
         IEnumerable<string> groupIds,
         int? limit = null,
         string? uuidCursor = null,
         bool withEmbeddings = false,
-        CancellationToken cancellationToken = default) =>
-        driver.GetEdgesByGroupIdsAsync<EntityEdge>(groupIds, limit, uuidCursor, withEmbeddings, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(groupIds);
+
+        var requestedGroupIds = groupIds as IReadOnlyList<string> ?? groupIds.ToArray();
+        var edges = await driver
+            .GetEdgesByGroupIdsAsync<EntityEdge>(
+                requestedGroupIds,
+                limit,
+                uuidCursor,
+                withEmbeddings,
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (edges.Count == 0)
+        {
+            throw new GroupsEdgesNotFoundException(requestedGroupIds);
+        }
+
+        return edges;
+    }
 
     /// <summary>Loads the entity edges (facts) that directly connect two nodes.</summary>
     public static Task<IReadOnlyList<EntityEdge>> GetBetweenNodesAsync(

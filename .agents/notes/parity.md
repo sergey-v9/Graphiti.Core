@@ -309,11 +309,12 @@ record parsing do not persist or hydrate it. C# Neo4j and Ladybug already follow
 the in-memory reference driver now does too by dropping `EpisodeMetadata` when cloning episodic nodes
 into storage.
 
-**2026-06-17 episodic-edge group miss follow-up:** closed the other narrow episodic-edge miss drift.
-Python `EpisodicEdge.get_by_group_ids` raises `GroupsEdgesNotFoundError(group_ids)` when the group
-query returns no edges, while other edge group helpers return empty lists. C#
-`EpisodicEdge.GetByGroupIdsAsync` now throws `GroupsEdgesNotFoundException` on empty results through
-both the static model helper and `graphiti.Edges.Episode`.
+**2026-06-17 entity/episodic-edge group miss follow-up:** closed the group-miss model-helper drift.
+Python `EntityEdge.get_by_group_ids` and `EpisodicEdge.get_by_group_ids` raise
+`GroupsEdgesNotFoundError(group_ids)` when the group query returns no edges, while relationship edge
+helpers return empty lists. C# `EntityEdge.GetByGroupIdsAsync` and
+`EpisodicEdge.GetByGroupIdsAsync` now throw `GroupsEdgesNotFoundException` on empty results through
+the static model helpers and public namespaces.
 
 **2026-06-17 semaphore default follow-up:** closed the helper default-concurrency drift. Python
 `semaphore_gather(..., max_coroutines=None)` uses `SEMAPHORE_LIMIT` (`20` by default), and
