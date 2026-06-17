@@ -302,6 +302,12 @@ record parsing do not persist or hydrate it. C# Neo4j and Ladybug already follow
 the in-memory reference driver now does too by dropping `EpisodeMetadata` when cloning episodic nodes
 into storage.
 
+**2026-06-17 episodic-edge group miss follow-up:** closed the other narrow episodic-edge miss drift.
+Python `EpisodicEdge.get_by_group_ids` raises `GroupsEdgesNotFoundError(group_ids)` when the group
+query returns no edges, while other edge group helpers return empty lists. C#
+`EpisodicEdge.GetByGroupIdsAsync` now throws `GroupsEdgesNotFoundException` on empty results through
+both the static model helper and `graphiti.Edges.Episode`.
+
 **2026-06-17 cross-encoder duplicate follow-up:** closed the duplicate-passage search drift. Python's
 search rerankers collapse duplicate cross-encoder passage strings through dict-comprehension behavior:
 passages are sent once in first-seen passage order, while the last duplicate candidate wins the
