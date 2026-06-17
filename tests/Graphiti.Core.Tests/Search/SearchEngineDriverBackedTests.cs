@@ -11,14 +11,16 @@ public class SearchEngineDriverBackedTests
         var node = new EntityNode { Uuid = "node", Name = "Alpha", GroupId = "group" };
         var episode = new EpisodicNode { Uuid = "episode", Name = "Episode", Content = "alpha episode", GroupId = "group" };
         var community = new CommunityNode { Uuid = "community", Name = "Community", Summary = "alpha community", GroupId = "group" };
+        var vectorCommunity = new CommunityNode { Uuid = "community-vector", Name = "Vector Community", GroupId = "group" };
         var driver = new DriverBackedSearchDriver
         {
-            ExpectedConcurrentSearchCalls = 4,
+            ExpectedConcurrentSearchCalls = 5,
             HoldExpectedConcurrentSearchCalls = true,
             EdgeFulltextHits = { new SearchHit<EntityEdge>(edge, 2) },
             NodeFulltextHits = { new SearchHit<EntityNode>(node, 2) },
             EpisodeFulltextHits = { new SearchHit<EpisodicNode>(episode, 2) },
-            CommunityFulltextHits = { new SearchHit<CommunityNode>(community, 2) }
+            CommunityFulltextHits = { new SearchHit<CommunityNode>(community, 2) },
+            CommunityVectorHits = { new SearchHit<CommunityNode>(vectorCommunity, 1) }
         };
         var clients = new GraphitiClients(
             driver,
@@ -53,15 +55,17 @@ public class SearchEngineDriverBackedTests
             new SearchFilters());
         var results = await CompleteExpectedConcurrentSearchAsync(driver, searchTask);
 
-        Assert.Equal(4, driver.StartedSearchCalls);
+        Assert.Equal(5, driver.StartedSearchCalls);
         Assert.Equal(1, driver.EdgeFulltextCalls);
         Assert.Equal(1, driver.NodeFulltextCalls);
         Assert.Equal(1, driver.EpisodeFulltextCalls);
         Assert.Equal(1, driver.CommunityFulltextCalls);
+        Assert.Equal(1, driver.CommunityVectorCalls);
+        Assert.Equal(new[] { 0f, 0f }, driver.LastCommunityVectorQueryVector!);
         Assert.Equal("edge", Assert.Single(results.Edges).Uuid);
         Assert.Equal("node", Assert.Single(results.Nodes).Uuid);
         Assert.Equal("episode", Assert.Single(results.Episodes).Uuid);
-        Assert.Equal("community", Assert.Single(results.Communities).Uuid);
+        Assert.Equal(new[] { "community", "community-vector" }, results.Communities.Select(community => community.Uuid));
     }
 
     [Fact]

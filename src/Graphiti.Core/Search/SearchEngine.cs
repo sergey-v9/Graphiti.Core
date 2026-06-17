@@ -85,6 +85,10 @@ internal static class SearchEngine
                         clients.Embedder.EmbeddingDimension,
                         "search query");
             }
+            else if (config.CommunityConfig is not null)
+            {
+                effectiveQueryVector = new float[clients.Embedder.EmbeddingDimension];
+            }
             else
             {
                 effectiveQueryVector = null;

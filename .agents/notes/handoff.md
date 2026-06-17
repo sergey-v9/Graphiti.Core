@@ -318,6 +318,8 @@ candidate, matching Python's dict-comprehension behavior. Base `Edge.DeleteByUui
 `HAS_EPISODE`/`NEXT_EPISODE` like Python's inherited base helper, with C# saga repair using concrete
 typed deletes instead. Search concurrency proof was also tightened so the fake driver waits for
 monotonic search-call arrivals instead of asserting a transient active count.
+Top-level community search now supplies Python's zero query vector fallback when no real embedding
+path is configured, so BM25/RRF community searches still execute vector retrieval like Python.
 Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests
 (`1025` passed, `3` skipped, `1028` total), both shippable package packs, and both package-consumer
 smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
