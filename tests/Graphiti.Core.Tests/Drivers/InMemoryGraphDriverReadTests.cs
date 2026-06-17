@@ -157,10 +157,14 @@ public sealed class InMemoryGraphDriverReadTests
         edges[0].Fact = "mutated";
         edgesWithEmbeddings[0].FactEmbedding![0] = 99f;
 
-        Assert.Equal("C summary", (await driver.GetNodeByUuidAsync<EntityNode>("node-c")).Summary);
-        Assert.Equal(new List<float> { 1f, 1f }, (await driver.GetNodeByUuidAsync<EntityNode>("node-c")).NameEmbedding);
-        Assert.Equal("third", (await driver.GetEdgeByUuidAsync<EntityEdge>("edge-c")).Fact);
-        Assert.Equal(new List<float> { 1f, 1f }, (await driver.GetEdgeByUuidAsync<EntityEdge>("edge-c")).FactEmbedding);
+        var storedNode = await driver.GetNodeByUuidAsync<EntityNode>("node-c");
+        var storedEdge = await driver.GetEdgeByUuidAsync<EntityEdge>("edge-c");
+        Assert.Equal("C summary", storedNode.Summary);
+        await storedNode.LoadNameEmbeddingAsync(driver);
+        Assert.Equal(new List<float> { 1f, 1f }, storedNode.NameEmbedding);
+        Assert.Equal("third", storedEdge.Fact);
+        await storedEdge.LoadFactEmbeddingAsync(driver);
+        Assert.Equal(new List<float> { 1f, 1f }, storedEdge.FactEmbedding);
     }
 
     [Fact]

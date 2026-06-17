@@ -9,7 +9,11 @@ namespace Graphiti.Core.Drivers;
 /// (<see cref="ISearchGraphDriver"/>), making it ideal for tests, examples, and ephemeral graphs.
 /// All mutating operations are guarded by a lock; the driver can be cloned to snapshot its state.
 /// </summary>
-public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, ITypedNodeDeleteGraphDriver, ITypedEdgeDeleteGraphDriver
+public sealed class InMemoryGraphDriver : GraphDriverBase,
+    ISearchGraphDriver,
+    ITypedNodeDeleteGraphDriver,
+    ITypedEdgeDeleteGraphDriver,
+    IEmbeddingLoadGraphDriver
 {
     private readonly Lock _gate;
     private readonly Dictionary<(Type Type, string Uuid), Node> _nodes = new();
@@ -583,7 +587,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         {
             if (TryGetNode<TNode>(uuid, out var typed))
             {
-                return Task.FromResult((TNode)CloneNode(typed));
+                return Task.FromResult(ProjectNodeEmbedding((TNode)CloneNode(typed), withEmbeddings: false));
             }
         }
 
@@ -612,7 +616,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
                 if (TryGetNode<TNode>(uuid, out var typed)
                     && (groupId is null || string.Equals(typed.GroupId, groupId, StringComparison.Ordinal)))
                 {
-                    nodes.Add((TNode)CloneNode(typed));
+                    nodes.Add(ProjectNodeEmbedding((TNode)CloneNode(typed), withEmbeddings: false));
                 }
             }
 
@@ -648,7 +652,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
         {
             if (TryGetEdge<T>(uuid, out var typed))
             {
-                return Task.FromResult((T)CloneEdge(typed));
+                return Task.FromResult(ProjectEdgeEmbedding((T)CloneEdge(typed), withEmbeddings: false));
             }
         }
 
@@ -673,7 +677,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             {
                 if (TryGetEdge<T>(uuid, out var typed))
                 {
-                    edges.Add((T)CloneEdge(typed));
+                    edges.Add(ProjectEdgeEmbedding((T)CloneEdge(typed), withEmbeddings: false));
                 }
             }
 
@@ -699,6 +703,50 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, I
             var edges = ProjectEdgesByUuidOrder(candidates, limit, uuidCursor, withEmbeddings);
             return Task.FromResult<IReadOnlyList<T>>(edges);
         }
+    }
+
+    Task<IReadOnlyDictionary<string, List<float>?>> IEmbeddingLoadGraphDriver.LoadEntityNodeEmbeddingsByUuidAsync(
+        IReadOnlyList<string> nodeUuids,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodeUuids);
+        cancellationToken.ThrowIfCancellationRequested();
+        var embeddings = new Dictionary<string, List<float>?>(nodeUuids.Count, StringComparer.Ordinal);
+        lock (_gate)
+        {
+            foreach (var uuid in nodeUuids)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (TryGetNode<EntityNode>(uuid, out var node))
+                {
+                    embeddings[uuid] = CopyNullableList(node.NameEmbedding);
+                }
+            }
+        }
+
+        return Task.FromResult<IReadOnlyDictionary<string, List<float>?>>(embeddings);
+    }
+
+    Task<IReadOnlyDictionary<string, List<float>?>> IEmbeddingLoadGraphDriver.LoadEntityEdgeEmbeddingsByUuidAsync(
+        IReadOnlyList<string> edgeUuids,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(edgeUuids);
+        cancellationToken.ThrowIfCancellationRequested();
+        var embeddings = new Dictionary<string, List<float>?>(edgeUuids.Count, StringComparer.Ordinal);
+        lock (_gate)
+        {
+            foreach (var uuid in edgeUuids)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (TryGetEdge<EntityEdge>(uuid, out var edge))
+                {
+                    embeddings[uuid] = CopyNullableList(edge.FactEmbedding);
+                }
+            }
+        }
+
+        return Task.FromResult<IReadOnlyDictionary<string, List<float>?>>(embeddings);
     }
 
     /// <inheritdoc />

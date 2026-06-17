@@ -361,6 +361,13 @@ helpers return empty lists. C# `EntityEdge.GetByGroupIdsAsync` and
 `EpisodicEdge.GetByGroupIdsAsync` now throw `GroupsEdgesNotFoundException` on empty results through
 the static model helpers and public namespaces.
 
+**2026-06-17 in-memory UUID embedding projection follow-up:** closed the reference-driver UUID-read
+drift. Python entity-node and entity-edge UUID helpers use return projections that omit
+`name_embedding` / `fact_embedding` by default; callers load those vectors through explicit
+embedding loaders. `InMemoryGraphDriver` now applies the same default projection for entity/fact
+`GetByUuidAsync` and `GetByUuidsAsync`, while its internal embedding-load path returns cloned stored
+vectors for `LoadNameEmbeddingAsync`, `LoadFactEmbeddingAsync`, and namespace bulk loaders.
+
 **2026-06-17 semaphore default follow-up:** closed the helper default-concurrency drift. Python
 `semaphore_gather(..., max_coroutines=None)` uses `SEMAPHORE_LIMIT` (`20` by default), and
 `max_coroutines=0` also falls back to that default via Python's `or` semantics. C#

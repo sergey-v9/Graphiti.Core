@@ -51,6 +51,49 @@ public class InMemorySearchGraphDriverTests
     }
 
     [Fact]
+    public async Task InMemoryUuidReadsOmitEntityAndFactEmbeddingsUntilExplicitlyLoaded()
+    {
+        var driver = new InMemoryGraphDriver();
+        var node = new EntityNode
+        {
+            Uuid = "entity",
+            Name = "Alice",
+            Summary = "project lead",
+            GroupId = "group",
+            Labels = { "Entity" },
+            NameEmbedding = new List<float> { 1f, 0f }
+        };
+        var edge = new EntityEdge
+        {
+            Uuid = "edge",
+            SourceNodeUuid = node.Uuid,
+            TargetNodeUuid = "bob",
+            GroupId = "group",
+            Name = "KNOWS",
+            Fact = "Alice knows Bob.",
+            FactEmbedding = new List<float> { 0f, 1f }
+        };
+        await node.SaveAsync(driver);
+        await edge.SaveAsync(driver);
+
+        var nodeByUuid = await EntityNode.GetByUuidAsync(driver, node.Uuid);
+        var nodeByUuids = Assert.Single(await EntityNode.GetByUuidsAsync(driver, new[] { node.Uuid }));
+        var edgeByUuid = await EntityEdge.GetByUuidAsync(driver, edge.Uuid);
+        var edgeByUuids = Assert.Single(await EntityEdge.GetByUuidsAsync(driver, new[] { edge.Uuid }));
+
+        Assert.Null(nodeByUuid.NameEmbedding);
+        Assert.Null(nodeByUuids.NameEmbedding);
+        Assert.Null(edgeByUuid.FactEmbedding);
+        Assert.Null(edgeByUuids.FactEmbedding);
+
+        await nodeByUuid.LoadNameEmbeddingAsync(driver);
+        await edgeByUuid.LoadFactEmbeddingAsync(driver);
+
+        Assert.Equal(node.NameEmbedding, nodeByUuid.NameEmbedding);
+        Assert.Equal(edge.FactEmbedding, edgeByUuid.FactEmbedding);
+    }
+
+    [Fact]
     public async Task InMemoryVectorSearch_ReturnsStableTopKAndClonesFinalHits()
     {
         var driver = new InMemoryGraphDriver();
@@ -99,6 +142,7 @@ public class InMemorySearchGraphDriverTests
         hits[0].Item.NameEmbedding![0] = 99f;
         var stored = await EntityNode.GetByUuidAsync(driver, first.Uuid);
         Assert.Equal("first original", stored.Summary);
+        await stored.LoadNameEmbeddingAsync(driver);
         Assert.Equal(new List<float> { 1f, 0f }, stored.NameEmbedding);
     }
 
@@ -390,6 +434,7 @@ public class InMemorySearchGraphDriverTests
         var storedEpisode = await EpisodicNode.GetByUuidAsync(driver, episode.Uuid);
         var storedCommunity = await CommunityNode.GetByUuidAsync(driver, community.Uuid);
         Assert.Equal("apollo vector fact", storedEdge.Fact);
+        await storedEdge.LoadFactEmbeddingAsync(driver);
         Assert.Equal(new List<float> { 1f, 0f }, storedEdge.FactEmbedding);
         Assert.Equal("apollo episode content", storedEpisode.Content);
         Assert.Equal("Apollo community", storedCommunity.Name);

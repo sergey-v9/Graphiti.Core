@@ -122,10 +122,12 @@ public class SearchFallbackGraphTests
         var storedCommunity = await CommunityNode.GetByUuidAsync(driver, community.Uuid);
         var storedEdge = await EntityEdge.GetByUuidAsync(driver, entityEdge.Uuid);
         Assert.Equal("Entity", storedEntity.Name);
+        await storedEntity.LoadNameEmbeddingAsync(driver);
         Assert.Equal(new[] { 1f, 0f }, storedEntity.NameEmbedding);
         Assert.Equal("Community", storedCommunity.Name);
         Assert.Equal(new[] { 0f, 1f }, storedCommunity.NameEmbedding);
         Assert.Equal("entity relates to community", storedEdge.Fact);
+        await storedEdge.LoadFactEmbeddingAsync(driver);
         Assert.Equal(new[] { 1f, 1f }, storedEdge.FactEmbedding);
     }
 

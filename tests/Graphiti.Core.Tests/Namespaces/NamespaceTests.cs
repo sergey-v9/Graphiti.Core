@@ -58,6 +58,8 @@ public class NamespaceTests
         Assert.Equal(alice.NameEmbedding, shell.NameEmbedding);
         shell.NameEmbedding![0] = 99f;
         var storedAlice = await graphiti.Nodes.Entity.GetByUuidAsync(alice.Uuid);
+        Assert.Null(storedAlice.NameEmbedding);
+        await graphiti.Nodes.Entity.LoadEmbeddingsAsync(storedAlice);
         Assert.Equal(alice.NameEmbedding, storedAlice.NameEmbedding);
 
         await graphiti.Nodes.Entity.DeleteByGroupIdAsync("group");
@@ -164,11 +166,17 @@ public class NamespaceTests
         await graphiti.Nodes.Community.SaveBulkAsync(new[] { communityWithEmbedding, communityMissingEmbedding });
         await graphiti.Edges.Entity.SaveBulkAsync(new[] { edgeWithEmbedding, edgeMissingEmbedding });
 
-        Assert.Equal(new List<float> { 1f, 0f }, (await graphiti.Nodes.Entity.GetByUuidAsync(entityWithEmbedding.Uuid)).NameEmbedding);
+        var storedEntityWithEmbedding = await graphiti.Nodes.Entity.GetByUuidAsync(entityWithEmbedding.Uuid);
+        Assert.Null(storedEntityWithEmbedding.NameEmbedding);
+        await graphiti.Nodes.Entity.LoadEmbeddingsAsync(storedEntityWithEmbedding);
+        Assert.Equal(new List<float> { 1f, 0f }, storedEntityWithEmbedding.NameEmbedding);
         Assert.Null((await graphiti.Nodes.Entity.GetByUuidAsync(entityMissingEmbedding.Uuid)).NameEmbedding);
         Assert.Equal(new List<float> { 0f, 1f }, (await graphiti.Nodes.Community.GetByUuidAsync(communityWithEmbedding.Uuid)).NameEmbedding);
         Assert.Null((await graphiti.Nodes.Community.GetByUuidAsync(communityMissingEmbedding.Uuid)).NameEmbedding);
-        Assert.Equal(new List<float> { 0.5f, 0.5f }, (await graphiti.Edges.Entity.GetByUuidAsync(edgeWithEmbedding.Uuid)).FactEmbedding);
+        var storedEdgeWithEmbedding = await graphiti.Edges.Entity.GetByUuidAsync(edgeWithEmbedding.Uuid);
+        Assert.Null(storedEdgeWithEmbedding.FactEmbedding);
+        await graphiti.Edges.Entity.LoadEmbeddingsAsync(storedEdgeWithEmbedding);
+        Assert.Equal(new List<float> { 0.5f, 0.5f }, storedEdgeWithEmbedding.FactEmbedding);
         Assert.Null((await graphiti.Edges.Entity.GetByUuidAsync(edgeMissingEmbedding.Uuid)).FactEmbedding);
     }
 
@@ -626,6 +634,8 @@ public class NamespaceTests
         Assert.Equal(knows.FactEmbedding, shell.FactEmbedding);
         shell.FactEmbedding![0] = 99f;
         var storedKnows = await graphiti.Edges.Entity.GetByUuidAsync(knows.Uuid);
+        Assert.Null(storedKnows.FactEmbedding);
+        await graphiti.Edges.Entity.LoadEmbeddingsAsync(storedKnows);
         Assert.Equal(knows.FactEmbedding, storedKnows.FactEmbedding);
 
         await graphiti.Edges.Entity.DeleteByUuidsAsync(new[] { knows.Uuid, mention.Uuid });
