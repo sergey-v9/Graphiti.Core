@@ -314,6 +314,14 @@ public class GraphitiHelperTests
     }
 
     [Fact]
+    public void NormalizeL2_PropagatesNonFiniteNormLikePython()
+    {
+        var normalized = GraphitiHelpers.NormalizeL2(new[] { float.NaN, 1f });
+
+        Assert.All(normalized, value => Assert.True(float.IsNaN(value)));
+    }
+
+    [Fact]
     public void NormalizeL2InPlace_UsesVectorizedNormalization()
     {
         var input = new[] { 3f, 4f };
@@ -325,17 +333,20 @@ public class GraphitiHelperTests
     }
 
     [Fact]
-    public void NormalizeL2InPlace_LeavesZeroAndInvalidVectorsUnchanged()
+    public void NormalizeL2InPlace_MatchesPythonZeroAndNonFiniteNorms()
     {
         var zero = new[] { 0f, 0f };
-        var invalid = new[] { float.NaN, 1f };
+        var nan = new[] { float.NaN, 1f };
+        var infinity = new[] { float.PositiveInfinity, 1f };
 
         GraphitiHelpers.NormalizeL2InPlace(zero);
-        GraphitiHelpers.NormalizeL2InPlace(invalid);
+        GraphitiHelpers.NormalizeL2InPlace(nan);
+        GraphitiHelpers.NormalizeL2InPlace(infinity);
 
         Assert.Equal(new[] { 0f, 0f }, zero);
-        Assert.True(float.IsNaN(invalid[0]));
-        Assert.Equal(1f, invalid[1]);
+        Assert.All(nan, value => Assert.True(float.IsNaN(value)));
+        Assert.True(float.IsNaN(infinity[0]));
+        Assert.Equal(0f, infinity[1]);
     }
 
     [Theory]

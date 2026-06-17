@@ -769,7 +769,7 @@ public static partial class GraphitiHelpers
             : EscapeLuceneCharacters(source, firstEscaped);
     }
 
-    /// <summary>Returns an L2-normalized copy of the vector; a zero/non-finite norm is left unchanged.</summary>
+    /// <summary>Returns an L2-normalized copy of the vector; a zero norm is left unchanged.</summary>
     public static float[] NormalizeL2(IEnumerable<float> embedding)
     {
         var vector = SnapshotEmbedding(embedding);
@@ -780,7 +780,7 @@ public static partial class GraphitiHelpers
     internal static void NormalizeL2InPlace(Span<float> vector)
     {
         var norm = TensorPrimitives.Norm(vector);
-        if (!float.IsFinite(norm) || norm <= 0)
+        if (norm == 0)
         {
             return;
         }

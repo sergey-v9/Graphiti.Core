@@ -143,12 +143,13 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest verification checkpoint, 2026-06-17: plan 05 now has an explicit Step F plan-folder backlog
-triage gate before release infrastructure, and search cross-encoder candidate pools now preserve
-Python's first-seen retrieval-result order across BM25/vector/BFS inputs. Edge cross-encoder
-windowing applies the `limit` after that retrieval-order dedupe; node/community cross-encoder inputs
-remain full-pool but use the same retrieval order. `.\eng\Verify-GraphitiCore.ps1` is green with the
-active GitHub Packages credential (`1029` passed, `3` skipped; both shippable packages packed and both
-fresh package-consumer smoke builds succeeded).
+triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
+first-seen retrieval-result order across BM25/vector/BFS inputs, and `NormalizeL2` preserves only
+zero-norm embeddings while propagating non-finite norms like Python. Edge cross-encoder windowing
+applies the `limit` after that retrieval-order dedupe; node/community cross-encoder inputs remain
+full-pool but use the same retrieval order. `.\eng\Verify-GraphitiCore.ps1` is green with the active
+GitHub Packages credential (`1030` passed, `3` skipped; both shippable packages packed and both fresh
+package-consumer smoke builds succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
 Packages feed for LadybugDB packages (`0.17.1-dev.1.1.g6f3dbed`) and `NuGet.config` includes package

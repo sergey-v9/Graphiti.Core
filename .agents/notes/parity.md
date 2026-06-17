@@ -322,6 +322,12 @@ both the static model helper and `graphiti.Edges.Episode`.
 or zero, preserves explicit positive caps, and rejects negative direct helper input instead of
 running unbounded.
 
+**2026-06-17 normalize_l2 follow-up:** closed the remaining vector-normalization helper drift.
+Python `normalize_l2` preserves only zero-norm embeddings; non-finite norms divide through NumPy and
+propagate `NaN`/zero results. C# `GraphitiHelpers.NormalizeL2` now uses the same zero-only guard
+instead of leaving non-finite inputs unchanged. Provider embedding validation still rejects
+non-finite generated embeddings before graph persistence.
+
 **2026-06-17 entity-type-id key follow-up:** closed an extraction parsing drift. Python builds the
 LLM `entity_type_id` context from `entity_types.items()` and resolves extracted IDs back to the
 dictionary key (`type_name`), not the model/display class name. C#
