@@ -186,6 +186,48 @@ public class NamespaceTests
     }
 
     [Fact]
+    public async Task NodeNamespaces_DeleteAsyncDoesNotCrossSagaBoundary()
+    {
+        var graphiti = new Graphiti(graphDriver: new InMemoryGraphDriver());
+        var entity = new EntityNode { Uuid = "shared-entity", Name = "Alice", GroupId = "group" };
+        await graphiti.Nodes.Entity.SaveAsync(entity);
+
+        await graphiti.Nodes.Saga.DeleteAsync(new SagaNode { Uuid = entity.Uuid, Name = "wrong", GroupId = "group" });
+
+        Assert.Equal(entity.Uuid, (await graphiti.Nodes.Entity.GetByUuidAsync(entity.Uuid)).Uuid);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => graphiti.Nodes.Saga.GetByUuidAsync(entity.Uuid));
+
+        var saga = new SagaNode { Uuid = "shared-saga", Name = "launch", GroupId = "group" };
+        await graphiti.Nodes.Saga.SaveAsync(saga);
+
+        await graphiti.Nodes.Entity.DeleteAsync(new EntityNode { Uuid = saga.Uuid, Name = "wrong", GroupId = "group" });
+
+        Assert.Equal(saga.Uuid, (await graphiti.Nodes.Saga.GetByUuidAsync(saga.Uuid)).Uuid);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => graphiti.Nodes.Entity.GetByUuidAsync(saga.Uuid));
+    }
+
+    [Fact]
+    public async Task NodeModel_DeleteAsyncDoesNotCrossSagaBoundary()
+    {
+        var driver = new InMemoryGraphDriver();
+        var entity = new EntityNode { Uuid = "model-entity", Name = "Alice", GroupId = "group" };
+        await entity.SaveAsync(driver);
+
+        await new SagaNode { Uuid = entity.Uuid, Name = "wrong", GroupId = "group" }.DeleteAsync(driver);
+
+        Assert.Equal(entity.Uuid, (await EntityNode.GetByUuidAsync(driver, entity.Uuid)).Uuid);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => SagaNode.GetByUuidAsync(driver, entity.Uuid));
+
+        var saga = new SagaNode { Uuid = "model-saga", Name = "launch", GroupId = "group" };
+        await saga.SaveAsync(driver);
+
+        await new EntityNode { Uuid = saga.Uuid, Name = "wrong", GroupId = "group" }.DeleteAsync(driver);
+
+        Assert.Equal(saga.Uuid, (await SagaNode.GetByUuidAsync(driver, saga.Uuid)).Uuid);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => EntityNode.GetByUuidAsync(driver, saga.Uuid));
+    }
+
+    [Fact]
     public async Task NamespaceSaveBulk_ValidatesBatchSizeBeforeEnumeration()
     {
         var driver = new DelayedNamespaceSaveDriver();

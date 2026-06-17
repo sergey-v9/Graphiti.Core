@@ -102,13 +102,9 @@ internal static class NamespaceDriverHelpers
         CancellationToken cancellationToken)
         where TNode : Node
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
-        var nodes = await driver.GetNodesByGroupIdsAsync<TNode>(
-            new[] { groupId },
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        await DeleteNodesByUuidsAsync<TNode>(
+        await TypedNodeDeletion.DeleteNodesByGroupIdAsync<TNode>(
             driver,
-            BuildNodeUuidList(nodes),
+            groupId,
             batchSize,
             cancellationToken).ConfigureAwait(false);
     }
@@ -120,18 +116,11 @@ internal static class NamespaceDriverHelpers
         CancellationToken cancellationToken)
         where TNode : Node
     {
-        ArgumentNullException.ThrowIfNull(uuids);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
-        var typedNodes = await driver.GetNodesByUuidsAsync<TNode>(
+        await TypedNodeDeletion.DeleteNodesByUuidsAsync<TNode>(
+            driver,
             uuids,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        var typedUuids = BuildNodeUuidList(typedNodes);
-        if (typedUuids.Count == 0)
-        {
-            return;
-        }
-
-        await driver.DeleteNodesByUuidsAsync(typedUuids, batchSize, cancellationToken).ConfigureAwait(false);
+            batchSize,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task DeleteEdgesByUuidsAsync<TEdge>(
@@ -256,8 +245,7 @@ internal static class NamespaceDriverHelpers
         return list;
     }
 
-    private static List<string> BuildNodeUuidList<TNode>(IReadOnlyList<TNode> nodes)
-        where TNode : Node
+    private static List<string> BuildNodeUuidList(List<EntityNode> nodes)
     {
         var uuids = new List<string>(nodes.Count);
         for (var i = 0; i < nodes.Count; i++)

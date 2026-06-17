@@ -7,7 +7,7 @@ namespace Graphiti.Core.Drivers;
 /// search (<see cref="ISearchGraphDriver"/>) by issuing Cypher queries, including full-text and vector
 /// retrieval, and provisions the required constraints and indexes on initialization.
 /// </summary>
-public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
+public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver, ITypedNodeDeleteGraphDriver
 {
     private static readonly IReadOnlyList<string> Neo4jSchemaStatements = Array.AsReadOnly(new[]
     {
@@ -220,6 +220,66 @@ public sealed class Neo4jGraphDriver : GraphDriverBase, ISearchGraphDriver
     /// <inheritdoc />
     public override Task DeleteNodeAsync(string uuid, CancellationToken cancellationToken = default) =>
         RunWriteAsync("MATCH (n {uuid: $uuid}) DETACH DELETE n", new Dictionary<string, object?> { ["uuid"] = uuid }, cancellationToken);
+
+    Task ITypedNodeDeleteGraphDriver.DeleteNodeAsync<TNode>(
+        string uuid,
+        CancellationToken cancellationToken) =>
+        RunWriteAsync(
+            $"MATCH (n:{Neo4jStatementBuilder.LabelFor<TNode>()} {{uuid: $uuid}}) DETACH DELETE n",
+            new Dictionary<string, object?> { ["uuid"] = uuid },
+            cancellationToken);
+
+    async Task ITypedNodeDeleteGraphDriver.DeleteNodesByGroupIdAsync<TNode>(
+        string groupId,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
+        var label = Neo4jStatementBuilder.LabelFor<TNode>();
+        var query =
+            $"""
+             MATCH (n:{label})
+             WHERE n.group_id = $group_id
+             WITH n LIMIT $batch_size
+             DETACH DELETE n
+             RETURN count(*) AS deleted
+             """;
+        var parameters = new Dictionary<string, object?>
+        {
+            ["group_id"] = groupId,
+            ["batch_size"] = batchSize
+        };
+        while (true)
+        {
+            var deleted = await RunWriteInt64Async(query, parameters, "deleted", cancellationToken).ConfigureAwait(false);
+            if (deleted < batchSize)
+            {
+                return;
+            }
+        }
+    }
+
+    async Task ITypedNodeDeleteGraphDriver.DeleteNodesByUuidsAsync<TNode>(
+        IEnumerable<string> uuids,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uuids);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
+        var label = Neo4jStatementBuilder.LabelFor<TNode>();
+        foreach (var batch in uuids.ToList().Chunk(batchSize))
+        {
+            await RunWriteAsync(
+                $"""
+                 UNWIND $uuids AS uuid
+                 MATCH (n:{label})
+                 WHERE n.uuid = uuid
+                 DETACH DELETE n
+                 """,
+                new Dictionary<string, object?> { ["uuids"] = batch.ToList() },
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
 
     /// <inheritdoc />
     public override async Task DeleteNodesByGroupIdAsync(

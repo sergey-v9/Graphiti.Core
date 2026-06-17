@@ -42,7 +42,7 @@ public abstract class Node : IEquatable<Node>
 
     /// <summary>Deletes this node (and its attached edges) from the graph.</summary>
     public Task DeleteAsync(IGraphDriver driver, CancellationToken cancellationToken = default) =>
-        driver.DeleteNodeAsync(Uuid, cancellationToken);
+        TypedNodeDeletion.DeleteNodeAsync(this, driver, cancellationToken);
 
     /// <summary>Deletes all nodes in the given group partition, in batches.</summary>
     public static Task DeleteByGroupIdAsync(

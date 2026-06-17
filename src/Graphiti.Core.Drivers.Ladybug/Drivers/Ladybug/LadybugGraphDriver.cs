@@ -3,7 +3,7 @@ namespace Graphiti.Core.Drivers.Ladybug;
 /// <summary>
 /// LadybugDB/Kuzu driver core over an abstract statement executor.
 /// </summary>
-internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, IEmbeddingLoadGraphDriver
+internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, IEmbeddingLoadGraphDriver, ITypedNodeDeleteGraphDriver
 {
     private readonly SharedState _shared;
     private readonly ILadybugQueryExecutor _executor;
@@ -208,6 +208,46 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         await _executor.ExecuteAsync(
             LadybugStatementBuilder.BuildNodeDeleteByUuidStatements<SagaNode>(uuid)[0],
             cancellationToken).ConfigureAwait(false);
+    }
+
+    async Task ITypedNodeDeleteGraphDriver.DeleteNodeAsync<TNode>(
+        string uuid,
+        CancellationToken cancellationToken)
+    {
+        await ExecuteAllAsync(
+            LadybugStatementBuilder.BuildNodeDeleteByUuidStatements<TNode>(uuid),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    async Task ITypedNodeDeleteGraphDriver.DeleteNodesByGroupIdAsync<TNode>(
+        string groupId,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
+        await ExecuteAllAsync(
+            LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<TNode>(groupId),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    async Task ITypedNodeDeleteGraphDriver.DeleteNodesByUuidsAsync<TNode>(
+        IEnumerable<string> uuids,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uuids);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
+        var uuidList = MaterializeWithCancellation(uuids, cancellationToken);
+        for (var batchStart = 0; batchStart < uuidList.Count;)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var batchCount = Math.Min(batchSize, uuidList.Count - batchStart);
+            var batch = CopyRange(uuidList, batchStart, batchCount);
+            await ExecuteAllAsync(
+                LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<TNode>(batch),
+                cancellationToken).ConfigureAwait(false);
+            batchStart += batchCount;
+        }
     }
 
     /// <inheritdoc />

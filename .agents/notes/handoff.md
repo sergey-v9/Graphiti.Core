@@ -147,6 +147,13 @@ and is blocked by GitHub Packages `403 Forbidden` for `LadybugDB` / `LadybugDB.N
 status` shows the token lacks `read:packages`. Provide a PAT/token with `read:packages` for source
 `github_ladybug` before rerunning `.\eng\Verify-GraphitiCore.ps1`.
 
+Current core-only checkpoint, 2026-06-17: typed node deletes now preserve Python's Saga boundary for
+direct model `DeleteAsync` and typed node namespaces. `.\eng\Verify-GraphitiCoreOnly.ps1` is green
+(`927` passed, `0` skipped; core pack succeeded). A no-restore build of
+`Graphiti.Core.Drivers.Ladybug` was also attempted to catch syntax errors, but it is blocked by the
+same GitHub Packages `403 Forbidden` for `LadybugDB` / `LadybugDB.Native` until source
+`github_ladybug` has a credential with `read:packages`.
+
 Latest checkpoint, 2026-06-17:
 
 `.\eng\Verify-GraphitiCoreOnly.ps1` is green after wiring the core-only GitHub Actions lane
@@ -262,12 +269,16 @@ The remaining empty-filter-list candidates are now deliberately disposed as hard
 Python emits malformed/backend-dependent empty `NodeLabels` fragments (`n:`, `n: AND m:`, or Kuzu
 `list_has_all(..., [])`) and empty temporal fragments (`(`, `()`, or dangling `OR` groups), while C#
 keeps those shapes as no-op filters via existing `CompiledSearchFilter`/query-builder coverage.
-Current audit follow-up closed namespace embedding drift and an in-memory triplet collision drift:
+Current audit follow-up closed namespace embedding drift, an in-memory triplet collision drift, and
+the typed node-delete Saga boundary:
 namespace `SaveAsync` regenerates entity/community node and entity-edge embeddings even when prefilled,
 namespace `SaveBulkAsync` now preserves supplied null/precomputed embeddings without calling the
 embedder, and `AddTripletAsync` creates a fresh entity-edge UUID when the default in-memory backend
-already has a non-entity edge with the requested UUID. Search concurrency proof was also tightened so
-the fake driver waits for monotonic search-call arrivals instead of asserting a transient active count.
+already has a non-entity edge with the requested UUID. Direct model `DeleteAsync` and typed node
+namespaces now use an internal typed-delete driver seam, so deleting through the wrong Entity/Saga
+node type no longer removes the stored node across that boundary. Search concurrency proof was also
+tightened so the fake driver waits for monotonic search-call arrivals instead of asserting a transient
+active count.
 Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests
 (`1012` passed, `3` skipped, `1015` total), both shippable package packs, and both package-consumer
 smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
@@ -276,7 +287,10 @@ smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-g
 Open WS-2 audit candidates from this mini-pass: decide whether to keep or remove the additive
 `CommunityEdgeNamespace.SaveBulkAsync` public helper, and whether to narrow base
 `Edge.DeleteByUuidsAsync` so it does not delete `HAS_EPISODE`/`NEXT_EPISODE` edges like Python's
-inherited base helper. Continue the broader full-pipeline parity audit against current Python; new
+inherited base helper. A read-only side audit also found that C# cross-encoder search composition
+preserves duplicate passage candidates by index, while Python sends duplicate passage text once in
+first-seen order and maps the ranked passage back to the last duplicate candidate; fix that as a
+search parity slice. Continue the broader full-pipeline parity audit against current Python; new
 candidates should be added here as they are confirmed.
 
 Latest checkpoint, 2026-06-13:

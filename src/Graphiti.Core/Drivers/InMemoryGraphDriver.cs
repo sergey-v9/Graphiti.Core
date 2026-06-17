@@ -9,7 +9,7 @@ namespace Graphiti.Core.Drivers;
 /// (<see cref="ISearchGraphDriver"/>), making it ideal for tests, examples, and ephemeral graphs.
 /// All mutating operations are guarded by a lock; the driver can be cloned to snapshot its state.
 /// </summary>
-public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
+public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver, ITypedNodeDeleteGraphDriver
 {
     private readonly Lock _gate;
     private readonly Dictionary<string, Node> _nodes = new(StringComparer.Ordinal);
@@ -178,6 +178,79 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
                 RemoveNodeIndexes(node);
             }
 
+            var edgeUuids = MaterializeUuids(GetIndexedUuids(_incidentEdgeUuidsByNodeUuid, uuid));
+            for (var i = 0; i < edgeUuids.Count; i++)
+            {
+                RemoveEdgeByUuid(edgeUuids[i]);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    Task ITypedNodeDeleteGraphDriver.DeleteNodeAsync<TNode>(
+        string uuid,
+        CancellationToken cancellationToken) =>
+        DeleteNodeByUuidAsync<TNode>(uuid, cancellationToken);
+
+    Task ITypedNodeDeleteGraphDriver.DeleteNodesByGroupIdAsync<TNode>(
+        string groupId,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
+        cancellationToken.ThrowIfCancellationRequested();
+        List<string> uuids;
+        lock (_gate)
+        {
+            uuids = BuildTypedNodeUuidsByGroup<TNode>(groupId);
+        }
+
+        return DeleteNodesByUuidsTypedAsync<TNode>(uuids, batchSize, cancellationToken);
+    }
+
+    Task ITypedNodeDeleteGraphDriver.DeleteNodesByUuidsAsync<TNode>(
+        IEnumerable<string> uuids,
+        int batchSize,
+        CancellationToken cancellationToken) =>
+        DeleteNodesByUuidsTypedAsync<TNode>(uuids, batchSize, cancellationToken);
+
+    private async Task DeleteNodesByUuidsTypedAsync<TNode>(
+        IEnumerable<string> uuids,
+        int batchSize,
+        CancellationToken cancellationToken)
+        where TNode : Node
+    {
+        ArgumentNullException.ThrowIfNull(uuids);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
+        cancellationToken.ThrowIfCancellationRequested();
+        var uuidList = MaterializeUuids(uuids);
+        for (var batchStart = 0; batchStart < uuidList.Count; batchStart += batchSize)
+        {
+            var batchEnd = batchStart + Math.Min(batchSize, uuidList.Count - batchStart);
+            for (var i = batchStart; i < batchEnd; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await DeleteNodeByUuidAsync<TNode>(uuidList[i], cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private Task DeleteNodeByUuidAsync<TNode>(
+        string uuid,
+        CancellationToken cancellationToken)
+        where TNode : Node
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_gate)
+        {
+            if (!_nodes.TryGetValue(uuid, out var node) || node is not TNode)
+            {
+                return Task.CompletedTask;
+            }
+
+            _nodes.Remove(uuid);
+            RemoveNodeIndexes(node);
             var edgeUuids = MaterializeUuids(GetIndexedUuids(_incidentEdgeUuidsByNodeUuid, uuid));
             for (var i = 0; i < edgeUuids.Count; i++)
             {
@@ -1424,6 +1497,22 @@ public sealed class InMemoryGraphDriver : GraphDriverBase, ISearchGraphDriver
         }
 
         return _nodeUuidsByGroup;
+    }
+
+    private List<string> BuildTypedNodeUuidsByGroup<TNode>(string groupId)
+        where TNode : Node
+    {
+        var uuids = GetIndexedUuids(GetNodeGroupIndex<TNode>(), groupId);
+        var results = new List<string>();
+        foreach (var uuid in uuids)
+        {
+            if (_nodes.TryGetValue(uuid, out var node) && node is TNode)
+            {
+                results.Add(uuid);
+            }
+        }
+
+        return results;
     }
 
     private static List<string> GetUuidsByGroups(
