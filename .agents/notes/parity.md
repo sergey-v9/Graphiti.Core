@@ -219,6 +219,9 @@ seeds community summary reduction from `[entity.summary for entity in community_
 empty strings through `summarize_nodes.summarize_pair`. C# now preserves blank entity summaries in the
 pairwise reducer instead of filtering them before prompting, with regression coverage at the prompt
 payload boundary.
+2026-06-17 follow-up: C# now also mirrors Python's same-level `semaphore_gather` fan-out inside that
+pairwise reducer. Multiple summary pairs in a single community reduction layer are launched
+concurrently and collected in input order before the next reduction layer starts.
 
 **2026-06-16 empty edge-filter follow-up:** closed the reachable edge half of the empty-filter-list
 drift. Python `edge_search_filter_query_constructor` emits `e.name in $edge_types` and

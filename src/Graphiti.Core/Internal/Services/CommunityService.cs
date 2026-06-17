@@ -225,13 +225,26 @@ internal sealed class CommunityService(
                 summaries.RemoveAt(summaries.Count - 1);
             }
 
-            var merged = new List<string>(summaries.Count / 2 + (oddOneOut is null ? 0 : 1));
-            for (var i = 0; i < summaries.Count / 2; i++)
+            var pairCount = summaries.Count / 2;
+            var pairIndexes = new List<int>(pairCount);
+            for (var i = 0; i < pairCount; i++)
             {
-                merged.Add(await GeneratePairSummaryAsync(
-                    summaries[i],
-                    summaries[i + summaries.Count / 2],
-                    cancellationToken).ConfigureAwait(false));
+                pairIndexes.Add(i);
+            }
+
+            var pairSummaries = await ThrottledWork.SelectAsync(
+                pairIndexes,
+                (index, token) => GeneratePairSummaryAsync(
+                    summaries[index],
+                    summaries[index + pairCount],
+                    token),
+                getMaxDegreeOfParallelism(),
+                cancellationToken).ConfigureAwait(false);
+
+            var merged = new List<string>(pairSummaries.Length + (oddOneOut is null ? 0 : 1));
+            for (var i = 0; i < pairSummaries.Length; i++)
+            {
+                merged.Add(pairSummaries[i]);
             }
 
             if (oddOneOut is not null)

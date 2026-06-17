@@ -241,7 +241,10 @@ Recorded sweep result, 2026-06-17:
    Resolved/invalidated edge result duplicate preservation and bulk-ingestion type-validation
    asymmetry were also split out and closed. A Ladybug provider clear-data empty-list no-op drift was
    then split out and closed. Top-level community-search empty-method embedding fallback was also
-   split out and closed. No concrete non-decision follow-up from this audit remains in plan 05.
+   split out and closed. Community summary same-layer pair fan-out was also split out and closed. No
+   earlier concrete non-decision follow-up from this audit remains in plan 05. New read-only audit
+   candidates after that checkpoint are tracked in `handoff.md` and should land as separate verified
+   slices rather than release-infra work.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

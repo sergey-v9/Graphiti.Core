@@ -447,6 +447,37 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
+    public async Task BuildCommunities_GeneratesPairSummariesConcurrentlyWithinCluster()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new DelayedPairSummaryLlmClient();
+        var graphiti = new Graphiti(
+            llmClient: llm,
+            graphDriver: driver,
+            maxCoroutines: 2);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alpha = Entity("Alpha", "group", now, "alpha");
+        var beta = Entity("Beta", "group", now, "beta");
+        var gamma = Entity("Gamma", "group", now, "gamma");
+        var delta = Entity("Delta", "group", now, "delta");
+        foreach (var node in new[] { alpha, beta, gamma, delta })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        await Relates(alpha, beta, "group", now).SaveAsync(driver);
+        await Relates(beta, gamma, "group", now).SaveAsync(driver);
+        await Relates(gamma, delta, "group", now).SaveAsync(driver);
+
+        var (communities, _) = await graphiti.BuildCommunitiesAsync(new[] { "group" });
+
+        Assert.Single(communities);
+        Assert.Equal(3, llm.PairSummaryCalls);
+        Assert.Equal(2, llm.MaxPairSummaryConcurrency);
+        Assert.Equal("Community summary", Assert.Single(communities).Name);
+    }
+
+    [Fact]
     public async Task AddEpisode_WithUpdateCommunities_AttachesResolvedNodeToNeighborCommunity()
     {
         var driver = new InMemoryGraphDriver();
@@ -868,6 +899,55 @@ public class GraphitiCommunityTests
                 "summarize_nodes.summary_description" => new JsonObject { ["description"] = "Team community" },
                 _ => new JsonObject()
             });
+        }
+    }
+
+    private sealed class DelayedPairSummaryLlmClient : LlmClient
+    {
+        private int _activePairSummaryCalls;
+        private int _maxPairSummaryConcurrency;
+        private int _pairSummaryCalls;
+
+        public DelayedPairSummaryLlmClient()
+            : base(config: null, cache: false)
+        {
+        }
+
+        public int PairSummaryCalls => Volatile.Read(ref _pairSummaryCalls);
+        public int MaxPairSummaryConcurrency => Volatile.Read(ref _maxPairSummaryConcurrency);
+
+        protected override async Task<JsonObject> GenerateResponseCoreAsync(
+            IReadOnlyList<Message> messages,
+            Type? responseModel,
+            StructuredResponseSchema? responseSchema,
+            int maxTokens,
+            ModelSize modelSize,
+            string? promptName,
+            CancellationToken cancellationToken)
+        {
+            if (string.Equals(promptName, "summarize_nodes.summarize_pair", StringComparison.Ordinal))
+            {
+                Interlocked.Increment(ref _pairSummaryCalls);
+                var active = Interlocked.Increment(ref _activePairSummaryCalls);
+                UpdateMax(ref _maxPairSummaryConcurrency, active);
+                try
+                {
+                    await Task.Delay(75, cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref _activePairSummaryCalls);
+                }
+
+                return new JsonObject { ["summary"] = "combined summary" };
+            }
+
+            if (string.Equals(promptName, "summarize_nodes.summary_description", StringComparison.Ordinal))
+            {
+                return new JsonObject { ["description"] = "Community summary" };
+            }
+
+            return new JsonObject();
         }
     }
 
