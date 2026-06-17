@@ -305,6 +305,9 @@ community, has-episode, or next-episode edge by assigning the entity edge a fres
 Remaining audit observation not changed in this pass: `CommunityEdgeNamespace.SaveBulkAsync` is an
 additive C# public helper not present in Python. Treat it as an ask-user public API decision before
 removing it; keeping it would need an explicit documented additive-API call.
+Separate ask-user API observation: C# entity attribute definitions currently do not expose Python's
+per-field `max_length` and required-field metadata. Adding that shape would be a public API expansion;
+until decided, the current global attribute cap remains the documented C# behavior.
 
 **2026-06-17 typed node-delete follow-up:** closed a Saga boundary drift. Python base
 `Node.delete`, `Node.delete_by_group_id`, and `Node.delete_by_uuids` reach only `Entity`,
@@ -387,6 +390,13 @@ uses the same inherited-base scope, while direct concrete `DeleteAsync` and type
 an internal typed-delete driver seam for all five edge types. The stronger C# episode-removal saga
 repair still deletes saga membership/order edges, but now does so through concrete
 `HasEpisodeEdge`/`NextEpisodeEdge` typed delete calls instead of the Python-scoped base helper.
+
+**2026-06-17 search-config validation follow-up:** closed an eager-validation drift. Python search
+configs are plain Pydantic fields: `sim_min_score`, `mmr_lambda`, and `bfs_max_depth` are only read
+when the corresponding retrieval/reranker branch runs, and `limit=0` naturally yields empty result
+slices. C# `SearchConfigValidator` now validates only structural shape (null configs/method lists and
+unknown enum values) plus rejects negative limits; zero limits return empty results, and inactive
+numeric knobs no longer block BM25/RRF searches.
 
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 
@@ -508,7 +518,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 
 | Area | Status | Notes |
 |---|---|---|
-| Search config recipes, reranker enums, wire values | OK | Verified equivalent, parity-tested |
+| Search config recipes, reranker enums, wire values | OK | Verified equivalent, parity-tested. Numeric knobs follow Python's lazy-use shape: inactive `sim_min_score`/`mmr_lambda`/`bfs_max_depth` values are not rejected up front, and `limit=0` returns empty results |
 | Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | OK | Deterministic parts well tested; edge/episode cross-encoder candidate windows now match Python's pre-rerank `limit` slices, including first-seen retrieval-order edge windowing, while node/community remain intentionally unwindowed like Python and pass full first-seen retrieval-order pools. Duplicate cross-encoder passages now match Python's first-seen passage / last-duplicate-candidate mapping. Community search now mirrors Python's unconditional vector retrieval when a query vector is available. Empty `EdgeTypes`/`EdgeUuids` filters are active match-none predicates like Python. Public search-result context helpers are exposed via `SearchHelpers` |
 | Community label propagation | OK | Algorithmically equivalent |
 | Graph drivers: LadybugDB (first-class investment target), InMemory (reference/test), Neo4j (temporary legacy compatibility) | OK | Runtime proof for Ladybug workflows, direct package binding of list/array/empty-list/null parameters, direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by UUID, public namespace community/saga reads and typed deletes, saga-scoped retrieval/content reads, paged/default-empty group reads, directed endpoint-pair and incident entity-edge reads, InMemory concrete node/edge type UUID boundaries, explicit and core file-backed paths, Kuzu `':memory:'` sentinel compatibility, package/native execution, and Ladybug-owned raw full-text query/label-filter construction; Neo4j is kept only to avoid regressions while present and is expected to be removed; see kuzu-driver-port.md |

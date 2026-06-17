@@ -223,8 +223,9 @@ Recorded sweep result, 2026-06-17:
    benchmark-first performance wins.
 5. Decision-gated follow-ups stay separate and should be surfaced explicitly before implementation:
    `CommunityEdgeNamespace.SaveBulkAsync` public API shape, empty node-label filter bug-compatibility,
-   `GRPH0002` / `AddGraphitiCore` alias migration, larger real-provider eval expansion, Linux/CI
-   validation scope, Neo4j retirement, versioning, publish path, and metapackage shape.
+   entity-attribute per-field max-length/required metadata, `GRPH0002` / `AddGraphitiCore` alias
+   migration, larger real-provider eval expansion, Linux/CI validation scope, Neo4j retirement,
+   versioning, publish path, and metapackage shape.
 6. `kuzu-driver-port.md` remaining-work bullets are conditional provider follow-ups, not unhandled
    release-plan tasks: broaden Ladybug workflow coverage only for uncovered behavior, add
    host-facing options only for real runtime needs, and add native-gated smoke tests only for a new
@@ -233,8 +234,9 @@ Recorded sweep result, 2026-06-17:
    Concrete implementation slices now handled: InMemory typed node/edge UUID storage boundaries,
    `BuildCommunitiesAsync` explicit-empty `groupIds` semantics, and default empty-string group
    discovery for community builds, and namespace all-miss plural-read behavior for entity/episodic
-   edge namespaces while preserving static model helper exceptions. No concrete non-decision
-   follow-up from this audit remains in plan 05.
+   edge namespaces while preserving static model helper exceptions, and lazy search-config numeric
+   validation/zero-limit behavior. No concrete non-decision follow-up from this audit remains in
+   plan 05.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

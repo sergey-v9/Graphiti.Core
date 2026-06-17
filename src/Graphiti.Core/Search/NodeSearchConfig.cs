@@ -17,7 +17,7 @@ public sealed class NodeSearchConfig
     [JsonPropertyName("sim_min_score")]
     public double SimMinScore { get; set; } = SearchConfiguration.DefaultMinScore;
 
-    /// <summary>Trade-off (0..1) between relevance and diversity when the MMR reranker is used; higher favors relevance.</summary>
+    /// <summary>Trade-off between relevance and diversity when the MMR reranker is used; higher favors relevance.</summary>
     [JsonPropertyName("mmr_lambda")]
     public double MmrLambda { get; set; } = SearchConfiguration.DefaultMmrLambda;
 

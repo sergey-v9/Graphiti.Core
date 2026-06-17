@@ -242,7 +242,7 @@ public sealed class SearchConfigurationTests
     }
 
     [Fact]
-    public async Task SearchEngine_RejectsInvalidSearchConfigBeforeExecuting()
+    public async Task SearchEngine_AllowsZeroLimitAndReturnsEmptyResults()
     {
         var clients = new GraphitiClients(
             new InMemoryGraphDriver(),
@@ -250,32 +250,57 @@ public sealed class SearchConfigurationTests
             new HashEmbedder(2),
             new IdentityCrossEncoderClient());
 
+        var results = await SearchEngine.SearchAsync(
+            clients,
+            "query",
+            groupIds: null,
+            new SearchConfig
+            {
+                Limit = 0,
+                NodeConfig = new NodeSearchConfig { SearchMethods = { NodeSearchMethod.Bm25 } }
+            },
+            new SearchFilters());
+
+        Assert.Empty(results.Nodes);
+    }
+
+    [Fact]
+    public async Task SearchEngine_RejectsNegativeLimitBeforeExecuting()
+    {
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             SearchEngine.SearchAsync(
-                clients,
+                new GraphitiClients(
+                    new InMemoryGraphDriver(),
+                    new NoOpLlmClient(),
+                    new HashEmbedder(2),
+                    new IdentityCrossEncoderClient()),
                 "query",
                 groupIds: null,
-                new SearchConfig { Limit = 0 },
+                new SearchConfig { Limit = -1 },
                 new SearchFilters()));
     }
 
-    [Theory]
-    [InlineData(double.NaN)]
-    [InlineData(double.PositiveInfinity)]
-    [InlineData(-0.1)]
-    [InlineData(1.1)]
-    public async Task SearchEngine_RejectsInvalidMmrLambda(double mmrLambda)
+    [Fact]
+    public async Task SearchEngine_AllowsInactiveNumericSearchKnobsLikePython()
     {
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            SearchEngine.NodeSearchAsync(
-                new InMemoryGraphDriver(),
-                new IdentityCrossEncoderClient(),
-                "query",
-                new[] { 1f, 0f },
-                groupIds: null,
-                new NodeSearchConfig { MmrLambda = mmrLambda },
-                new SearchFilters(),
-                limit: 10));
+        var results = await SearchEngine.NodeSearchAsync(
+            new InMemoryGraphDriver(),
+            new IdentityCrossEncoderClient(),
+            "query",
+            queryVector: null,
+            groupIds: null,
+            new NodeSearchConfig
+            {
+                SearchMethods = { NodeSearchMethod.Bm25 },
+                Reranker = NodeReranker.Rrf,
+                SimMinScore = 2,
+                MmrLambda = double.NaN,
+                BfsMaxDepth = 0
+            },
+            new SearchFilters(),
+            limit: 10);
+
+        Assert.Empty(results);
     }
 
     [Fact]

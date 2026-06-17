@@ -303,7 +303,8 @@ Current audit follow-up closed namespace embedding drift, an in-memory triplet c
 typed node-delete Saga boundary, the duplicate-passage cross-encoder drift, the base node-delete
 scope drift, the entity UUID group-filter drift, the in-memory episodic-metadata drift, the
 entity/episodic-edge group-miss drift, the semaphore default-concurrency drift, the entity-type-id key
-mapping/schema drift, and the base edge-delete scope drift:
+mapping/schema drift, the base edge-delete scope drift, and the eager search-config numeric validation
+drift:
 namespace `SaveAsync` regenerates entity/community node and entity-edge embeddings even when prefilled,
 namespace `SaveBulkAsync` now preserves supplied null/precomputed embeddings without calling the
 embedder, and `AddTripletAsync` creates a fresh entity-edge UUID when the default in-memory backend
@@ -336,10 +337,13 @@ candidate, matching Python's dict-comprehension behavior. Base `Edge.DeleteByUui
 `HAS_EPISODE`/`NEXT_EPISODE` like Python's inherited base helper, with C# saga repair using concrete
 typed deletes instead. Search concurrency proof was also tightened so the fake driver waits for
 monotonic search-call arrivals instead of asserting a transient active count.
+Search config validation now mirrors Python's lazy numeric use: zero limits return empty results, and
+inactive `sim_min_score`/`mmr_lambda`/`bfs_max_depth` values no longer fail BM25/RRF searches before
+dispatch.
 Top-level community search now supplies Python's zero query vector fallback when no real embedding
 path is configured, so BM25/RRF community searches still execute vector retrieval like Python.
 Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests
-(`1025` passed, `3` skipped, `1028` total), both shippable package packs, and both package-consumer
+(`1037` passed, `3` skipped, `1040` total), both shippable package packs, and both package-consumer
 smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
@@ -347,8 +351,10 @@ Open WS-2 audit candidate from this mini-pass: decide whether to keep or remove 
 `CommunityEdgeNamespace.SaveBulkAsync` public helper. A read-only side audit confirmed Python has no
 community-edge `save_bulk`, while C# exposes `SaveBulkAsync` publicly and pins it in the API snapshot
 plus Ladybug package runtime tests. Treat this as an ask-user public API decision before changing the
-surface. Continue the broader full-pipeline parity audit against current Python; new candidates
-should be added here as they are confirmed.
+surface. A separate read-only maintenance audit found that C# entity attribute definitions do not
+currently expose Python's per-field `max_length` and required-field metadata; adding that shape would
+also be a public API decision. Continue the broader full-pipeline parity audit against current Python;
+new candidates should be added here as they are confirmed.
 
 Latest checkpoint, 2026-06-13:
 
