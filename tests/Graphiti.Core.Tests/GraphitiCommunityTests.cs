@@ -182,6 +182,26 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
+    public async Task BuildCommunities_ClustersByEndpointGroupsNotEdgeGroup()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group", now, "alice");
+        var bob = Entity("Bob", "group", now, "bob");
+        await alice.SaveAsync(driver);
+        await bob.SaveAsync(driver);
+        await Relates(alice, bob, "edge-only", now).SaveAsync(driver);
+
+        var (communities, communityEdges) = await graphiti.BuildCommunitiesAsync(new[] { "group" });
+
+        var community = Assert.Single(communities);
+        Assert.Equal(2, communityEdges.Count);
+        Assert.All(communityEdges, edge => Assert.Equal(community.Uuid, edge.SourceNodeUuid));
+        Assert.Equal(new[] { alice.Uuid, bob.Uuid }, communityEdges.Select(edge => edge.TargetNodeUuid).Order());
+    }
+
+    [Fact]
     public async Task BuildCommunities_RemovesExistingCommunitiesBeforeRebuild()
     {
         var driver = new InMemoryGraphDriver();

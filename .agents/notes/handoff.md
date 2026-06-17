@@ -23,7 +23,7 @@ lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 > PENDING Sergey's confirmation. See `roadmap.md` → "User-gated". Neo4j removal: DONE (2026-06-17).
 > The library work itself
 > (parity sweep, search/pipeline correctness) is solid and green (latest full verifier:
-> 974 passed / 3 skipped).
+> 975 passed / 3 skipped).
 
 ## Current Layout
 
@@ -168,8 +168,8 @@ maps use dictionary keys for custom type names like Python. MMR reranking now re
 and community candidates in Python's first-seen retrieval order, and edge episode-mentions scores
 stay in pre-sort RRF order like Python. Bulk ingestion skips the extra upfront entity/exclusion type
 validation absent from Python `add_episode_bulk` while single `AddEpisodeAsync` still validates.
-`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`974` passed,
-`3` skipped, `977` total; both shippable packages packed and both fresh package-consumer smoke builds
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`975` passed,
+`3` skipped, `978` total; both shippable packages packed and both fresh package-consumer smoke builds
 succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
@@ -376,7 +376,7 @@ Community summary reduction now mirrors Python's same-level `semaphore_gather` f
 same-layer `summarize_pair` calls inside one cluster run concurrently and preserve input-order
 merge results before the next reduction layer.
 Verified with `.\eng\Verify-GraphitiCore.ps1`: restore, format, warning-clean build, full tests
-(`974` passed, `3` skipped, `977` total), both shippable package packs, and both package-consumer
+(`975` passed, `3` skipped, `978` total), both shippable package packs, and both package-consumer
 smoke builds. `OPENAI_API_KEY` was unset; the three skipped tests were the env-gated
 `OpenAIProviderIntegrationTests`.
 
@@ -391,15 +391,15 @@ have been split into separate slices and closed; continue the broader full-pipel
 against current Python, and add new candidates here as they are confirmed.
 
 Ladybug group-read statements now treat `uuidCursor: ""` like no cursor, matching Python's truthy
-cursor predicate for node and edge group reads.
+cursor predicate for node and edge group reads. Community clustering now matches Python's endpoint
+group semantics by selecting incident entity edges whose source and target nodes are both in the
+selected entity-node set, instead of filtering candidate edges by edge `GroupId`.
 
 Open concrete follow-up candidates from the 2026-06-17 read-only audit, to handle as separate
 verified slices: InMemory UUID reads should omit entity/fact embeddings by default while explicit
-embedding loaders still hydrate them; `BuildCommunitiesAsync(["g"])` should cluster by endpoint
-entity groups rather than filtering candidate edges by edge `GroupId`; community rebuild should
-timestamp each community build separately; and workflow throttling should preserve Python's
-omitted/zero `max_coroutines` semantics where not already covered by
-`GraphitiHelpers.SemaphoreGatherAsync`.
+embedding loaders still hydrate them; community rebuild should timestamp each community build
+separately; and workflow throttling should preserve Python's omitted/zero `max_coroutines` semantics
+where not already covered by `GraphitiHelpers.SemaphoreGatherAsync`.
 
 Latest checkpoint, 2026-06-13:
 

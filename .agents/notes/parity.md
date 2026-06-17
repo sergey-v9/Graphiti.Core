@@ -125,6 +125,10 @@ drift. Python discovers entity groups only when `group_ids is None`; an explicit
 communities and builds none. C# now preserves that null-vs-empty distinction. InMemory and LadybugDB
 group discovery also now include the default empty-string group like Python's `WHERE n.group_id IS
 NOT NULL` discovery query, so omitted `BuildCommunitiesAsync()` rebuilds default-group graphs.
+2026-06-17 follow-up: community clustering now selects candidate relationship edges by endpoint
+entity membership in the selected group(s), not by the edge's own `GroupId`. This matches Python's
+`MATCH (n:Entity {group_id})-[e]-(m:Entity {group_id})` shape and keeps a same-group entity pair
+connected even when the stored edge has a different group id.
 
 **2026-06-14 saga prompt truthiness follow-up:** closed a small prompt-rendering drift in
 `summarize_sagas.summarize_saga`. Python renders `<EXISTING_KNOWLEDGE>` whenever

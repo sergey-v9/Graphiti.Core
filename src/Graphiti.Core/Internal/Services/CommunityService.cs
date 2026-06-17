@@ -27,7 +27,7 @@ internal sealed class CommunityService(
 
             var resolvedGroupIds = await ResolveCommunityGroupIdsAsync(driver, groupIds, cancellationToken).ConfigureAwait(false);
             var nodes = await GetEntityNodesForCommunityAsync(driver, resolvedGroupIds, cancellationToken).ConfigureAwait(false);
-            var edges = await GetEntityEdgesForCommunityAsync(driver, resolvedGroupIds, cancellationToken).ConfigureAwait(false);
+            var edges = await GetEntityEdgesForCommunityAsync(driver, nodes, cancellationToken).ConfigureAwait(false);
             var clusters = CommunityClustering.BuildClusters(nodes, edges);
             var now = UtcNow();
             var builtCommunities = await SelectThrottledAsync(
@@ -172,12 +172,41 @@ internal sealed class CommunityService(
 
     private static async Task<IReadOnlyList<EntityEdge>> GetEntityEdgesForCommunityAsync(
         IGraphDriver driver,
-        IReadOnlyList<string> groupIds,
+        List<EntityNode> nodes,
         CancellationToken cancellationToken)
     {
-        return await driver.GetEdgesByGroupIdsAsync<EntityEdge>(
-            groupIds,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (nodes.Count == 0)
+        {
+            return Array.Empty<EntityEdge>();
+        }
+
+        var selectedNodeUuids = new HashSet<string>(nodes.Count, StringComparer.Ordinal);
+        foreach (var node in nodes)
+        {
+            selectedNodeUuids.Add(node.Uuid);
+        }
+
+        var edges = new List<EntityEdge>();
+        var seenEdgeUuids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var node in nodes)
+        {
+            var incidentEdges = await driver.GetEntityEdgesByNodeUuidAsync(
+                node.Uuid,
+                cancellationToken).ConfigureAwait(false);
+            foreach (var edge in incidentEdges)
+            {
+                if (!selectedNodeUuids.Contains(edge.SourceNodeUuid)
+                    || !selectedNodeUuids.Contains(edge.TargetNodeUuid)
+                    || !seenEdgeUuids.Add(edge.Uuid))
+                {
+                    continue;
+                }
+
+                edges.Add(edge);
+            }
+        }
+
+        return edges;
     }
 
     private static async Task<IReadOnlyList<CommunityNode>> GetCommunityNodesAsync(
