@@ -604,6 +604,8 @@ internal sealed class EdgeResolutionService(
                 : existingEdges[index - offset]);
         }
 
+        SortInvalidationCandidatesByValidAt(invalidationCandidates);
+
         await ExtractEdgeAttributesAsync(
             resolvedEdge,
             episode,
@@ -645,6 +647,40 @@ internal sealed class EdgeResolutionService(
         }
 
         return (resolvedEdge, invalidatedEdges);
+    }
+
+    private static void SortInvalidationCandidatesByValidAt(List<EntityEdge> invalidationCandidates)
+    {
+        // Python uses list.sort(key=lambda c: (c.valid_at is None, ensure_utc(c.valid_at))).
+        // Keep the sort stable so equal timestamps preserve the LLM/index order.
+        for (var i = 1; i < invalidationCandidates.Count; i++)
+        {
+            var candidate = invalidationCandidates[i];
+            var j = i - 1;
+            while (j >= 0 && CompareInvalidationCandidateValidAt(invalidationCandidates[j], candidate) > 0)
+            {
+                invalidationCandidates[j + 1] = invalidationCandidates[j];
+                j--;
+            }
+
+            invalidationCandidates[j + 1] = candidate;
+        }
+    }
+
+    private static int CompareInvalidationCandidateValidAt(EntityEdge left, EntityEdge right)
+    {
+        if (left.ValidAt is null)
+        {
+            return right.ValidAt is null ? 0 : 1;
+        }
+
+        if (right.ValidAt is null)
+        {
+            return -1;
+        }
+
+        return GraphitiHelpers.EnsureUtc(left.ValidAt.Value)
+            .CompareTo(GraphitiHelpers.EnsureUtc(right.ValidAt.Value));
     }
 
     private static void RunSharedEdgeMutation(object? sharedEdgeMutationLock, Action mutation)

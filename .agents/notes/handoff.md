@@ -147,7 +147,7 @@ that published version.
 Rerun verification before claiming the tree is green; historical test counts drift as coverage is
 added.
 
-Latest verification checkpoint, 2026-06-17: plan 05 now has an explicit Step F plan-folder backlog
+Latest verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
 first-seen retrieval-result order across BM25/vector/BFS inputs, and `NormalizeL2` preserves only
 zero-norm embeddings while propagating non-finite norms like Python. `EntityEdge.GetByGroupIdsAsync`
@@ -170,8 +170,10 @@ stay in pre-sort RRF order like Python. Bulk ingestion skips the extra upfront e
 validation absent from Python `add_episode_bulk` while single `AddEpisodeAsync` still validates.
 Search `PropertyFilters` are now ignored by backend query construction and in-memory/materialized
 matching while keeping the DTO field, matching Python's current `property_filters` behavior.
-`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`967` passed,
-`3` skipped, `970` total; both shippable packages packed and both fresh package-consumer smoke builds
+Invalidation candidates are now sorted by `valid_at` ascending with nulls last before resolved-edge
+expiry and contradiction handling, matching Python's invalidated-edge ordering.
+`.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`968` passed,
+`3` skipped, `971` total; both shippable packages packed and both fresh package-consumer smoke builds
 succeeded).
 
 Package-feed checkpoint, 2026-06-17: Graphiti now points at the `sergey-v9/ladybug-dotnet` GitHub
@@ -411,12 +413,10 @@ public DTO field for Python wire-shape parity, but backend query construction pl
 in-memory/materialized matching now ignore it because Python defines `property_filters` without
 applying it in the node or edge search filter constructors.
 
-Open concrete follow-up candidate from the 2026-06-17 read-only audit: invalidated-edge ordering.
-Python sorts `invalidation_candidates` by `valid_at` before expiring the resolved edge and returning
-the contradicted older edges; C# currently preserves candidate-search order through
-`ResolveEdgeContradictions`. Treat this as the next separate verified slice. Continue the broader
-Python-vs-C# audit and add new candidates here as they are confirmed; decision-gated release/API/provider
-items remain separate in plan 05 and the provider notes.
+Open concrete follow-up candidates from the 2026-06-17 read-only audit: none currently remain after
+the verified slices above. Continue the broader Python-vs-C# audit and add new candidates here as
+they are confirmed; decision-gated release/API/provider items remain separate in plan 05 and the
+provider notes.
 
 Latest checkpoint, 2026-06-13:
 

@@ -69,6 +69,9 @@ integrated; verification green (962 tests). Plans 03 and 04 are closed.
 candidate in `EdgeMergeHelpers.ResolveEdgeContradictions`, and leaves `expired_at` null for a
 brand-new extracted edge with `invalid_at` when Python returns early because no candidates exist.
 Edge candidate `created_at` still comes from the ingestion operation timestamp.
+2026-06-18 follow-up: C# now also sorts `invalidation_candidates` by `valid_at` ascending with nulls
+last before resolved-edge expiry and contradiction handling, matching Python's stable
+`(c.valid_at is None, ensure_utc(c.valid_at))` sort.
 
 **2026-06-14 Ladybug ranker hygiene:** closed the tracked backend-only rank row issue. Ladybug
 distance and episode-mention rank queries already constrain each per-UUID query to the requested
