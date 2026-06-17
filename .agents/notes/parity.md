@@ -279,12 +279,14 @@ additive C# public helper not present in Python. Treat it as an ask-user public 
 removing it; keeping it would need an explicit documented additive-API call.
 
 **2026-06-17 typed node-delete follow-up:** closed a Saga boundary drift. Python base
-`Node.delete` reaches only `Entity`, `Episodic`, and `Community`, while `SagaNode.delete` is Saga-only.
-C# direct model `DeleteAsync` and typed node namespaces now route through an internal typed-delete
-driver seam. InMemory, Neo4j, and Ladybug implement it directly, so deleting through the wrong
-Entity/Saga node type no longer removes the stored node across that boundary. Third-party drivers that
-do not implement the internal seam still use a typed read before falling back to the existing broad
-delete primitive.
+`Node.delete`, `Node.delete_by_group_id`, and `Node.delete_by_uuids` reach only `Entity`,
+`Episodic`, and `Community`, while `SagaNode` delete helpers are Saga-only. C# direct model
+`DeleteAsync`, static base `Node.DeleteByGroupIdAsync` / `Node.DeleteByUuidsAsync`, and typed node
+namespaces now route through typed deletion for the same Python-scoped node types. InMemory and
+Ladybug implement the internal seam directly, and the temporary Neo4j compatibility path does too
+while present, so deleting through the wrong Entity/Saga node type or inherited base helper no longer
+removes saga nodes across that boundary. Third-party drivers that do not implement the internal seam
+still use a typed read before falling back to the existing broad delete primitive.
 
 **2026-06-17 cross-encoder duplicate follow-up:** closed the duplicate-passage search drift. Python's
 search rerankers collapse duplicate cross-encoder passage strings through dict-comprehension behavior:

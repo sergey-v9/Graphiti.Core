@@ -50,7 +50,7 @@ public abstract class Node : IEquatable<Node>
         string groupId,
         int batchSize = 100,
         CancellationToken cancellationToken = default) =>
-        driver.DeleteNodesByGroupIdAsync(groupId, batchSize, cancellationToken);
+        DeleteBaseNodeTypesByGroupIdAsync(driver, groupId, batchSize, cancellationToken);
 
     /// <summary>Deletes the nodes with the given UUIDs, in batches.</summary>
     public static Task DeleteByUuidsAsync(
@@ -58,7 +58,55 @@ public abstract class Node : IEquatable<Node>
         IEnumerable<string> uuids,
         int batchSize = 100,
         CancellationToken cancellationToken = default) =>
-        driver.DeleteNodesByUuidsAsync(uuids, batchSize, cancellationToken);
+        DeleteBaseNodeTypesByUuidsAsync(driver, uuids, batchSize, cancellationToken);
+
+    private static async Task DeleteBaseNodeTypesByGroupIdAsync(
+        IGraphDriver driver,
+        string groupId,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        await TypedNodeDeletion.DeleteNodesByGroupIdAsync<EntityNode>(
+            driver,
+            groupId,
+            batchSize,
+            cancellationToken).ConfigureAwait(false);
+        await TypedNodeDeletion.DeleteNodesByGroupIdAsync<EpisodicNode>(
+            driver,
+            groupId,
+            batchSize,
+            cancellationToken).ConfigureAwait(false);
+        await TypedNodeDeletion.DeleteNodesByGroupIdAsync<CommunityNode>(
+            driver,
+            groupId,
+            batchSize,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task DeleteBaseNodeTypesByUuidsAsync(
+        IGraphDriver driver,
+        IEnumerable<string> uuids,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uuids);
+        var uuidList = uuids as IReadOnlyList<string> ?? uuids.ToList();
+        await TypedNodeDeletion.DeleteNodesByUuidsAsync<EntityNode>(
+            driver,
+            uuidList,
+            batchSize,
+            cancellationToken).ConfigureAwait(false);
+        await TypedNodeDeletion.DeleteNodesByUuidsAsync<EpisodicNode>(
+            driver,
+            uuidList,
+            batchSize,
+            cancellationToken).ConfigureAwait(false);
+        await TypedNodeDeletion.DeleteNodesByUuidsAsync<CommunityNode>(
+            driver,
+            uuidList,
+            batchSize,
+            cancellationToken).ConfigureAwait(false);
+    }
 
     /// <summary>Two nodes are equal when they share the same <see cref="Uuid"/>.</summary>
     public bool Equals(Node? other) => other is not null && Uuid == other.Uuid;
