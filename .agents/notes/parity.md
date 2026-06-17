@@ -252,8 +252,9 @@ map labels/display names where that behavior is separately established.
 **2026-06-16 blank Lucene full-text audit:** disposed the open blank-query candidate as documented
 hardening. Python top-level search skips blank input, but lower-level Lucene full-text helpers can
 still build `()` / grouped-empty query strings. C# `SearchUtilities.FulltextQuery` returns an empty
-query for blank/whitespace sanitized Lucene input and direct Neo4j full-text methods skip the backend
-call. Keep this as an intentional divergence, pinned by `SearchUtilitiesTests`.
+query for blank/whitespace sanitized Lucene input. Keep this as an intentional divergence, pinned by
+`SearchUtilitiesTests`. (The direct full-text path then in the temporary Neo4j driver, removed
+2026-06-17, also skipped the backend call.)
 
 **2026-06-17 ParseDbDate follow-up:** closed the database date parsing drift. Python
 `parse_db_date` delegates string values to `datetime.fromisoformat`, so blank strings, padded strings,
@@ -291,8 +292,9 @@ serialization divergence.
 provider drift. Python's public fallback always takes the saga branch when `saga is not None`, binds
 `group_id = None` when no group list is supplied, and therefore does not fall through to generic
 episode retrieval or pick a saga from another group. C# now matches that public outcome across the
-reachable providers: InMemory returns no rows without a supplied group, Ladybug emits the grouped saga
-query with `group_id = null`, and Neo4j no longer uses a name-only saga match.
+reachable providers: InMemory returns no rows without a supplied group, and Ladybug emits the grouped
+saga query with `group_id = null`. (The temporary Neo4j driver, removed 2026-06-17, was also corrected
+to drop its name-only saga match while present.)
 
 **2026-06-17 namespace/triplet audit follow-up:** closed public namespace embedding and
 `add_triplet` collision drifts found by the current Python-vs-C# audit. Python namespace single saves
@@ -314,10 +316,11 @@ until decided, the current global attribute cap remains the documented C# behavi
 `Episodic`, and `Community`, while `SagaNode` delete helpers are Saga-only. C# direct model
 `DeleteAsync`, static base `Node.DeleteByGroupIdAsync` / `Node.DeleteByUuidsAsync`, and typed node
 namespaces now route through typed deletion for the same Python-scoped node types. InMemory and
-Ladybug implement the internal seam directly, and the temporary Neo4j compatibility path does too
-while present, so deleting through the wrong Entity/Saga node type or inherited base helper no longer
-removes saga nodes across that boundary. Third-party drivers that do not implement the internal seam
-still use a typed read before falling back to the existing broad delete primitive.
+Ladybug implement the internal seam directly (the temporary Neo4j compatibility path did too while
+present, before its 2026-06-17 removal), so deleting through the wrong Entity/Saga node type or
+inherited base helper no longer removes saga nodes across that boundary. Third-party drivers that do
+not implement the internal seam still use a typed read before falling back to the existing broad
+delete primitive.
 
 **2026-06-17 entity UUID group-filter follow-up:** closed a model helper drift. Python
 `EntityNode.get_by_uuids(..., group_id=...)` accepts `group_id`, but the normal fallback query filters
@@ -329,7 +332,8 @@ still keeps its optional group filter for callers that use the driver contract d
 
 **2026-06-17 in-memory episodic metadata follow-up:** closed a reference-driver drift. Python's
 `EpisodicNode` model has `episode_metadata`, but episodic node save, bulk-save, return projection, and
-record parsing do not persist or hydrate it. C# Neo4j and Ladybug already followed that storage shape;
+record parsing do not persist or hydrate it. C# Ladybug already followed that storage shape (as did
+the temporary Neo4j driver before its 2026-06-17 removal);
 the in-memory reference driver now does too by dropping `EpisodeMetadata` when cloning episodic nodes
 into storage.
 
@@ -553,7 +557,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Search config recipes, reranker enums, wire values | OK | Verified equivalent, parity-tested. Numeric knobs follow Python's lazy-use shape: inactive `sim_min_score`/`mmr_lambda`/`bfs_max_depth` values are not rejected up front, and `limit=0` returns empty results |
 | Hybrid search flow (semantic + BM25 + BFS), RRF/MMR/cross-encoder/node-distance/episode-mentions | OK | Deterministic parts well tested; edge/episode cross-encoder candidate windows now match Python's pre-rerank `limit` slices, including first-seen retrieval-order edge windowing, while node/community remain intentionally unwindowed like Python and pass full first-seen retrieval-order pools. Duplicate cross-encoder passages now match Python's first-seen passage / last-duplicate-candidate mapping. Community search now mirrors Python's unconditional vector retrieval when a query vector is available. Empty `EdgeTypes`/`EdgeUuids` filters are active match-none predicates like Python. Public search-result context helpers are exposed via `SearchHelpers` |
 | Community label propagation | OK | Algorithmically equivalent |
-| Graph drivers: LadybugDB (first-class investment target), InMemory (reference/test), Neo4j (temporary legacy compatibility) | OK | Runtime proof for Ladybug workflows, direct package binding of list/array/empty-list/null parameters, direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by UUID, public namespace community/saga reads and typed deletes, saga-scoped retrieval/content reads, paged/default-empty group reads, directed endpoint-pair and incident entity-edge reads, InMemory concrete node/edge type UUID boundaries, explicit and core file-backed paths, Kuzu `':memory:'` sentinel compatibility, package/native execution, and Ladybug-owned raw full-text query/label-filter construction; Neo4j is kept only to avoid regressions while present and is expected to be removed; see kuzu-driver-port.md |
+| Graph drivers: LadybugDB (first-class investment target), InMemory (reference/test); FalkorDB/Neptune (enum/wire-compat only) | OK | Runtime proof for Ladybug workflows, direct package binding of list/array/empty-list/null parameters, direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by UUID, public namespace community/saga reads and typed deletes, saga-scoped retrieval/content reads, paged/default-empty group reads, directed endpoint-pair and incident entity-edge reads, InMemory concrete node/edge type UUID boundaries, explicit and core file-backed paths, Kuzu `':memory:'` sentinel compatibility, package/native execution, and Ladybug-owned raw full-text query/label-filter construction; Neo4j was removed 2026-06-17 and is no longer a provider; see kuzu-driver-port.md |
 | LLM/embedder/reranker adapters via Microsoft.Extensions.AI | DIVERGENT | Documented decision; structured output + Polly retries in place. `MicrosoftExtensionsAICrossEncoderClient` uses structured boolean+confidence scoring because generic M.E.AI lacks OpenAI top-logprob controls |
 | Retry-on-validation-failure with error feedback message | llm_client/client.py retry loop | OK | Ported 2026-06-11 in base `LlmClient`: `JsonException` parse/schema failures get two Python-style validation-feedback re-prompts, cache keys remain based on the original prepared messages, and only validated final responses are cached |
 | GLiNER2 local extraction client | N/A | Specialized optional Python feature; out of scope unless requested |

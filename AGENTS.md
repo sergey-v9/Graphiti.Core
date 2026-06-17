@@ -63,8 +63,7 @@ Never:
   impact is deliberate and tested.
 - Do not add native binaries, RID packaging, or provider-specific SDK dependencies beyond the current
   core graph-provider dependencies without an explicit packaging/provider decision.
-- Do not spend more effort improving Neo4j unless it is needed to preserve existing behavior,
-  validate shared abstractions, or unblock LadybugDB work. Do not add FalkorDB or Neptune provider
+- Do not reintroduce a Neo4j provider (removed 2026-06-17). Do not add FalkorDB or Neptune provider
   support unless a separate provider decision changes the C# scope.
 
 Always:
@@ -112,9 +111,9 @@ Port contract:
 - `HybridCache`, Polly `ResiliencePipeline<T>`, `ActivitySource`, `Microsoft.ML.Tokenizers`, and
   tensor primitives are infrastructure choices, not permission to change Graphiti behavior or hide
   avoidable allocations behind fashionable abstractions.
-- Existing Neo4j behavior may stay only as temporary legacy compatibility coverage.
+- Neo4j was removed 2026-06-17 and is no longer a C# provider.
   FalkorDB and Neptune are compatibility/helper surfaces, not supported configured C# providers today.
-  Neo4j is expected to be removed later, LadybugDB is the core provider investment target, and the
+  LadybugDB is the core provider investment target, and the
   in-memory driver is a real deterministic test/reference backend rather than a product provider.
 
 Generated vs hand-written:
@@ -126,8 +125,7 @@ Provider/package facts:
 - This is currently a managed `net10.0` library with central package versions in
   `Directory.Packages.props`.
 - `Graphiti.Core` is LadybugDB-free and restores from nuget.org alone. It carries the graph-driver
-  contract plus the deterministic InMemory reference/test driver and temporary legacy Neo4j
-  compatibility coverage.
+  contract plus the deterministic InMemory reference/test driver.
 - `Graphiti.Core.Drivers.Ladybug` is the opt-in LadybugDB driver package. It owns the
   `LadybugDB`/`LadybugDB.Native` package references, `LadybugDbOptions`,
   `AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory`.

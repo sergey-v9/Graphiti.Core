@@ -143,8 +143,8 @@ fresh package-consumer smoke builds succeeded).
   driver-facing product surface.
 - Use `GraphProvider.LadybugDb` as the driver-facing provider value. Keep `GraphProvider.Kuzu` only as
   the `[Obsolete]` compatibility alias for callers that have not renamed yet.
-- Keep temporary Neo4j compatibility, FalkorDB, InMemory, and Neptune policy in `decisions.md`; do
-  not repeat it here.
+- Keep FalkorDB, InMemory, and Neptune policy in `decisions.md`; do not repeat it here. (Neo4j was
+  removed 2026-06-17 and is no longer a provider.)
 - If runtime proof exposes behavior that looks like a LadybugDB package or binding bug, mark it
   separately from Graphiti port gaps. Work around proven backend limitations deliberately when useful,
   but keep them visible.

@@ -17,9 +17,10 @@ These were taken by the agent ahead of sign-off; Sergey has now ruled on them:
    `sergey-v9/ladybug-dotnet` GitHub Packages feed; do NOT re-add a local offline fallback. A
    `read:packages` credential for source `github_ladybug` is required for any full (Ladybug-inclusive)
    restore, locally and in CI. This is intentional.
-3. **Neo4j — REMOVE NOW.** Removal is authorized and in scope (see Phase 4 / the Neo4j removal work).
-   Drop the `Neo4jGraphDriver` and its helpers, the provider selection path, the package reference,
-   and its tests; update the public surface, parity matrix, and docs accordingly.
+3. **Neo4j — DONE, removed 2026-06-17.** The `Neo4jGraphDriver` and its helpers, the
+   `GraphProvider.Neo4j` enum member, the `uri`/`user`/`password` constructor parameters,
+   `GraphitiOptions.Uri`/`User`/`Password`, the `Neo4j.Driver` package reference, and all Neo4j tests
+   are gone; the public-API baseline was regenerated and the parity matrix and docs were updated.
 
 Still user-gated (do not self-authorize): **release publishing / versioning** of the Graphiti packages
 themselves (2.0.0 line, alpha→beta cadence, metapackage shape).
@@ -28,9 +29,8 @@ themselves (2.0.0 line, alpha→beta cadence, metapackage shape).
 
 The infrastructure is real and green: builds clean, deterministic tests pass, packaging works,
 LadybugDB has runtime proof as the provider target, InMemory is proven as the reference/test backend,
-temporary Neo4j legacy coverage is present only to avoid regressions while it remains, and the
-search/ranking/community algorithms have genuine parity coverage. The live Python prompt instruction
-text has been ported into C#.
+and the search/ranking/community algorithms have genuine parity coverage. The live Python prompt
+instruction text has been ported into C#.
 Phase 2 has closed the ingestion semantic gaps: entity summaries, invented fallback removal, broad
 invalidation candidates, multi-episode attribution, true-batch bulk ingestion, combined extraction
 internals with public separate-extraction parity, validation-failure re-prompting, and edge
@@ -107,9 +107,8 @@ Existing direction, unchanged: LadybugDB is the provider investment target. Rema
 naming decision is complete: `GraphProvider.LadybugDb` is driver-facing, and `GraphProvider.Kuzu` is
 only an `[Obsolete]` compatibility alias. Active Ladybug full-text and label-filter behavior now lives
 inside `Drivers/Ladybug/`; direct package parameter binding is covered through the local repaired
-LadybugDB package family; shared Kuzu branches were retired from the generic search helpers. Neo4j remains supported legacy
-compatibility (keep it from regressing); its removal is a user-gated decision not yet made — do not
-remove it or schedule its removal without Sergey's explicit go-ahead.
+LadybugDB package family; shared Kuzu branches were retired from the generic search helpers. Neo4j was
+removed 2026-06-17 and is no longer a provider.
 
 ## Phase 5 — Release readiness (IN PROGRESS)
 
@@ -157,8 +156,8 @@ or have agents build-only and run the consolidated test centrally.
   adaptation check → verify centrally → adversarial audit → record → advance the local pointer). The
   current sync point is in `parity.md`'s anchor.
 - LadybugDB is the main provider target; InMemory is the deterministic reference/test driver;
-  Neo4j is supported legacy compatibility kept from regressing (no new investment), and its removal
-  is a user-gated decision Sergey has not made; FalkorDB/Neptune are enum/wire compatibility surfaces.
+  Neo4j was removed 2026-06-17 and is no longer a provider; FalkorDB/Neptune are enum/wire
+  compatibility surfaces.
 - Search stays custom and parity-tested: RRF, MMR, cross-encoder ordering, node-distance,
   episode-mentions, filters, BFS, result merge.
 - `Microsoft.Extensions.AI` remains the chat/embedding adapter boundary; `ILlmClient`,
@@ -173,4 +172,3 @@ or have agents build-only and run the consolidated test centrally.
 - Whether to expose external adapters (OpenAI, Azure OpenAI, Qdrant, Semantic Kernel) as separate
   packages.
 - Whether to add a compatibility option defaulting chunking to Python's chars-per-token heuristic.
-- When and how to schedule the Neo4j removal milestone.

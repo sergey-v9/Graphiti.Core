@@ -71,11 +71,11 @@ The public surface is guarded by a snapshot test (`tests/Graphiti.Core.Tests/Api
 deliberately. Standing decisions from the plan-05 batch-1 cleanup (alpha-stage breaking changes;
 no wire/prompt/cache/temporal behavior changed):
 
-- `Graphiti` constructor driver selection precedence: explicit `graphDriver` > non-null `uri`
-  (temporary Neo4j compatibility) > **InMemory default**. It no longer throws when both are omitted, so
-  `new Graphiti()` backs onto the deterministic reference/test driver. New product/backend work should
-  pass a LadybugDB driver explicitly. `AddEpisodeAsync(AddEpisodeOptions, ct)` is an additive overload
-  over the 15-parameter positional one (which is unchanged).
+- `Graphiti` constructor driver selection precedence: explicit `graphDriver` > **InMemory default**.
+  It no longer throws when the driver is omitted, so `new Graphiti()` backs onto the deterministic
+  reference/test driver. New product/backend work should pass a LadybugDB driver explicitly.
+  `AddEpisodeAsync(AddEpisodeOptions, ct)` is an additive overload over the 15-parameter positional
+  one (which is unchanged).
 - Driver-facing provider value is `GraphProvider.LadybugDb` (new ordinal `5`); `GraphProvider.Kuzu` is an
   `[Obsolete]` alias that still resolves to the LadybugDB driver. The DI method is `AddGraphiti`;
   `AddGraphitiCore` is an `[Obsolete]` alias. `GraphProvider` is not wire/cache-serialized (only an OTel
@@ -94,8 +94,8 @@ no wire/prompt/cache/temporal behavior changed):
 - `Graphiti.Core` and `Graphiti.Core.Drivers.Ladybug` ship IntelliSense XML docs from their public XML
   comments. Keep docs complete when adding public members to either package.
 - **LadybugDB is a separate package.** `Graphiti.Core` carries the driver contract (`IGraphDriver`,
-  `GraphProvider`, `GraphDriverBase`), the deterministic `InMemoryGraphDriver` reference/test backend,
-  and the temporary legacy `Neo4jGraphDriver` compatibility implementation. It depends only on
+  `GraphProvider`, `GraphDriverBase`) and the deterministic `InMemoryGraphDriver` reference/test
+  backend. It depends only on
   nuget.org packages and restores off-machine without Ladybug package credentials. The first-class
   LadybugDB driver, `LadybugDbOptions`, `AddLadybugDbGraphDriver`, and
   `LadybugDbGraphDriverFactory` live in `src/Graphiti.Core.Drivers.Ladybug/` (which owns the
@@ -135,10 +135,10 @@ no wire/prompt/cache/temporal behavior changed):
   feature-polishing work unless that directly supports tests or LadybugDB.
 - DI-created supported graph drivers should honor `GraphitiOptions.Database`; for InMemory the
   database label remains distinct from `DefaultGroupId`.
-- Keep existing official `Neo4j.Driver` code working and do not invest in Neo4j beyond avoiding
-  regressions (it is not a first-class C# provider target). Neo4j stays as supported legacy
-  compatibility; whether/when to remove it is a user-gated decision Sergey has not made — do not
-  remove it or plan its removal without an explicit go-ahead (see the "User-gated" block in `roadmap.md`).
+- Neo4j was removed 2026-06-17; it is no longer a provider. The `Neo4jGraphDriver`, the
+  `GraphProvider.Neo4j` enum member, the `uri`/`user`/`password` constructor parameters,
+  `GraphitiOptions.Uri`/`User`/`Password`, the `Neo4j.Driver` package reference, and all Neo4j tests
+  are gone. Do not reintroduce a Neo4j provider without an explicit ask.
 
 ## Provider And Infrastructure Choices
 
@@ -235,7 +235,8 @@ no wire/prompt/cache/temporal behavior changed):
 - Saga-scoped episode retrieval follows Python's public fallback for null or empty group lists:
   `saga` still selects the saga branch, but the group parameter is null, so normal grouped sagas do
   not match and the query does not fall through to generic episode retrieval. InMemory returns an
-  empty result for this shape; Ladybug and Neo4j bind the null group in the grouped saga match.
+  empty result for this shape; Ladybug binds the null group in the grouped saga match. (Neo4j, removed
+  2026-06-17, did the same while present.)
 - Empty node-label and empty temporal filter branches are intentional C# hardening divergences.
   Python can emit malformed/backend-dependent fragments for these shapes (`n:`, `n: AND m:`, `(`,
   `()`, or dangling `OR` groups). C# treats empty node labels and empty temporal groups as no-op
@@ -324,7 +325,7 @@ Other accepted public-workflow divergences confirmed in a 2026-06-14 surface aud
   C# applies `storeRawEpisodeContent: false` to bulk after extraction as well, so stored bulk episodes
   are scrubbed consistently with single-ingest behavior while extraction still sees the original text.
 - **Explicit/DI graph drivers stay caller-owned.** Python `close()` always closes `self.driver`. C#
-  closes only drivers it constructed itself (default InMemory or URI-created Neo4j); externally supplied
+  closes only drivers it constructed itself (the default InMemory driver); externally supplied
   or DI-scoped drivers remain owned by their caller/container. This preserves .NET lifetime semantics
   and is pinned by `Graphiti_DisposeAsync_DoesNotCloseExternalGraphDriver` and
   `AddGraphiti_DisposesScopedGraphDriverOnce`.
@@ -376,9 +377,8 @@ strip (#1531) is N/A (no FalkorDB driver).
 - The LadybugDB provider uses the LadybugDB NuGet package, which comes from the alternative Kuzu fork.
   Kuzu remains the Python parity lineage and compatibility vocabulary, while the driver-facing provider
   name is `GraphProvider.LadybugDb`. See `kuzu-driver-port.md`.
-- `GraphProvider.Neo4j` may remain temporarily in the current provider surface only for legacy
-  compatibility; keep existing behavior from regressing, but do not plan provider improvements there.
-  Neo4j is expected to be removed. `GraphProvider.InMemory` remains the deterministic reference/test
+- `GraphProvider.Neo4j` was removed 2026-06-17; Neo4j is no longer a provider in the C# port.
+  `GraphProvider.InMemory` remains the deterministic reference/test
   backend rather than a product provider. `GraphProvider.FalkorDb` and `GraphProvider.Neptune` remain
   enum/helper compatibility surfaces and are rejected by default options validation unless a separate
   provider decision changes that. LadybugDB is the provider path to invest in.

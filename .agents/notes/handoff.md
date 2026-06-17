@@ -13,16 +13,15 @@ Python remains the behavioral source of truth. The C# port should be idiomatic .
 compatible with Graphiti semantics, wire values, cache/schema identity, and performance/allocation
 discipline.
 
-Provider work is focused on LadybugDB. InMemory is the deterministic reference/test backend. Neo4j is
-supported legacy compatibility: keep it from regressing and do not pick it for new provider
-investment, but its removal is a user-gated decision Sergey has not made (do not plan or perform it
-without an explicit go-ahead — see the "User-gated" block in `roadmap.md`). The focused provider state
+Provider work is focused on LadybugDB. InMemory is the deterministic reference/test backend. Neo4j was
+removed 2026-06-17 and is no longer a provider. The focused provider state
 lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 
-> ⚠ **Supervisor review 2026-06-17:** CI lanes, publishing the LadybugDB binding to the
-> `sergey-v9/ladybug-dotnet` GitHub Packages feed (dropping the local offline feed), and framing Neo4j
-> removal as settled were all done by following the roadmap into user-gated territory. They are
-> PENDING Sergey's confirmation. See `roadmap.md` → "User-gated". The library work itself
+> ⚠ **Supervisor review 2026-06-17:** CI lanes and publishing the LadybugDB binding to the
+> `sergey-v9/ladybug-dotnet` GitHub Packages feed (dropping the local offline feed) were done by
+> following the roadmap into user-gated territory. They are
+> PENDING Sergey's confirmation. See `roadmap.md` → "User-gated". Neo4j removal: DONE (2026-06-17).
+> The library work itself
 > (parity sweep, search/pipeline correctness) is solid and green (1048 passed / 3 skipped).
 
 ## Current Layout
@@ -31,8 +30,7 @@ lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
   saga, community, infrastructure, and extraction parsing partials.
 - `Models/`: node, edge, result DTO, entity type, entity attribute, and episode type models.
 - `Drivers/` (in `Graphiti.Core`): only the driver contract/base (`IGraphDriver`, base driver),
-  the deterministic in-memory reference/test driver, temporary legacy Neo4j compatibility and its
-  statement builders/record mappers/session/executor helpers, the provider enum, and saga episode
+  the deterministic in-memory reference/test driver, the provider enum, and saga episode
   content.
 - `Graphiti.Core.Drivers.Ladybug` (separate project): owns the LadybugDB driver/factory/executor,
   statement builders, search statement/filter, record mapper, schema, and `LadybugDbOptions` +
@@ -56,8 +54,7 @@ lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the full matrix):
 
 - **Solid and verified:** project/infrastructure shape (net10.0, analyzers, packaging), drivers
-  (InMemory reference/test, LadybugDB runtime proof, temporary Neo4j legacy compatibility),
-  search ranking/fusion/reranking,
+  (InMemory reference/test, LadybugDB runtime proof), search ranking/fusion/reranking,
   community label propagation, text utilities, serialization/cache identity, DI/options. The
   deterministic suite is green in the latest verification checkpoint below.
 - **Phase 2 complete:** the LLM-facing semantic layer has moved from scaffold prompts to ported
@@ -304,8 +301,9 @@ contract.
 `RetrieveEpisodes_WithSagaAndNoGroupIdsDoesNotMatchAcrossGroups`,
 `BuildRetrieveEpisodes_WithSagaAndNoGroupsBindsNullGroupId`, and
 `BuildRetrieveEpisodesStatement_BindsNullSagaGroupWithoutGroupIds` close the saga-scoped retrieval
-`groupIds: null` provider drift: InMemory no longer picks a cross-group saga, Ladybug no longer
-falls through to generic episode retrieval, and Neo4j no longer emits a name-only saga match.
+`groupIds: null` provider drift: InMemory no longer picks a cross-group saga, and Ladybug no longer
+falls through to generic episode retrieval. (Neo4j, removed 2026-06-17, was also corrected to drop its
+name-only saga match while present.)
 The remaining empty-filter-list candidates are now deliberately disposed as hardening divergences:
 Python emits malformed/backend-dependent empty `NodeLabels` fragments (`n:`, `n: AND m:`, or Kuzu
 `list_has_all(..., [])`) and empty temporal fragments (`(`, `()`, or dangling `OR` groups), while C#
@@ -327,7 +325,7 @@ deletion for the Python-scoped node types, so deleting through the wrong Entity/
 inherited base helper no longer removes saga nodes across that boundary. `EntityNode.GetByUuidsAsync`
 keeps the Python-compatible optional `groupId` parameter but no longer applies it, because Python's
 normal entity UUID query filters only by UUID. InMemory no longer persists `EpisodicNode.EpisodeMetadata`,
-matching Python's episodic save/projection/record-parser behavior and the Neo4j/Ladybug persistence
+matching Python's episodic save/projection/record-parser behavior and the Ladybug persistence
 shape. `EntityEdge.GetByGroupIdsAsync` and `EpisodicEdge.GetByGroupIdsAsync` now throw
 `GroupsEdgesNotFoundException` on empty group results, matching Python's `GroupsEdgesNotFoundError`
 branches for those group reads.
@@ -625,8 +623,7 @@ allocation-sensitive coverage and should not be casually rewritten without targe
 - Search ranking/fusion/reranking: RRF, MMR, cross-encoder ordering, node-distance,
   episode-mentions, fallback BM25, vector scoring, BFS origins, and result splitting.
 - Driver/reference behavior: in-memory deterministic indexes/cloning/search, materialized fallback
-  snapshots, temporary Neo4j query/session telemetry boundaries while present, and Ladybug
-  statement/mapper/executor shapes.
+  snapshots, and Ladybug statement/mapper/executor shapes.
 - Ingestion and maintenance: extraction parsing, node/edge dedupe, invalidation windows, episode
   removal, saga association/summarization, community build/rebuild/update, and bulk ingestion.
 - Serialization and provider infrastructure: structured LLM schema/cache identity, response-cache

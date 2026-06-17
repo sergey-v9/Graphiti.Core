@@ -56,19 +56,20 @@ package. (FalkorDb/Neptune members stay — they're intentional wire-compat surf
 ## D. Constructor ergonomics (product decision)
 
 **RESOLVED 2026-06-14:** the constructor defaults to the deterministic
-`InMemoryGraphDriver` when no driver or URI is supplied. A supplied `graphDriver` remains the
-first-choice path and should be used for LadybugDB, the first-class backend. Passing `uri:` still builds
-Neo4j only as a temporary legacy compatibility path; Neo4j is not a product provider target and is
-expected to be removed later. `AddEpisodeAsync(AddEpisodeOptions, ct)` was added as the options-object
-entry point while the positional overload remains.
+`InMemoryGraphDriver` when no driver is supplied. A supplied `graphDriver` remains the
+first-choice path and should be used for LadybugDB, the first-class backend.
+`AddEpisodeAsync(AddEpisodeOptions, ct)` was added as the options-object
+entry point while the positional overload remains. (Update 2026-06-17: Neo4j was removed entirely —
+the driver, the `GraphProvider.Neo4j` member, and the `uri`/`user`/`password` ctor params are gone.)
 
 ## E. Packaging (product + effort decision)
 
 **RESOLVED 2026-06-14:** `Graphiti.Core` no longer references `LadybugDB`/`LadybugDB.Native`.
-It carries the driver contract, the InMemory reference/test driver, and temporary legacy Neo4j
-compatibility while restoring from nuget.org alone. The first-class LadybugDB driver moved to
+It carries the driver contract and the InMemory reference/test driver
+while restoring from nuget.org alone. The first-class LadybugDB driver moved to
 `Graphiti.Core.Drivers.Ladybug`, which owns the LadybugDB package references, `LadybugDbOptions`,
-`AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory`.
+`AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory`. (Update 2026-06-17: Neo4j was removed
+entirely; `Graphiti.Core` no longer carries a Neo4j compatibility driver.)
 
 ## Recommended order
 

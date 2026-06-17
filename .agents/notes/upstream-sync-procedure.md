@@ -13,15 +13,15 @@ whenever we want to pull newer upstream work. The last execution (2026-06-14, an
   and dependency bumps are out of scope (we don't port them). The C# parity contract is against the
   Python *library* source.
 - **The C# primary provider is LadybugDB** (a maintained Kuzu-lineage engine). The C# port mirrors
-  Python's **KUZU** driver behavior. InMemory is the deterministic reference/test backend. Neo4j is
-  temporary legacy compatibility expected to be removed; FalkorDB / Neptune are enum/wire-compat only
+  Python's **KUZU** driver behavior. InMemory is the deterministic reference/test backend. Neo4j was
+  removed 2026-06-17 and is no longer a C# provider; FalkorDB / Neptune are enum/wire-compat only
   (no real C# driver). Python upstream has deprecated Kuzu and made FalkorDB primary; **we deliberately
   diverge** — we keep LadybugDB primary and do not echo the Kuzu deprecation.
 - **Other-provider changes get evaluated for adaptation to our primary provider** (see step 4): if a
-  fix to FalkorDB/Neo4j reveals a *real latent issue* for LadybugDB AND adapting it aligns with
-  Python's own Kuzu behavior + the authors' intent, adapt it. Do **not** blindly copy
-  provider-protocol-specifics (RediSearch tokenization, Redis NUL handling) that Python itself does
-  not apply to Kuzu.
+  fix to a Python provider we do not invest in (FalkorDB/Neo4j/Neptune) reveals a *real latent issue*
+  for LadybugDB AND adapting it aligns with Python's own Kuzu behavior + the authors' intent, adapt
+  it. Do **not** blindly copy provider-protocol-specifics (RediSearch tokenization, Redis NUL
+  handling) that Python itself does not apply to Kuzu.
 - **Pointer move is gated on incorporation.** Only advance the local `graphiti_core` checkout after
   every library change in the delta is incorporated, dispositioned, and the C# suite is green.
 - **CI — keep as-is, do not expand** (Sergey, 2026-06-17). The two GitHub Actions lanes
@@ -60,7 +60,7 @@ the `-- graphiti_core` filter — ignore them.)
 |---|---|---|
 | **Prompts / pipeline / search** | `prompts/`, `nodes.py`, `edges.py`, `search/`, `utils/` ingestion | **Highest risk.** Port the behavior + instruction text faithfully (see Prompt Parity Contract in `decisions.md`). Prefer full-string golden tests. Verify against the Python source, never a summary. |
 | **LLM-client SDK mechanics** | `llm_client/openai*`, `azure_openai*`, reasoning/temperature/response_format | Usually **N/A**: the C# port uses the `Microsoft.Extensions.AI` adapter boundary, so OpenAI-SDK request construction is the *consumer's* chat client, not Graphiti. Extract only the portable *semantic* intent (e.g. "empty response is retryable", "strip markdown fences"). |
-| **Provider-specific** | `driver/falkordb/*`, `driver/neo4j/*`, `driver/neptune/*` | Do not port or improve these provider paths for their own sake. For Neo4j, only avoid regressions in the temporary legacy path while it remains. Run the step-4 adaptation check against LadybugDB. A change to a *shared* helper (e.g. `helpers.py`) may still be in scope. |
+| **Provider-specific** | `driver/falkordb/*`, `driver/neo4j/*`, `driver/neptune/*` | Do not port or improve these provider paths for their own sake — there is no C# driver for any of them (Neo4j was removed 2026-06-17, like FalkorDB/Neptune). Run the step-4 adaptation check against LadybugDB. A change to a *shared* helper (e.g. `helpers.py`) may still be in scope. |
 | **Kuzu driver** | `driver/kuzu_driver.py` | Mirror genuine behavior changes into the LadybugDB driver. **Reject** the upstream Kuzu *deprecation* — we use the maintained LadybugDB lineage. |
 | **Version / docs / tests** | `pyproject.toml`, `__init__` version, docstrings, `_test.py` | Skip (record the version bump only). |
 

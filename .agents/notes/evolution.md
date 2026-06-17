@@ -95,6 +95,7 @@ longer true, mark it `Superseded` and explain the successor direction.
 | M1 | Landed | Deep C# modernization | The port moved from literal translation toward idiomatic .NET structure, infrastructure, and allocation-aware implementation while preserving Graphiti behavior. |
 | M2 | Active | LadybugDB-first provider strategy | The C# port's provider investment target is a core LadybugDB-backed driver, unlike the Python provider priorities. |
 | M3 | Landed | First real-provider validation | The port ran end-to-end against the real OpenAI API for the first time (2026-06-13): structured schemas accepted, sane temporally-correct graph, relevant reranked search. The LLM-facing layer is now empirically validated, not just unit-tested against fakes. |
+| M4 | Landed | Neo4j retirement | The temporary legacy Neo4j path was removed from the C# product surface (2026-06-17): the driver, the `GraphProvider.Neo4j` member, the `uri`/`user`/`password` ctor params, `GraphitiOptions.Uri`/`User`/`Password`, the `Neo4j.Driver` package ref, and all Neo4j tests are gone. Supported providers are now LadybugDB, InMemory, and FalkorDB/Neptune (enum/wire-compat only). |
 
 ## M1: Deep C# Modernization
 
@@ -185,15 +186,14 @@ into its own package (plan-05 E):
 - `GraphProvider.LadybugDb` is the driver-facing name; `GraphProvider.Kuzu` is an `[Obsolete]`
   compatibility alias that resolves to the same LadybugDB-backed driver. The concrete driver reports
   `GraphProvider.LadybugDb`; file persistence is configured through `LadybugDbOptions.DatabasePath`.
-- Neo4j is retained only as temporary legacy compatibility while present and is expected to be
-  removed, FalkorDB is not a C# provider investment target, and InMemory remains the deterministic
-  reference/test driver.
+- Neo4j was removed 2026-06-17 and is no longer a C# provider, FalkorDB is not a C# provider
+  investment target, and InMemory remains the deterministic reference/test driver.
 
 ### Evidence
 
 - `decisions.md` names LadybugDB as the primary provider target, keeps InMemory as the deterministic
-  reference/test backend, and blocks provider investment in temporary Neo4j compatibility,
-  FalkorDB, and Neptune.
+  reference/test backend, records that Neo4j was removed 2026-06-17, and blocks provider investment in
+  FalkorDB and Neptune.
 - `kuzu-driver-port.md` records detailed package facts, provider policy, runtime proof, quirks, and
   remaining work.
 - `GraphProvider.cs` confirms `GraphProvider.LadybugDb` (value 5) is the driver-facing name and
@@ -219,10 +219,11 @@ The LadybugDB milestone must still preserve:
 
 ### Follow-Up Decisions
 
-- When and how to schedule Neo4j removal as its own milestone.
-
 **RESOLVED**
 
+- Neo4j removal (M4, 2026-06-17): the temporary legacy Neo4j path was removed from the C# product
+  surface — driver, `GraphProvider.Neo4j`, `uri`/`user`/`password` ctor params,
+  `GraphitiOptions.Uri`/`User`/`Password`, the `Neo4j.Driver` package ref, and tests.
 - Final driver-facing naming (decided in plan-05 B): `GraphProvider.LadybugDb` is the driver-facing
   name and `GraphProvider.Kuzu` is the `[Obsolete]` compatibility alias.
 - Shared Kuzu compatibility branches in generic search helpers were retired in plan-05 B2; active
@@ -261,12 +262,54 @@ clients" to "empirically validated against the real OpenAI API."
 - Whether to build the eval harness for a durable C#-vs-Python quality score.
 - Whether to wire a key-gated provider-validation job into CI.
 
+## M4: Neo4j Retirement
+
+**Status:** Landed
+**Visible range:** 2026-06-17
+**Thesis:** Neo4j was never the C# port's provider investment target and was only carried as temporary
+legacy compatibility. With LadybugDB established as the first-class backend and InMemory as the
+reference/test driver, the temporary Neo4j path was removed from the C# product surface.
+
+### Python Baseline
+
+Python `graphiti_core/` still ships a Neo4j driver and treats it as a supported backend. The C# port
+does not mirror Python's provider priorities (see M2); the Neo4j removal is a deliberate C#-only
+direction, not a Python parity change.
+
+### C# Direction
+
+The temporary legacy Neo4j path is gone:
+
+- the `Neo4jGraphDriver` and its helpers (statement builders, record mappers, session/executor
+  helpers) are removed;
+- the `GraphProvider.Neo4j` enum member is removed;
+- the `uri`/`user`/`password` `Graphiti` constructor parameters and the
+  `GraphitiOptions.Uri`/`User`/`Password` options are removed (constructor driver selection is now
+  explicit `graphDriver` > InMemory default);
+- the `Neo4j.Driver` package reference and all Neo4j tests are removed.
+
+Supported providers are now LadybugDB (first-class target), InMemory (deterministic reference/test),
+and FalkorDB/Neptune (enum/wire-compat only, no real driver).
+
+### Evidence
+
+- `decisions.md` "Provider Status" and "Library Boundaries" record the removal and the new constructor
+  precedence.
+- The public-API baseline (`tests/Graphiti.Core.Tests/Api/`) was regenerated; `parity.md` and the
+  consumer `README.md` no longer list Neo4j.
+- Build is 0-warning and the full suite is green.
+
+### Boundaries
+
+- Do not reintroduce a Neo4j provider without an explicit ask.
+
 ## Candidate Future Milestones
 
 Use this list as a prompt, not as committed direction:
 
 - **Provider surface freeze:** final naming, DI, package, and support policy for LadybugDB.
-- **Neo4j retirement:** remove the temporary legacy Neo4j path from the C# product surface.
+- **Neo4j retirement:** COMPLETED 2026-06-17 (landed as M4) — the temporary legacy Neo4j path was
+  removed from the C# product surface.
 - **Stable public API release:** API, namespace, docs, migration notes, and packaging expectations
   are stable enough for external consumers.
 - **C#-native operations posture:** telemetry, verification scripts, package build, and provider

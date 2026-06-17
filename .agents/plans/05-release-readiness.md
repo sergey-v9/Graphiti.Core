@@ -19,8 +19,8 @@ from strict package sources:
   internalized, and shippable package projects generating IntelliSense XML documentation.
 - **B+C** — `GraphProvider.LadybugDb=5` and `AddGraphiti` primary; `Kuzu`/`AddGraphitiCore` `[Obsolete]`
   aliases. `GRPH0001` and `GRPH0002` are suppressed only at deliberate compatibility-alias sites.
-- **D** — constructor defaults to InMemory (precedence: explicit driver > legacy `uri` (temporary
-  Neo4j compatibility) > InMemory); additive `AddEpisodeOptions` overload.
+- **D** — constructor defaults to InMemory (precedence: explicit driver > InMemory); additive
+  `AddEpisodeOptions` overload. (Update 2026-06-17: the legacy `uri` Neo4j path was removed.)
 - **E.1 + E.3** — LadybugDB extracted to `src/Graphiti.Core.Drivers.Ladybug/`; `Graphiti.Core` is LadybugDB-free
   and restores from nuget.org alone; core resolves `LadybugDb`/`Kuzu` via `GraphDriverFactory` (set by
   `AddLadybugDbGraphDriver`) and throws a clear error if the package is absent. README/samples updated.
@@ -152,13 +152,13 @@ that selects LadybugDB through the same registration path.
 ## Step D — Constructor & ingestion ergonomics (design change)
 
 **Goal:** remove the surprising "silently build a Neo4j driver when `graphDriver` is null" default for a
-LadybugDB/InMemory-first port. Resolved by defaulting to InMemory; the `uri` path remains only as
-temporary legacy Neo4j compatibility and is expected to be removed later.
+LadybugDB/InMemory-first port. Resolved by defaulting to InMemory. (Update 2026-06-17: Neo4j was
+removed entirely, so the `uri`/`user`/`password` params are gone and the constructor selects explicit
+`graphDriver` > InMemory default.)
 
-- `src/Graphiti.Core/Graphiti.cs:51-63` constructor. Resolved shape: explicit `graphDriver` wins,
-  omitted driver/URI defaults to `InMemoryGraphDriver`, and a supplied `uri` still creates Neo4j only
-  as temporary legacy compatibility. New backend work should pass LadybugDB explicitly; Neo4j removal
-  should be a deliberate later milestone recorded in `decisions.md`/README migration notes.
+- `src/Graphiti.Core/Graphiti.cs` constructor. Resolved shape: explicit `graphDriver` wins, omitted
+  driver defaults to `InMemoryGraphDriver`. New backend work should pass LadybugDB explicitly. The
+  Neo4j removal landed 2026-06-17 (M4 in `evolution.md`).
 - Optional within D: introduce an `AddEpisodeOptions`-style object for `AddEpisodeAsync`'s ~15 optional
   params (`entityTypes`, `edgeTypes`, `edgeTypeMap`, `excludedEntityTypes`, `customExtractionInstructions`,
   saga fields). Keep the existing overload (or `[Obsolete]` it) so it's non-breaking; the options object is
@@ -173,8 +173,8 @@ covering the new default/explicit-driver behavior.
 ## Step E — Split LadybugDB into its own package (the publish blocker)
 
 **Goal:** `Graphiti.Core` restores from nuget.org alone; LadybugDB becomes opt-in so core-only
-consumers are not forced onto Ladybug package credentials. InMemory remains the reference/test backend;
-Neo4j remains only temporary legacy compatibility.
+consumers are not forced onto Ladybug package credentials. InMemory remains the reference/test backend.
+(Update 2026-06-17: Neo4j was removed entirely and is no longer a provider.)
 
 This is the largest item and gates a real NuGet release. Sub-steps:
 1. **Extract** `Drivers/Ladybug/` into a new project `src/Graphiti.Core.Drivers.Ladybug/` that references
@@ -224,8 +224,9 @@ Recorded sweep result, 2026-06-17:
 5. Decision-gated follow-ups stay separate and should be surfaced explicitly before implementation:
    `CommunityEdgeNamespace.SaveBulkAsync` public API shape, empty node-label filter bug-compatibility,
    entity-attribute per-field max-length/required metadata, `GRPH0002` / `AddGraphitiCore` alias
-   migration, larger real-provider eval expansion, Linux/CI validation scope, Neo4j retirement,
-   versioning, publish path, and metapackage shape.
+   migration, larger real-provider eval expansion, Linux/CI validation scope,
+   versioning, publish path, and metapackage shape. (Neo4j retirement is no longer pending — it
+   landed 2026-06-17, M4 in `evolution.md`.)
 6. `kuzu-driver-port.md` remaining-work bullets are conditional provider follow-ups, not unhandled
    release-plan tasks: broaden Ladybug workflow coverage only for uncovered behavior, add
    host-facing options only for real runtime needs, and add native-gated smoke tests only for a new
