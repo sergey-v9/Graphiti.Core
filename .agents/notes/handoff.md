@@ -124,7 +124,9 @@ Latest plan-folder/backlog audit, 2026-06-18: `Check-PythonUpstreamDelta.ps1 -Fe
 reported no `graphiti_core/` upstream delta from anchor `0ed90b7` to target
 `b82b80e4c0c962fc714a22b74caf8c20997e8d83`; search-result merge/context helper comparison found no
 confirmed drift; and a read-only model/edge/namespace CRUD comparison against Python found no
-confirmed, undocumented drift. Plan 06 remains scheduled but opt-in.
+confirmed, undocumented drift. A later removal audit found one concrete delete-helper drift, now
+closed: node delete helpers accept non-positive batch sizes and provider loops normalize those values
+to one all-items batch. Plan 06 remains scheduled but opt-in.
 
 ## LadybugDB / Kuzu
 
@@ -158,9 +160,9 @@ added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
 credentials for the Ladybug feed: `995` passed, `3` skipped, `998` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice keeps M.E.AI chat response parsing to whole
-JSON payloads or whole payloads wrapped in markdown code fences; JSON embedded inside arbitrary prose
-now fails into the retry-feedback loop.
+both package-consumer smokes succeeded. The newest slice accepts non-positive node-delete batch sizes
+through typed/static namespace deletion and InMemory/Ladybug delete loops, normalizing provider UUID
+delete loops to one all-items batch where needed.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -454,7 +456,9 @@ and duplicate membership rows. The bulk node-resolution candidate from the 2026-
 is now closed: node resolution uses per-extracted semantic candidates plus explicit overrides only,
 and no-hit searches keep extracted nodes new. The 2026-06-18 `Edge.Equals` subagent candidate is now
 closed: edge-to-edge equality returns false while object equality matches only a node with the same
-UUID. One saga candidate remains separate:
+UUID. The removal audit's non-positive node-delete batch-size candidate is now closed: C# typed/static
+namespace deletion and InMemory/Ladybug delete loops accept zero/negative batch sizes and normalize
+looping where needed. One saga candidate remains separate:
 bulk saga predecessor lookup excludes the first bulk episode where Python passes an empty
 `current_episode_uuid`; matching Python can create a `NEXT_EPISODE` self-loop when the only bulk item
 reuses an already-linked saga episode UUID, so treat that as a decision-gated cycle-avoidance question
@@ -468,7 +472,10 @@ remains open. LLM-client read-only audit on 2026-06-18 found two candidates, bot
 usage for refused/malformed/schema-invalid attempts is recorded only after parsed structured
 validation succeeds, and `MicrosoftExtensionsAIChatClient` no longer extracts JSON embedded in
 arbitrary prose. It now accepts whole JSON or a whole payload wrapped in a markdown code fence; prose-
-wrapped output raises `JsonException` and flows through retry feedback.
+wrapped output raises `JsonException` and flows through retry feedback. A follow-up LLM audit found
+that C# cache keys are broader than Python by design and documented in `decisions.md`; schema
+description metadata and broader required-field tightening remain compatibility-sensitive follow-up
+candidates because current static fixtures still exercise legacy aliases.
 Embedder/lifecycle read-only audits on 2026-06-18 found no code slice: lifecycle/maintenance behavior
 was already documented and tested, while the default `HashEmbedder` and strict provider embedding
 output validation are accepted C# adapter divergences now recorded in `decisions.md` and `parity.md`.

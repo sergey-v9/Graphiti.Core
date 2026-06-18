@@ -47,7 +47,6 @@ internal static class TypedNodeDeletion
         where TNode : Node
     {
         ArgumentNullException.ThrowIfNull(driver);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         if (driver is ITypedNodeDeleteGraphDriver typedDriver)
         {
             await typedDriver.DeleteNodesByGroupIdAsync<TNode>(groupId, batchSize, cancellationToken).ConfigureAwait(false);
@@ -73,7 +72,6 @@ internal static class TypedNodeDeletion
     {
         ArgumentNullException.ThrowIfNull(driver);
         ArgumentNullException.ThrowIfNull(uuids);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         if (driver is ITypedNodeDeleteGraphDriver typedDriver)
         {
             await typedDriver.DeleteNodesByUuidsAsync<TNode>(uuids, batchSize, cancellationToken).ConfigureAwait(false);

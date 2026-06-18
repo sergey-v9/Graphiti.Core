@@ -181,14 +181,29 @@ public class NamespaceTests
     }
 
     [Fact]
-    public async Task NodeNamespaces_ValidateDeleteBatchArgumentsBeforeLookup()
+    public async Task NodeNamespaces_AllowNonPositiveDeleteBatchSizes()
     {
         var graphiti = new Graphiti(graphDriver: new InMemoryGraphDriver());
+        var entity = new EntityNode { Name = "Alice", GroupId = "tenant" };
+        var episode = new EpisodicNode
+        {
+            Name = "episode",
+            GroupId = "tenant",
+            Source = EpisodeType.Message,
+            Content = "Alice",
+            ValidAt = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)
+        };
+        await graphiti.Nodes.Entity.SaveAsync(entity);
+        await graphiti.Nodes.Episode.SaveAsync(episode);
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            graphiti.Nodes.Entity.DeleteByGroupIdAsync("missing", batchSize: 0));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            graphiti.Nodes.Episode.DeleteByUuidsAsync(Array.Empty<string>(), batchSize: -1));
+        await graphiti.Nodes.Entity.DeleteByGroupIdAsync("missing", batchSize: 0);
+        await graphiti.Nodes.Entity.DeleteByGroupIdAsync("tenant", batchSize: 0);
+        await graphiti.Nodes.Episode.DeleteByUuidsAsync(new[] { episode.Uuid }, batchSize: -1);
+
+        await Assert.ThrowsAsync<NodeNotFoundException>(() =>
+            graphiti.Nodes.Entity.GetByUuidAsync(entity.Uuid));
+        await Assert.ThrowsAsync<NodeNotFoundException>(() =>
+            graphiti.Nodes.Episode.GetByUuidAsync(episode.Uuid));
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
             graphiti.Nodes.Community.DeleteByUuidsAsync(null!));
     }

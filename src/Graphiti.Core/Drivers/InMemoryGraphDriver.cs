@@ -214,7 +214,6 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         int batchSize,
         CancellationToken cancellationToken)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         cancellationToken.ThrowIfCancellationRequested();
         List<string> uuids;
         lock (_gate)
@@ -238,12 +237,12 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         where TNode : Node
     {
         ArgumentNullException.ThrowIfNull(uuids);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         cancellationToken.ThrowIfCancellationRequested();
         var uuidList = MaterializeUuids(uuids);
-        for (var batchStart = 0; batchStart < uuidList.Count; batchStart += batchSize)
+        var effectiveBatchSize = NormalizeDeleteBatchSize(batchSize, uuidList.Count);
+        for (var batchStart = 0; batchStart < uuidList.Count; batchStart += effectiveBatchSize)
         {
-            var batchEnd = batchStart + Math.Min(batchSize, uuidList.Count - batchStart);
+            var batchEnd = batchStart + Math.Min(effectiveBatchSize, uuidList.Count - batchStart);
             for (var i = batchStart; i < batchEnd; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -411,7 +410,6 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
     /// <inheritdoc />
     public override Task DeleteNodesByGroupIdAsync(string groupId, int batchSize = 100, CancellationToken cancellationToken = default)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         cancellationToken.ThrowIfCancellationRequested();
         List<(Type Type, string Uuid)> nodeKeys;
         lock (_gate)
@@ -426,12 +424,12 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
     public override async Task DeleteNodesByUuidsAsync(IEnumerable<string> uuids, int batchSize = 100, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uuids);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         cancellationToken.ThrowIfCancellationRequested();
         var uuidList = MaterializeUuids(uuids);
-        for (var batchStart = 0; batchStart < uuidList.Count; batchStart += batchSize)
+        var effectiveBatchSize = NormalizeDeleteBatchSize(batchSize, uuidList.Count);
+        for (var batchStart = 0; batchStart < uuidList.Count; batchStart += effectiveBatchSize)
         {
-            var batchEnd = batchStart + Math.Min(batchSize, uuidList.Count - batchStart);
+            var batchEnd = batchStart + Math.Min(effectiveBatchSize, uuidList.Count - batchStart);
             for (var i = batchStart; i < batchEnd; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -445,10 +443,10 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         int batchSize,
         CancellationToken cancellationToken)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
-        for (var batchStart = 0; batchStart < nodeKeys.Count; batchStart += batchSize)
+        var effectiveBatchSize = NormalizeDeleteBatchSize(batchSize, nodeKeys.Count);
+        for (var batchStart = 0; batchStart < nodeKeys.Count; batchStart += effectiveBatchSize)
         {
-            var batchEnd = batchStart + Math.Min(batchSize, nodeKeys.Count - batchStart);
+            var batchEnd = batchStart + Math.Min(effectiveBatchSize, nodeKeys.Count - batchStart);
             for (var i = batchStart; i < batchEnd; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -456,6 +454,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
             }
         }
     }
+
+    private static int NormalizeDeleteBatchSize(int batchSize, int itemCount) =>
+        batchSize > 0 ? batchSize : Math.Max(itemCount, 1);
 
     private Task DeleteNodeByKeyAsync(
         (Type Type, string Uuid) nodeKey,

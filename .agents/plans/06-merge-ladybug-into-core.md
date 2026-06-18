@@ -24,6 +24,8 @@ into the Ladybug merge checklist below.
 
 ## Work Items
 
+- [ ] Re-run the plan-folder backlog gate from plan 05 Step F and handle any concrete leftover in
+  `.agents/plans/` or directly linked planning notes as a separate slice before continuing this merge.
 - [ ] Move the Ladybug driver implementation from `src/Graphiti.Core.Drivers.Ladybug/` into
   `src/Graphiti.Core/Drivers/Ladybug/`.
 - [ ] Fold `LadybugDbOptions`, `AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory` into

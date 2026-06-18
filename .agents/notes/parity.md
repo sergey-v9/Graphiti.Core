@@ -14,7 +14,7 @@ upstream sync below (none touched prompts/search/pipeline). **To pull the next b
 `upstream-sync-procedure.md`**: diff `graphiti_core/` against this anchor, disposition each change,
 verify, then move the anchor to the new `origin/main` HEAD.
 
-**Latest upstream check:** 2026-06-17 `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch -FailOnDelta`
+**Latest upstream check:** 2026-06-18 `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch -FailOnDelta`
 found `origin/main` at `b82b80e4c0c962fc714a22b74caf8c20997e8d83`; `git log`, `git diff --stat`, and
 `git diff --name-status` over `0ed90b7..origin/main -- graphiti_core` were empty. No new Python
 library work needs porting.
@@ -391,6 +391,13 @@ present, before its 2026-06-17 removal), so deleting through the wrong Entity/Sa
 inherited base helper no longer removes saga nodes across that boundary. Third-party drivers that do
 not implement the internal seam still use a typed read before falling back to the existing broad
 delete primitive.
+
+**2026-06-18 node-delete batch-size follow-up:** closed a delete-helper argument drift. Python
+node namespace deletion passes `batch_size` through to the provider operation, and the current Kuzu
+operation accepts the value without validating or using it. C# typed/static namespace deletion,
+InMemory node delete loops, and Ladybug node delete loops now accept non-positive batch sizes instead
+of rejecting them. Providers that batch UUID deletes normalize non-positive values to one all-items
+batch, preserving null UUID-collection validation.
 
 **2026-06-17 entity UUID group-filter follow-up:** closed a model helper drift. Python
 `EntityNode.get_by_uuids(..., group_id=...)` accepts `group_id`, but the normal fallback query filters

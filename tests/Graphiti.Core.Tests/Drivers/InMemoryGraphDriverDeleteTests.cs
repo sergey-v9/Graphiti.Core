@@ -7,33 +7,31 @@ public class InMemoryGraphDriverDeleteTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task DeleteNodesByGroupIdAsync_InvalidBatchSizeDoesNotMutateState(int batchSize)
+    public async Task DeleteNodesByGroupIdAsync_NonPositiveBatchSizeDeletesMatchingNodes(int batchSize)
     {
         var driver = new InMemoryGraphDriver();
         var node = new EntityNode { Name = "Alice", GroupId = "tenant" };
         await driver.SaveNodeAsync(node);
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            driver.DeleteNodesByGroupIdAsync("tenant", batchSize));
+        await driver.DeleteNodesByGroupIdAsync("tenant", batchSize);
 
-        var stored = await driver.GetNodeByUuidAsync<EntityNode>(node.Uuid);
-        Assert.Equal(node.Uuid, stored.Uuid);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() =>
+            driver.GetNodeByUuidAsync<EntityNode>(node.Uuid));
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task DeleteNodesByUuidsAsync_InvalidBatchSizeDoesNotMutateState(int batchSize)
+    public async Task DeleteNodesByUuidsAsync_NonPositiveBatchSizeDeletesMatchingNodes(int batchSize)
     {
         var driver = new InMemoryGraphDriver();
         var node = new EntityNode { Name = "Alice", GroupId = "tenant" };
         await driver.SaveNodeAsync(node);
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            driver.DeleteNodesByUuidsAsync(new[] { node.Uuid }, batchSize));
+        await driver.DeleteNodesByUuidsAsync(new[] { node.Uuid }, batchSize);
 
-        var stored = await driver.GetNodeByUuidAsync<EntityNode>(node.Uuid);
-        Assert.Equal(node.Uuid, stored.Uuid);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() =>
+            driver.GetNodeByUuidAsync<EntityNode>(node.Uuid));
     }
 
     [Fact]

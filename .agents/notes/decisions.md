@@ -208,6 +208,10 @@ no wire/prompt/cache/temporal behavior changed):
   `Graphiti.Core.Drivers.Ladybug` project (see plan-05 Step E split above), not `Graphiti.Core`.
 - Use `HybridCache` for LLM response caching and preserve cache-key semantics for parity-sensitive
   structured calls.
+- LLM cache keys intentionally include the response schema fingerprint, response-model identity,
+  resolved model/size, and generation knobs in addition to prepared messages. Python currently keys on
+  model plus messages; the C# shape avoids cross-schema or settings collisions for typed
+  Microsoft.Extensions.AI calls and should not be narrowed as incidental parity cleanup.
 - Keep LLM cache storage as `JsonObject` payloads serialized with `GraphitiJsonSerializer.Options`
   through the shared cache payload helper. Cache implementations may repair invalid stored strings,
   but must not change cache-key inputs, prompt/schema identity, or JSON wire shape as incidental

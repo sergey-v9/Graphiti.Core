@@ -224,7 +224,6 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         int batchSize,
         CancellationToken cancellationToken)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         await ExecuteAllAsync(
             LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<TNode>(groupId),
             cancellationToken).ConfigureAwait(false);
@@ -236,12 +235,12 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(uuids);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         var uuidList = MaterializeWithCancellation(uuids, cancellationToken);
+        var effectiveBatchSize = NormalizeDeleteBatchSize(batchSize, uuidList.Count);
         for (var batchStart = 0; batchStart < uuidList.Count;)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var batchCount = Math.Min(batchSize, uuidList.Count - batchStart);
+            var batchCount = Math.Min(effectiveBatchSize, uuidList.Count - batchStart);
             var batch = CopyRange(uuidList, batchStart, batchCount);
             await ExecuteAllAsync(
                 LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<TNode>(batch),
@@ -256,7 +255,6 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         int batchSize = 100,
         CancellationToken cancellationToken = default)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         await ExecuteAllAsync(
             LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<EntityNode>(groupId),
             cancellationToken).ConfigureAwait(false);
@@ -278,12 +276,12 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uuids);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
         var uuidList = MaterializeWithCancellation(uuids, cancellationToken);
+        var effectiveBatchSize = NormalizeDeleteBatchSize(batchSize, uuidList.Count);
         for (var batchStart = 0; batchStart < uuidList.Count;)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var batchCount = Math.Min(batchSize, uuidList.Count - batchStart);
+            var batchCount = Math.Min(effectiveBatchSize, uuidList.Count - batchStart);
             var batch = CopyRange(uuidList, batchStart, batchCount);
             await ExecuteAllAsync(
                 LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<EntityNode>(batch),
@@ -940,6 +938,9 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
 
         return results;
     }
+
+    private static int NormalizeDeleteBatchSize(int batchSize, int itemCount) =>
+        batchSize > 0 ? batchSize : Math.Max(itemCount, 1);
 
     private static Dictionary<string, List<float>?> BuildEmbeddingLookup(
         IReadOnlyList<IReadOnlyDictionary<string, object?>> records,
