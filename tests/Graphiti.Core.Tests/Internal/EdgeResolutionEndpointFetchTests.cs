@@ -584,6 +584,61 @@ public class EdgeResolutionEndpointFetchTests
         Assert.Equal(fixedNow, februaryCandidate.ExpiredAt);
     }
 
+    [Fact]
+    public async Task ResolveEdgeWithLlm_PreservesCandidateOrderWhenResolvedEdgeAlreadyExpired()
+    {
+        var driver = new InMemoryGraphDriver();
+        var fixedNow = new DateTime(2026, 4, 1, 12, 0, 0, DateTimeKind.Utc);
+        var llm = new PromptResponseLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["dedupe_edges.resolve_edge"] = new()
+            {
+                ["duplicate_facts"] = new JsonArray(),
+                ["contradicted_facts"] = new JsonArray { 0, 1 }
+            }
+        });
+        var service = new EdgeResolutionService(
+            () => driver,
+            new GraphitiClients(driver, llm, new HashEmbedder(2), new IdentityCrossEncoderClient()),
+            llm,
+            NullLogger.Instance,
+            utcNow: () => fixedNow);
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode-1",
+            Name = "episode",
+            Content = "Alice left a team.",
+            Source = EpisodeType.Message,
+            GroupId = "group",
+            ValidAt = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+        var resolved = BuildWorksAtEdge();
+        resolved.Uuid = "new-edge";
+        resolved.Fact = "Alice left the platform team.";
+        resolved.ValidAt = episode.ValidAt;
+        resolved.InvalidAt = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
+        var februaryCandidate = BuildWorksAtEdge();
+        februaryCandidate.Uuid = "february";
+        februaryCandidate.Fact = "Alice joined the data team.";
+        februaryCandidate.ValidAt = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var januaryCandidate = BuildWorksAtEdge();
+        januaryCandidate.Uuid = "january";
+        januaryCandidate.Fact = "Alice joined the support team.";
+        januaryCandidate.ValidAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var (_, invalidated) = await service.ResolveEdgeWithLlmAsync(
+            resolved,
+            Array.Empty<EntityEdge>(),
+            new[] { februaryCandidate, januaryCandidate },
+            episode,
+            CancellationToken.None);
+
+        Assert.Equal(new[] { februaryCandidate, januaryCandidate }, invalidated);
+        Assert.Equal(fixedNow, resolved.ExpiredAt);
+        Assert.Equal(resolved.ValidAt, februaryCandidate.InvalidAt);
+        Assert.Equal(resolved.ValidAt, januaryCandidate.InvalidAt);
+    }
+
     private sealed class PromptResponseLlmClient(IReadOnlyDictionary<string, JsonObject> responsesByPromptName)
         : ILlmClient
     {

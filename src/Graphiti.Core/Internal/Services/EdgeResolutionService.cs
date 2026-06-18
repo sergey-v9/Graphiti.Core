@@ -603,8 +603,6 @@ internal sealed class EdgeResolutionService(
                 : existingEdges[index - offset]);
         }
 
-        SortInvalidationCandidatesByValidAt(invalidationCandidates);
-
         await ExtractEdgeAttributesAsync(
             resolvedEdge,
             episode,
@@ -861,14 +859,19 @@ internal sealed class EdgeResolutionService(
         List<EntityEdge> invalidationCandidates,
         DateTime now)
     {
-        if (resolvedEdge.ExpiredAt is not null || resolvedEdge.ValidAt is null)
+        if (resolvedEdge.ExpiredAt is not null)
+        {
+            return;
+        }
+
+        SortInvalidationCandidatesByValidAt(invalidationCandidates);
+
+        if (resolvedEdge.ValidAt is null)
         {
             return;
         }
 
         var resolvedValidAt = GraphitiHelpers.EnsureUtc(resolvedEdge.ValidAt.Value);
-        EntityEdge? earliestLaterCandidate = null;
-        var earliestLaterValidAt = default(DateTime);
         for (var i = 0; i < invalidationCandidates.Count; i++)
         {
             var candidate = invalidationCandidates[i];
@@ -878,25 +881,13 @@ internal sealed class EdgeResolutionService(
             }
 
             var candidateValidAt = GraphitiHelpers.EnsureUtc(candidate.ValidAt.Value);
-            if (candidateValidAt <= resolvedValidAt)
+            if (candidateValidAt > resolvedValidAt)
             {
-                continue;
-            }
-
-            if (earliestLaterCandidate is null || candidate.ValidAt.Value < earliestLaterValidAt)
-            {
-                earliestLaterCandidate = candidate;
-                earliestLaterValidAt = candidate.ValidAt.Value;
+                resolvedEdge.InvalidAt = candidate.ValidAt;
+                resolvedEdge.ExpiredAt = now;
+                return;
             }
         }
-
-        if (earliestLaterCandidate is null)
-        {
-            return;
-        }
-
-        resolvedEdge.InvalidAt = earliestLaterCandidate.ValidAt;
-        resolvedEdge.ExpiredAt = now;
     }
 
     private async Task ExtractEdgeTimestampsAsync(

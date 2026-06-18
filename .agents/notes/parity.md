@@ -493,6 +493,13 @@ appear in both prompt lists with continuous indexes. C# normal ingestion still e
 candidates from broad invalidation search, but `AddTripletAsync` now keeps related UUIDs in the broad
 candidate list and can invalidate a related edge through its broad-list index.
 
+**2026-06-18 pre-expired edge candidate-order follow-up:** closed the remaining edge-resolution audit
+candidate. Python sets `expired_at` on a resolved edge that already has `invalid_at`, then skips the
+candidate sort because `expired_at is None` is false; contradiction handling therefore keeps the LLM
+selected/index order. C# now sorts invalidation candidates only inside the unexpired resolved-edge
+branch, preserving candidate order for already-expired/invalidated resolved edges while keeping the
+date-order behavior for normal unexpired edges.
+
 **2026-06-17 bulk type-validation follow-up:** closed an `add_episode_bulk` entrypoint drift. Python
 validates `entity_types` / `excluded_entity_types` for single `add_episode`, but its bulk path does
 not call `validate_entity_types` or `validate_excluded_entity_types`; it passes the values directly to
