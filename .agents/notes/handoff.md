@@ -159,12 +159,9 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `1013` passed, `3` skipped, `1016` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice requires the remaining live structured
-response models (saga/community summaries, community descriptions, batch entity summaries, node
-resolutions, edge duplicate/contradiction resolutions, and batch edge timestamps) to carry the same
-required top-level and nested fields as the source response models, while leaving individual edge
-timestamp bounds optional.
+credentials for the Ladybug feed: `1014` passed, `3` skipped, `1017` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice aligns combined extraction prompt rendering
+so custom fact types are omitted unless both fact types and a type map are supplied.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -488,6 +485,12 @@ of the live extraction schemas.
 Embedder/lifecycle read-only audits on 2026-06-18 found no code slice: lifecycle/maintenance behavior
 was already documented and tested, while the default `HashEmbedder` and strict provider embedding
 output validation are accepted C# adapter divergences now recorded in `decisions.md` and `parity.md`.
+Ingestion/maintenance read-only audits found one combined prompt drift, now closed: combined
+extraction omits custom fact types unless a type map is also supplied, while standalone edge
+extraction keeps its fallback signature behavior. Namespace read-only audits found one remaining
+concrete non-decision candidate to handle separately: public namespace `SaveBulkAsync` currently
+rejects non-positive `batchSize`, while Python namespace save-bulk calls pass those values through
+and current save implementations ignore them.
 Decision-gated release/API/provider items remain separate in plan 05 and the provider notes.
 
 Latest checkpoint, 2026-06-13:

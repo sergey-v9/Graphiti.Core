@@ -43,7 +43,7 @@ internal static class ExtractNodesAndEdgesPrompts
             PromptJson.Serialize(ExtractNodesPrompts.BuildPreviousEpisodesContext(previousEpisodes)),
             customExtractionInstructions ?? string.Empty,
             PromptJson.Serialize(ExtractNodesPrompts.BuildEntityTypesContext(entityTypes)),
-            edgeTypes is null || edgeTypes.Count == 0
+            edgeTypes is null || edgeTypes.Count == 0 || edgeTypeMap is null || edgeTypeMap.Count == 0
                 ? string.Empty
                 : PromptJson.Serialize(ExtractEdgesPrompts.BuildEdgeTypesContext(edgeTypes, edgeTypeMap)));
     }

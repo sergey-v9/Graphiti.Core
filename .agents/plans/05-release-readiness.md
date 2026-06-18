@@ -265,6 +265,10 @@ Recorded sweep result, 2026-06-17:
     outside plan 06's opt-in Ladybug merge checklist. The newly confirmed remaining structured response
     required-field drift was handled as its own parity slice before plan 06/release decisions, preserving
     this gate's "separate slice first" rule.
+12. Follow-up ingestion/namespace audits kept the same gate shape. The combined extraction prompt's
+    custom fact-type map drift was handled as its own parity slice. Namespace save-bulk handling for
+    non-positive `batchSize` remains a separate concrete slice before plan 06/release decisions, not
+    release infrastructure.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

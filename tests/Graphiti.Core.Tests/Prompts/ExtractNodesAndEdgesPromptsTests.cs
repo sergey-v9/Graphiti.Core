@@ -276,4 +276,30 @@ public class ExtractNodesAndEdgesPromptsTests
             """;
         Assert.Equal(expected, messages[1].Content);
     }
+
+    [Fact]
+    public void BuildContext_OmitsFactTypesWithoutTypeMap()
+    {
+        var episode = new EpisodicNode
+        {
+            Content = "Alice works at Acme.",
+            ValidAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc)
+        };
+
+        var context = ExtractNodesAndEdgesPrompts.BuildContext(
+            episode,
+            Array.Empty<EpisodicNode>(),
+            entityTypes: null,
+            edgeTypes: new Dictionary<string, EntityTypeDefinition>
+            {
+                ["WORKS_AT"] = new("WORKS_AT", "Employment relationship")
+            },
+            edgeTypeMap: null,
+            customExtractionInstructions: null);
+        var messages = ExtractNodesAndEdgesPrompts.BuildExtractMessage(context);
+
+        Assert.Empty(context.EdgeTypesJson);
+        Assert.DoesNotContain("<FACT_TYPES>", messages[1].Content, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"fact_type_name\"", messages[1].Content, StringComparison.Ordinal);
+    }
 }

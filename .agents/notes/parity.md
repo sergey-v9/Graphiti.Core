@@ -519,6 +519,12 @@ maps use the same keys. C# prompt builders and `EntitySummaryService` now use th
 `EntityTypeDefinition.Name`, so aliased type definitions render the same identifiers the parser
 already treats as canonical.
 
+**2026-06-18 combined extraction fact-type-map follow-up:** closed the combined-prompt variant of
+custom fact-type rendering. Python's combined extraction helper renders `<FACT_TYPES>` only when both
+`edge_types` and `edge_type_map` are supplied; C# now omits that section when a caller supplies fact
+types without a type map. The standalone edge-extraction prompt keeps its existing fallback signature
+behavior because it is a separate prompt path.
+
 **2026-06-17 MMR retrieval-order follow-up:** closed the MMR candidate-order drift for node, edge,
 and community search. Python builds UUID maps from retrieval results in method/result order and
 passes `list(..._uuid_map.values())` into `maximal_marginal_relevance`, so tied MMR scores keep
@@ -673,7 +679,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Edge extraction (LLM) | edge_operations.extract_edges | EpisodeGraphExtractor + EdgeResolutionService | OK | Prompts ported 2026-06-11; public `AddEpisodeAsync` coverage pins Python's separate-extraction self-edge drop after source/target names resolve to the same node UUID and exact endpoint-name validation before UUID resolution |
 | Edge resolution: dedup fast-path, timestamps, contradictions | edge_operations.resolve_extracted_edge | EdgeResolutionService | OK | Prompt text ported 2026-06-11; broad candidate search remains tracked separately below |
 | Broad invalidation-candidate search | edge_operations.py:407-418 | EdgeResolutionService | OK | Verified 2026-06-11; unfiltered edge hybrid search supplies invalidation candidates beyond the node pair, with regression coverage for invalidating an edge on a different target node |
-| Combined node+edge extraction path | utils/maintenance/combined_extraction.py | EpisodeGraphExtractor.ExtractCombinedEpisodeGraphAsync | OK | Internal path ported 2026-06-11: single LLM call, orphan dropping, node attribution from facts, self-fact preservation, and batch timestamps. Public `Graphiti` ingestion remains on separate extraction because Python exposes `use_combined_extraction` only as an internal bulk helper flag defaulting to `False`; tests pin that `add_episode` and `add_episode_bulk` do not call the combined prompt by default |
+| Combined node+edge extraction path | utils/maintenance/combined_extraction.py | EpisodeGraphExtractor.ExtractCombinedEpisodeGraphAsync | OK | Internal path ported 2026-06-11: single LLM call, orphan dropping, node attribution from facts, self-fact preservation, and batch timestamps. 2026-06-18 follow-up: combined prompt fact types render only when both fact types and a type map are supplied. Public `Graphiti` ingestion remains on separate extraction because Python exposes `use_combined_extraction` only as an internal bulk helper flag defaulting to `False`; tests pin that `add_episode` and `add_episode_bulk` do not call the combined prompt by default |
 | Edge attribute extraction during add_episode | edge_operations.resolve_extracted_edge | EdgeResolutionService | OK | Aligned 2026-06-11: structured edge attributes are extracted during edge resolution only. There is no post-resolution ingestion-stage edge attribute pass; exact duplicate reuse skips the prompt and preserves existing attributes, while non-fast-path resolution replaces/clears attributes like Python |
 | Episodic edge building | edge_operations.build_episodic_edges | MaintenanceUtilities | OK | |
 | Bulk ingestion (true batch dedup/resolve) | bulk_utils, graphiti.py:1230+ | Graphiti.Ingestion.cs:195+ | OK + DIVERGENT | Staged extraction, cross-batch node/edge dedupe, final resolution, pointer remapping, per-episode provenance. 2026-06-13 fixes: bulk summaries no longer append edge facts (Python `edges=None`). 2026-06-18 fix: first-pass and final node resolution no longer widen null override candidate pools beyond semantic hits. Behaviors KEPT as documented DIVERGENT (see `decisions.md`): cross-episode edge invalidation is more aggressive than Python, bulk episodes own `episode.EntityEdges` where Python's bulk leaves it empty, and `storeRawEpisodeContent: false` also scrubs stored bulk episode content after extraction |
