@@ -76,7 +76,7 @@ public class GraphitiCommunityTests
 
         var actual = ClusterUuids(CommunityClustering.BuildClusters(nodes, edges));
 
-        Assert.Equal(new[] { new[] { "a", "d", "e" }, new[] { "b", "c" } }, actual);
+        Assert.Equal(new[] { new[] { "b", "c" }, new[] { "d", "e", "a" } }, actual);
         Assert.Equal(SynchronousLabelPropagationOracle(nodes, edges), actual);
     }
 
@@ -113,7 +113,7 @@ public class GraphitiCommunityTests
             new[] { laterUuid, earlierUuid },
             new[] { missingEndpointEdge, crossGroupEdge });
 
-        Assert.Equal(new[] { new[] { "node-a", "node-b" } }, ClusterUuids(clusters));
+        Assert.Equal(new[] { new[] { "node-b", "node-a" } }, ClusterUuids(clusters));
     }
 
     [Fact]
@@ -199,6 +199,25 @@ public class GraphitiCommunityTests
 
         Assert.Equal(new[] { "group-b", "group-a" }, communities.Select(community => community.GroupId));
         Assert.Equal(new[] { groupB.Uuid, groupA.Uuid }, communityEdges.Select(edge => edge.TargetNodeUuid));
+    }
+
+    [Fact]
+    public async Task BuildCommunities_PreservesIntraGroupReadOrder()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var laterUuid = Entity("Zulu", "group", now, "z-uuid");
+        var earlierUuid = Entity("Alpha", "group", now, "a-uuid");
+
+        foreach (var node in new[] { earlierUuid, laterUuid })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        var (_, communityEdges) = await graphiti.BuildCommunitiesAsync(new[] { "group" });
+
+        Assert.Equal(new[] { laterUuid.Uuid, earlierUuid.Uuid }, communityEdges.Select(edge => edge.TargetNodeUuid));
     }
 
     [Fact]
@@ -389,7 +408,7 @@ public class GraphitiCommunityTests
         var promptSummaries = ReadSummaryPairPayload(pairMessages[^1])
             .Select(item => item?["summary"]?.GetValue<string>())
             .ToArray();
-        Assert.Equal(new[] { string.Empty, "Bob summary" }, promptSummaries);
+        Assert.Equal(new[] { "Bob summary", string.Empty }, promptSummaries);
     }
 
     [Fact]
@@ -504,8 +523,8 @@ public class GraphitiCommunityTests
 
         var (communities, communityEdges) = await graphiti.BuildCommunitiesAsync(new[] { "group" });
 
-        Assert.Equal(new[] { "Community Alpha", "Community Beta", "Community Gamma" }, communities.Select(community => community.Name));
-        Assert.Equal(new[] { "alpha", "beta", "gamma" }, communityEdges.Select(edge => edge.TargetNodeUuid));
+        Assert.Equal(new[] { "Community Gamma", "Community Beta", "Community Alpha" }, communities.Select(community => community.Name));
+        Assert.Equal(new[] { "gamma", "beta", "alpha" }, communityEdges.Select(edge => edge.TargetNodeUuid));
         Assert.Equal(3, llm.TrackedPromptCalls);
         Assert.InRange(llm.MaxObservedConcurrency, 2, 2);
         Assert.InRange(embedder.MaxObservedConcurrency, 2, 2);
@@ -902,12 +921,8 @@ public class GraphitiCommunityTests
             .GroupBy(pair => pair.Value)
             .Select(group => group
                 .Select(pair => nodesByUuid[pair.Key])
-                .OrderBy(node => node.Name, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(node => node.Uuid, StringComparer.Ordinal)
                 .Select(node => node.Uuid)
                 .ToArray())
-            .OrderBy(cluster => nodesByUuid[cluster[0]].Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(cluster => cluster[0], StringComparer.Ordinal)
             .ToArray();
     }
 
@@ -1094,6 +1109,8 @@ public class GraphitiCommunityTests
         private static TimeSpan DelayFor(string name) =>
             string.Equals(name, "Alpha", StringComparison.Ordinal)
                 ? TimeSpan.FromMilliseconds(150)
+                : string.Equals(name, "Gamma", StringComparison.Ordinal)
+                    ? TimeSpan.FromMilliseconds(45)
                 : TimeSpan.FromMilliseconds(15);
     }
 

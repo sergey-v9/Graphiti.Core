@@ -63,6 +63,7 @@ internal static class CommunityClustering
         var adjacency = BuildAdjacency(indexByUuid, edges);
         var communities = LabelPropagate(adjacency);
         var clustersByCommunity = new Dictionary<int, List<EntityNode>>();
+        var communityOrder = new List<int>();
 
         for (var index = 0; index < distinctNodes.Count; index++)
         {
@@ -71,19 +72,18 @@ internal static class CommunityClustering
             {
                 cluster = new List<EntityNode>();
                 clustersByCommunity[community] = cluster;
+                communityOrder.Add(community);
             }
 
             cluster.Add(distinctNodes[index]);
         }
 
         var clusters = new List<List<EntityNode>>(clustersByCommunity.Count);
-        foreach (var cluster in clustersByCommunity.Values)
+        foreach (var community in communityOrder)
         {
-            cluster.Sort(CompareClusterNodes);
-            clusters.Add(cluster);
+            clusters.Add(clustersByCommunity[community]);
         }
 
-        clusters.Sort(CompareClusters);
         return clusters;
     }
 
@@ -211,17 +211,6 @@ internal static class CommunityClustering
 
     private static int CompareNeighbors(Neighbor left, Neighbor right) =>
         left.NodeIndex.CompareTo(right.NodeIndex);
-
-    private static int CompareClusterNodes(EntityNode left, EntityNode right)
-    {
-        var nameComparison = string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase);
-        return nameComparison != 0
-            ? nameComparison
-            : string.CompareOrdinal(left.Uuid, right.Uuid);
-    }
-
-    private static int CompareClusters(List<EntityNode> left, List<EntityNode> right) =>
-        CompareClusterNodes(left[0], right[0]);
 
     private static void IncrementNeighbor(Dictionary<int, int> neighbors, int index)
     {
