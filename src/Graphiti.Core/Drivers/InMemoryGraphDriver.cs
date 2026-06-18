@@ -566,7 +566,10 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                 {
                     foreach (var nodeKey in GetIndexedNodeKeys(_nodeKeysByGroup, groupId))
                     {
-                        nodeKeys.Add(nodeKey);
+                        if (nodeKey.Type != typeof(SagaNode))
+                        {
+                            nodeKeys.Add(nodeKey);
+                        }
                     }
                 }
 

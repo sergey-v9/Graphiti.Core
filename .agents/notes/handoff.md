@@ -149,9 +149,9 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `976` passed, `3` skipped, `979` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice aligns name-based saga association with
-Python's minimal existing-saga projection before save.
+credentials for the Ladybug feed: `980` passed, `3` skipped, `983` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice aligns scoped clear-data saga preservation
+for InMemory and Ladybug with Python's maintenance clear behavior.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -379,8 +379,9 @@ of deduping by UUID, matching Python's result-list shape.
 Bulk ingestion now mirrors Python's validation asymmetry: `AddEpisodeAsync` still validates
 `entityTypes` / `excludedEntityTypes`, while `AddEpisodeBulkAsync` no longer adds upfront
 `ValidateEntityTypes` / `ValidateExcludedEntityTypes` calls absent from Python `add_episode_bulk`.
-Ladybug `ClearDataAsync` now mirrors Python's null-vs-empty `clear_data` split: null clears all,
-while an empty group-id list is scoped deletion that preserves existing records.
+Ladybug and InMemory `ClearDataAsync` now mirror Python's scoped maintenance clear: null clears all,
+an empty group-id list preserves existing records, and group-scoped clear deletes Entity/Episodic/
+Community nodes plus incident edges while leaving Saga nodes intact.
 Top-level community search now supplies Python's zero query vector fallback when no real embedding
 path is configured, including the default empty community method list plus RRF, so BM25/RRF
 community searches still execute vector retrieval without calling the embedder like Python.

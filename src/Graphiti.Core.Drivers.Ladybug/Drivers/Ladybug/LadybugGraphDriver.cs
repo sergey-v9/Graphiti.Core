@@ -384,7 +384,15 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         {
             foreach (var groupId in groupIds)
             {
-                await DeleteNodesByGroupIdAsync(groupId, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await ExecuteAllAsync(
+                    LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<EntityNode>(groupId),
+                    cancellationToken).ConfigureAwait(false);
+                await _executor.ExecuteAsync(
+                    LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<EpisodicNode>(groupId)[0],
+                    cancellationToken).ConfigureAwait(false);
+                await _executor.ExecuteAsync(
+                    LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<CommunityNode>(groupId)[0],
+                    cancellationToken).ConfigureAwait(false);
             }
 
             return;

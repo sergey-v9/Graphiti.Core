@@ -62,6 +62,46 @@ public class InMemoryGraphDriverClearDataTests
     }
 
     [Fact]
+    public async Task ClearDataAsync_GroupIdsPreservesSagaNodesAndDeletesIncidentEpisodeEdges()
+    {
+        var driver = new InMemoryGraphDriver();
+        var saga = new SagaNode { Uuid = "saga", Name = "checkout", GroupId = "group-a" };
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode",
+            Name = "episode",
+            GroupId = "group-a",
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Saga episode",
+            ValidAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc)
+        };
+        var edge = new HasEpisodeEdge
+        {
+            Uuid = "has-episode",
+            SourceNodeUuid = saga.Uuid,
+            TargetNodeUuid = episode.Uuid,
+            GroupId = "group-a"
+        };
+        await driver.SaveNodeAsync(saga);
+        await driver.SaveNodeAsync(episode);
+        await driver.SaveEdgeAsync(edge);
+
+        await driver.ClearDataAsync(new[] { "group-a" });
+
+        Assert.Equal(saga.Uuid, (await driver.GetNodeByUuidAsync<SagaNode>(saga.Uuid)).Uuid);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() =>
+            driver.GetNodeByUuidAsync<EpisodicNode>(episode.Uuid));
+        await Assert.ThrowsAsync<EdgeNotFoundException>(() =>
+            driver.GetEdgeByUuidAsync<HasEpisodeEdge>(edge.Uuid));
+
+        await driver.ClearDataAsync();
+
+        await Assert.ThrowsAsync<NodeNotFoundException>(() =>
+            driver.GetNodeByUuidAsync<SagaNode>(saga.Uuid));
+    }
+
+    [Fact]
     public async Task ClearDataAsync_EmptyGroupListDoesNotMutateState()
     {
         var driver = new InMemoryGraphDriver();

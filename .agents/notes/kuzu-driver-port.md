@@ -153,7 +153,7 @@ publishing of `Graphiti.Core` becomes a goal (that is the still-user-gated relea
   paged node/edge group reads, directed endpoint-pair edge reads, incident edge reads, group-id
   enumeration, public namespace community/saga group reads and typed-delete isolation, BFS/rankers,
   and delete/clear flows, including Python-compatible empty group-list clear no-op versus null
-  clear-all. Do not add a separate native-gated smoke suite
+  clear-all and scoped clear preserving Saga nodes. Do not add a separate native-gated smoke suite
   unless it covers a new runtime requirement or CI/platform constraint the current package runtime
   tests do not cover.
 - The LadybugDB package has a nearby source checkout at `W:\code\ladybug`; this is background

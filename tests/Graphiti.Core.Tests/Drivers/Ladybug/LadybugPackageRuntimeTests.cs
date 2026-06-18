@@ -1872,6 +1872,67 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_ClearDataByGroupPreservesSagaNodes()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var createdAt = new DateTime(2026, 6, 7, 8, 9, 10, DateTimeKind.Utc);
+        var saga = new GraphitiSagaNode
+        {
+            Uuid = "clear-saga",
+            Name = "clear saga",
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            FirstEpisodeUuid = "clear-episode",
+            LastEpisodeUuid = "clear-episode"
+        };
+        var episode = new EpisodicNode
+        {
+            Uuid = "clear-episode",
+            Name = "clear episode",
+            GroupId = "tenant",
+            Source = EpisodeType.Message,
+            SourceDescription = "chat",
+            Content = "Saga episode content",
+            CreatedAt = createdAt,
+            ValidAt = createdAt
+        };
+        var entity = new EntityNode
+        {
+            Uuid = "clear-entity",
+            Name = "Clear Entity",
+            GroupId = "tenant",
+            CreatedAt = createdAt,
+            Summary = "entity removed by scoped clear"
+        };
+        var edge = new HasEpisodeEdge
+        {
+            Uuid = "clear-has-episode",
+            SourceNodeUuid = saga.Uuid,
+            TargetNodeUuid = episode.Uuid,
+            GroupId = "tenant",
+            CreatedAt = createdAt
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(saga);
+        await driver.SaveNodeAsync(episode);
+        await driver.SaveNodeAsync(entity);
+        await driver.SaveEdgeAsync(edge);
+
+        await driver.ClearDataAsync(["tenant"]);
+
+        Assert.Equal(saga.Uuid, (await driver.GetNodeByUuidAsync<GraphitiSagaNode>(saga.Uuid)).Uuid);
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => driver.GetNodeByUuidAsync<EpisodicNode>(episode.Uuid));
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => driver.GetNodeByUuidAsync<EntityNode>(entity.Uuid));
+        await Assert.ThrowsAsync<EdgeNotFoundException>(() => driver.GetEdgeByUuidAsync<HasEpisodeEdge>(edge.Uuid));
+
+        await driver.ClearDataAsync();
+
+        await Assert.ThrowsAsync<NodeNotFoundException>(() => driver.GetNodeByUuidAsync<GraphitiSagaNode>(saga.Uuid));
+    }
+
+    [Fact]
     public void PackageRuntime_BindsGraphitiListArrayEmptyListAndNullParametersDirectly()
     {
         using var database = new Database("");
