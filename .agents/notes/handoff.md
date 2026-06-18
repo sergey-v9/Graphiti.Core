@@ -157,9 +157,10 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `986` passed, `3` skipped, `989` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice aligns already-expired/invalidated resolved
-edge handling by sorting invalidation candidates only in the unexpired resolved-edge branch.
+credentials for the Ladybug feed: `988` passed, `3` skipped, `991` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice aligns InMemory saga-scoped retrieval and
+saga episode-content reads with relationship-row semantics, preserving cross-group linked episodes
+and duplicate membership rows.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -185,10 +186,12 @@ validation absent from Python `add_episode_bulk` while single `AddEpisodeAsync` 
 Search `PropertyFilters` are now ignored by backend query construction and in-memory/materialized
 matching while keeping the DTO field, matching Python's current `property_filters` behavior.
 Invalidation candidates are sorted by `valid_at` ascending with nulls last on the normal unexpired
-resolved-edge path, matching Python's invalidated-edge ordering there; the already-expired/invalidated
-resolved-edge sort branch is now tracked as a separate open follow-up below. InMemory edge saves now
+resolved-edge path, matching Python's invalidated-edge ordering there; already-expired/invalidated
+resolved edges preserve LLM/index order because sorting stays inside the unexpired branch. InMemory edge saves now
 require the same typed endpoint presence as Python's edge `MATCH`/`MERGE` save queries and leave
-existing edges untouched when a replacement save has missing or wrong-typed endpoints.
+existing edges untouched when a replacement save has missing or wrong-typed endpoints. InMemory
+saga-scoped retrieval and saga episode-content reads now follow `HAS_EPISODE` relationship rows
+directly, preserving cross-group linked episodes and duplicate membership rows.
 `.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`975` passed,
 `3` skipped, `978` total; both shippable packages packed and both fresh package-consumer smoke builds
 succeeded).
@@ -441,7 +444,9 @@ Open concrete follow-up candidates from the latest read-only audits: plan-folder
 only plan 06 unchecked, and that LadybugDB merge remains a separate optional stream under
 `.agents/plans/06-merge-ladybug-into-core.md`, not release/versioning work. The endpoint-gated
 InMemory edge-save drift is now closed. Existing saga-by-name association is now aligned with
-Python's minimal `_get_or_create_saga` return before save. One saga candidate remains separate:
+Python's minimal `_get_or_create_saga` return before save. InMemory saga-scoped retrieval and saga
+episode-content reads now preserve `HAS_EPISODE` row semantics, including cross-group linked episodes
+and duplicate membership rows. One saga candidate remains separate:
 bulk saga predecessor lookup excludes the first bulk episode where Python passes an empty
 `current_episode_uuid`; matching Python can create a `NEXT_EPISODE` self-loop when the only bulk item
 reuses an already-linked saga episode UUID, so treat that as a decision-gated cycle-avoidance question

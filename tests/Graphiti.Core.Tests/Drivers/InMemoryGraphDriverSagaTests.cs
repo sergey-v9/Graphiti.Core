@@ -60,6 +60,95 @@ public class InMemoryGraphDriverSagaTests
     }
 
     [Fact]
+    public async Task RetrieveEpisodes_WithSagaFollowsMembershipRowsAcrossEpisodeGroups()
+    {
+        var driver = new InMemoryGraphDriver();
+        var referenceTime = new DateTime(2026, 5, 27, 12, 0, 0, DateTimeKind.Utc);
+        var saga = new SagaNode
+        {
+            Uuid = "saga-tenant-a",
+            Name = "onboarding",
+            GroupId = "tenant-a"
+        };
+        var linkedEpisode = Episode(
+            "episode-linked-tenant-b",
+            "tenant-b",
+            referenceTime.AddMinutes(-1),
+            content: "linked episode");
+        var unlinkedTenantA = Episode(
+            "episode-unlinked-tenant-a",
+            "tenant-a",
+            referenceTime.AddMinutes(-2),
+            content: "unlinked episode");
+
+        await saga.SaveAsync(driver);
+        await linkedEpisode.SaveAsync(driver);
+        await unlinkedTenantA.SaveAsync(driver);
+        await new HasEpisodeEdge
+        {
+            Uuid = "has-linked-cross-group",
+            SourceNodeUuid = saga.Uuid,
+            TargetNodeUuid = linkedEpisode.Uuid,
+            GroupId = "tenant-a"
+        }.SaveAsync(driver);
+
+        var retrieved = await driver.RetrieveEpisodesAsync(
+            referenceTime,
+            lastN: 10,
+            groupIds: new[] { "tenant-a" },
+            saga: "onboarding");
+
+        var episode = Assert.Single(retrieved);
+        Assert.Equal(linkedEpisode.Uuid, episode.Uuid);
+    }
+
+    [Fact]
+    public async Task SagaEpisodeReadsPreserveDuplicateMembershipRows()
+    {
+        var driver = new InMemoryGraphDriver();
+        var referenceTime = new DateTime(2026, 5, 27, 12, 0, 0, DateTimeKind.Utc);
+        var saga = new SagaNode
+        {
+            Uuid = "saga-duplicates",
+            Name = "onboarding",
+            GroupId = "tenant"
+        };
+        var episode = Episode(
+            "episode-duplicate-membership",
+            "tenant",
+            referenceTime.AddMinutes(-1),
+            content: "same episode content");
+
+        await saga.SaveAsync(driver);
+        await episode.SaveAsync(driver);
+        foreach (var edgeUuid in new[] { "has-duplicate-a", "has-duplicate-b" })
+        {
+            await new HasEpisodeEdge
+            {
+                Uuid = edgeUuid,
+                SourceNodeUuid = saga.Uuid,
+                TargetNodeUuid = episode.Uuid,
+                GroupId = "tenant"
+            }.SaveAsync(driver);
+        }
+
+        var retrieved = await driver.RetrieveEpisodesAsync(
+            referenceTime,
+            lastN: 10,
+            groupIds: new[] { "tenant" },
+            saga: "onboarding");
+        var contents = await driver.GetSagaEpisodeContentsAsync(
+            saga.Uuid,
+            since: null,
+            limit: 10);
+
+        Assert.Equal(new[] { episode.Uuid, episode.Uuid }, retrieved.Select(item => item.Uuid));
+        Assert.Equal(
+            new[] { episode.Content, episode.Content },
+            contents.Select(item => item.Content));
+    }
+
+    [Fact]
     public async Task RetrieveEpisodes_WithSagaAndNoGroupIdsDoesNotMatchAcrossGroups()
     {
         var driver = new InMemoryGraphDriver();

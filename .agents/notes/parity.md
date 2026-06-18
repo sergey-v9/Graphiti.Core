@@ -218,6 +218,13 @@ forwarding. C# now proves episode retrieval reads from the override driver, and 
 removes stale communities plus saves replacement communities on the override driver while leaving the
 instance root driver's communities untouched.
 
+**2026-06-18 in-memory saga membership follow-up:** closed a reference-driver saga retrieval/content
+drift. InMemory saga-scoped episode retrieval now enumerates the selected saga's `HAS_EPISODE`
+relationship rows before applying source/reference-time filters, so linked episodes are returned even
+when their own `group_id` differs from the saga lookup group. InMemory saga episode-content reads now
+preserve duplicate membership-row multiplicity while retaining the existing initial/since ordering and
+limit-before-empty-content behavior.
+
 **2026-06-16 saga empty-summary follow-up:** closed a reachable `summarize_saga` drift. Python reads
 `llm_response.get('summary', '')`, hard-truncates only if needed, and persists the value directly; it
 does not synthesize a deterministic fallback when the typed LLM response contains `""`. C# now
@@ -618,7 +625,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Workflow | Python | C# | Status | Notes |
 |---|---|---|---|---|
 | Lifecycle | `close` | `CloseAsync` / `DisposeAsync` | DIVERGENT | C# closes only owned drivers; explicit/DI drivers are caller/container-owned |
-| Episode retrieval | `retrieve_episodes` | `RetrieveEpisodesAsync` | OK | |
+| Episode retrieval | `retrieve_episodes` | `RetrieveEpisodesAsync` | OK | Saga-scoped InMemory retrieval follows membership rows directly, including linked episodes from other groups and duplicate membership rows |
 | Communities | `build_communities` | `BuildCommunitiesAsync` | OK | Community summary reduction preserves raw entity summaries, including blank strings, like Python. Omitted group IDs discover all entity groups, including the default empty-string group; explicit `[]` clears existing communities and builds none like Python |
 | Basic fact search | `search` | `SearchAsync(query, ...)` | OK | |
 | Advanced graph search | `search_` | `SearchAdvancedAsync` / `SearchAsync(query, SearchConfig, ...)` | OK | Idiomatic C# names; Python-style aliases intentionally not added |
