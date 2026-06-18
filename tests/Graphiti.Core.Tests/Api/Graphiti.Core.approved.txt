@@ -226,6 +226,7 @@ namespace Graphiti.Core.Drivers
         public abstract System.Threading.Tasks.Task ClearDataAsync(System.Collections.Generic.IReadOnlyList<string>? groupIds = null, System.Threading.CancellationToken cancellationToken = default);
         public abstract Graphiti.Core.Drivers.IGraphDriver Clone(string database);
         public abstract System.Threading.Tasks.Task CloseAsync(System.Threading.CancellationToken cancellationToken = default);
+        public virtual System.Threading.Tasks.Task DeleteAllIndexesAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public abstract System.Threading.Tasks.Task DeleteEdgeAsync(string uuid, System.Threading.CancellationToken cancellationToken = default);
         public abstract System.Threading.Tasks.Task DeleteEdgesByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default);
         public abstract System.Threading.Tasks.Task DeleteNodeAsync(string uuid, System.Threading.CancellationToken cancellationToken = default);
@@ -279,6 +280,7 @@ namespace Graphiti.Core.Drivers
         System.Threading.Tasks.Task ClearDataAsync(System.Collections.Generic.IReadOnlyList<string>? groupIds = null, System.Threading.CancellationToken cancellationToken = default);
         Graphiti.Core.Drivers.IGraphDriver Clone(string database);
         System.Threading.Tasks.Task CloseAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task DeleteAllIndexesAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task DeleteEdgeAsync(string uuid, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task DeleteEdgesByUuidsAsync(System.Collections.Generic.IEnumerable<string> uuids, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task DeleteNodeAsync(string uuid, System.Threading.CancellationToken cancellationToken = default);

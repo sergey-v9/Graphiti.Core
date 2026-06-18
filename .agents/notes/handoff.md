@@ -150,8 +150,9 @@ added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
 credentials for the Ladybug feed: `981` passed, `3` skipped, `984` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice hardens episode contribution lookup coverage
-for missing/duplicate requested episodes, empty score/result scopes, and mentioned-node de-duplication.
+both package-consumer smokes succeeded. The newest slice adds the driver-level
+`DeleteAllIndexesAsync` surface with provider no-op behavior for LadybugDB/Kuzu and InMemory,
+clarifies provider-dependent `deleteExisting` setup docs, and updates the public-API snapshot.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's

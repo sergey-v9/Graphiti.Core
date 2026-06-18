@@ -26,6 +26,7 @@ public class InMemoryGraphDriverCancellationTests
         var operations = new Func<Task>[]
         {
             () => driver.BuildIndicesAndConstraintsAsync(cancellationToken: token),
+            () => driver.DeleteAllIndexesAsync(token),
             () => driver.CloseAsync(token),
             () => driver.GetEntityGroupIdsAsync(token),
             () => driver.GetCommunityGroupIdsAsync(token),

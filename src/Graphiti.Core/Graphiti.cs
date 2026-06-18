@@ -151,8 +151,9 @@ public sealed partial class Graphiti : IAsyncDisposable
     }
 
     /// <summary>
-    /// Creates the indices and constraints the graph requires. Set <paramref name="deleteExisting"/>
-    /// to drop and recreate them. Run this once before ingesting data into a fresh database.
+    /// Creates the indices and constraints the graph requires. When <paramref name="deleteExisting"/>
+    /// is true, providers that support runtime index deletion may drop existing indexes first. Run
+    /// this once before ingesting data into a fresh database.
     /// </summary>
     public async Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, CancellationToken cancellationToken = default)
     {

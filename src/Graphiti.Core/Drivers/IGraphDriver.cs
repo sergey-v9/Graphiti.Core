@@ -17,8 +17,14 @@ public interface IGraphDriver : IAsyncDisposable
     /// <summary>Default graph partition id used when callers omit one.</summary>
     string DefaultGroupId { get; }
 
-    /// <summary>Creates required indices and constraints, optionally dropping existing ones first.</summary>
+    /// <summary>
+    /// Creates required indices and constraints. When <paramref name="deleteExisting"/> is true,
+    /// providers that support runtime index deletion may drop existing indexes first.
+    /// </summary>
     Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, CancellationToken cancellationToken = default);
+
+    /// <summary>Drops runtime-managed indexes when the provider supports it; otherwise a no-op.</summary>
+    Task DeleteAllIndexesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Closes the underlying connection/session.</summary>
     Task CloseAsync(CancellationToken cancellationToken = default);

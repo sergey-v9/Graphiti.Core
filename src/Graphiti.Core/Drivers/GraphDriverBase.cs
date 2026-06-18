@@ -47,6 +47,13 @@ public abstract class GraphDriverBase : IGraphDriver
     public abstract Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, CancellationToken cancellationToken = default);
 
     /// <inheritdoc />
+    public virtual Task DeleteAllIndexesAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
     public abstract Task CloseAsync(CancellationToken cancellationToken = default);
 
     /// <inheritdoc />
