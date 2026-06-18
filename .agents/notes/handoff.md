@@ -83,8 +83,8 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
   per-episode provenance rather than running each episode through the whole maintenance chain.
   Validation-failure re-prompting was ported 2026-06-11 in base `LlmClient`: malformed JSON or
   schema-validation `JsonException`s get Python's two repair attempts with a validation-error user
-  message, while retry feedback stays out of the cache key and only final validated responses are
-  cached. Edge attribute extraction was aligned 2026-06-11: C# no longer runs a separate
+  message, while retry feedback and prompt labels stay out of the cache key and only final
+  validated responses are cached. Edge attribute extraction was aligned 2026-06-11: C# no longer runs a separate
   ingestion-stage edge attribute pass, and custom edge attributes are extracted inside edge
   resolution. Exact duplicate edge reuse skips the edge-attribute prompt and preserves existing
   structured attributes like Python.
@@ -157,9 +157,9 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `991` passed, `3` skipped, `994` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice preserves intra-group community cluster and
-member order from the entity read/projection order instead of sorting by entity name.
+credentials for the Ladybug feed: `992` passed, `3` skipped, `995` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice keeps prompt labels out of the LLM response
+cache key while preserving them for telemetry and usage attribution.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -449,7 +449,10 @@ only plan 06 unchecked, and that LadybugDB merge remains a separate optional str
 InMemory edge-save drift is now closed. Existing saga-by-name association is now aligned with
 Python's minimal `_get_or_create_saga` return before save. InMemory saga-scoped retrieval and saga
 episode-content reads now preserve `HAS_EPISODE` row semantics, including cross-group linked episodes
-and duplicate membership rows. One saga candidate remains separate:
+and duplicate membership rows. New 2026-06-18 subagent candidates to handle separately: bulk node
+resolution appears to still widen null override candidate sets to all group nodes before semantic
+search can constrain them, and `Edge.Equals` appears to follow edge-to-edge UUID equality rather than
+Python's edge-to-node boundary quirk. One saga candidate remains separate:
 bulk saga predecessor lookup excludes the first bulk episode where Python passes an empty
 `current_episode_uuid`; matching Python can create a `NEXT_EPISODE` self-loop when the only bulk item
 reuses an already-linked saga episode UUID, so treat that as a decision-gated cycle-avoidance question

@@ -86,7 +86,7 @@ public abstract class LlmClient : ILlmClient, IDisposable
     /// <param name="maxTokens">Per-request token cap; defaults to <see cref="MaxTokens"/>.</param>
     /// <param name="modelSize">Selects the primary or small model.</param>
     /// <param name="groupId">Optional graph partition, used for language instructions.</param>
-    /// <param name="promptName">Optional prompt label for telemetry and cache keys.</param>
+    /// <param name="promptName">Optional prompt label for telemetry.</param>
     /// <param name="attributeExtraction">Adds the attribute-extraction preamble when <c>true</c>.</param>
     /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <exception cref="ArgumentException">Both a response model and a response schema were supplied.</exception>
@@ -409,7 +409,6 @@ public abstract class LlmClient : ILlmClient, IDisposable
             maxTokens,
             responseModel?.AssemblyQualifiedName ?? responseSchema?.Name,
             StructuredResponseValidator.GetSchemaFingerprint(responseModel, responseSchema),
-            promptName,
             messages);
         var keyBytes = JsonSerializer.SerializeToUtf8Bytes(payload, CacheKeyPayloadJsonTypeInfo);
         var hash = SHA256.HashData(keyBytes);

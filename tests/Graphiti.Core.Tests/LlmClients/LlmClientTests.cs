@@ -542,13 +542,25 @@ public class LlmClientTests
 
         await client.GenerateResponseAsync(messages, maxTokens: 100, promptName: "a");
         await client.GenerateResponseAsync(messages, maxTokens: 200, promptName: "a");
-        await client.GenerateResponseAsync(messages, maxTokens: 200, promptName: "b");
         await client.GenerateResponseAsync(messages, maxTokens: 200, modelSize: ModelSize.Small, promptName: "b");
         await client.GenerateResponseAsync(messages, responseModel: typeof(CacheResponseA), maxTokens: 200, promptName: "b");
         await client.GenerateResponseAsync(messages, responseModel: typeof(CacheResponseB), maxTokens: 200, promptName: "b");
         await client.GenerateResponseAsync(messages, maxTokens: 100, promptName: "a");
 
-        Assert.Equal(6, client.GenerateCalls);
+        Assert.Equal(5, client.GenerateCalls);
+    }
+
+    [Fact]
+    public async Task GenerateResponse_CacheKeyIgnoresPromptName()
+    {
+        var client = new CapturingLlmClient(cache: true);
+        var messages = new[] { new Message("system", "sys"), new Message("user", "hello") };
+
+        var first = await client.GenerateResponseAsync(messages, promptName: "extract.a");
+        var second = await client.GenerateResponseAsync(messages, promptName: "extract.b");
+
+        Assert.Equal(first.ToJsonString(), second.ToJsonString());
+        Assert.Equal(1, client.GenerateCalls);
     }
 
     [Fact]
@@ -564,7 +576,6 @@ public class LlmClientTests
             100,
             null,
             null,
-            "extract",
             new[] { new Message("user", "hello") });
 
         var json = JsonSerializer.Serialize(payload, GraphitiJsonSerializer.Options);
@@ -573,7 +584,7 @@ public class LlmClientTests
         Assert.Equal(typeof(LlmCacheKeyPayload), typeInfo.Type);
         Assert.Contains("\"small_model\":null", json, StringComparison.Ordinal);
         Assert.Contains("\"resolved_model\":\"gpt-main\"", json, StringComparison.Ordinal);
-        Assert.Contains("\"prompt_name\":\"extract\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("prompt_name", json, StringComparison.Ordinal);
         Assert.Contains("\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}]", json, StringComparison.Ordinal);
     }
 
@@ -695,7 +706,6 @@ public class LlmClientTests
                 MaxTokens = 200,
                 ResponseModel = typeof(CacheResponseA).AssemblyQualifiedName,
                 ResponseSchemaFingerprint = StructuredResponseValidator.GetSchemaFingerprint(typeof(CacheResponseA)),
-                PromptName = "extract",
                 Messages = prepared
             },
             GraphitiJsonSerializer.Options);
@@ -743,7 +753,6 @@ public class LlmClientTests
                 MaxTokens = 200,
                 ResponseModel = schema.Name,
                 ResponseSchemaFingerprint = schema.Fingerprint,
-                PromptName = "extract",
                 Messages = prepared
             },
             GraphitiJsonSerializer.Options);

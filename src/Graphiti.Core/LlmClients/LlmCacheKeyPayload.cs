@@ -13,5 +13,4 @@ internal sealed record LlmCacheKeyPayload(
     int MaxTokens,
     string? ResponseModel,
     string? ResponseSchemaFingerprint,
-    string? PromptName,
     IReadOnlyList<Message> Messages);
