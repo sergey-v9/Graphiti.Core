@@ -157,9 +157,9 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `992` passed, `3` skipped, `995` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice keeps prompt labels out of the LLM response
-cache key while preserving them for telemetry and usage attribution.
+credentials for the Ladybug feed: `993` passed, `3` skipped, `996` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice keeps node resolution scoped to per-node
+semantic candidates plus explicit overrides; no-hit candidate searches keep extracted nodes new.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -449,10 +449,11 @@ only plan 06 unchecked, and that LadybugDB merge remains a separate optional str
 InMemory edge-save drift is now closed. Existing saga-by-name association is now aligned with
 Python's minimal `_get_or_create_saga` return before save. InMemory saga-scoped retrieval and saga
 episode-content reads now preserve `HAS_EPISODE` row semantics, including cross-group linked episodes
-and duplicate membership rows. New 2026-06-18 subagent candidates to handle separately: bulk node
-resolution appears to still widen null override candidate sets to all group nodes before semantic
-search can constrain them, and `Edge.Equals` appears to follow edge-to-edge UUID equality rather than
-Python's edge-to-node boundary quirk. One saga candidate remains separate:
+and duplicate membership rows. The bulk node-resolution candidate from the 2026-06-18 subagent audit
+is now closed: node resolution uses per-extracted semantic candidates plus explicit overrides only,
+and no-hit searches keep extracted nodes new. Remaining 2026-06-18 subagent candidate to handle
+separately: `Edge.Equals` appears to follow edge-to-edge UUID equality rather than Python's
+edge-to-node boundary quirk. One saga candidate remains separate:
 bulk saga predecessor lookup excludes the first bulk episode where Python passes an empty
 `current_episode_uuid`; matching Python can create a `NEXT_EPISODE` self-loop when the only bulk item
 reuses an already-linked saga episode UUID, so treat that as a decision-gated cycle-avoidance question

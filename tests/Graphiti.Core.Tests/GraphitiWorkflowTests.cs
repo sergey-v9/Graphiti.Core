@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Text.Json.Nodes;
 using Graphiti.Core;
+using Graphiti.Core.Embedding;
 using Graphiti.Core.Internal.Services;
 using Microsoft.Extensions.Logging;
 
@@ -394,7 +395,7 @@ public class GraphitiWorkflowTests
             Summary = "Existing organization",
             Attributes = new Dictionary<string, object?> { ["founded"] = 2015 }
         };
-        await existing.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, existing, embeddingText: "Open AI");
 
         var source = new EntityNode
         {
@@ -1290,7 +1291,7 @@ public class GraphitiWorkflowTests
             Labels = new List<string> { "Entity" },
             Summary = "Existing summary"
         };
-        await existing.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, existing, embeddingText: "Open AI");
 
         var graphiti = new Graphiti(
             graphDriver: driver,
@@ -1428,7 +1429,7 @@ public class GraphitiWorkflowTests
                 ["legacy"] = "stale"
             }
         };
-        await existing.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, existing);
         var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
         {
             ["extract_nodes.extract_message"] = new()
@@ -1704,8 +1705,8 @@ public class GraphitiWorkflowTests
             GroupId = "group",
             Labels = new List<string> { "Entity", "Person" }
         };
-        await alice.SaveAsync(driver);
-        await bob.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, alice);
+        await SaveSearchableEntityNodeAsync(driver, bob);
         var existingEdge = new EntityEdge
         {
             SourceNodeUuid = alice.Uuid,
@@ -1790,7 +1791,7 @@ public class GraphitiWorkflowTests
                 ["department"] = "Research"
             }
         };
-        await existing.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, existing);
         var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
         {
             ["extract_nodes.extract_message"] = new()
@@ -1855,7 +1856,7 @@ public class GraphitiWorkflowTests
                 ["city"] = "Paris"
             }
         };
-        await existing.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, existing);
         var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
         {
             ["extract_nodes.extract_message"] = new()
@@ -1920,7 +1921,7 @@ public class GraphitiWorkflowTests
                 ["legacy"] = "stale"
             }
         };
-        await existing.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, existing);
         var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
         {
             ["extract_nodes.extract_message"] = new()
@@ -2929,8 +2930,8 @@ public class GraphitiWorkflowTests
         var driver = new InMemoryGraphDriver();
         var alice = new EntityNode { Name = "Alice", GroupId = "group" };
         var acme = new EntityNode { Name = "Acme", GroupId = "group" };
-        await alice.SaveAsync(driver);
-        await acme.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, alice);
+        await SaveSearchableEntityNodeAsync(driver, acme);
         var existingEdge = new EntityEdge
         {
             SourceNodeUuid = alice.Uuid,
@@ -3011,8 +3012,8 @@ public class GraphitiWorkflowTests
         var driver = new InMemoryGraphDriver();
         var alice = new EntityNode { Name = "Alice", GroupId = "group" };
         var acme = new EntityNode { Name = "Acme", GroupId = "group" };
-        await alice.SaveAsync(driver);
-        await acme.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, alice);
+        await SaveSearchableEntityNodeAsync(driver, acme);
         var existingEdge = new EntityEdge
         {
             SourceNodeUuid = alice.Uuid,
@@ -3292,7 +3293,7 @@ public class GraphitiWorkflowTests
             GroupId = "group",
             Labels = new List<string> { "Entity" }
         };
-        await existing.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, existing);
         var graphiti = new Graphiti(
             graphDriver: driver,
             llmClient: new StaticLlmClient(new JsonObject
@@ -3338,7 +3339,7 @@ public class GraphitiWorkflowTests
             GroupId = "group",
             Labels = new List<string> { "Entity", "Person" }
         };
-        await existing.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, existing);
         var graphiti = new Graphiti(
             graphDriver: driver,
             llmClient: new StaticLlmClient(new JsonObject
@@ -3419,8 +3420,8 @@ public class GraphitiWorkflowTests
         var driver = new InMemoryGraphDriver();
         var first = new EntityNode { Name = "Acme Corp", GroupId = "group" };
         var second = new EntityNode { Name = " acme   corp ", GroupId = "group" };
-        await first.SaveAsync(driver);
-        await second.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, first);
+        await SaveSearchableEntityNodeAsync(driver, second);
         var graphiti = new Graphiti(
             graphDriver: driver,
             llmClient: new StaticLlmClient(new JsonObject
@@ -3463,8 +3464,8 @@ public class GraphitiWorkflowTests
         var driver = new InMemoryGraphDriver();
         var first = new EntityNode { Name = "Acme Corp", GroupId = "group", Summary = "A vendor." };
         var second = new EntityNode { Name = " acme   corp ", GroupId = "group", Summary = "The ACME corp in this conversation." };
-        await first.SaveAsync(driver);
-        await second.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, first);
+        await SaveSearchableEntityNodeAsync(driver, second);
         var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
         {
             ["extract_nodes.extract_message"] = new()
@@ -3522,7 +3523,7 @@ public class GraphitiWorkflowTests
     {
         var driver = new InMemoryGraphDriver();
         var existing = new EntityNode { Name = "OpenAI", GroupId = "group" };
-        await existing.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, existing, embeddingText: "Open AI");
         var graphiti = new Graphiti(
             graphDriver: driver,
             llmClient: new StaticLlmClient(new JsonObject
@@ -3573,6 +3574,48 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisodeBulk_KeepsExtractedNodeSeparateWhenNodeSearchFindsNoCandidates()
+    {
+        var driver = new EmptyEdgeSearchGraphDriver
+        {
+            ReturnEmptyNodeEmbeddingHits = true
+        };
+        var existing = new EntityNode { Name = "OpenAI", GroupId = "group" };
+        await SaveSearchableEntityNodeAsync(driver, existing, embeddingText: "Open AI");
+        var llm = new StaticLlmClient(new JsonObject
+        {
+            ["extracted_entities"] = new JsonArray
+            {
+                new JsonObject { ["name"] = "Open AI", ["entity_type"] = "Organization" }
+            },
+            ["edges"] = new JsonArray()
+        });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+
+        var result = await graphiti.AddEpisodeBulkAsync(
+            new[]
+            {
+                new RawEpisode
+                {
+                    Name = "first",
+                    Content = "Open AI launched a new model.",
+                    SourceDescription = "message",
+                    ReferenceTime = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)
+                }
+            },
+            groupId: "group");
+
+        var resolved = Assert.Single(result.Nodes);
+        Assert.Equal("Open AI", resolved.Name);
+        Assert.NotEqual(existing.Uuid, resolved.Uuid);
+        Assert.DoesNotContain("dedupe_nodes.nodes", llm.PromptNames);
+
+        var storedNodes = await driver.GetNodesByGroupIdsAsync<EntityNode>(new[] { "group" });
+        Assert.Contains(storedNodes, node => node.Uuid == existing.Uuid);
+        Assert.Contains(storedNodes, node => node.Uuid == resolved.Uuid);
+    }
+
+    [Fact]
     public async Task AddEpisodeBulk_DoesNotAppendEdgeFactsToExistingShortSummary()
     {
         // The bulk attribute-extraction path receives NO edges, so a node with an existing short
@@ -3585,7 +3628,7 @@ public class GraphitiWorkflowTests
             GroupId = "group",
             Summary = "OpenAI is a research lab."
         };
-        await existing.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, existing, embeddingText: "Open AI");
         var graphiti = new Graphiti(
             graphDriver: driver,
             llmClient: new StaticLlmClient(new JsonObject
@@ -3634,7 +3677,7 @@ public class GraphitiWorkflowTests
     {
         var driver = new InMemoryGraphDriver();
         var existing = new EntityNode { Uuid = "zzzz-openai", Name = "OpenAI", GroupId = "group" };
-        await existing.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, existing, embeddingText: "Open AI");
         var graphiti = new Graphiti(
             graphDriver: driver,
             llmClient: new StaticLlmClient(new JsonObject
@@ -3800,8 +3843,8 @@ public class GraphitiWorkflowTests
         var fixedNow = new DateTimeOffset(2026, 4, 1, 12, 0, 0, TimeSpan.Zero);
         var alice = new EntityNode { Name = "Alice", GroupId = "group" };
         var acme = new EntityNode { Name = "Acme", GroupId = "group", Labels = new List<string> { "Entity", "Organization" } };
-        await alice.SaveAsync(driver);
-        await acme.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, alice);
+        await SaveSearchableEntityNodeAsync(driver, acme);
         var oldEdge = new EntityEdge
         {
             SourceNodeUuid = alice.Uuid,
@@ -3853,8 +3896,8 @@ public class GraphitiWorkflowTests
         var driver = new InMemoryGraphDriver();
         var alice = new EntityNode { Name = "Alice", GroupId = "group" };
         var bob = new EntityNode { Name = "Bob", GroupId = "group" };
-        await alice.SaveAsync(driver);
-        await bob.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, alice);
+        await SaveSearchableEntityNodeAsync(driver, bob);
         var existingEdge = new EntityEdge
         {
             SourceNodeUuid = alice.Uuid,
@@ -3908,8 +3951,8 @@ public class GraphitiWorkflowTests
         var driver = new InMemoryGraphDriver();
         var alice = new EntityNode { Name = "Alice", GroupId = "group" };
         var acme = new EntityNode { Name = "Acme", GroupId = "group" };
-        await alice.SaveAsync(driver);
-        await acme.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, alice);
+        await SaveSearchableEntityNodeAsync(driver, acme);
         var existingEdge = new EntityEdge
         {
             SourceNodeUuid = alice.Uuid,
@@ -3968,11 +4011,11 @@ public class GraphitiWorkflowTests
     {
         var driver = new InMemoryGraphDriver();
         var alice = new EntityNode { Name = "Alice", GroupId = "group" };
-        await alice.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, alice);
         for (var i = 0; i < 25; i++)
         {
             var company = new EntityNode { Name = $"Company {i}", GroupId = "group" };
-            await company.SaveAsync(driver);
+            await SaveSearchableEntityNodeAsync(driver, company);
             await new EntityEdge
             {
                 SourceNodeUuid = alice.Uuid,
@@ -4045,8 +4088,8 @@ public class GraphitiWorkflowTests
         var fixedNow = new DateTimeOffset(2026, 3, 2, 4, 5, 6, TimeSpan.Zero);
         var alice = new EntityNode { Name = "Alice", GroupId = "group" };
         var acme = new EntityNode { Name = "Acme", GroupId = "group" };
-        await alice.SaveAsync(driver);
-        await acme.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, alice);
+        await SaveSearchableEntityNodeAsync(driver, acme);
         var oldEdge = new EntityEdge
         {
             SourceNodeUuid = alice.Uuid,
@@ -4110,8 +4153,8 @@ public class GraphitiWorkflowTests
         var fixedNow = new DateTimeOffset(2026, 3, 2, 4, 5, 6, TimeSpan.Zero);
         var alice = new EntityNode { Name = "Alice", GroupId = "group" };
         var beta = new EntityNode { Name = "Beta", GroupId = "group" };
-        await alice.SaveAsync(driver);
-        await beta.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, alice);
+        await SaveSearchableEntityNodeAsync(driver, beta);
         var oldEdge = new EntityEdge
         {
             SourceNodeUuid = alice.Uuid,
@@ -4174,8 +4217,8 @@ public class GraphitiWorkflowTests
         var fixedNow = new DateTimeOffset(2026, 3, 2, 4, 5, 6, TimeSpan.Zero);
         var alice = new EntityNode { Name = "Alice", GroupId = "group" };
         var acme = new EntityNode { Name = "Acme", GroupId = "group" };
-        await alice.SaveAsync(driver);
-        await acme.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, alice);
+        await SaveSearchableEntityNodeAsync(driver, acme);
         var laterEdge = new EntityEdge
         {
             Uuid = "later-edge-1",
@@ -4453,8 +4496,8 @@ public class GraphitiWorkflowTests
         var driver = new InMemoryGraphDriver();
         var alice = new EntityNode { Name = "Alice", GroupId = "group" };
         var acme = new EntityNode { Name = "Acme", GroupId = "group" };
-        await alice.SaveAsync(driver);
-        await acme.SaveAsync(driver);
+        await SaveSearchableEntityNodeAsync(driver, alice);
+        await SaveSearchableEntityNodeAsync(driver, acme);
         var existingValidAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var existingEdge = new EntityEdge
         {
@@ -5165,6 +5208,7 @@ public class GraphitiWorkflowTests
 
         public int ExpectedConcurrentEdgeLoads { get; set; }
         public bool HoldExpectedConcurrentEdgeLoads { get; set; }
+        public bool ReturnEmptyNodeEmbeddingHits { get; set; }
         public Task ExpectedConcurrentEdgeLoadsReached => _expectedConcurrentEdgeLoadsReached.Task;
         public int MaxConcurrentEdgeLoads => Volatile.Read(ref _maxConcurrentEdgeLoads);
 
@@ -5175,7 +5219,10 @@ public class GraphitiWorkflowTests
             _inner.CloseAsync(cancellationToken);
 
         public override IGraphDriver Clone(string database) =>
-            new EmptyEdgeSearchGraphDriver((InMemoryGraphDriver)_inner.Clone(database));
+            new EmptyEdgeSearchGraphDriver((InMemoryGraphDriver)_inner.Clone(database))
+            {
+                ReturnEmptyNodeEmbeddingHits = ReturnEmptyNodeEmbeddingHits
+            };
 
         public override Task SaveNodeAsync(Node node, CancellationToken cancellationToken = default) =>
             _inner.SaveNodeAsync(node, cancellationToken);
@@ -5379,8 +5426,16 @@ public class GraphitiWorkflowTests
             IReadOnlyList<string>? groupIds,
             int limit,
             float minScore,
-            CancellationToken cancellationToken = default) =>
-            _inner.SearchEntityNodesByEmbeddingAsync(searchVector, searchFilter, groupIds, limit, minScore, cancellationToken);
+            CancellationToken cancellationToken = default)
+        {
+            if (ReturnEmptyNodeEmbeddingHits)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return Task.FromResult<IReadOnlyList<SearchHit<EntityNode>>>(Array.Empty<SearchHit<EntityNode>>());
+            }
+
+            return _inner.SearchEntityNodesByEmbeddingAsync(searchVector, searchFilter, groupIds, limit, minScore, cancellationToken);
+        }
 
         public Task<IReadOnlyList<SearchHit<EntityEdge>>> SearchEntityEdgesFulltextAsync(
             string query,
@@ -5490,6 +5545,18 @@ public class GraphitiWorkflowTests
                 CreatedAt = episode.CreatedAt
             }.SaveAsync(driver);
         }
+    }
+
+    private static async Task SaveSearchableEntityNodeAsync(
+        IGraphDriver driver,
+        EntityNode node,
+        string? embeddingText = null)
+    {
+        var embedding = await new HashEmbedder()
+            .CreateAsync(embeddingText ?? node.Name)
+            .ConfigureAwait(false);
+        node.NameEmbedding = embedding.ToList();
+        await node.SaveAsync(driver);
     }
 
     private static async Task SaveEntityEdgeEndpointNodesAsync(IGraphDriver driver, EntityEdge edge)

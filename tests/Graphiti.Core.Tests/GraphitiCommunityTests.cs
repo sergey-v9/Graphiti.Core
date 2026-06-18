@@ -606,6 +606,8 @@ public class GraphitiCommunityTests
         var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var alice = Entity("Alice", "group", now);
         var bob = Entity("Bob", "group", now);
+        await alice.GenerateNameEmbeddingAsync(graphiti.Embedder);
+        await bob.GenerateNameEmbeddingAsync(graphiti.Embedder);
         await alice.SaveAsync(driver);
         await bob.SaveAsync(driver);
         await Relates(alice, bob, "group", now).SaveAsync(driver);

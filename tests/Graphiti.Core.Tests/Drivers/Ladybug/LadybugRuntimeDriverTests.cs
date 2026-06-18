@@ -493,6 +493,8 @@ public class LadybugRuntimeDriverTests
         };
 
         await graphiti.BuildIndicesAndConstraintsAsync();
+        await alice.GenerateNameEmbeddingAsync(graphiti.Embedder);
+        await bob.GenerateNameEmbeddingAsync(graphiti.Embedder);
         await driver.SaveNodeAsync(alice);
         await driver.SaveNodeAsync(bob);
         await driver.SaveEdgeAsync(new EntityEdge

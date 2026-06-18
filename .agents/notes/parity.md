@@ -46,8 +46,8 @@ integrated; full verification green (948 passed, 2 skipped, format/build/pack cl
   resolution (`ThrottledWork.SelectAsync`) and the test that had been loosened to hide the
   serialization was reverted to `Equal(2)`.
 - **Ingestion/summary:** bulk summaries no longer append edge facts (Python `edges=None`); community
-  summaries use the raw entity summary, not name-prefixed text; bulk first-pass node dedup no longer
-  over-widens the candidate pool.
+  summaries use the raw entity summary, not name-prefixed text; node resolution no longer
+  over-widens null override candidate pools.
 - **Infra:** Ladybug full-text is now verbatim-or-empty (was collapse+truncate+search); cross-encoder
   uses the primary model not the small model; empty LLM responses re-prompt instead of being swallowed;
   content-filter refusals surface as a non-retryable `LlmRefusalException`.
@@ -522,6 +522,14 @@ not call `validate_entity_types` or `validate_excluded_entity_types`; it passes 
 bulk extraction. C# `AddEpisodeBulkAsync` now mirrors that asymmetry by skipping the extra upfront
 validation while `AddEpisodeAsync` keeps the Python single-episode validation behavior.
 
+**2026-06-18 node-resolution candidate follow-up:** closed the remaining candidate-widening drift
+from the latest bulk audit. `ResolveExtractedNodesAsync` now collects ordered candidates per
+extracted node from semantic node search, merges only an explicit existing-node override, and runs
+deterministic plus LLM dedupe against those candidate lists. A null override no longer triggers a
+whole-group read or lexical fallback, so an extracted node with no search hits remains new and skips
+the node-dedupe prompt. Exact duplicate extracted nodes are still collapsed before resolution, with
+episode attribution merged at the extraction boundary.
+
 **2026-06-18 entity-attribute key follow-up:** closed a custom attribute validation/merge drift.
 Python custom entity field names are exact Pydantic field names: `validate_entity_types` rejects only
 exact `EntityNode.model_fields` names, and structured attribute responses address exact field names.
@@ -632,7 +640,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Combined node+edge extraction path | utils/maintenance/combined_extraction.py | EpisodeGraphExtractor.ExtractCombinedEpisodeGraphAsync | OK | Internal path ported 2026-06-11: single LLM call, orphan dropping, node attribution from facts, self-fact preservation, and batch timestamps. Public `Graphiti` ingestion remains on separate extraction because Python exposes `use_combined_extraction` only as an internal bulk helper flag defaulting to `False`; tests pin that `add_episode` and `add_episode_bulk` do not call the combined prompt by default |
 | Edge attribute extraction during add_episode | edge_operations.resolve_extracted_edge | EdgeResolutionService | OK | Aligned 2026-06-11: structured edge attributes are extracted during edge resolution only. There is no post-resolution ingestion-stage edge attribute pass; exact duplicate reuse skips the prompt and preserves existing attributes, while non-fast-path resolution replaces/clears attributes like Python |
 | Episodic edge building | edge_operations.build_episodic_edges | MaintenanceUtilities | OK | |
-| Bulk ingestion (true batch dedup/resolve) | bulk_utils, graphiti.py:1230+ | Graphiti.Ingestion.cs:195+ | OK + DIVERGENT | Staged extraction, cross-batch node/edge dedupe, final resolution, pointer remapping, per-episode provenance. 2026-06-13 fixes: bulk summaries no longer append edge facts (Python `edges=None`); first-pass node dedup no longer over-widens the candidate pool. Behaviors KEPT as documented DIVERGENT (see `decisions.md`): cross-episode edge invalidation is more aggressive than Python, bulk episodes own `episode.EntityEdges` where Python's bulk leaves it empty, and `storeRawEpisodeContent: false` also scrubs stored bulk episode content after extraction |
+| Bulk ingestion (true batch dedup/resolve) | bulk_utils, graphiti.py:1230+ | Graphiti.Ingestion.cs:195+ | OK + DIVERGENT | Staged extraction, cross-batch node/edge dedupe, final resolution, pointer remapping, per-episode provenance. 2026-06-13 fixes: bulk summaries no longer append edge facts (Python `edges=None`). 2026-06-18 fix: first-pass and final node resolution no longer widen null override candidate pools beyond semantic hits. Behaviors KEPT as documented DIVERGENT (see `decisions.md`): cross-episode edge invalidation is more aggressive than Python, bulk episodes own `episode.EntityEdges` where Python's bulk leaves it empty, and `storeRawEpisodeContent: false` also scrubs stored bulk episode content after extraction |
 | Saga association + episode-time watermarks | graphiti.py | SagaService | OK | Watermarks present. Name-based existing saga association uses Python's minimal `_get_or_create_saga` projection before save |
 | Community update on ingest | graphiti.py | CommunityService | OK | Flow parity; community summary/name prompts ported 2026-06-11; blank entity summaries are preserved when summarized into communities |
 

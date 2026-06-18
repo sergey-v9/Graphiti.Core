@@ -182,6 +182,7 @@ internal sealed class EpisodeGraphExtractor(
                     episodeCount: 1);
             }
 
+            nodes = CollapseExactDuplicateNodes(nodes, attribution);
             activity?.SetTag("graphiti.extraction.candidates", extractedEntities.Count);
             activity?.SetTag("graphiti.extraction.fallback", false);
             activity?.SetTag("graphiti.extraction.excluded", skippedExcluded);
@@ -245,7 +246,9 @@ internal sealed class EpisodeGraphExtractor(
         return nodes;
     }
 
-    private static List<EntityNode> CollapseExactDuplicateNodes(List<EntityNode> nodes)
+    private static List<EntityNode> CollapseExactDuplicateNodes(
+        List<EntityNode> nodes,
+        Dictionary<string, IReadOnlyList<int>>? attribution = null)
     {
         if (nodes.Count < 2)
         {
@@ -267,7 +270,18 @@ internal sealed class EpisodeGraphExtractor(
 
             if (IsMoreSpecific(node, existing))
             {
+                if (attribution is not null)
+                {
+                    MoveAttribution(attribution, existing.Uuid, node.Uuid);
+                }
+
                 canonicalByName[normalized] = node;
+                continue;
+            }
+
+            if (attribution is not null)
+            {
+                MoveAttribution(attribution, node.Uuid, existing.Uuid);
             }
         }
 
@@ -278,6 +292,54 @@ internal sealed class EpisodeGraphExtractor(
         }
 
         return collapsed;
+    }
+
+    private static void MoveAttribution(
+        Dictionary<string, IReadOnlyList<int>> attribution,
+        string sourceUuid,
+        string targetUuid)
+    {
+        if (!attribution.TryGetValue(sourceUuid, out var source))
+        {
+            return;
+        }
+
+        attribution.Remove(sourceUuid);
+        if (!attribution.TryGetValue(targetUuid, out var target))
+        {
+            attribution[targetUuid] = source;
+            return;
+        }
+
+        attribution[targetUuid] = MergeAttributionIndices(target, source);
+    }
+
+    private static IReadOnlyList<int> MergeAttributionIndices(
+        IReadOnlyList<int> first,
+        IReadOnlyList<int> second)
+    {
+        if (first.Count == 0)
+        {
+            return second;
+        }
+
+        if (second.Count == 0)
+        {
+            return first;
+        }
+
+        var seen = new SortedSet<int>();
+        for (var i = 0; i < first.Count; i++)
+        {
+            seen.Add(first[i]);
+        }
+
+        for (var i = 0; i < second.Count; i++)
+        {
+            seen.Add(second[i]);
+        }
+
+        return seen.ToArray();
     }
 
     private static bool IsMoreSpecific(EntityNode candidate, EntityNode existing)
