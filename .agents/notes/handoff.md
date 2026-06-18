@@ -158,9 +158,9 @@ added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
 credentials for the Ladybug feed: `995` passed, `3` skipped, `998` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice records LLM token usage only after a parsed
-structured response passes validation, so refused/malformed/schema-invalid attempts do not increment
-`TokenTracker`.
+both package-consumer smokes succeeded. The newest slice keeps M.E.AI chat response parsing to whole
+JSON payloads or whole payloads wrapped in markdown code fences; JSON embedded inside arbitrary prose
+now fails into the retry-feedback loop.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -464,12 +464,11 @@ related UUIDs in the broad invalidation candidate list while normal ingestion st
 The already-expired/invalidated resolved-edge sort drift is also closed: C# now sorts invalidation
 candidates only inside the unexpired resolved-edge branch, preserving LLM/index order for
 already-expired resolved edges. No concrete non-decision candidate from this read-only edge audit
-remains open. LLM-client read-only audit on 2026-06-18 found two candidates: token usage for
-refused/malformed/schema-invalid attempts is now closed by recording provider usage only after
-parsed structured validation succeeds; the remaining LLM candidate is broad embedded-JSON extraction
-from prose/fenced text in `MicrosoftExtensionsAIChatClient`, which is currently accepted globally
-where the source OpenAI-compatible paths mostly parse only whole JSON after optional wrapping-fence
-stripping. Treat that parser-tolerance item as a separate parity or explicit-divergence slice.
+remains open. LLM-client read-only audit on 2026-06-18 found two candidates, both now closed: token
+usage for refused/malformed/schema-invalid attempts is recorded only after parsed structured
+validation succeeds, and `MicrosoftExtensionsAIChatClient` no longer extracts JSON embedded in
+arbitrary prose. It now accepts whole JSON or a whole payload wrapped in a markdown code fence; prose-
+wrapped output raises `JsonException` and flows through retry feedback.
 Decision-gated release/API/provider items remain separate in plan 05 and the provider notes.
 
 Latest checkpoint, 2026-06-13:

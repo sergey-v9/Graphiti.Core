@@ -1,5 +1,3 @@
-using System.Buffers;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.RateLimiting;
@@ -172,9 +170,8 @@ public sealed class MicrosoftExtensionsAIChatClient : LlmClient
             throw new JsonException("Invalid response from LLM: the model returned an empty response.");
         }
 
-        var trimmed = text.Trim();
-        if (TryParseJsonNode(trimmed, out var parsed)
-            || TryExtractJsonNode(trimmed, out parsed))
+        var trimmed = StripWrappingCodeFence(text);
+        if (TryParseJsonNode(trimmed, out var parsed))
         {
             return ToResponseObject(parsed);
         }
@@ -187,29 +184,50 @@ public sealed class MicrosoftExtensionsAIChatClient : LlmClient
             ? jsonObject
             : new JsonObject { ["value"] = parsed };
 
-    private static bool TryExtractJsonNode(string text, out JsonNode? parsed)
+    private static string StripWrappingCodeFence(string text)
     {
-        var searchStart = 0;
-        while (searchStart < text.Length)
+        var trimmed = text.Trim();
+        if (!trimmed.StartsWith("```", StringComparison.Ordinal))
         {
-            var relativeStart = text.AsSpan(searchStart).IndexOfAny('{', '[');
-            if (relativeStart < 0)
-            {
-                break;
-            }
-
-            var candidateStart = searchStart + relativeStart;
-            if (TryParseJsonNodePrefix(text.AsSpan(candidateStart), out parsed))
-            {
-                return true;
-            }
-
-            searchStart = candidateStart + 1;
+            return trimmed;
         }
 
-        parsed = null;
-        return false;
+        var contentStart = 3;
+        while (contentStart < trimmed.Length && IsFenceInfoCharacter(trimmed[contentStart]))
+        {
+            contentStart++;
+        }
+
+        while (contentStart < trimmed.Length && trimmed[contentStart] is ' ' or '\t')
+        {
+            contentStart++;
+        }
+
+        if (contentStart < trimmed.Length && trimmed[contentStart] == '\r')
+        {
+            contentStart++;
+            if (contentStart < trimmed.Length && trimmed[contentStart] == '\n')
+            {
+                contentStart++;
+            }
+        }
+        else if (contentStart < trimmed.Length && trimmed[contentStart] == '\n')
+        {
+            contentStart++;
+        }
+
+        var withoutOpeningFence = trimmed[contentStart..];
+        withoutOpeningFence = withoutOpeningFence.Trim();
+        if (withoutOpeningFence.EndsWith("```", StringComparison.Ordinal))
+        {
+            withoutOpeningFence = withoutOpeningFence[..^3].TrimEnd();
+        }
+
+        return withoutOpeningFence.Trim();
     }
+
+    private static bool IsFenceInfoCharacter(char value) =>
+        char.IsAsciiLetterOrDigit(value) || value is '_' or '-';
 
     private static bool TryParseJsonNode(string text, out JsonNode? parsed)
     {
@@ -227,40 +245,6 @@ public sealed class MicrosoftExtensionsAIChatClient : LlmClient
         {
             parsed = null;
             return false;
-        }
-    }
-
-    private static bool TryParseJsonNodePrefix(ReadOnlySpan<char> text, out JsonNode? parsed)
-    {
-        if (text.IsEmpty || text[0] is not ('{' or '['))
-        {
-            parsed = null;
-            return false;
-        }
-
-        byte[]? rented = null;
-        var maxByteCount = Encoding.UTF8.GetMaxByteCount(text.Length);
-        Span<byte> utf8 = maxByteCount <= 4096
-            ? stackalloc byte[maxByteCount]
-            : rented = ArrayPool<byte>.Shared.Rent(maxByteCount);
-        try
-        {
-            var byteCount = Encoding.UTF8.GetBytes(text, utf8);
-            var reader = new Utf8JsonReader(utf8[..byteCount]);
-            parsed = JsonNode.Parse(ref reader);
-            return true;
-        }
-        catch (JsonException)
-        {
-            parsed = null;
-            return false;
-        }
-        finally
-        {
-            if (rented is not null)
-            {
-                ArrayPool<byte>.Shared.Return(rented);
-            }
         }
     }
 }

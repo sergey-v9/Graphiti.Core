@@ -159,10 +159,10 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task MicrosoftExtensionsAIChatClient_ExtractsJsonFromFencedResponse()
+    public async Task MicrosoftExtensionsAIChatClient_StripsWrappingJsonFence()
     {
         var graphitiClient = new MicrosoftExtensionsAIChatClient(
-            new FakeChatClient("Sure - {not-json}\n```json\n{\"ok\":true}\n```\nDone."));
+            new FakeChatClient("```json\n{\"ok\":true}\n```"));
 
         var response = await graphitiClient.GenerateResponseAsync(
             new[] { new Message("user", "extract") },
@@ -172,10 +172,10 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task MicrosoftExtensionsAIChatClient_ExtractsJsonWithBracesInsideString()
+    public async Task MicrosoftExtensionsAIChatClient_ParsesJsonWithBracesInsideString()
     {
         var graphitiClient = new MicrosoftExtensionsAIChatClient(
-            new FakeChatClient("Intro {\"ok\":true,\"text\":\"keep { this } literal\"} trailing"));
+            new FakeChatClient("{\"ok\":true,\"text\":\"keep { this } literal\"}"));
 
         var response = await graphitiClient.GenerateResponseAsync(
             new[] { new Message("user", "extract") });
@@ -185,10 +185,10 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task MicrosoftExtensionsAIChatClient_ExtractsJsonWithEscapesInsideString()
+    public async Task MicrosoftExtensionsAIChatClient_ParsesJsonWithEscapesInsideString()
     {
         var graphitiClient = new MicrosoftExtensionsAIChatClient(
-            new FakeChatClient("Intro {\"ok\":true,\"text\":\"quote: \\\"hi\\\", slash: \\\\, unicode: \\u007bnot structural\\u007d, braces: { keep }\"} trailing"));
+            new FakeChatClient("{\"ok\":true,\"text\":\"quote: \\\"hi\\\", slash: \\\\, unicode: \\u007bnot structural\\u007d, braces: { keep }\"}"));
 
         var response = await graphitiClient.GenerateResponseAsync(
             new[] { new Message("user", "extract") });
@@ -200,45 +200,37 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
-    public async Task MicrosoftExtensionsAIChatClient_SkipsMalformedArrayCandidate()
+    public async Task MicrosoftExtensionsAIChatClient_RejectsEmbeddedJsonInProse()
     {
         var graphitiClient = new MicrosoftExtensionsAIChatClient(
-            new FakeChatClient("prefix [not-json]\n```json\n{\"ok\":true}\n```"));
+            new FakeChatClient("Intro {\"ok\":true} trailing"));
 
-        var response = await graphitiClient.GenerateResponseAsync(
-            new[] { new Message("user", "extract") },
-            responseModel: typeof(StructuredResponse));
-
-        Assert.True(response["ok"]?.GetValue<bool>());
+        await Assert.ThrowsAsync<JsonException>(() =>
+            graphitiClient.GenerateResponseAsync(
+                new[] { new Message("user", "extract") },
+                responseModel: typeof(StructuredResponse)));
     }
 
     [Fact]
-    public async Task MicrosoftExtensionsAIChatClient_SkipsManyInvalidJsonCandidates()
+    public async Task MicrosoftExtensionsAIChatClient_RejectsNonWrappingFence()
     {
-        var noisyPrefix = string.Join(
-            ' ',
-            Enumerable.Range(0, 40).Select(index => $"{{invalid-{index}}}"));
         var graphitiClient = new MicrosoftExtensionsAIChatClient(
-            new FakeChatClient($"{noisyPrefix} ```json\n{{\"ok\":true}}\n```"));
+            new FakeChatClient("Prefix\n```json\n{\"ok\":true}\n```"));
 
-        var response = await graphitiClient.GenerateResponseAsync(
-            new[] { new Message("user", "extract") },
-            responseModel: typeof(StructuredResponse));
-
-        Assert.True(response["ok"]?.GetValue<bool>());
+        await Assert.ThrowsAsync<JsonException>(() =>
+            graphitiClient.GenerateResponseAsync(
+                new[] { new Message("user", "extract") },
+                responseModel: typeof(StructuredResponse)));
     }
 
     [Fact]
-    public async Task MicrosoftExtensionsAIChatClient_WrapsNestedArrayExtractedFromText()
+    public async Task MicrosoftExtensionsAIChatClient_RejectsJsonArrayEmbeddedInProse()
     {
         var graphitiClient = new MicrosoftExtensionsAIChatClient(
             new FakeChatClient("prefix [{\"nested\":{\"ok\":true}}] suffix"));
 
-        var response = await graphitiClient.GenerateResponseAsync(new[] { new Message("user", "extract") });
-        var value = Assert.IsType<JsonArray>(response["value"]);
-        var nested = Assert.IsType<JsonObject>(value[0])["nested"];
-
-        Assert.True(nested?["ok"]?.GetValue<bool>());
+        await Assert.ThrowsAsync<JsonException>(() =>
+            graphitiClient.GenerateResponseAsync(new[] { new Message("user", "extract") }));
     }
 
     [Fact]

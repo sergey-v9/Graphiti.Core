@@ -302,6 +302,10 @@ no wire/prompt/cache/temporal behavior changed):
 - Structured-output prompts include the JSON schema text in the final prompt message and may also
   pass response-format metadata to the provider. Source-generated JSON metadata may cover nested
   `Graphiti.*Response` DTOs, but DTO type identity and snake_case schema/wire names must stay stable.
+- M.E.AI chat responses parse as the whole trimmed JSON payload, with support for stripping a
+  markdown code fence only when it wraps the entire payload. The generic adapter does not scan prose
+  for an embedded JSON object/array; prose-wrapped output is invalid and routes through the retry
+  feedback loop. Provider-specific extraction fallbacks would need their own adapter decision.
 - Token usage tracking keeps the idiomatic C# `InputTokens`/`OutputTokens` totals, and also exposes
   Python-equivalent per-prompt `CallCount`, `AvgInputTokens`, and `AvgOutputTokens` values. Live
   provider usage is recorded only after the response parses and passes structured validation; refused,
