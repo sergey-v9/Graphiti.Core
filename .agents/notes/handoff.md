@@ -105,8 +105,10 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
   is evidence-driven (benchmark-first) only (`roadmap.md`).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
   1–3 are complete; the active plan-05 surface now has an explicit Step F plan-folder backlog triage
-  gate before release infrastructure. E.2 now consumes the fork-published LadybugDB dev package family,
-  and CI has both the core-only lane
+  gate before plan 06 or release infrastructure. Anything newly found in `.agents/plans/` or directly
+  linked notes should be handled as its own parity/provider/perf/docs slice first, not bundled into the
+  optional Ladybug merge or release-version decisions. E.2 now consumes the fork-published LadybugDB dev
+  package family, and CI has both the core-only lane
   (`.github/workflows/core-only.yml`) and full Ladybug-inclusive lane (`.github/workflows/full.yml`)
   wired. Workflow YAML parsing and `.\eng\Verify-GraphitiCoreOnly.ps1` are green locally; the full
   verifier is also green with GitHub Packages credentials. Versioning and publish-path decisions remain
@@ -117,6 +119,12 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
   in `Prompts/` (one static class per Python prompt module).
 - Optional local `.agents/skills` files are specialist references only. Use them for matching tasks,
   but do not let generic AI/ML/framework advice override `decisions.md`.
+
+Latest plan-folder/backlog audit, 2026-06-18: `Check-PythonUpstreamDelta.ps1 -Fetch -FailOnDelta`
+reported no `graphiti_core/` upstream delta from anchor `0ed90b7` to target
+`b82b80e4c0c962fc714a22b74caf8c20997e8d83`; search-result merge/context helper comparison found no
+confirmed drift; and a read-only model/edge/namespace CRUD comparison against Python found no
+confirmed, undocumented drift. Plan 06 remains scheduled but opt-in.
 
 ## LadybugDB / Kuzu
 

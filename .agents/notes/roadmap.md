@@ -149,11 +149,14 @@ now LadybugDB-free and restores from nuget.org alone, with the LadybugDB driver 
 `Graphiti.Core.Drivers.Ladybug` package. The public-API snapshot and package-readiness tests guard
 both assemblies.
 
-Remaining (release infra): Step F's plan-folder sweep is recorded in plan 05. E.2 is complete:
-Graphiti points at the `sergey-v9/ladybug-dotnet` GitHub Packages feed and pins the fork-published
-`0.17.1-dev.1.1.g6f3dbed` LadybugDB package family; full local verification requires a NuGet
-credential for source `github_ladybug` with `read:packages`. **Versioning** (2.0.0 line /
-alpha→beta cadence), publish path, and metapackage shape remain decision-gated. CI has both a
+Remaining (release infra): Step F's plan-folder sweep is recorded in plan 05 and stays ahead of both
+the optional plan-06 Ladybug merge and release decisions. Anything newly found in `.agents/plans/` or
+directly linked notes should be split into its own parity/provider/perf/docs slice before versioning or
+publishing work. E.2 is complete: Graphiti points at the `sergey-v9/ladybug-dotnet` GitHub Packages
+feed and pins the fork-published `0.17.1-dev.1.1.g6f3dbed` LadybugDB package family; full local
+verification requires a NuGet credential for source `github_ladybug` with `read:packages`.
+**Versioning** (2.0.0 line / alpha→beta cadence), publish path, and metapackage shape remain
+decision-gated. CI has both a
 `Graphiti.Core`-only GitHub Actions lane running `eng\Verify-GraphitiCoreOnly.ps1` and a full
 Ladybug-inclusive Windows lane running `eng\Verify-GraphitiCore.ps1` with authenticated GitHub
 Packages restore. NuGet metadata, README packing, XML docs, symbol package generation, and

@@ -247,6 +247,11 @@ Recorded sweep result, 2026-06-17:
    earlier concrete non-decision follow-up from this audit remains in plan 05. New read-only audit
    candidates after that checkpoint are tracked in `handoff.md` and should land as separate verified
    slices rather than release-infra work.
+8. Follow-up sweep on 2026-06-18 kept this gate ahead of plan 06 and release decisions: upstream
+   `graphiti_core/` delta was empty, search-result merge/context helpers showed no confirmed drift,
+   and the model/namespace CRUD audit found no confirmed, undocumented drift. Continue to treat any
+   newly found plan-folder leftover as a separate slice first; do not bundle it into the Ladybug merge,
+   versioning, publish path, or metapackage decisions.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

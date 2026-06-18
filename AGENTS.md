@@ -19,8 +19,11 @@ item as a slice (implement → verify → commit → check it off and update `pa
 changes), then stop or pick the next. Phases 1–3 are complete and plan-05 A–E are complete. Plan 06
 is scheduled as a separate pre-release stream to merge the LadybugDB driver back into
 `Graphiti.Core`, but it is opt-in because it changes package/feed consequences; do not auto-pick it
-unless Sergey explicitly initiates that merge. Remaining release-infrastructure work after that is
-decision- or external-feed-gated (version cadence, publish path, metapackage shape, and future
+unless Sergey explicitly initiates that merge. Before plan 06 or release-version work, use plan-05
+Step F as the plan-folder backlog gate: sweep `.agents/plans/` and directly linked notes, then handle
+any concrete leftover as its own parity/provider/perf/docs slice rather than folding it into the
+Ladybug merge or the publish decision. Remaining release-infrastructure work after that is
+decision-gated or external-feed-gated (version cadence, publish path, metapackage shape, and future
 Ladybug package publication/replacement). When the open plan items are blocked on those decisions,
 choose work from `roadmap.md`/`handoff.md` that directly strengthens parity, packaging verification,
 upstream sync, or documented current state. Performance work is allowed only when it is
