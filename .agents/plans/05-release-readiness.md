@@ -261,6 +261,10 @@ Recorded sweep result, 2026-06-17:
     now recorded as an intentional infrastructure decision; live extraction required-field tightening
     was handled as its own parity slice. Schema-description metadata remains compatibility-sensitive,
     not release infrastructure, because it changes schema JSON, fingerprints, and cache keys.
+11. Follow-up plan-folder audit after the moved-docs request found no unchecked implementation items
+    outside plan 06's opt-in Ladybug merge checklist. The newly confirmed remaining structured response
+    required-field drift was handled as its own parity slice before plan 06/release decisions, preserving
+    this gate's "separate slice first" rule.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

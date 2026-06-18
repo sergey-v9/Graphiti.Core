@@ -879,6 +879,15 @@ public class LadybugRuntimeDriverTests
                     ["fact"] = "Carol works with Alice"
                 }
             },
+            ["entity_resolutions"] = new JsonArray
+            {
+                new JsonObject { ["id"] = 0, ["name"] = "Carol", ["duplicate_candidate_id"] = -1 },
+                new JsonObject { ["id"] = 1, ["name"] = "Alice", ["duplicate_candidate_id"] = 0 }
+            },
+            ["duplicate_facts"] = new JsonArray(),
+            ["contradicted_facts"] = new JsonArray(),
+            ["summaries"] = new JsonArray(),
+            ["timestamps"] = new JsonArray(),
             ["summary"] = summary,
             ["description"] = description
         });
@@ -900,7 +909,12 @@ public class LadybugRuntimeDriverTests
                     ["relation_type"] = "WORKS_AT",
                     ["fact"] = "Alice works at Acme."
                 }
-            }
+            },
+            ["entity_resolutions"] = new JsonArray(),
+            ["duplicate_facts"] = new JsonArray(),
+            ["contradicted_facts"] = new JsonArray(),
+            ["summaries"] = new JsonArray(),
+            ["timestamps"] = new JsonArray()
         };
 
     private sealed class FixedTimeProvider : TimeProvider

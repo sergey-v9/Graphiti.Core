@@ -468,6 +468,13 @@ combined extraction requires both arrays and the same canonical item fields. C# 
 alias handling in the direct `JsonObject` parser for compatibility tests, but those aliases are no
 longer part of the live response model/schema sent to or validated for LLM providers.
 
+**2026-06-18 remaining structured response-schema follow-up:** closed the same required-field drift
+for the other live prompt response models. Saga/community summaries, community descriptions, batch
+entity summaries, node resolutions, edge duplicate/contradiction resolutions, and batch edge
+timestamps now require the top-level fields and nested item fields that the source Pydantic response
+models mark required. `EdgeTimestampResponse.valid_at` and `invalid_at` stay optional/null because
+the source timestamp model defaults those temporal bounds to `None`.
+
 **2026-06-17 cross-encoder duplicate follow-up:** closed the duplicate-passage search drift. Python's
 search rerankers collapse duplicate cross-encoder passage strings through dict-comprehension behavior:
 passages are sent once in first-seen passage order, while the last duplicate candidate wins the

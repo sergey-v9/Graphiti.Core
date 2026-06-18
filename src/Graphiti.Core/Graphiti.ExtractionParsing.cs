@@ -299,42 +299,54 @@ public sealed partial class Graphiti
 
     internal sealed class SagaSummaryResponse
     {
-        public string? Summary { get; set; }
+        [JsonRequired]
+        public string Summary { get; set; } = string.Empty;
     }
 
     internal sealed class CommunitySummaryResponse
     {
-        public string? Summary { get; set; }
+        [JsonRequired]
+        public string Summary { get; set; } = string.Empty;
     }
 
     internal sealed class CommunityNameResponse
     {
-        public string? Description { get; set; }
+        [JsonRequired]
+        public string Description { get; set; } = string.Empty;
     }
 
     internal sealed class SummarizedEntitiesResponse
     {
+        [JsonRequired]
         public List<SummarizedEntityResponse> Summaries { get; set; } = new();
     }
 
     internal sealed record SummarizedEntityResponse(
+        [property: JsonRequired]
         string Name,
+        [property: JsonRequired]
         string Summary);
 
     internal sealed class NodeResolutionsResponse
     {
+        [JsonRequired]
         public List<NodeDuplicateResponse> EntityResolutions { get; set; } = new();
     }
 
     internal sealed record NodeDuplicateResponse(
+        [property: JsonRequired]
         int Id,
+        [property: JsonRequired]
         string Name,
+        [property: JsonRequired]
         int DuplicateCandidateId);
 
     internal sealed class EdgeResolutionResponse
     {
+        [JsonRequired]
         public List<int> DuplicateFacts { get; set; } = new();
 
+        [JsonRequired]
         public List<int> ContradictedFacts { get; set; } = new();
     }
 
@@ -347,6 +359,7 @@ public sealed partial class Graphiti
 
     internal sealed class BatchEdgeTimestampsResponse
     {
+        [JsonRequired]
         public List<EdgeTimestampResponse> Timestamps { get; set; } = new();
     }
 

@@ -417,7 +417,7 @@ public class GraphitiCommunityTests
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(
             graphDriver: driver,
-            llmClient: new StaticJsonLlmClient(_ => new JsonObject()));
+            llmClient: new StaticJsonLlmClient(_ => new JsonObject { ["summary"] = string.Empty }));
         var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var alice = Entity("Alice", "group", now, "alice");
         var bob = Entity("Bob", "group", now, "bob");
@@ -437,7 +437,7 @@ public class GraphitiCommunityTests
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(
             graphDriver: driver,
-            llmClient: new StaticJsonLlmClient(_ => new JsonObject()));
+            llmClient: new StaticJsonLlmClient(_ => new JsonObject { ["description"] = string.Empty }));
         var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var alice = Entity("Alice", "group", now, "alice");
         await alice.SaveAsync(driver);
@@ -582,13 +582,41 @@ public class GraphitiCommunityTests
                 return new JsonObject { ["description"] = "Work group" };
             }
 
-            if (user.Contains("Carol works with Alice", StringComparison.Ordinal))
+            if (system.Contains("entity deduplication assistant", StringComparison.Ordinal))
+            {
+                return new JsonObject
+                {
+                    ["entity_resolutions"] = new JsonArray(
+                        new JsonObject { ["id"] = 0, ["name"] = "Carol", ["duplicate_candidate_id"] = -1 },
+                        new JsonObject { ["id"] = 1, ["name"] = "Alice", ["duplicate_candidate_id"] = 0 })
+                };
+            }
+
+            if (system.Contains("fact deduplication assistant", StringComparison.Ordinal))
+            {
+                return new JsonObject
+                {
+                    ["duplicate_facts"] = new JsonArray(),
+                    ["contradicted_facts"] = new JsonArray()
+                };
+            }
+
+            if (system.Contains("entity extraction specialist", StringComparison.Ordinal)
+                && user.Contains("Carol works with Alice", StringComparison.Ordinal))
             {
                 return new JsonObject
                 {
                     ["extracted_entities"] = new JsonArray(
                         new JsonObject { ["name"] = "Carol", ["entity_type_id"] = 0 },
-                        new JsonObject { ["name"] = "Alice", ["entity_type_id"] = 0 }),
+                        new JsonObject { ["name"] = "Alice", ["entity_type_id"] = 0 })
+                };
+            }
+
+            if (system.Contains("expert fact extractor", StringComparison.Ordinal)
+                && user.Contains("Carol works with Alice", StringComparison.Ordinal))
+            {
+                return new JsonObject
+                {
                     ["edges"] = new JsonArray(
                         new JsonObject
                         {

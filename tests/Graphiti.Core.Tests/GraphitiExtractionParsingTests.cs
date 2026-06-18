@@ -164,6 +164,160 @@ public class GraphitiExtractionParsingTests
         StructuredResponseValidator.Validate(valid, responseModel);
     }
 
+    public static TheoryData<string, Type, JsonObject, JsonObject> RequiredStructuredResponseFields =>
+        new()
+        {
+            {
+                "saga summary",
+                typeof(Graphiti.SagaSummaryResponse),
+                new JsonObject { ["summary"] = "Project state." },
+                new JsonObject()
+            },
+            {
+                "community summary",
+                typeof(Graphiti.CommunitySummaryResponse),
+                new JsonObject { ["summary"] = "Team state." },
+                new JsonObject()
+            },
+            {
+                "community description",
+                typeof(Graphiti.CommunityNameResponse),
+                new JsonObject { ["description"] = "Team community." },
+                new JsonObject()
+            },
+            {
+                "entity summaries list",
+                typeof(Graphiti.SummarizedEntitiesResponse),
+                new JsonObject
+                {
+                    ["summaries"] = new JsonArray(
+                        new JsonObject { ["name"] = "Alice", ["summary"] = "Alice leads the project." })
+                },
+                new JsonObject()
+            },
+            {
+                "entity summary name",
+                typeof(Graphiti.SummarizedEntitiesResponse),
+                new JsonObject
+                {
+                    ["summaries"] = new JsonArray(
+                        new JsonObject { ["name"] = "Alice", ["summary"] = "Alice leads the project." })
+                },
+                new JsonObject
+                {
+                    ["summaries"] = new JsonArray(
+                        new JsonObject { ["summary"] = "Alice leads the project." })
+                }
+            },
+            {
+                "entity summary text",
+                typeof(Graphiti.SummarizedEntitiesResponse),
+                new JsonObject
+                {
+                    ["summaries"] = new JsonArray(
+                        new JsonObject { ["name"] = "Alice", ["summary"] = "Alice leads the project." })
+                },
+                new JsonObject
+                {
+                    ["summaries"] = new JsonArray(
+                        new JsonObject { ["name"] = "Alice" })
+                }
+            },
+            {
+                "node resolutions list",
+                typeof(Graphiti.NodeResolutionsResponse),
+                new JsonObject
+                {
+                    ["entity_resolutions"] = new JsonArray(
+                        new JsonObject { ["id"] = 0, ["name"] = "Alice", ["duplicate_candidate_id"] = -1 })
+                },
+                new JsonObject()
+            },
+            {
+                "node resolution id",
+                typeof(Graphiti.NodeResolutionsResponse),
+                new JsonObject
+                {
+                    ["entity_resolutions"] = new JsonArray(
+                        new JsonObject { ["id"] = 0, ["name"] = "Alice", ["duplicate_candidate_id"] = -1 })
+                },
+                new JsonObject
+                {
+                    ["entity_resolutions"] = new JsonArray(
+                        new JsonObject { ["name"] = "Alice", ["duplicate_candidate_id"] = -1 })
+                }
+            },
+            {
+                "node resolution name",
+                typeof(Graphiti.NodeResolutionsResponse),
+                new JsonObject
+                {
+                    ["entity_resolutions"] = new JsonArray(
+                        new JsonObject { ["id"] = 0, ["name"] = "Alice", ["duplicate_candidate_id"] = -1 })
+                },
+                new JsonObject
+                {
+                    ["entity_resolutions"] = new JsonArray(
+                        new JsonObject { ["id"] = 0, ["duplicate_candidate_id"] = -1 })
+                }
+            },
+            {
+                "node resolution duplicate candidate",
+                typeof(Graphiti.NodeResolutionsResponse),
+                new JsonObject
+                {
+                    ["entity_resolutions"] = new JsonArray(
+                        new JsonObject { ["id"] = 0, ["name"] = "Alice", ["duplicate_candidate_id"] = -1 })
+                },
+                new JsonObject
+                {
+                    ["entity_resolutions"] = new JsonArray(
+                        new JsonObject { ["id"] = 0, ["name"] = "Alice" })
+                }
+            },
+            {
+                "edge duplicate facts",
+                typeof(Graphiti.EdgeResolutionResponse),
+                new JsonObject { ["duplicate_facts"] = new JsonArray(), ["contradicted_facts"] = new JsonArray() },
+                new JsonObject { ["contradicted_facts"] = new JsonArray() }
+            },
+            {
+                "edge contradicted facts",
+                typeof(Graphiti.EdgeResolutionResponse),
+                new JsonObject { ["duplicate_facts"] = new JsonArray(), ["contradicted_facts"] = new JsonArray() },
+                new JsonObject { ["duplicate_facts"] = new JsonArray() }
+            },
+            {
+                "timestamp batch list",
+                typeof(Graphiti.BatchEdgeTimestampsResponse),
+                new JsonObject
+                {
+                    ["timestamps"] = new JsonArray(
+                        new JsonObject { ["valid_at"] = null, ["invalid_at"] = null })
+                },
+                new JsonObject()
+            }
+        };
+
+    [Theory]
+    [MemberData(nameof(RequiredStructuredResponseFields))]
+    public void StructuredResponseSchemas_RequireDeclaredFields(
+        string _,
+        Type responseModel,
+        JsonObject valid,
+        JsonObject missing)
+    {
+        Assert.Throws<JsonException>(() => StructuredResponseValidator.Validate(missing, responseModel));
+
+        StructuredResponseValidator.Validate(valid, responseModel);
+    }
+
+    [Fact]
+    public void EdgeTimestampResponseSchema_AllowsOmittedTemporalBounds()
+    {
+        StructuredResponseValidator.Validate(new JsonObject(), typeof(Graphiti.EdgeTimestampResponse));
+    }
+
     private static JsonObject NodeExtractionResponse(bool includeEdges, JsonObject entity)
     {
         var response = new JsonObject
