@@ -9,7 +9,7 @@ namespace Graphiti.Core.Tests;
 public class GraphitiWorkflowTests
 {
     [Fact]
-    public void EntityTypeDefinition_AttributesAreCaseInsensitiveImmutableSnapshot()
+    public void EntityTypeDefinition_AttributesAreExactImmutableSnapshot()
     {
         var attributes = new Dictionary<string, EntityAttributeDefinition>(StringComparer.Ordinal)
         {
@@ -21,11 +21,13 @@ public class GraphitiWorkflowTests
         attributes["location"] = new("Current location");
 
         Assert.IsAssignableFrom<FrozenDictionary<string, EntityAttributeDefinition>>(typeDefinition.Attributes);
-        Assert.True(typeDefinition.Attributes.ContainsKey("role"));
-        Assert.True(typeDefinition.Attributes.ContainsKey("ACTIVE"));
+        Assert.True(typeDefinition.Attributes.ContainsKey("Role"));
+        Assert.True(typeDefinition.Attributes.ContainsKey("active"));
+        Assert.False(typeDefinition.Attributes.ContainsKey("role"));
+        Assert.False(typeDefinition.Attributes.ContainsKey("ACTIVE"));
         Assert.False(typeDefinition.Attributes.ContainsKey("location"));
-        Assert.Equal("Job title", typeDefinition.Attributes["role"].Description);
-        Assert.Equal("boolean", typeDefinition.Attributes["ACTIVE"].Type);
+        Assert.Equal("Job title", typeDefinition.Attributes["Role"].Description);
+        Assert.Equal("boolean", typeDefinition.Attributes["active"].Type);
     }
 
     [Fact]
@@ -1388,8 +1390,8 @@ public class GraphitiWorkflowTests
             },
             ["extract_nodes.extract_attributes"] = new()
             {
-                ["Role"] = "engineer",
-                ["ACTIVE"] = true
+                ["role"] = "engineer",
+                ["active"] = true
             }
         });
         var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);

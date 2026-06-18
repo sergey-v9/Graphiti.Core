@@ -104,7 +104,7 @@ internal static class ExtractionContextBuilder
         }
 
         attributes.Sort(static (left, right) =>
-            StringComparer.OrdinalIgnoreCase.Compare(left.Key, right.Key));
+            StringComparer.Ordinal.Compare(left.Key, right.Key));
         return attributes;
     }
 }

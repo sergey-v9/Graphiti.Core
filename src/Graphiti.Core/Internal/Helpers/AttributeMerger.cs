@@ -41,7 +41,7 @@ internal static class AttributeMerger
             ? attributes
             : response;
         var result = new Dictionary<string, object?>(StringComparer.Ordinal);
-        var valuesByName = new Dictionary<string, JsonNode?>(StringComparer.OrdinalIgnoreCase);
+        var valuesByName = new Dictionary<string, JsonNode?>(StringComparer.Ordinal);
         foreach (var pair in source)
         {
             valuesByName[pair.Key] = pair.Value;
@@ -67,7 +67,7 @@ internal static class AttributeMerger
             attributeNames.Add(attributeName);
         }
 
-        attributeNames.Sort(StringComparer.OrdinalIgnoreCase);
+        attributeNames.Sort(StringComparer.Ordinal);
         return attributeNames;
     }
 

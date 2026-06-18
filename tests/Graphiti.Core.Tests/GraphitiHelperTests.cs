@@ -239,7 +239,7 @@ public class GraphitiHelperTests
     }
 
     [Fact]
-    public void ValidateEntityTypes_RejectsProtectedNamesCaseInsensitively()
+    public void ValidateEntityTypes_RejectsExactProtectedNames()
     {
         var exception = Assert.Throws<EntityTypeValidationException>(() =>
             GraphitiHelpers.ValidateEntityTypes(new Dictionary<string, EntityTypeDefinition>
@@ -248,11 +248,27 @@ public class GraphitiHelperTests
                     "Person",
                     attributes: new Dictionary<string, EntityAttributeDefinition>
                     {
-                        ["NAMEEMBEDDING"] = new("Protected field")
+                        ["name_embedding"] = new("Protected field")
                     })
             }));
 
-        Assert.Contains("NAMEEMBEDDING", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("name_embedding", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ValidateEntityTypes_AllowsCaseVariantsAndClrStyleAttributeNames()
+    {
+        GraphitiHelpers.ValidateEntityTypes(new Dictionary<string, EntityTypeDefinition>
+        {
+            ["Person"] = new(
+                "Person",
+                attributes: new Dictionary<string, EntityAttributeDefinition>
+                {
+                    ["NAMEEMBEDDING"] = new("Case variant"),
+                    ["NameEmbedding"] = new("CLR-style name"),
+                    ["Name"] = new("Capitalized name")
+                })
+        });
     }
 
     [Fact]

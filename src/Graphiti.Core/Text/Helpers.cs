@@ -35,15 +35,12 @@ public static partial class GraphitiHelpers
         "uuid",
         "name",
         "group_id",
-        "groupid",
         "labels",
         "created_at",
-        "createdat",
         "name_embedding",
-        "nameembedding",
         "summary",
         "attributes"
-    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+    }.ToFrozenSet(StringComparer.Ordinal);
 
     /// <summary>Deterministic default timestamp (Unix epoch) used for missing/uninitialized values.</summary>
     public static DateTime DefaultTimestamp { get; } = DateTime.UnixEpoch;

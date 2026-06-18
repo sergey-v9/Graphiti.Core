@@ -157,10 +157,10 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `981` passed, `3` skipped, `984` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice adds the driver-level
-`DeleteAllIndexesAsync` surface with provider no-op behavior for LadybugDB/Kuzu and InMemory,
-clarifies provider-dependent `deleteExisting` setup docs, and updates the public-API snapshot.
+credentials for the Ladybug feed: `984` passed, `3` skipped, `987` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice aligns custom entity attribute keys with
+Python's exact Pydantic field-name behavior and records two separate edge-resolution follow-ups from
+the read-only audit.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -185,9 +185,10 @@ stay in pre-sort RRF order like Python. Bulk ingestion skips the extra upfront e
 validation absent from Python `add_episode_bulk` while single `AddEpisodeAsync` still validates.
 Search `PropertyFilters` are now ignored by backend query construction and in-memory/materialized
 matching while keeping the DTO field, matching Python's current `property_filters` behavior.
-Invalidation candidates are now sorted by `valid_at` ascending with nulls last before resolved-edge
-expiry and contradiction handling, matching Python's invalidated-edge ordering. InMemory edge saves
-now require the same typed endpoint presence as Python's edge `MATCH`/`MERGE` save queries and leave
+Invalidation candidates are sorted by `valid_at` ascending with nulls last on the normal unexpired
+resolved-edge path, matching Python's invalidated-edge ordering there; the already-expired/invalidated
+resolved-edge sort branch is now tracked as a separate open follow-up below. InMemory edge saves now
+require the same typed endpoint presence as Python's edge `MATCH`/`MERGE` save queries and leave
 existing edges untouched when a replacement save has missing or wrong-typed endpoints.
 `.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`975` passed,
 `3` skipped, `978` total; both shippable packages packed and both fresh package-consumer smoke builds
@@ -411,6 +412,12 @@ currently expose Python's per-field `max_length` and required-field metadata; ad
 also be a public API decision. The concrete non-decision candidates found in this audit mini-pass
 have been split into separate slices and closed; continue the broader full-pipeline parity audit
 against current Python, and add new candidates here as they are confirmed.
+2026-06-18 follow-up: the non-decision entity-attribute exact-key drift is closed. C# custom
+attribute definitions, protected-name validation, generated dynamic attribute schemas, and attribute
+response merging now use exact ordinal keys like Python's Pydantic field-name handling; case variants
+and C# property-style names no longer collide with snake_case framework fields or with each other.
+The per-field `max_length` / required-field metadata shape remains the separate ask-user API decision
+noted above.
 
 Ladybug group-read statements now treat `uuidCursor: ""` like no cursor, matching Python's truthy
 cursor predicate for node and edge group reads. Community clustering now matches Python's endpoint
@@ -439,8 +446,13 @@ Python's minimal `_get_or_create_saga` return before save. One saga candidate re
 bulk saga predecessor lookup excludes the first bulk episode where Python passes an empty
 `current_episode_uuid`; matching Python can create a `NEXT_EPISODE` self-loop when the only bulk item
 reuses an already-linked saga episode UUID, so treat that as a decision-gated cycle-avoidance question
-before changing it. Decision-gated release/API/provider items remain separate in plan 05 and the
-provider notes.
+before changing it. Edge-resolution read-only audit on 2026-06-18 found two concrete non-decision
+candidates to handle as separate slices: `AddTripletAsync` currently subtracts related-edge UUIDs from
+broad invalidation candidates while Python passes related and existing candidates through to
+`resolve_extracted_edge` unchanged, and C# sorts invalidation candidates before contradiction handling
+even when the resolved edge is already expired/invalidated while Python sorts only inside the
+`expired_at is None` branch. Decision-gated release/API/provider items remain separate in plan 05 and
+the provider notes.
 
 Latest checkpoint, 2026-06-13:
 

@@ -66,4 +66,47 @@ public class AttributeMergerTests
         Assert.Equal("Research", node.Attributes["department"]);
     }
 
+    [Fact]
+    public void ReplaceExtractedAttributes_UsesExactDeclaredAttributeNames()
+    {
+        var prior = new Dictionary<string, object?>(StringComparer.Ordinal);
+        var entityType = new EntityTypeDefinition(
+            "Person",
+            attributes: new Dictionary<string, EntityAttributeDefinition>(StringComparer.Ordinal)
+            {
+                ["Role"] = new("Capitalized role"),
+                ["role"] = new("Lowercase role")
+            });
+        var response = new JsonObject
+        {
+            ["Role"] = "lead",
+            ["role"] = "engineer"
+        };
+
+        var merged = AttributeMerger.ReplaceExtractedAttributes(prior, entityType, response);
+
+        Assert.Equal("lead", merged["Role"]);
+        Assert.Equal("engineer", merged["role"]);
+    }
+
+    [Fact]
+    public void ReplaceExtractedAttributes_IgnoresCaseMismatchedResponseFields()
+    {
+        var prior = new Dictionary<string, object?>(StringComparer.Ordinal);
+        var entityType = new EntityTypeDefinition(
+            "Person",
+            attributes: new Dictionary<string, EntityAttributeDefinition>
+            {
+                ["role"] = new("Role")
+            });
+        var response = new JsonObject
+        {
+            ["Role"] = "lead"
+        };
+
+        var merged = AttributeMerger.ReplaceExtractedAttributes(prior, entityType, response);
+
+        Assert.Empty(merged);
+    }
+
 }

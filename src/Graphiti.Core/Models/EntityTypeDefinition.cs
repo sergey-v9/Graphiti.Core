@@ -10,7 +10,7 @@ public sealed class EntityTypeDefinition
 {
     private static readonly FrozenDictionary<string, EntityAttributeDefinition> EmptyAttributes =
         Array.Empty<KeyValuePair<string, EntityAttributeDefinition>>()
-            .ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+            .ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>Creates a type definition with an optional description and attribute set.</summary>
     public EntityTypeDefinition(
@@ -25,7 +25,7 @@ public sealed class EntityTypeDefinition
             : attributes.ToFrozenDictionary(
                 pair => pair.Key,
                 pair => pair.Value,
-                StringComparer.OrdinalIgnoreCase);
+                StringComparer.Ordinal);
     }
 
     /// <summary>Name of the entity type.</summary>
@@ -34,6 +34,6 @@ public sealed class EntityTypeDefinition
     /// <summary>Description guiding the LLM on when the type applies.</summary>
     public string Description { get; }
 
-    /// <summary>Attributes the type declares, keyed by attribute name (case-insensitive).</summary>
+    /// <summary>Attributes the type declares, keyed by exact attribute name.</summary>
     public FrozenDictionary<string, EntityAttributeDefinition> Attributes { get; }
 }

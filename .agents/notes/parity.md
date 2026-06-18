@@ -492,6 +492,14 @@ not call `validate_entity_types` or `validate_excluded_entity_types`; it passes 
 bulk extraction. C# `AddEpisodeBulkAsync` now mirrors that asymmetry by skipping the extra upfront
 validation while `AddEpisodeAsync` keeps the Python single-episode validation behavior.
 
+**2026-06-18 entity-attribute key follow-up:** closed a custom attribute validation/merge drift.
+Python custom entity field names are exact Pydantic field names: `validate_entity_types` rejects only
+exact `EntityNode.model_fields` names, and structured attribute responses address exact field names.
+C# `EntityTypeDefinition.Attributes`, protected-name validation, dynamic attribute schemas, and
+attribute response merging now use ordinal exact keys, so case variants and C# property-style names no
+longer collide with snake_case framework fields or with each other. The separate per-field
+`max_length` / required-metadata API expansion remains decision-gated.
+
 **2026-06-17 Ladybug clear-data empty-list follow-up:** closed a provider clear-flow drift. Python
 `clear_data` treats only `group_ids is None` as clear-all; a non-null empty list runs scoped deletion
 and matches nothing. The Ladybug driver now distinguishes null from an empty group list, preserving
