@@ -469,6 +469,9 @@ usage for refused/malformed/schema-invalid attempts is recorded only after parse
 validation succeeds, and `MicrosoftExtensionsAIChatClient` no longer extracts JSON embedded in
 arbitrary prose. It now accepts whole JSON or a whole payload wrapped in a markdown code fence; prose-
 wrapped output raises `JsonException` and flows through retry feedback.
+Embedder/lifecycle read-only audits on 2026-06-18 found no code slice: lifecycle/maintenance behavior
+was already documented and tested, while the default `HashEmbedder` and strict provider embedding
+output validation are accepted C# adapter divergences now recorded in `decisions.md` and `parity.md`.
 Decision-gated release/API/provider items remain separate in plan 05 and the provider notes.
 
 Latest checkpoint, 2026-06-13:

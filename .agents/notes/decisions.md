@@ -194,6 +194,10 @@ no wire/prompt/cache/temporal behavior changed):
 
 - Use `Microsoft.Extensions.AI` as the primary adapter boundary for chat and embeddings.
 - Keep `ILlmClient`, `IEmbedderClient`, and `ICrossEncoderClient` as Graphiti-facing abstractions.
+- `HashEmbedder` remains the C# constructor/DI default embedder so Graphiti Core works without an
+  implicit OpenAI dependency. This deliberately differs from Python's default `OpenAIEmbedder`; real-
+  provider hosts should opt into a provider-backed `MicrosoftExtensionsAIEmbedderClient` or register
+  an `IEmbeddingGenerator`.
 - `IdentityCrossEncoderClient` remains the C# constructor/DI default so Graphiti Core works without
   an external provider. This deliberately differs from Python's default `OpenAIRerankerClient`.
   Real-provider hosts should opt into `MicrosoftExtensionsAICrossEncoderClient`; the OpenAI sample
@@ -221,6 +225,10 @@ no wire/prompt/cache/temporal behavior changed):
 - Use tensor/vector primitives for low-level math when helpful, but keep Graphiti ranking algorithms
   custom and parity-tested. Reject non-finite embedding values at Graphiti-owned embedding boundaries
   before persistence or ranking.
+- Provider-backed C# embedders also require exact provider output counts and exact configured vector
+  dimensions before persistence/ranking. Python provider clients generally slice or forward returned
+  vectors, but the C# port treats malformed provider output as an adapter boundary error so downstream
+  graph state stays dimension-consistent.
 - Use an internal BM25 scorer for in-memory/materialized fallback full-text search. Do not add
   Lucene.NET as a default core dependency for this path.
 
