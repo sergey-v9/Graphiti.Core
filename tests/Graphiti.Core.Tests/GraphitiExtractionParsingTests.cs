@@ -85,6 +85,85 @@ public class GraphitiExtractionParsingTests
         StructuredResponseValidator.Validate(validOutOfRange, responseModel);
     }
 
+    [Theory]
+    [InlineData("EpisodeNode")]
+    [InlineData("Combined")]
+    public void ExtractionResponseSchemas_RequireCanonicalEntityArraysAndFields(string responseKind)
+    {
+        var responseModel = responseKind == "Combined"
+            ? typeof(Graphiti.CombinedExtractionResponse)
+            : typeof(Graphiti.EpisodeNodeExtractionResponse);
+        var includeEdges = responseKind == "Combined";
+        var missingArray = includeEdges
+            ? new JsonObject { ["edges"] = new JsonArray() }
+            : new JsonObject();
+        var aliasArray = new JsonObject
+        {
+            ["entities"] = new JsonArray(
+                new JsonObject { ["name"] = "Alice", ["entity_type_id"] = 0 })
+        };
+        var missingName = NodeExtractionResponse(
+            includeEdges,
+            new JsonObject { ["entity_type_id"] = 0 });
+        var valid = NodeExtractionResponse(
+            includeEdges,
+            new JsonObject { ["name"] = "Alice", ["entity_type_id"] = 0 });
+
+        Assert.Throws<JsonException>(() => StructuredResponseValidator.Validate(missingArray, responseModel));
+        Assert.Throws<JsonException>(() => StructuredResponseValidator.Validate(aliasArray, responseModel));
+        Assert.Throws<JsonException>(() => StructuredResponseValidator.Validate(missingName, responseModel));
+
+        StructuredResponseValidator.Validate(valid, responseModel);
+    }
+
+    [Theory]
+    [InlineData("EpisodeEdge")]
+    [InlineData("Combined")]
+    public void ExtractionResponseSchemas_RequireCanonicalEdgeFields(string responseKind)
+    {
+        var responseModel = responseKind == "Combined"
+            ? typeof(Graphiti.CombinedExtractionResponse)
+            : typeof(Graphiti.EpisodeEdgeExtractionResponse);
+        var missingArray = responseKind == "Combined"
+            ? new JsonObject
+            {
+                ["extracted_entities"] = new JsonArray()
+            }
+            : new JsonObject();
+        var aliasEdge = ExtractionEdgeResponse(
+            responseKind,
+            new JsonObject
+            {
+                ["source"] = "Alice",
+                ["target"] = "Acme",
+                ["name"] = "WORKS_AT",
+                ["fact"] = "Alice works at Acme."
+            });
+        var missingFact = ExtractionEdgeResponse(
+            responseKind,
+            new JsonObject
+            {
+                ["source_entity_name"] = "Alice",
+                ["target_entity_name"] = "Acme",
+                ["relation_type"] = "WORKS_AT"
+            });
+        var valid = ExtractionEdgeResponse(
+            responseKind,
+            new JsonObject
+            {
+                ["source_entity_name"] = "Alice",
+                ["target_entity_name"] = "Acme",
+                ["relation_type"] = "WORKS_AT",
+                ["fact"] = "Alice works at Acme."
+            });
+
+        Assert.Throws<JsonException>(() => StructuredResponseValidator.Validate(missingArray, responseModel));
+        Assert.Throws<JsonException>(() => StructuredResponseValidator.Validate(aliasEdge, responseModel));
+        Assert.Throws<JsonException>(() => StructuredResponseValidator.Validate(missingFact, responseModel));
+
+        StructuredResponseValidator.Validate(valid, responseModel);
+    }
+
     private static JsonObject NodeExtractionResponse(bool includeEdges, JsonObject entity)
     {
         var response = new JsonObject
@@ -97,6 +176,23 @@ public class GraphitiExtractionParsingTests
         }
 
         return response;
+    }
+
+    private static JsonObject ExtractionEdgeResponse(string responseKind, JsonObject edge)
+    {
+        if (responseKind == "Combined")
+        {
+            return new JsonObject
+            {
+                ["extracted_entities"] = new JsonArray(),
+                ["edges"] = new JsonArray(edge)
+            };
+        }
+
+        return new JsonObject
+        {
+            ["edges"] = new JsonArray(edge)
+        };
     }
 
     [Theory]

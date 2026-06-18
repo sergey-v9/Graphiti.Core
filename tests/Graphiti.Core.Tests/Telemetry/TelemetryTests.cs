@@ -212,8 +212,8 @@ public class TelemetryTests
                             {
                                 new JsonObject
                                 {
-                                    ["source"] = "Alice",
-                                    ["target"] = "Bob",
+                                    ["source_entity_name"] = "Alice",
+                                    ["target_entity_name"] = "Bob",
                                     ["relation_type"] = "LIKES",
                                     ["fact"] = "Alice likes Bob",
                                     ["valid_at"] = "2026-01-01T00:00:00Z"

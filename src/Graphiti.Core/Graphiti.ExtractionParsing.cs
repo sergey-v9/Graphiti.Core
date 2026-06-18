@@ -254,27 +254,20 @@ public sealed partial class Graphiti
 
     internal sealed class EpisodeNodeExtractionResponse
     {
-        public List<EpisodeGraphExtractedEntityResponse>? ExtractedEntities { get; set; }
-
-        public List<EpisodeGraphExtractedEntityResponse>? Entities { get; set; }
+        [JsonRequired]
+        public List<EpisodeGraphExtractedEntityResponse> ExtractedEntities { get; set; } = new();
     }
 
     internal sealed class EpisodeEdgeExtractionResponse
     {
-        public List<EpisodeGraphExtractedEdgeResponse>? Edges { get; set; }
+        [JsonRequired]
+        public List<EpisodeGraphExtractedEdgeResponse> Edges { get; set; } = new();
     }
 
     internal sealed class EpisodeGraphExtractedEntityResponse
     {
-        public string? Name { get; set; }
-
-        public string? Entity { get; set; }
-
-        public string? EntityName { get; set; }
-
-        public string? EntityType { get; set; }
-
-        public string? Type { get; set; }
+        [JsonRequired]
+        public string Name { get; set; } = string.Empty;
 
         [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
         [JsonRequired]
@@ -285,19 +278,17 @@ public sealed partial class Graphiti
 
     internal sealed class EpisodeGraphExtractedEdgeResponse
     {
-        public string? SourceEntityName { get; set; }
+        [JsonRequired]
+        public string SourceEntityName { get; set; } = string.Empty;
 
-        public string? Source { get; set; }
+        [JsonRequired]
+        public string TargetEntityName { get; set; } = string.Empty;
 
-        public string? TargetEntityName { get; set; }
+        [JsonRequired]
+        public string RelationType { get; set; } = string.Empty;
 
-        public string? Target { get; set; }
-
-        public string? RelationType { get; set; }
-
-        public string? Name { get; set; }
-
-        public string? Fact { get; set; }
+        [JsonRequired]
+        public string Fact { get; set; } = string.Empty;
 
         public string? ValidAt { get; set; }
 
@@ -361,14 +352,17 @@ public sealed partial class Graphiti
 
     internal sealed class CombinedExtractionResponse
     {
+        [JsonRequired]
         public List<CombinedExtractedEntityResponse> ExtractedEntities { get; set; } = new();
 
+        [JsonRequired]
         public List<CombinedExtractedEdgeResponse> Edges { get; set; } = new();
     }
 
     internal sealed class CombinedExtractedEntityResponse
     {
-        public string? Name { get; set; }
+        [JsonRequired]
+        public string Name { get; set; } = string.Empty;
 
         [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
         [JsonRequired]
@@ -377,13 +371,17 @@ public sealed partial class Graphiti
 
     internal sealed class CombinedExtractedEdgeResponse
     {
-        public string? SourceEntityName { get; set; }
+        [JsonRequired]
+        public string SourceEntityName { get; set; } = string.Empty;
 
-        public string? TargetEntityName { get; set; }
+        [JsonRequired]
+        public string TargetEntityName { get; set; } = string.Empty;
 
-        public string? RelationType { get; set; }
+        [JsonRequired]
+        public string RelationType { get; set; } = string.Empty;
 
-        public string? Fact { get; set; }
+        [JsonRequired]
+        public string Fact { get; set; } = string.Empty;
 
         public List<int>? EpisodeIndices { get; set; }
     }

@@ -586,15 +586,15 @@ public class GraphitiCommunityTests
             {
                 return new JsonObject
                 {
-                    ["entities"] = new JsonArray(
+                    ["extracted_entities"] = new JsonArray(
                         new JsonObject { ["name"] = "Carol", ["entity_type_id"] = 0 },
                         new JsonObject { ["name"] = "Alice", ["entity_type_id"] = 0 }),
                     ["edges"] = new JsonArray(
                         new JsonObject
                         {
-                            ["source"] = "Carol",
-                            ["target"] = "Alice",
-                            ["name"] = "WORKS_WITH",
+                            ["source_entity_name"] = "Carol",
+                            ["target_entity_name"] = "Alice",
+                            ["relation_type"] = "WORKS_WITH",
                             ["fact"] = "Carol works with Alice"
                         })
                 };

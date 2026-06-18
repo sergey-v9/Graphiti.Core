@@ -5660,6 +5660,18 @@ public class GraphitiWorkflowTests
             if (IsNodeExtractionPrompt(promptName))
             {
                 ExtractionResponseModel = responseModel;
+                return Task.FromResult<JsonObject>(new()
+                {
+                    ["extracted_entities"] = new JsonArray()
+                });
+            }
+
+            if (string.Equals(promptName, "extract_edges.edge", StringComparison.Ordinal))
+            {
+                return Task.FromResult<JsonObject>(new()
+                {
+                    ["edges"] = new JsonArray()
+                });
             }
 
             return Task.FromResult(new JsonObject());

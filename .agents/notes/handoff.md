@@ -159,10 +159,10 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `995` passed, `3` skipped, `998` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice accepts non-positive node-delete batch sizes
-through typed/static namespace deletion and InMemory/Ladybug delete loops, normalizing provider UUID
-delete loops to one all-items batch where needed.
+credentials for the Ladybug feed: `999` passed, `3` skipped, `1002` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice requires canonical live extraction response
+schemas (`extracted_entities`, `edges`, entity names/type IDs, edge endpoints, relation type, and
+fact) while leaving direct parser aliases as compatibility-only.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -473,9 +473,12 @@ usage for refused/malformed/schema-invalid attempts is recorded only after parse
 validation succeeds, and `MicrosoftExtensionsAIChatClient` no longer extracts JSON embedded in
 arbitrary prose. It now accepts whole JSON or a whole payload wrapped in a markdown code fence; prose-
 wrapped output raises `JsonException` and flows through retry feedback. A follow-up LLM audit found
-that C# cache keys are broader than Python by design and documented in `decisions.md`; schema
-description metadata and broader required-field tightening remain compatibility-sensitive follow-up
-candidates because current static fixtures still exercise legacy aliases.
+that C# cache keys are broader than Python by design and documented in `decisions.md`. Required-field
+tightening for live extraction response models is now closed: canonical `extracted_entities`, `edges`,
+entity names/type IDs, edge endpoints, relation type, and fact are required at structured-response
+validation. Schema description metadata remains compatibility-sensitive because it changes schema
+JSON/fingerprints/cache keys; direct parser legacy aliases remain compatibility-only and are not part
+of the live extraction schemas.
 Embedder/lifecycle read-only audits on 2026-06-18 found no code slice: lifecycle/maintenance behavior
 was already documented and tested, while the default `HashEmbedder` and strict provider embedding
 output validation are accepted C# adapter divergences now recorded in `decisions.md` and `parity.md`.

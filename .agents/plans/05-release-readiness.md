@@ -258,8 +258,9 @@ Recorded sweep result, 2026-06-17:
    decision-gated, and release/API/provider decisions remain separate from this gate.
 10. Follow-up removal/LLM audit on 2026-06-18 kept the same gate shape. The concrete node-delete
     non-positive batch-size drift was handled as its own parity/provider slice. LLM cache-key breadth is
-    now recorded as an intentional infrastructure decision; schema-description/required-field
-    tightening remains a compatibility-sensitive follow-up, not release infrastructure.
+    now recorded as an intentional infrastructure decision; live extraction required-field tightening
+    was handled as its own parity slice. Schema-description metadata remains compatibility-sensitive,
+    not release infrastructure, because it changes schema JSON, fingerprints, and cache keys.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

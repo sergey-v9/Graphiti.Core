@@ -460,6 +460,14 @@ DTOs now require `entity_type_id`, reject missing or nonnumeric values during st
 validation/direct parsing, preserve Pydantic-style numeric-string coercion, and still let valid
 out-of-range integers fall back to `Entity` like Python node creation.
 
+**2026-06-18 extraction response-shape follow-up:** closed the remaining live structured extraction
+schema drift. Separate node extraction now requires the top-level `extracted_entities` array plus each
+entity's canonical `name` and `entity_type_id`; separate edge extraction requires the top-level
+`edges` array plus canonical `source_entity_name`, `target_entity_name`, `relation_type`, and `fact`;
+combined extraction requires both arrays and the same canonical item fields. C# still keeps legacy
+alias handling in the direct `JsonObject` parser for compatibility tests, but those aliases are no
+longer part of the live response model/schema sent to or validated for LLM providers.
+
 **2026-06-17 cross-encoder duplicate follow-up:** closed the duplicate-passage search drift. Python's
 search rerankers collapse duplicate cross-encoder passage strings through dict-comprehension behavior:
 passages are sent once in first-seen passage order, while the last duplicate candidate wins the
