@@ -250,6 +250,7 @@ internal sealed class EdgeResolutionService(
             groupId,
             relatedEdges,
             existingEdgesOverride,
+            excludeRelatedEdges: true,
             cancellationToken).ConfigureAwait(false);
 
         var (resolvedEdge, invalidatedEdges) = await ResolveEdgeWithLlmAsync(
@@ -462,6 +463,7 @@ internal sealed class EdgeResolutionService(
         string groupId,
         IReadOnlyList<EntityEdge> relatedEdges,
         IReadOnlyList<EntityEdge>? existingEdgesOverride,
+        bool excludeRelatedEdges,
         CancellationToken cancellationToken)
     {
         var relatedUuids = new HashSet<string>(StringComparer.Ordinal);
@@ -480,13 +482,16 @@ internal sealed class EdgeResolutionService(
             new SearchFilters(),
             driver: driverAccessor(),
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        var overrideLookup = EdgeMergeHelpers.BuildOverrideLookup(existingEdgesOverride, relatedUuids);
+        var excludedOverrideUuids = excludeRelatedEdges
+            ? relatedUuids
+            : new HashSet<string>(StringComparer.Ordinal);
+        var overrideLookup = EdgeMergeHelpers.BuildOverrideLookup(existingEdgesOverride, excludedOverrideUuids);
         var candidates = new List<EntityEdge>(SearchUtilities.RelevantSchemaLimit);
         var seenUuids = new HashSet<string>(StringComparer.Ordinal);
         for (var i = 0; i < searchResults.Edges.Count; i++)
         {
             var edge = searchResults.Edges[i];
-            if (relatedUuids.Contains(edge.Uuid))
+            if (excludeRelatedEdges && relatedUuids.Contains(edge.Uuid))
             {
                 continue;
             }

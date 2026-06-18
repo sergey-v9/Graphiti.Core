@@ -934,6 +934,7 @@ public sealed partial class Graphiti
                 edge.GroupId,
                 relatedEdges,
                 null,
+                excludeRelatedEdges: false,
                 cancellationToken).ConfigureAwait(false);
             var syntheticEpisode = new EpisodicNode
             {

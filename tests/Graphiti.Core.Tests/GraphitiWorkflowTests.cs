@@ -725,6 +725,56 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddTriplet_AllowsRelatedEdgeAsInvalidationCandidate()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["dedupe_edges.resolve_edge"] = new()
+            {
+                ["duplicate_facts"] = new JsonArray(),
+                ["contradicted_facts"] = new JsonArray { 1 }
+            }
+        });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+        var oldValidAt = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var newValidAt = new DateTime(2026, 2, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = new EntityNode { Name = "Alice", GroupId = "group", CreatedAt = oldValidAt };
+        var acme = new EntityNode { Name = "Acme", GroupId = "group", CreatedAt = oldValidAt };
+        await alice.SaveAsync(driver);
+        await acme.SaveAsync(driver);
+        var oldEdge = new EntityEdge
+        {
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = acme.Uuid,
+            GroupId = "group",
+            CreatedAt = oldValidAt,
+            Name = "WORKS_AT",
+            Fact = "Alice works at Acme",
+            ValidAt = oldValidAt
+        };
+        await oldEdge.SaveAsync(driver);
+        var newEdge = new EntityEdge
+        {
+            SourceNodeUuid = alice.Uuid,
+            TargetNodeUuid = acme.Uuid,
+            GroupId = "group",
+            CreatedAt = newValidAt,
+            Name = "LEFT",
+            Fact = "Alice no longer works at Acme",
+            ValidAt = newValidAt
+        };
+
+        var result = await graphiti.AddTripletAsync(alice, newEdge, acme);
+
+        var invalidated = Assert.Single(result.Edges, edge => edge.Uuid == oldEdge.Uuid);
+        Assert.Equal(newValidAt, invalidated.InvalidAt);
+        var call = Assert.Single(llm.Calls, call => call.PromptName == "dedupe_edges.resolve_edge");
+        Assert.Contains("\"idx\":0", call.Messages[^1].Content, StringComparison.Ordinal);
+        Assert.Contains("\"idx\":1", call.Messages[^1].Content, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task GetNodesAndEdgesByEpisode_PreservesPerEpisodeEdgeMultiplicity()
     {
         var driver = new InMemoryGraphDriver();

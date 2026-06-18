@@ -486,6 +486,13 @@ now preserves those duplicate appearances during the resolution collection pass;
 episode edge UUID lists from the single-episode path therefore see the same duplicate sequence shape
 Python would return.
 
+**2026-06-18 add-triplet invalidation-candidate follow-up:** closed a triplet-only edge-resolution
+drift. Python `add_triplet` passes the reranked between-node `related_edges` and the broad
+`existing_edges` search results directly into `resolve_extracted_edge`, so the same edge UUID may
+appear in both prompt lists with continuous indexes. C# normal ingestion still excludes duplicate
+candidates from broad invalidation search, but `AddTripletAsync` now keeps related UUIDs in the broad
+candidate list and can invalidate a related edge through its broad-list index.
+
 **2026-06-17 bulk type-validation follow-up:** closed an `add_episode_bulk` entrypoint drift. Python
 validates `entity_types` / `excluded_entity_types` for single `add_episode`, but its bulk path does
 not call `validate_entity_types` or `validate_excluded_entity_types`; it passes the values directly to

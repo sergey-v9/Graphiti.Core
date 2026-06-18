@@ -157,10 +157,10 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `984` passed, `3` skipped, `987` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice aligns custom entity attribute keys with
-Python's exact Pydantic field-name behavior and records two separate edge-resolution follow-ups from
-the read-only audit.
+credentials for the Ladybug feed: `985` passed, `3` skipped, `988` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice aligns `AddTripletAsync` invalidation
+candidates with Python by keeping related UUIDs in the broad candidate list for the triplet path
+while preserving duplicate-candidate exclusion for normal ingestion.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -447,12 +447,12 @@ bulk saga predecessor lookup excludes the first bulk episode where Python passes
 `current_episode_uuid`; matching Python can create a `NEXT_EPISODE` self-loop when the only bulk item
 reuses an already-linked saga episode UUID, so treat that as a decision-gated cycle-avoidance question
 before changing it. Edge-resolution read-only audit on 2026-06-18 found two concrete non-decision
-candidates to handle as separate slices: `AddTripletAsync` currently subtracts related-edge UUIDs from
-broad invalidation candidates while Python passes related and existing candidates through to
-`resolve_extracted_edge` unchanged, and C# sorts invalidation candidates before contradiction handling
-even when the resolved edge is already expired/invalidated while Python sorts only inside the
-`expired_at is None` branch. Decision-gated release/API/provider items remain separate in plan 05 and
-the provider notes.
+candidates. The `AddTripletAsync` candidate-subtraction drift is now closed: triplet ingestion keeps
+related UUIDs in the broad invalidation candidate list while normal ingestion still excludes them.
+One edge-resolution candidate remains open: C# sorts invalidation candidates before contradiction
+handling even when the resolved edge is already expired/invalidated, while Python sorts only inside
+the `expired_at is None` branch. Decision-gated release/API/provider items remain separate in plan 05
+and the provider notes.
 
 Latest checkpoint, 2026-06-13:
 
