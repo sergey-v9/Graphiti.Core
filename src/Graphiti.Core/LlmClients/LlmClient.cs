@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
+using System.Threading;
 
 namespace Graphiti.Core.LlmClients;
 
@@ -19,6 +20,7 @@ public abstract class LlmClient : ILlmClient, IDisposable
     private static readonly JsonTypeInfo<LlmCacheKeyPayload> CacheKeyPayloadJsonTypeInfo =
         (JsonTypeInfo<LlmCacheKeyPayload>)GraphitiJsonSerializer.Options.GetTypeInfo(typeof(LlmCacheKeyPayload));
 
+    private readonly AsyncLocal<PendingTokenUsageHolder?> _pendingTokenUsage = new();
     private readonly bool _ownsCache;
     private bool _disposed;
 
@@ -188,6 +190,7 @@ public abstract class LlmClient : ILlmClient, IDisposable
         {
             try
             {
+                BeginPendingTokenUsage();
                 var response = await GenerateResponseCoreAsync(
                     liveMessages,
                     responseModel,
@@ -197,12 +200,19 @@ public abstract class LlmClient : ILlmClient, IDisposable
                     promptName,
                     cancellationToken).ConfigureAwait(false);
                 ValidateResponse(response, responseModel, responseSchema);
+                RecordPendingTokenUsage();
                 return response;
             }
             catch (JsonException exception) when (retryCount < MaxValidationRetries)
             {
+                ClearPendingTokenUsage();
                 retryCount++;
                 liveMessages = AppendValidationRetryMessage(liveMessages, exception);
+            }
+            catch
+            {
+                ClearPendingTokenUsage();
+                throw;
             }
         }
     }
@@ -274,6 +284,35 @@ public abstract class LlmClient : ILlmClient, IDisposable
         ModelSize modelSize,
         string? promptName,
         CancellationToken cancellationToken);
+
+    internal void SetPendingTokenUsage(string? promptName, long inputTokens, long outputTokens)
+    {
+        if (_pendingTokenUsage.Value is { } holder)
+        {
+            holder.Usage = new PendingTokenUsage(promptName ?? string.Empty, inputTokens, outputTokens);
+        }
+    }
+
+    private void RecordPendingTokenUsage()
+    {
+        if (_pendingTokenUsage.Value?.Usage is not { } usage)
+        {
+            return;
+        }
+
+        TokenTracker.AddUsage(usage.PromptName, usage.InputTokens, usage.OutputTokens);
+        ClearPendingTokenUsage();
+    }
+
+    private void BeginPendingTokenUsage()
+    {
+        _pendingTokenUsage.Value = new PendingTokenUsageHolder();
+    }
+
+    private void ClearPendingTokenUsage()
+    {
+        _pendingTokenUsage.Value = null;
+    }
 
     /// <summary>
     /// Clones and augments the messages with attribute-extraction, schema, and language instructions and
@@ -434,4 +473,11 @@ public abstract class LlmClient : ILlmClient, IDisposable
             ? target with { Content = target.Content + note }
             : target with { Content = note.TrimStart() + "\n\n" + target.Content };
     }
+
+    private sealed class PendingTokenUsageHolder
+    {
+        public PendingTokenUsage? Usage { get; set; }
+    }
+
+    private sealed record PendingTokenUsage(string PromptName, long InputTokens, long OutputTokens);
 }

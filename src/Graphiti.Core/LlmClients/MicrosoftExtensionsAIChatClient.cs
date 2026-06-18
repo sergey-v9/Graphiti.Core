@@ -67,9 +67,10 @@ public sealed class MicrosoftExtensionsAIChatClient : LlmClient
                 ExecuteProviderCallAsync,
                 cancellationToken).ConfigureAwait(false);
 
-        TrackUsage(response, promptName);
         ThrowIfRefused(response);
-        return ParseJsonResponse(response.Text);
+        var parsed = ParseJsonResponse(response.Text);
+        SetPendingUsage(response, promptName);
+        return parsed;
 
         async ValueTask<ChatResponse> ExecuteProviderCallAsync(CancellationToken token)
         {
@@ -128,7 +129,7 @@ public sealed class MicrosoftExtensionsAIChatClient : LlmClient
         }
     }
 
-    private void TrackUsage(ChatResponse response, string? promptName)
+    private void SetPendingUsage(ChatResponse response, string? promptName)
     {
         var usage = response.Usage;
         if (usage is null)
@@ -138,7 +139,7 @@ public sealed class MicrosoftExtensionsAIChatClient : LlmClient
 
         var input = usage.InputTokenCount.GetValueOrDefault();
         var output = usage.OutputTokenCount.GetValueOrDefault();
-        TokenTracker.AddUsage(promptName ?? string.Empty, input, output);
+        SetPendingTokenUsage(promptName, input, output);
     }
 
     private static Microsoft.Extensions.AI.ChatMessage ToAIMessage(Message message) =>

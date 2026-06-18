@@ -255,8 +255,10 @@ no wire/prompt/cache/temporal behavior changed):
   emit `()` / `group AND ()` query strings and let the backend decide. C# treats skipping these
   direct blank Lucene calls as intentional hardening to avoid invalid or backend-dependent no-op
   full-text queries.
-- Property filters are enforced in C# even though Python currently exposes the field without using
-  it. Treat this as an intentional C# feature.
+- Property filters are preserved on the public DTO for Python wire-shape compatibility, but ignored
+  by backend query construction and in-memory/materialized matching because Python currently exposes
+  the field without applying it in search filter constructors. Treat enforcement as a future API and
+  behavior decision, not as current C# behavior.
 - Date-filter Cypher uses unique parameter names across OR branches; Python's reset-per-branch
   behavior can collide.
 - Kuzu-compatible full-text query construction matches Python's `fulltext_query` KUZU branch
@@ -301,7 +303,9 @@ no wire/prompt/cache/temporal behavior changed):
   pass response-format metadata to the provider. Source-generated JSON metadata may cover nested
   `Graphiti.*Response` DTOs, but DTO type identity and snake_case schema/wire names must stay stable.
 - Token usage tracking keeps the idiomatic C# `InputTokens`/`OutputTokens` totals, and also exposes
-  Python-equivalent per-prompt `CallCount`, `AvgInputTokens`, and `AvgOutputTokens` values.
+  Python-equivalent per-prompt `CallCount`, `AvgInputTokens`, and `AvgOutputTokens` values. Live
+  provider usage is recorded only after the response parses and passes structured validation; refused,
+  malformed, empty, or schema-invalid retry attempts do not increment `TokenTracker`.
 - Combined node+edge extraction is ported as an internal `EpisodeGraphExtractor` path, but public
   `Graphiti` ingestion stays on separate node then edge extraction by default. The Python baseline
   exposes `use_combined_extraction` only as an internal bulk helper flag defaulting to `False`, not

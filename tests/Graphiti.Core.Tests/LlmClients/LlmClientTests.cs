@@ -871,7 +871,7 @@ public class LlmClientTests
         // the ContentFilter finish reason; that must propagate as a non-retryable LlmRefusalException
         // with no re-prompt.
         var chatClient = new ScriptedChatClient(
-            new ScriptedReply("{\"ok\":false}", ChatFinishReason.ContentFilter),
+            new ScriptedReply("{\"ok\":false}", ChatFinishReason.ContentFilter, 7, 8),
             new ScriptedReply("{\"ok\":true}"));
         var graphitiClient = new MicrosoftExtensionsAIChatClient(chatClient);
 
@@ -881,6 +881,29 @@ public class LlmClientTests
                 responseModel: typeof(CacheResponseA)));
 
         Assert.Equal(1, chatClient.Calls);
+        Assert.Empty(graphitiClient.TokenTracker.Usage);
+    }
+
+    [Fact]
+    public async Task GenerateResponse_TracksUsageOnlyForValidatedResponse()
+    {
+        var chatClient = new ScriptedChatClient(
+            new ScriptedReply("not-json", InputTokens: 1, OutputTokens: 2),
+            new ScriptedReply("{\"ok\":\"yes\"}", InputTokens: 3, OutputTokens: 4),
+            new ScriptedReply("{\"ok\":true}", InputTokens: 5, OutputTokens: 6));
+        var graphitiClient = new MicrosoftExtensionsAIChatClient(chatClient);
+
+        var response = await graphitiClient.GenerateResponseAsync(
+            new[] { new Message("user", "extract") },
+            responseModel: typeof(CacheResponseA),
+            promptName: "structured");
+
+        Assert.True(response["ok"]?.GetValue<bool>());
+        Assert.Equal(3, chatClient.Calls);
+        var usage = graphitiClient.TokenTracker.Usage["structured"];
+        Assert.Equal(5, usage.InputTokens);
+        Assert.Equal(6, usage.OutputTokens);
+        Assert.Equal(1, usage.CallCount);
     }
 
     [Fact]
@@ -1207,7 +1230,11 @@ public class LlmClientTests
         public void Dispose() => Disposed = true;
     }
 
-    private sealed record ScriptedReply(string Text, ChatFinishReason? FinishReason = null);
+    private sealed record ScriptedReply(
+        string Text,
+        ChatFinishReason? FinishReason = null,
+        int? InputTokens = null,
+        int? OutputTokens = null);
 
     private sealed class ScriptedChatClient : IChatClient
     {
@@ -1240,6 +1267,14 @@ public class LlmClientTests
             {
                 FinishReason = reply.FinishReason
             };
+            if (reply.InputTokens is not null || reply.OutputTokens is not null)
+            {
+                response.Usage = new UsageDetails
+                {
+                    InputTokenCount = reply.InputTokens,
+                    OutputTokenCount = reply.OutputTokens
+                };
+            }
 
             return Task.FromResult(response);
         }
