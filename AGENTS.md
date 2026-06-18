@@ -16,13 +16,15 @@ commit rules, read `.agents/notes/commit-policy.md`.
 **Current priority - how to pick work.** Concrete work orders live in `.agents/plans/`; the
 roadmap orders them. Pick the lowest-numbered plan with unchecked actionable items, do exactly one
 item as a slice (implement → verify → commit → check it off and update `parity.md` when parity state
-changes), then stop or pick the next. Phases 1–3 are complete and plan-05 A–E are complete; plan 06 is
-the active non-decision pre-release work order to merge the LadybugDB driver back into
-`Graphiti.Core`. Remaining release-infrastructure work after that is decision- or external-feed-gated
-(version cadence, publish path, metapackage shape, and future Ladybug package publication/replacement).
-When the open plan items are blocked on those decisions, choose work from `roadmap.md`/`handoff.md`
-that directly strengthens parity, packaging verification, upstream sync, or documented current state.
-Performance work is allowed only when it is benchmark-first and parity-safe.
+changes), then stop or pick the next. Phases 1–3 are complete and plan-05 A–E are complete. Plan 06
+is scheduled as a separate pre-release stream to merge the LadybugDB driver back into
+`Graphiti.Core`, but it is opt-in because it changes package/feed consequences; do not auto-pick it
+unless Sergey explicitly initiates that merge. Remaining release-infrastructure work after that is
+decision- or external-feed-gated (version cadence, publish path, metapackage shape, and future
+Ladybug package publication/replacement). When the open plan items are blocked on those decisions,
+choose work from `roadmap.md`/`handoff.md` that directly strengthens parity, packaging verification,
+upstream sync, or documented current state. Performance work is allowed only when it is
+benchmark-first and parity-safe.
 
 **No Python coupling in the code.** The product is *behavioral / wire* parity with Python (enforced by
 tests, tracked in `parity.md`) — but the C# `src/` and `tests/` must not be textually welded to Python.
