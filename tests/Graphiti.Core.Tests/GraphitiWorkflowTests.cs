@@ -1415,6 +1415,60 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisode_ClearsResolvedNodeAttributesWhenEntityTypesAreOmitted()
+    {
+        var driver = new InMemoryGraphDriver();
+        var existing = new EntityNode
+        {
+            Name = "Alice",
+            GroupId = "group",
+            Labels = new List<string> { "Entity", "Person" },
+            Attributes = new Dictionary<string, object?>
+            {
+                ["legacy"] = "stale"
+            }
+        };
+        await existing.SaveAsync(driver);
+        var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["extract_nodes.extract_message"] = new()
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Alice", ["entity_type"] = "Person" },
+                    new JsonObject { ["name"] = "Bob", ["entity_type"] = "Person" }
+                },
+                ["edges"] = new JsonArray
+                {
+                    new JsonObject
+                    {
+                        ["source"] = "Alice",
+                        ["target"] = "Bob",
+                        ["relation_type"] = "KNOWS",
+                        ["fact"] = "Alice knows Bob."
+                    }
+                }
+            },
+            ["extract_nodes.extract_attributes"] = new()
+            {
+                ["role"] = "engineer"
+            }
+        });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+
+        await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Alice knows Bob.",
+            "message",
+            new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+            groupId: "group");
+
+        var storedAlice = await EntityNode.GetByUuidAsync(driver, existing.Uuid);
+        Assert.Empty(storedAlice.Attributes);
+        Assert.DoesNotContain("extract_nodes.extract_attributes", llm.PromptNames);
+    }
+
+    [Fact]
     public async Task AddEpisode_HydratesDeclaredEntityAttributes()
     {
         var driver = new InMemoryGraphDriver();
@@ -1856,6 +1910,17 @@ public class GraphitiWorkflowTests
     public async Task AddEpisode_SkipsAttributePromptWhenEntityTypeHasNoDeclaredAttributes()
     {
         var driver = new InMemoryGraphDriver();
+        var existing = new EntityNode
+        {
+            Name = "Alice",
+            GroupId = "group",
+            Labels = new List<string> { "Entity", "Person" },
+            Attributes = new Dictionary<string, object?>
+            {
+                ["legacy"] = "stale"
+            }
+        };
+        await existing.SaveAsync(driver);
         var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
         {
             ["extract_nodes.extract_message"] = new()
@@ -1896,6 +1961,8 @@ public class GraphitiWorkflowTests
 
         Assert.DoesNotContain("extract_nodes.extract_attributes", llm.PromptNames);
         Assert.All(result.Nodes, node => Assert.Empty(node.Attributes));
+        var storedAlice = await EntityNode.GetByUuidAsync(driver, existing.Uuid);
+        Assert.Empty(storedAlice.Attributes);
     }
 
     [Fact]

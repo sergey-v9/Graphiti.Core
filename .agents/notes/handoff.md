@@ -157,9 +157,9 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `989` passed, `3` skipped, `992` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice preserves explicit group ordering when
-building communities, matching the community-cluster group loop before community generation.
+credentials for the Ladybug feed: `990` passed, `3` skipped, `993` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice clears resolved node attributes when no
+declared attribute schema applies, matching the no-prompt attribute extraction result.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -192,7 +192,8 @@ existing edges untouched when a replacement save has missing or wrong-typed endp
 saga-scoped retrieval and saga episode-content reads now follow `HAS_EPISODE` relationship rows
 directly, preserving cross-group linked episodes and duplicate membership rows. Community rebuild now
 builds clusters per resolved group id in caller/discovery order, so explicit group lists preserve
-their returned community and membership-edge order.
+their returned community and membership-edge order. Resolved node attributes are now cleared to an
+empty map when entity types are omitted or the matched entity type has no declared attributes.
 `.\eng\Verify-GraphitiCore.ps1` is green with the active GitHub Packages credential (`975` passed,
 `3` skipped, `978` total; both shippable packages packed and both fresh package-consumer smoke builds
 succeeded).

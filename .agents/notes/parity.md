@@ -526,6 +526,13 @@ attribute response merging now use ordinal exact keys, so case variants and C# p
 longer collide with snake_case framework fields or with each other. The separate per-field
 `max_length` / required-metadata API expansion remains decision-gated.
 
+**2026-06-18 node-attribute no-schema follow-up:** closed a reachable attribute-clearing drift.
+Python runs node attribute extraction for every resolved node and assigns the returned dictionary
+back; when no matching entity type exists or the matched type declares no fields, that returned
+dictionary is `{}`. C# now clears resolved node attributes for omitted/empty entity-type maps and
+for nodes whose matched type has no declared attributes, while still skipping the attribute prompt in
+those no-schema cases.
+
 **2026-06-17 Ladybug clear-data empty-list follow-up:** closed a provider clear-flow drift. Python
 `clear_data` treats only `group_ids is None` as clear-all; a non-null empty list runs scoped deletion
 and matches nothing. The Ladybug driver now distinguishes null from an empty group list, preserving
@@ -613,7 +620,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 | Node extraction (LLM) | node_operations.extract_nodes | EpisodeGraphExtractor | OK | Prompts ported 2026-06-11 |
 | Multi-episode node/fact attribution | node_operations.py:103-112, 283-306; edge_operations.py:170-180, 290-313 | EpisodeGraphExtractor → EpisodeAttribution → MaintenanceUtilities.BuildEpisodicEdges / EdgeResolutionService | OK | C# parses `episode_indices` for extracted nodes and facts, maps fact attribution to edge `Episodes`/`ReferenceTime` using Python's first-raw-index `reference_time` rule, and now keeps node attribution keyed to extracted-node UUIDs like Python; resolved-node UUID mismatches therefore fall back to all provided episodes |
 | Node resolution: deterministic + embedding + LLM dedup | node_operations.resolve_extracted_nodes | NodeResolutionService | OK | Prompt ported 2026-06-11; deterministic, embedding, and LLM dedupe stages covered. 2026-06-17: label promotion now mirrors Python `_promote_resolved_node`, adding extracted specific labels only when the matched canonical node is still generic `Entity` |
-| Entity attribute extraction | node_operations.extract_attributes_from_nodes | AttributeExtractionService | OK | Overlay merge and anti-hallucination prompt ported 2026-06-11 |
+| Entity attribute extraction | node_operations.extract_attributes_from_nodes | AttributeExtractionService | OK | Overlay merge and anti-hallucination prompt ported 2026-06-11. Nodes without an applicable declared-attribute schema are cleared to an empty attribute map without prompting |
 | Entity summary generation (batch, fact-appending) | node_operations.py:833-1000 | EntitySummaryService | OK | Ported 2026-06-11; appends short new edge facts, batches 30-node LLM flights, supports internal filter/episode-prompt hooks, truncates LLM summaries |
 | Edge extraction (LLM) | edge_operations.extract_edges | EpisodeGraphExtractor + EdgeResolutionService | OK | Prompts ported 2026-06-11; public `AddEpisodeAsync` coverage pins Python's separate-extraction self-edge drop after source/target names resolve to the same node UUID and exact endpoint-name validation before UUID resolution |
 | Edge resolution: dedup fast-path, timestamps, contradictions | edge_operations.resolve_extracted_edge | EdgeResolutionService | OK | Prompt text ported 2026-06-11; broad candidate search remains tracked separately below |

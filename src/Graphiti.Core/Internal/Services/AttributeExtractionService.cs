@@ -21,8 +21,17 @@ internal sealed class AttributeExtractionService(
 
         try
         {
-            if (nodes.Count == 0 || entityTypes is null || entityTypes.Count == 0)
+            if (nodes.Count == 0)
             {
+                activity?.SetTag("graphiti.extraction.skipped", true);
+                activity?.SetTag("graphiti.extraction.targets", 0);
+                GraphitiTelemetry.SetOk(activity);
+                return;
+            }
+
+            if (entityTypes is null || entityTypes.Count == 0)
+            {
+                ClearNodeAttributes(nodes);
                 activity?.SetTag("graphiti.extraction.skipped", true);
                 activity?.SetTag("graphiti.extraction.targets", 0);
                 GraphitiTelemetry.SetOk(activity);
@@ -73,16 +82,32 @@ internal sealed class AttributeExtractionService(
         {
             var node = nodes[i];
             var entityType = EntityTypeResolver.FindEntityTypeDefinition(node, entityTypes);
-            if (entityType is not null && entityType.Attributes.Count > 0)
+            if (entityType is null || entityType.Attributes.Count == 0)
             {
-                extractionTargets.Add(new NodeAttributeExtractionTarget(
-                    node,
-                    entityType,
-                    AttributeSchema: null!));
+                ClearNodeAttributes(node);
+                continue;
             }
+
+            extractionTargets.Add(new NodeAttributeExtractionTarget(
+                node,
+                entityType,
+                AttributeSchema: null!));
         }
 
         return extractionTargets;
+    }
+
+    private static void ClearNodeAttributes(List<EntityNode> nodes)
+    {
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            ClearNodeAttributes(nodes[i]);
+        }
+    }
+
+    private static void ClearNodeAttributes(EntityNode node)
+    {
+        node.Attributes = new Dictionary<string, object?>(StringComparer.Ordinal);
     }
 
     private static void ApplyNodeAttributeSchemas(List<NodeAttributeExtractionTarget> targets)
