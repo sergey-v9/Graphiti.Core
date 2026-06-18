@@ -15,6 +15,13 @@ the AGENTS.md "lowest-numbered plan with unchecked items" rule. Execute it only 
 initiates it, as its own implementation stream (not a versioning/publishing step or a parity
 micro-slice). Default ongoing work stays on parity hardening / docs / verification.
 
+## Prerequisite Gate
+
+Before starting this merge, re-run the plan-folder backlog gate from plan 05 Step F across
+`.agents/plans/` and the directly linked notes. Anything concrete left in that folder or its linked
+planning notes must be handled as a separate parity/provider/perf/docs slice first; do not fold it
+into the Ladybug merge checklist below.
+
 ## Work Items
 
 - [ ] Move the Ladybug driver implementation from `src/Graphiti.Core.Drivers.Ladybug/` into
