@@ -123,6 +123,11 @@ share a UUID without overwriting each other; entity, episodic, community, has-ep
 next-episode edges can do the same. `AddTripletAsync` now preserves a submitted EntityEdge UUID when
 only a non-entity edge has that UUID, matching Python's same-type collision check.
 
+**2026-06-18 edge equality boundary follow-up:** closed a model equality drift from the edge/node
+base classes. Edges still hash by UUID, but typed edge-to-edge equality now returns false while
+object equality only matches a node with the same UUID. Node equality remains node-only, preserving
+the asymmetric edge-to-node boundary exposed by the source model methods.
+
 **2026-06-18 in-memory endpoint-gated edge-save follow-up:** closed a reference-driver persistence
 drift. Python edge `save` queries `MATCH` the typed source and target nodes before `MERGE`, so an
 edge save with missing or wrong-typed endpoints creates no relationship and does not replace an

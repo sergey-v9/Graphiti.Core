@@ -252,6 +252,10 @@ Recorded sweep result, 2026-06-17:
    and the model/namespace CRUD audit found no confirmed, undocumented drift. Continue to treat any
    newly found plan-folder leftover as a separate slice first; do not bundle it into the Ladybug merge,
    versioning, publish path, or metapackage decisions.
+9. Follow-up sweep after the moved-docs recheck found no unchecked implementation checklist items in
+   plans 01-05 and only plan 06's opt-in Ladybug merge checklist. The concrete `Edge.Equals` audit
+   candidate was handled as its own parity slice; the bulk-saga predecessor self-loop remains
+   decision-gated, and release/API/provider decisions remain separate from this gate.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

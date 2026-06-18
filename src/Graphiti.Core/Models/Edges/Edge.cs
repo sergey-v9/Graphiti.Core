@@ -2,9 +2,9 @@ namespace Graphiti.Core.Models.Edges;
 
 /// <summary>
 /// Base type for all graph edges: a directed relationship from <see cref="SourceNodeUuid"/> to
-/// <see cref="TargetNodeUuid"/> within a graph partition. Edges are compared by UUID. Concrete
-/// subtypes include <see cref="EntityEdge"/>, <see cref="EpisodicEdge"/>,
-/// <see cref="CommunityEdge"/>, <see cref="HasEpisodeEdge"/>, and <see cref="NextEpisodeEdge"/>.
+/// <see cref="TargetNodeUuid"/> within a graph partition. Concrete subtypes include
+/// <see cref="EntityEdge"/>, <see cref="EpisodicEdge"/>, <see cref="CommunityEdge"/>,
+/// <see cref="HasEpisodeEdge"/>, and <see cref="NextEpisodeEdge"/>.
 /// </summary>
 public abstract class Edge : IEquatable<Edge>
 {
@@ -38,11 +38,15 @@ public abstract class Edge : IEquatable<Edge>
         CancellationToken cancellationToken = default) =>
         TypedEdgeDeletion.DeleteBaseEdgesByUuidsAsync(driver, uuids, cancellationToken);
 
-    /// <summary>Two edges are equal when they share the same <see cref="Uuid"/>.</summary>
-    public bool Equals(Edge? other) => other is not null && Uuid == other.Uuid;
+    /// <summary>Edges do not compare equal to other edges through the typed equality path.</summary>
+    public bool Equals(Edge? other)
+    {
+        _ = other;
+        return false;
+    }
 
     /// <inheritdoc />
-    public override bool Equals(object? obj) => obj is Edge edge && Equals(edge);
+    public override bool Equals(object? obj) => obj is Node node && Uuid == node.Uuid;
 
     /// <inheritdoc />
     public override int GetHashCode() => Uuid.GetHashCode(StringComparison.Ordinal);

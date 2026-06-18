@@ -157,9 +157,9 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `993` passed, `3` skipped, `996` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice keeps node resolution scoped to per-node
-semantic candidates plus explicit overrides; no-hit candidate searches keep extracted nodes new.
+credentials for the Ladybug feed: `994` passed, `3` skipped, `997` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice preserves the edge equality boundary: typed
+edge-to-edge equality returns false while object equality matches only a node with the same UUID.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -451,9 +451,9 @@ Python's minimal `_get_or_create_saga` return before save. InMemory saga-scoped 
 episode-content reads now preserve `HAS_EPISODE` row semantics, including cross-group linked episodes
 and duplicate membership rows. The bulk node-resolution candidate from the 2026-06-18 subagent audit
 is now closed: node resolution uses per-extracted semantic candidates plus explicit overrides only,
-and no-hit searches keep extracted nodes new. Remaining 2026-06-18 subagent candidate to handle
-separately: `Edge.Equals` appears to follow edge-to-edge UUID equality rather than Python's
-edge-to-node boundary quirk. One saga candidate remains separate:
+and no-hit searches keep extracted nodes new. The 2026-06-18 `Edge.Equals` subagent candidate is now
+closed: edge-to-edge equality returns false while object equality matches only a node with the same
+UUID. One saga candidate remains separate:
 bulk saga predecessor lookup excludes the first bulk episode where Python passes an empty
 `current_episode_uuid`; matching Python can create a `NEXT_EPISODE` self-loop when the only bulk item
 reuses an already-linked saga episode UUID, so treat that as a decision-gated cycle-avoidance question
