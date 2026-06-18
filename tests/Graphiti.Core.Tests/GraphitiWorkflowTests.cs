@@ -768,6 +768,92 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task GetNodesAndEdgesByEpisode_OmitsMissingEpisodesAndKeepsUnrankedShape()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var firstEdge = new EntityEdge
+        {
+            Uuid = "edge-first",
+            SourceNodeUuid = "alice",
+            TargetNodeUuid = "bob",
+            GroupId = "group",
+            Name = "KNOWS",
+            Fact = "Alice knows Bob",
+            CreatedAt = now
+        };
+        var secondEdge = new EntityEdge
+        {
+            Uuid = "edge-second",
+            SourceNodeUuid = "alice",
+            TargetNodeUuid = "bob",
+            GroupId = "group",
+            Name = "TRUSTS",
+            Fact = "Alice trusts Bob",
+            CreatedAt = now.AddMinutes(1)
+        };
+        await SaveEntityEdgeEndpointNodesAsync(driver, firstEdge);
+        await firstEdge.SaveAsync(driver);
+        await secondEdge.SaveAsync(driver);
+        var firstEpisode = new EpisodicNode
+        {
+            Uuid = "episode-first",
+            Name = "first",
+            GroupId = "group",
+            CreatedAt = now,
+            ValidAt = now,
+            Content = firstEdge.Fact,
+            EntityEdges = new List<string> { firstEdge.Uuid }
+        };
+        var secondEpisode = new EpisodicNode
+        {
+            Uuid = "episode-second",
+            Name = "second",
+            GroupId = "group",
+            CreatedAt = now.AddMinutes(1),
+            ValidAt = now.AddMinutes(1),
+            Content = secondEdge.Fact,
+            EntityEdges = new List<string> { secondEdge.Uuid }
+        };
+        await firstEpisode.SaveAsync(driver);
+        await secondEpisode.SaveAsync(driver);
+        await new EpisodicEdge
+        {
+            Uuid = "mention-first-alice",
+            SourceNodeUuid = firstEpisode.Uuid,
+            TargetNodeUuid = "alice",
+            GroupId = "group"
+        }.SaveAsync(driver);
+        await new EpisodicEdge
+        {
+            Uuid = "mention-first-bob",
+            SourceNodeUuid = firstEpisode.Uuid,
+            TargetNodeUuid = "bob",
+            GroupId = "group"
+        }.SaveAsync(driver);
+        await new EpisodicEdge
+        {
+            Uuid = "mention-second-alice",
+            SourceNodeUuid = secondEpisode.Uuid,
+            TargetNodeUuid = "alice",
+            GroupId = "group"
+        }.SaveAsync(driver);
+
+        var results = await graphiti.GetNodesAndEdgesByEpisodeAsync(
+            new[] { firstEpisode.Uuid, "missing", firstEpisode.Uuid, secondEpisode.Uuid });
+
+        Assert.Equal(new[] { firstEdge.Uuid, secondEdge.Uuid }, results.Edges.Select(edge => edge.Uuid));
+        Assert.Equal(new[] { "alice", "bob" }, results.Nodes.Select(node => node.Uuid));
+        Assert.Empty(results.EdgeRerankerScores);
+        Assert.Empty(results.NodeRerankerScores);
+        Assert.Empty(results.Episodes);
+        Assert.Empty(results.EpisodeRerankerScores);
+        Assert.Empty(results.Communities);
+        Assert.Empty(results.CommunityRerankerScores);
+    }
+
+    [Fact]
     public async Task GetNodesAndEdgesByEpisode_FetchesEpisodeEdgesWithBoundedConcurrency()
     {
         var driver = new EmptyEdgeSearchGraphDriver

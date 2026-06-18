@@ -149,9 +149,9 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `980` passed, `3` skipped, `983` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice aligns scoped clear-data saga preservation
-for InMemory and Ladybug with Python's maintenance clear behavior.
+credentials for the Ladybug feed: `981` passed, `3` skipped, `984` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice hardens episode contribution lookup coverage
+for missing/duplicate requested episodes, empty score/result scopes, and mentioned-node de-duplication.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
