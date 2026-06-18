@@ -266,6 +266,11 @@ payload boundary.
 pairwise reducer. Multiple summary pairs in a single community reduction layer are launched
 concurrently and collected in input order before the next reduction layer starts.
 
+**2026-06-18 community group-order follow-up:** closed a reachable `build_communities` ordering
+drift. C# now builds community clusters per resolved group id in caller/discovery order before
+launching community generation, matching the Python community-cluster group loop and preserving the
+returned community and membership-edge order for explicit group lists.
+
 **2026-06-16 empty edge-filter follow-up:** closed the reachable edge half of the empty-filter-list
 drift. Python `edge_search_filter_query_constructor` emits `e.name in $edge_types` and
 `e.uuid in $edge_uuids` whenever those lists are non-null, so explicitly empty lists are active
@@ -626,7 +631,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 |---|---|---|---|---|
 | Lifecycle | `close` | `CloseAsync` / `DisposeAsync` | DIVERGENT | C# closes only owned drivers; explicit/DI drivers are caller/container-owned |
 | Episode retrieval | `retrieve_episodes` | `RetrieveEpisodesAsync` | OK | Saga-scoped InMemory retrieval follows membership rows directly, including linked episodes from other groups and duplicate membership rows |
-| Communities | `build_communities` | `BuildCommunitiesAsync` | OK | Community summary reduction preserves raw entity summaries, including blank strings, like Python. Omitted group IDs discover all entity groups, including the default empty-string group; explicit `[]` clears existing communities and builds none like Python |
+| Communities | `build_communities` | `BuildCommunitiesAsync` | OK | Community summary reduction preserves raw entity summaries, including blank strings, like Python. Omitted group IDs discover all entity groups, including the default empty-string group; explicit `[]` clears existing communities and builds none like Python. Explicit group order is preserved for returned communities and membership edges |
 | Basic fact search | `search` | `SearchAsync(query, ...)` | OK | |
 | Advanced graph search | `search_` | `SearchAdvancedAsync` / `SearchAsync(query, SearchConfig, ...)` | OK | Idiomatic C# names; Python-style aliases intentionally not added |
 | Episode contribution lookup | `get_nodes_and_edges_by_episode` | `GetNodesAndEdgesByEpisodeAsync` | OK + DIVERGENT | Per-episode entity-edge loads use bounded fan-out like Python `semaphore_gather`, then flatten in episode order. Bulk episodes own entity-edge UUIDs in C#, so bulk episode contribution lookup is more complete than Python |

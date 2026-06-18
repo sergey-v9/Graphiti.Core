@@ -182,6 +182,26 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
+    public async Task BuildCommunities_PreservesRequestedGroupOrder()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var groupB = Entity("Zulu", "group-b", now, "group-b-node");
+        var groupA = Entity("Alpha", "group-a", now, "group-a-node");
+
+        foreach (var node in new[] { groupA, groupB })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        var (communities, communityEdges) = await graphiti.BuildCommunitiesAsync(new[] { "group-b", "group-a" });
+
+        Assert.Equal(new[] { "group-b", "group-a" }, communities.Select(community => community.GroupId));
+        Assert.Equal(new[] { groupB.Uuid, groupA.Uuid }, communityEdges.Select(edge => edge.TargetNodeUuid));
+    }
+
+    [Fact]
     public async Task BuildCommunities_ClustersByEndpointGroupsNotEdgeGroup()
     {
         var driver = new InMemoryGraphDriver();

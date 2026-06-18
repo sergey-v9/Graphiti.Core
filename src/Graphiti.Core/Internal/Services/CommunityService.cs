@@ -26,9 +26,7 @@ internal sealed class CommunityService(
             await RemoveCommunitiesAsync(driver, cancellationToken).ConfigureAwait(false);
 
             var resolvedGroupIds = await ResolveCommunityGroupIdsAsync(driver, groupIds, cancellationToken).ConfigureAwait(false);
-            var nodes = await GetEntityNodesForCommunityAsync(driver, resolvedGroupIds, cancellationToken).ConfigureAwait(false);
-            var edges = await GetEntityEdgesForCommunityAsync(driver, nodes, cancellationToken).ConfigureAwait(false);
-            var clusters = CommunityClustering.BuildClusters(nodes, edges);
+            var clusters = await GetCommunityClustersAsync(driver, resolvedGroupIds, cancellationToken).ConfigureAwait(false);
             var builtCommunities = await SelectThrottledAsync(
                 clusters,
                 BuildCommunityAsync,
@@ -167,6 +165,30 @@ internal sealed class CommunityService(
         }
 
         return result;
+    }
+
+    private static async Task<List<List<EntityNode>>> GetCommunityClustersAsync(
+        IGraphDriver driver,
+        IReadOnlyList<string> groupIds,
+        CancellationToken cancellationToken)
+    {
+        var clusters = new List<List<EntityNode>>();
+        foreach (var groupId in groupIds)
+        {
+            var nodes = await GetEntityNodesForCommunityAsync(
+                driver,
+                new[] { groupId },
+                cancellationToken).ConfigureAwait(false);
+            if (nodes.Count == 0)
+            {
+                continue;
+            }
+
+            var edges = await GetEntityEdgesForCommunityAsync(driver, nodes, cancellationToken).ConfigureAwait(false);
+            clusters.AddRange(CommunityClustering.BuildClusters(nodes, edges));
+        }
+
+        return clusters;
     }
 
     private static async Task<IReadOnlyList<EntityEdge>> GetEntityEdgesForCommunityAsync(
