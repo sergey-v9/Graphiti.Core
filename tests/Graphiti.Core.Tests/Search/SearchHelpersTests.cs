@@ -11,6 +11,12 @@ public sealed class SearchHelpersTests
     }
 
     [Fact]
+    public void FormatEdgeDateRange_RejectsNullEdge()
+    {
+        Assert.Throws<ArgumentNullException>(() => SearchHelpers.FormatEdgeDateRange(null!));
+    }
+
+    [Fact]
     public void FormatEdgeDateRange_RendersInvariantDateTimes()
     {
         var edge = new EntityEdge
@@ -62,17 +68,34 @@ public sealed class SearchHelpersTests
 
         var context = SearchHelpers.SearchResultsToContextString(results);
 
-        Assert.Contains("FACTS and ENTITIES represent relevant context", context);
-        Assert.Contains("<FACTS>", context);
-        Assert.Contains("</COMMUNITIES>", context);
-        Assert.Contains(
-            """{"fact":"Alice founded Graphiti","valid_at":"2026-01-02 03:04:05+00:00","invalid_at":"Present"}""",
-            context);
-        Assert.Contains(
-            """{"fact":"Alice left Zep","valid_at":"None","invalid_at":"2026-02-03 04:05:06+00:00"}""",
-            context);
-        Assert.Contains("""{"entity_name":"Alice","summary":"Founder"}""", context);
-        Assert.Contains("""{"source_description":"chat","content":"Alice mentioned Graphiti."}""", context);
-        Assert.Contains("""{"community_name":"Graphiti 日本","summary":"関連 entities"}""", context);
+        const string expected = """
+
+            FACTS and ENTITIES represent relevant context to the current conversation.
+            COMMUNITIES represent a cluster of closely related entities.
+
+            These are the most relevant facts and their valid and invalid dates. Facts are considered valid
+            between their valid_at and invalid_at dates. Facts with an invalid_at date of "Present" are considered valid.
+            <FACTS>
+                    [{"fact":"Alice founded Graphiti","valid_at":"2026-01-02 03:04:05+00:00","invalid_at":"Present"},{"fact":"Alice left Zep","valid_at":"None","invalid_at":"2026-02-03 04:05:06+00:00"}]
+            </FACTS>
+            <ENTITIES>
+                    [{"entity_name":"Alice","summary":"Founder"}]
+            </ENTITIES>
+            <EPISODES>
+                    [{"source_description":"chat","content":"Alice mentioned Graphiti."}]
+            </EPISODES>
+            <COMMUNITIES>
+                    [{"community_name":"Graphiti 日本","summary":"関連 entities"}]
+            </COMMUNITIES>
+
+        """;
+
+        Assert.Equal(expected, context);
+    }
+
+    [Fact]
+    public void SearchResultsToContextString_RejectsNullResults()
+    {
+        Assert.Throws<ArgumentNullException>(() => SearchHelpers.SearchResultsToContextString(null!));
     }
 }
