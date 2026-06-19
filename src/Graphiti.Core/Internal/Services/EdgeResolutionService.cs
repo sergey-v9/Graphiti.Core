@@ -179,7 +179,8 @@ internal sealed class EdgeResolutionService(
                 getMaxDegreeOfParallelism?.Invoke() ?? GraphitiHelpers.DefaultSemaphoreLimit,
                 cancellationToken).ConfigureAwait(false);
 
-            // Serial collection pass in input order.
+            // Serial collection pass in input order. Match the source workflow's result shape:
+            // every resolved edge first, followed by each invalidated-edge chunk.
             foreach (var outcome in outcomes)
             {
                 resolvedEdgeUuidMap?.TryAdd(outcome.ExtractedEdgeUuid, outcome.ResolvedEdge.Uuid);
@@ -189,10 +190,11 @@ internal sealed class EdgeResolutionService(
                 }
 
                 result.Add(outcome.ResolvedEdge);
-                foreach (var invalidatedEdge in outcome.InvalidatedEdges)
-                {
-                    result.Add(invalidatedEdge);
-                }
+            }
+
+            foreach (var outcome in outcomes)
+            {
+                result.AddRange(outcome.InvalidatedEdges);
             }
 
             activity?.SetTag("graphiti.extraction.skipped_edges", skippedEdges);

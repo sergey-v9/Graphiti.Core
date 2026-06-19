@@ -274,6 +274,10 @@ Recorded sweep result, 2026-06-17:
     reference/materialized multi-label matcher drift was handled as its own parity slice, aligning
     non-empty node-label matching with the Ladybug/Kuzu all-label predicate while preserving the
     existing empty-label hardening divergence.
+14. Follow-up edge-resolution audit on 2026-06-19 kept the same gate shape. The concrete
+    resolved-vs-invalidated block-order drift was handled as its own parity slice: edge resolution
+    now returns all resolved edges before invalidated chunks, matching Python single-ingestion
+    `resolved_edges + invalidated_edges` ordering.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

@@ -557,6 +557,12 @@ now preserves those duplicate appearances during the resolution collection pass;
 episode edge UUID lists from the single-episode path therefore see the same duplicate sequence shape
 Python would return.
 
+**2026-06-19 edge-resolution block-order follow-up:** closed the separate resolved-vs-invalidated
+ordering drift. Python collects all `resolved_edges` and all `invalidated_edges` separately, then
+single ingestion uses `resolved_edges + invalidated_edges`. C# no longer interleaves each resolved
+edge with that outcome's invalidated chunk; `ResolveEntityEdgesAsync` now returns every resolved edge
+first, followed by invalidated chunks in extraction order.
+
 **2026-06-18 add-triplet invalidation-candidate follow-up:** closed a triplet-only edge-resolution
 drift. Python `add_triplet` passes the reranked between-node `related_edges` and the broad
 `existing_edges` search results directly into `resolve_extracted_edge`, so the same edge UUID may

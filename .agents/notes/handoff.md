@@ -125,7 +125,9 @@ reported no `graphiti_core/` upstream delta from anchor `0ed90b7` to target
 `b9a74644fb641910a03d325ec2b8f669d3db75dc`. The current concrete search-filter drift is now closed:
 the reference/materialized matcher requires every requested non-empty node label like the Ladybug/Kuzu
 `list_has_all` provider predicate, including on both edge endpoints. The empty-node-label hardening
-divergence remains unchanged. Plan 06 remains scheduled but opt-in.
+divergence remains unchanged. The follow-up edge-resolution block-order drift is also closed:
+resolved edges now return before invalidated chunks like Python's `resolved_edges + invalidated_edges`
+single-ingestion shape. Plan 06 remains scheduled but opt-in.
 
 ## LadybugDB / Kuzu
 
@@ -158,9 +160,9 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-19: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `1014` passed, `3` skipped, `1017` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice aligns reference/materialized non-empty
-node-label filters with the Ladybug/Kuzu all-label predicate while preserving empty-label hardening.
+credentials for the Ladybug feed: `1015` passed, `3` skipped, `1018` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice aligns edge-resolution return ordering so
+all resolved edges precede invalidated chunks like Python's single-ingestion shape.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
