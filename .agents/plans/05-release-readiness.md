@@ -300,6 +300,14 @@ Recorded sweep result, 2026-06-17:
     `add_episode(update_communities=True)` result destructuring bug is not reproduced: C# keeps
     flattened `Communities` / `CommunityEdges` result lists and pins the one-node public workflow as
     an intentional repair, documented in `decisions.md` and `parity.md`.
+20. Follow-up moved-docs/backlog and package-feed audit on 2026-06-19 kept the same gate shape. The
+    plan folder has no unchecked implementation checklist outside plan 06's opt-in Ladybug merge.
+    The visible leftovers are decision-gated/user-gated items already listed above. GitHub Packages
+    currently reports only `0.17.1-dev.1.1.g6f3dbed` for `LadybugDB` and `LadybugDB.Native`, matching
+    `Directory.Packages.props`; no package bump is available or needed. The only concrete
+    non-decision follow-up from this pass was test hardening: the search concurrency proof now avoids
+    a second fixed wall-clock timeout after its fake-driver barrier has already proven concurrent
+    startup, reducing full-suite scheduler-load sensitivity.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

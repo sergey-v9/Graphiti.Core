@@ -93,6 +93,12 @@ active `read:packages` GitHub token passed as `NuGetPackageSourceCredentials_git
 and `.\eng\Verify-GraphitiCore.ps1` are green (`1021` passed, `3` skipped; both Graphiti packages and
 fresh package-consumer smoke builds succeeded).
 
+2026-06-19 recheck: GitHub Packages still reports only `0.17.1-dev.1.1.g6f3dbed` for both
+`LadybugDB` and `LadybugDB.Native` under `sergey-v9/ladybug-dotnet`, matching
+`Directory.Packages.props`. The Graphiti root `NuGet.config` points at the fork GitHub Packages feed
+and has no active local/offline package source. Old `0.17.0-alpha.2-graphiti.1` mentions are
+historical recovery notes only, not an active restore path.
+
 ## Self-service bindings (2026-06-17)
 
 `sergey-v9/ladybug-dotnet` is **our fork** — we own it and publish from it. The LadybugDB *engine*

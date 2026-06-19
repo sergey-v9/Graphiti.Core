@@ -139,7 +139,13 @@ under-split: `HeuristicTokenCounter` now drives character-window budget checks a
 while deterministic large covering chunks remain documented C# hardening. The incremental-community
 audit is also closed as a documented C# repair: `AddEpisodeAsync(updateCommunities: true)` returns
 flattened community-update results instead of reproducing the source workflow's broken per-node
-destructuring. Plan 06 remains scheduled but opt-in.
+destructuring. A follow-up moved-docs/backlog audit found no remaining unchecked implementation item
+outside plan 06's opt-in Ladybug merge and already-recorded decision-gated items. The package-feed
+recheck also confirmed that `0.17.1-dev.1.1.g6f3dbed` is still the only published GitHub Packages
+version for `LadybugDB` and `LadybugDB.Native`, matching the current Graphiti pin. The only concrete
+slice from this pass was test-only hardening for the search concurrency proof: after the fake-driver
+barrier has proven concurrent startup, it now waits on the xUnit cancellation token instead of a
+second fixed wall-clock timeout. Plan 06 remains scheduled but opt-in.
 
 ## LadybugDB / Kuzu
 
@@ -173,8 +179,11 @@ added.
 
 Latest full verifier, 2026-06-19: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
 credentials for the Ladybug feed: `1021` passed, `3` skipped, `1024` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice documents and pins the repaired
-incremental-community result shape for one-node `AddEpisodeAsync(updateCommunities: true)` updates.
+both package-consumer smokes succeeded. The newest slice hardens the search concurrency proof after
+the fake-driver barrier and records that the moved-docs/backlog audit found no remaining concrete
+implementation item outside plan 06 or already-recorded decision gates. Focused verification also
+passed for `SearchAsync_ExecutesConfiguredScopesConcurrently`, and the full
+`SearchEngineDriverBackedTests` class passed (`42` tests).
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's

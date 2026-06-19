@@ -1725,7 +1725,7 @@ public class SearchEngineDriverBackedTests
             driver.ReleaseExpectedConcurrentSearchCalls();
         }
 
-        return await searchTask.WaitAsync(TimeSpan.FromSeconds(10));
+        return await searchTask.WaitAsync(TestContext.Current.CancellationToken);
     }
 
     private sealed class RecordingCrossEncoder : CrossEncoderClient
