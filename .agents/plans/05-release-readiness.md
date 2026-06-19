@@ -286,6 +286,12 @@ Recorded sweep result, 2026-06-17:
     ranker scope drift was handled as its own parity slice: materialized node-distance and
     episode-mentions rankers no longer limit ranker evidence to the candidate retrieval groups,
     matching Python ranker queries.
+17. Follow-up model/wire audit on 2026-06-19 kept the same gate shape. The remaining UUID/default
+    construction candidates are public-surface questions, not hidden implementation leftovers: C#
+    currently pins UUIDv7 generation plus deterministic epoch/empty-string model defaults, while the
+    source models use uuid4, required fields, and ambient creation timestamps. Do not change this
+    constructor/deserialization behavior without explicit public API direction, snapshot/test updates,
+    and a separate slice.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

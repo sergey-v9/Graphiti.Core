@@ -113,6 +113,15 @@ audit found no missing core workflow. It did record three already-tested, accept
 divergences in `decisions.md`: stronger episode removal/saga repair, bulk raw-content scrubbing when
 `storeRawEpisodeContent` is false, and caller-owned explicit/DI driver lifecycle.
 
+**2026-06-19 public model-default audit:** constructor/default behavior remains a decision-gated
+public-surface divergence, not an internal parity slice. Python source models use uuid4 generation,
+require public fields such as node name/group, edge endpoints, edge name/fact, and edge/episode
+timestamps at model construction, and default node creation time to the current clock. C# currently
+pins UUIDv7 generation, empty-string defaults for those public string fields, and
+`GraphitiHelpers.DefaultTimestamp` for missing/uninitialized timestamps in `GraphitiHelperTests` and
+`ModernInfrastructureTests`. Changing this would alter public constructor/deserialization behavior
+and should happen only with explicit public API direction plus snapshot/test updates.
+
 **2026-06-14 triplet duplicate follow-up:** closed the tracked triplet exact-duplicate drift. C# no
 longer scans the raw full between-node edge set before duplicate-candidate search. Exact duplicate
 reuse now lives in `ResolveEdgeWithLlmAsync` and scans only the reranked/truncated `relatedEdges`

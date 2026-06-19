@@ -131,7 +131,10 @@ single-ingestion shape. The lower-level edge-embedding endpoint-scope drift is a
 InMemory, and materialized search now ignore endpoint filters when `groupIds` is null, matching
 Python's Kuzu path. The materialized fallback ranker scope drift is also closed: node-distance and
 episode-mentions ranker evidence is no longer limited to the candidate retrieval groups, matching
-Python ranker queries. Plan 06 remains scheduled but opt-in.
+Python ranker queries. The model/wire audit found no safe internal code slice: UUIDv7 generation and
+deterministic epoch/empty-string model defaults are test-pinned C# public-surface behavior; aligning
+them to Python uuid4/required/ambient-time model construction is decision-gated and separate from
+plan 06 or release infrastructure. Plan 06 remains scheduled but opt-in.
 
 ## LadybugDB / Kuzu
 
