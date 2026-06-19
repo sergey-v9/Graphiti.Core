@@ -250,6 +250,43 @@ public class SearchGraphTraversalTests
     }
 
     [Fact]
+    public async Task MaterializedEdgeEmbeddingSearch_IgnoresEndpointFiltersWhenGroupScopeIsNull()
+    {
+        var driver = new InMemoryGraphDriver();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var source = Entity("source", now);
+        var target = Entity("target", now);
+        var otherTarget = Entity("other-target", now);
+        foreach (var node in new[] { source, target, otherTarget })
+        {
+            await driver.SaveNodeAsync(node);
+        }
+
+        var edge = Edge(source, target, "alpha relation", now);
+        edge.Uuid = "edge";
+        edge.FactEmbedding = new List<float> { 1f, 0f };
+        var otherEdge = Edge(source, otherTarget, "alpha relation", now);
+        otherEdge.Uuid = "other-edge";
+        otherEdge.FactEmbedding = new List<float> { 1f, 0f };
+        await driver.SaveEdgeAsync(edge);
+        await driver.SaveEdgeAsync(otherEdge);
+        var searchDriver = new MaterializingSearchGraphDriver(driver);
+
+        var hits = await searchDriver.SearchEntityEdgesByEmbeddingAsync(
+            new[] { 1f, 0f },
+            new SearchFilters { EdgeTypes = new List<string> { "RELATES_TO" } },
+            groupIds: null,
+            limit: 10,
+            minScore: 0.5f,
+            sourceNodeUuid: source.Uuid,
+            targetNodeUuid: target.Uuid);
+
+        Assert.Equal(
+            new[] { edge.Uuid, otherEdge.Uuid }.Order(StringComparer.Ordinal),
+            hits.Select(hit => hit.Item.Uuid).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public async Task MaterializedNodeDistanceRanker_DeduplicatesInputsAndKeepsStableTies()
     {
         var driver = new InMemoryGraphDriver();

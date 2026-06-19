@@ -127,7 +127,9 @@ the reference/materialized matcher requires every requested non-empty node label
 `list_has_all` provider predicate, including on both edge endpoints. The empty-node-label hardening
 divergence remains unchanged. The follow-up edge-resolution block-order drift is also closed:
 resolved edges now return before invalidated chunks like Python's `resolved_edges + invalidated_edges`
-single-ingestion shape. Plan 06 remains scheduled but opt-in.
+single-ingestion shape. The lower-level edge-embedding endpoint-scope drift is also closed: Ladybug,
+InMemory, and materialized search now ignore endpoint filters when `groupIds` is null, matching
+Python's Kuzu path. Plan 06 remains scheduled but opt-in.
 
 ## LadybugDB / Kuzu
 
@@ -160,9 +162,9 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-19: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `1015` passed, `3` skipped, `1018` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice aligns edge-resolution return ordering so
-all resolved edges precede invalidated chunks like Python's single-ingestion shape.
+credentials for the Ladybug feed: `1017` passed, `3` skipped, `1020` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice aligns lower-level edge-embedding endpoint
+filters so they apply only when `groupIds` is non-null, matching Python's Kuzu path.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's

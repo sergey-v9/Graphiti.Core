@@ -313,6 +313,12 @@ builder already emitted that provider predicate, but `CompiledSearchFilter` used
 materialized search accepted any requested label. The matcher now requires every requested label on
 each matched node while preserving the documented empty-label no-op hardening.
 
+**2026-06-19 edge-embedding endpoint-scope follow-up:** closed a lower-level embedding-search filter
+drift. Python's generic and Kuzu edge-similarity search append `source_uuid` / `target_uuid`
+predicates only inside the non-null `group_ids` block. C# Ladybug, InMemory, and materialized
+embedding search now ignore endpoint filters when `groupIds` is null, while preserving endpoint
+filtering for non-null group scopes.
+
 **2026-06-16 search-helper follow-up:** closed the public helper gap for
 `graphiti_core.search.search_helpers`. C# now exposes `SearchHelpers.FormatEdgeDateRange` and
 `SearchHelpers.SearchResultsToContextString`, preserving Python's sectioned context shape, date

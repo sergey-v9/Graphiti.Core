@@ -107,13 +107,13 @@ internal static class LadybugSearchStatementBuilder
         ArgumentNullException.ThrowIfNull(searchVector);
         var (filterQueries, parameters) = LadybugSearchFilter.BuildEdgeQuery(searchFilter);
         AddGroupFilter(filterQueries, parameters, "e", groupIds);
-        if (sourceNodeUuid is not null)
+        if (groupIds is not null && sourceNodeUuid is not null)
         {
             filterQueries.Add("n.uuid = $source_uuid");
             parameters["source_uuid"] = sourceNodeUuid;
         }
 
-        if (targetNodeUuid is not null)
+        if (groupIds is not null && targetNodeUuid is not null)
         {
             filterQueries.Add("m.uuid = $target_uuid");
             parameters["target_uuid"] = targetNodeUuid;

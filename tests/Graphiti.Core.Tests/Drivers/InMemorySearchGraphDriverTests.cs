@@ -448,6 +448,42 @@ public class InMemorySearchGraphDriverTests
     }
 
     [Fact]
+    public async Task InMemoryEdgeEmbeddingSearch_IgnoresEndpointFiltersWhenGroupScopeIsNull()
+    {
+        var driver = new InMemoryGraphDriver();
+        var searchDriver = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var source = Entity("source", now);
+        var target = Entity("target", now);
+        var otherTarget = Entity("other-target", now);
+        var edge = Edge(source, target, "apollo vector fact", now);
+        edge.FactEmbedding = new List<float> { 1f, 0f };
+        var otherEdge = Edge(source, otherTarget, "apollo vector fact", now);
+        otherEdge.FactEmbedding = new List<float> { 1f, 0f };
+
+        foreach (var node in new[] { source, target, otherTarget })
+        {
+            await node.SaveAsync(driver);
+        }
+
+        await edge.SaveAsync(driver);
+        await otherEdge.SaveAsync(driver);
+
+        var hits = await searchDriver.SearchEntityEdgesByEmbeddingAsync(
+            new[] { 1f, 0f },
+            new SearchFilters { EdgeTypes = new List<string> { "RELATES_TO" } },
+            groupIds: null,
+            limit: 10,
+            minScore: 0.5f,
+            sourceNodeUuid: source.Uuid,
+            targetNodeUuid: target.Uuid);
+
+        Assert.Equal(
+            new[] { edge.Uuid, otherEdge.Uuid }.Order(StringComparer.Ordinal),
+            hits.Select(hit => hit.Item.Uuid).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public async Task InMemoryVectorSearch_EdgeAndCommunityThresholdsTiesNullsAndDimensions()
     {
         var driver = new InMemoryGraphDriver();

@@ -1234,10 +1234,15 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         Dictionary<string, EntityNode> nodesByUuid;
         lock (_gate)
         {
-            candidates = FilterEdgesByEndpoint(
-                GetEdgesFromIndex<EntityEdge>(groupIds, allWhenNoGroups: true),
-                sourceNodeUuid,
-                targetNodeUuid);
+            candidates = GetEdgesFromIndex<EntityEdge>(groupIds, allWhenNoGroups: true);
+            if (groupIds is not null)
+            {
+                candidates = FilterEdgesByEndpoint(
+                    candidates,
+                    sourceNodeUuid,
+                    targetNodeUuid);
+            }
+
             nodesByUuid = EntityNodeLookup();
         }
 

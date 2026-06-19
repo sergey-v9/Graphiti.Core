@@ -278,6 +278,10 @@ Recorded sweep result, 2026-06-17:
     resolved-vs-invalidated block-order drift was handled as its own parity slice: edge resolution
     now returns all resolved edges before invalidated chunks, matching Python single-ingestion
     `resolved_edges + invalidated_edges` ordering.
+15. Follow-up search-provider audit on 2026-06-19 kept the same gate shape. The concrete
+    edge-embedding endpoint-scope drift was handled as its own parity/provider slice: Ladybug,
+    InMemory, and materialized embedding search now ignore endpoint filters when `groupIds` is null
+    and keep endpoint filters for non-null group scopes.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

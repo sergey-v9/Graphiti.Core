@@ -87,14 +87,19 @@ internal sealed class MaterializingSearchGraphDriver(
         CancellationToken cancellationToken = default)
     {
         var compiledFilter = CompiledSearchFilter.Compile(searchFilter);
-        var candidates = FilterEdgesByEndpoint(
-            await SearchFallbackGraph.GetAllEntityEdgesAsync(
-                driver,
-                groupIds,
-                withEmbeddings: true,
-                cancellationToken).ConfigureAwait(false),
-            sourceNodeUuid,
-            targetNodeUuid);
+        var candidates = await SearchFallbackGraph.GetAllEntityEdgesAsync(
+            driver,
+            groupIds,
+            withEmbeddings: true,
+            cancellationToken).ConfigureAwait(false);
+        if (groupIds is not null)
+        {
+            candidates = FilterEdgesByEndpoint(
+                candidates,
+                sourceNodeUuid,
+                targetNodeUuid);
+        }
+
         var nodesByUuid = await SearchFallbackGraph.LoadEdgeEndpointNodeLookupAsync(
             driver,
             candidates,

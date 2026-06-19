@@ -144,6 +144,20 @@ public class LadybugSearchStatementTests
         Assert.Equal(new[] { "tenant" }, Assert.IsType<List<string>>(embedding.Parameters["group_ids"]));
         Assert.Equal("source-1", embedding.Parameters["source_uuid"]);
         Assert.Equal("target-1", embedding.Parameters["target_uuid"]);
+
+        var unscopedEmbedding = LadybugSearchStatementBuilder.BuildEntityEdgeEmbeddingSearchStatement(
+            new[] { 0.1f, 0.2f },
+            new SearchFilters(),
+            groupIds: null,
+            limit: 3,
+            minScore: 0.6f,
+            sourceNodeUuid: "source-1",
+            targetNodeUuid: "target-1");
+
+        Assert.DoesNotContain("n.uuid = $source_uuid", unscopedEmbedding.Query, StringComparison.Ordinal);
+        Assert.DoesNotContain("m.uuid = $target_uuid", unscopedEmbedding.Query, StringComparison.Ordinal);
+        Assert.False(unscopedEmbedding.Parameters.ContainsKey("source_uuid"));
+        Assert.False(unscopedEmbedding.Parameters.ContainsKey("target_uuid"));
     }
 
     [Fact]
