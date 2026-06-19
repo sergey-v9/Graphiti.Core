@@ -14,8 +14,8 @@ upstream sync below (none touched prompts/search/pipeline). **To pull the next b
 `upstream-sync-procedure.md`**: diff `graphiti_core/` against this anchor, disposition each change,
 verify, then move the anchor to the new `origin/main` HEAD.
 
-**Latest upstream check:** 2026-06-18 `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch -FailOnDelta`
-found `origin/main` at `b82b80e4c0c962fc714a22b74caf8c20997e8d83`; `git log`, `git diff --stat`, and
+**Latest upstream check:** 2026-06-19 `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch -FailOnDelta`
+found `origin/main` at `b9a74644fb641910a03d325ec2b8f669d3db75dc`; `git log`, `git diff --stat`, and
 `git diff --name-status` over `0ed90b7..origin/main -- graphiti_core` were empty. No new Python
 library work needs porting.
 
@@ -305,6 +305,13 @@ reproducing invalid backend queries, pinned by the existing
 `CompiledSearchFilter_TreatsEmptyDateBranchAsNoOp`,
 `EdgeSearchFilterQueryConstructor_SkipsEmptyDateFilterList`, and
 `EdgeSearchFilterQueryConstructor_EmptyDateOrBranchDoesNotEmitInvalidCypher` tests.
+
+**2026-06-19 multi-label filter follow-up:** closed a reference-backend matcher drift for non-empty
+multi-label filters. Python's Kuzu/Ladybug lineage uses `list_has_all(n.labels, $labels)` for node
+filters and the same all-label predicate on both endpoints for edge filters. C#'s Ladybug query
+builder already emitted that provider predicate, but `CompiledSearchFilter` used by InMemory and
+materialized search accepted any requested label. The matcher now requires every requested label on
+each matched node while preserving the documented empty-label no-op hardening.
 
 **2026-06-16 search-helper follow-up:** closed the public helper gap for
 `graphiti_core.search.search_helpers`. C# now exposes `SearchHelpers.FormatEdgeDateRange` and

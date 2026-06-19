@@ -195,15 +195,15 @@ internal sealed class CompiledSearchFilter
             return true;
         }
 
-        foreach (var label in node.Labels)
+        foreach (var label in _nodeLabels)
         {
-            if (_nodeLabels.Contains(label))
+            if (!node.Labels.Contains(label, StringComparer.Ordinal))
             {
-                return true;
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 
     private static FrozenSet<string> ToFrozenStringSet(List<string>? values) =>

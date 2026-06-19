@@ -868,16 +868,19 @@ public class InMemorySearchGraphDriverTests
     }
 
     [Fact]
-    public async Task InMemoryEdgeSearch_NodeLabelFilterMatchesAnyLabelOnBothEndpoints()
+    public async Task InMemoryEdgeSearch_NodeLabelFilterRequiresEveryLabelOnBothEndpoints()
     {
         var driver = new InMemoryGraphDriver();
         var searchDriver = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
         var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var person = Entity("Alice", now);
         person.Labels.Add("Person");
+        person.Labels.Add("Company");
         var company = Entity("Acme", now);
+        company.Labels.Add("Person");
         company.Labels.Add("Company");
         var project = Entity("Project", now);
+        project.Labels.Add("Person");
         project.Labels.Add("Project");
 
         foreach (var node in new[] { person, company, project })

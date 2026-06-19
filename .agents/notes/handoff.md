@@ -120,13 +120,12 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
 - Optional local `.agents/skills` files are specialist references only. Use them for matching tasks,
   but do not let generic AI/ML/framework advice override `decisions.md`.
 
-Latest plan-folder/backlog audit, 2026-06-18: `Check-PythonUpstreamDelta.ps1 -Fetch -FailOnDelta`
+Latest plan-folder/backlog audit, 2026-06-19: `Check-PythonUpstreamDelta.ps1 -Fetch -FailOnDelta`
 reported no `graphiti_core/` upstream delta from anchor `0ed90b7` to target
-`b82b80e4c0c962fc714a22b74caf8c20997e8d83`; search-result merge/context helper comparison found no
-confirmed drift; and a read-only model/edge/namespace CRUD comparison against Python found no
-confirmed, undocumented drift. A later removal audit found one concrete delete-helper drift, now
-closed: node delete helpers accept non-positive batch sizes and provider loops normalize those values
-to one all-items batch. Plan 06 remains scheduled but opt-in.
+`b9a74644fb641910a03d325ec2b8f669d3db75dc`. The current concrete search-filter drift is now closed:
+the reference/materialized matcher requires every requested non-empty node label like the Ladybug/Kuzu
+`list_has_all` provider predicate, including on both edge endpoints. The empty-node-label hardening
+divergence remains unchanged. Plan 06 remains scheduled but opt-in.
 
 ## LadybugDB / Kuzu
 
@@ -160,8 +159,8 @@ added.
 
 Latest full verifier, 2026-06-19: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
 credentials for the Ladybug feed: `1014` passed, `3` skipped, `1017` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice aligns namespace save-bulk batching so
-zero/negative `batchSize` values are accepted as one materialized all-items save batch.
+both package-consumer smokes succeeded. The newest slice aligns reference/materialized non-empty
+node-label filters with the Ladybug/Kuzu all-label predicate while preserving empty-label hardening.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's

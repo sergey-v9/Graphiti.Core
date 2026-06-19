@@ -97,7 +97,7 @@ public sealed class SearchFilterTests
     }
 
     [Fact]
-    public void SearchFilterMatcher_NodeLabelsMatchAnyRequestedLabel()
+    public void SearchFilterMatcher_NodeLabelsRequireEveryRequestedLabel()
     {
         var filters = new SearchFilters
         {
@@ -105,10 +105,10 @@ public sealed class SearchFilterTests
         };
 
         Assert.True(SearchFilterMatcher.NodeMatches(
-            new EntityNode { Name = "Alice", Labels = new List<string> { "Entity", "Person" } },
+            new EntityNode { Name = "Alice", Labels = new List<string> { "Entity", "Person", "Company" } },
             filters));
         Assert.False(SearchFilterMatcher.NodeMatches(
-            new EntityNode { Name = "Project", Labels = new List<string> { "Entity", "Project" } },
+            new EntityNode { Name = "Project", Labels = new List<string> { "Entity", "Person" } },
             filters));
     }
 
@@ -222,7 +222,11 @@ public sealed class SearchFilterTests
 
         Assert.False(compiled.EdgeMatches(edge, nodes));
 
-        nodes["target"] = new EntityNode { Labels = new List<string> { "Entity", "Company" } };
+        nodes["target"] = new EntityNode { Labels = new List<string> { "Entity", "Person", "Company" } };
+
+        Assert.False(compiled.EdgeMatches(edge, nodes));
+
+        nodes["source"] = new EntityNode { Labels = new List<string> { "Entity", "Person", "Company" } };
 
         Assert.True(compiled.EdgeMatches(edge, nodes));
     }

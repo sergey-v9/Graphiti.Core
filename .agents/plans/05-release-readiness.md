@@ -269,6 +269,11 @@ Recorded sweep result, 2026-06-17:
     custom fact-type map drift was handled as its own parity slice. Namespace save-bulk handling for
     non-positive `batchSize` was then handled as its own parity slice before plan 06/release decisions,
     not release infrastructure.
+13. Follow-up search-filter audit on 2026-06-19 kept the same gate shape. Upstream `graphiti_core/`
+    delta was empty through target `b9a74644fb641910a03d325ec2b8f669d3db75dc`; the concrete
+    reference/materialized multi-label matcher drift was handled as its own parity slice, aligning
+    non-empty node-label matching with the Ladybug/Kuzu all-label predicate while preserving the
+    existing empty-label hardening divergence.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.
