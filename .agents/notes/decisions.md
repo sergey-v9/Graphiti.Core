@@ -401,6 +401,12 @@ Other accepted public-workflow divergences confirmed in a 2026-06-14 surface aud
   or DI-scoped drivers remain owned by their caller/container. This preserves .NET lifetime semantics
   and is pinned by `Graphiti_DisposeAsync_DoesNotCloseExternalGraphDriver` and
   `AddGraphiti_DisposesScopedGraphDriverOnce`.
+- **Incremental community updates return a flattened result.** Python `add_episode(update_communities=True)`
+  destructures the per-node update results as though there were exactly two top-level values, so one,
+  two, or three-plus updated nodes can throw or mis-shape the public `AddEpisodeResults` payload. C#
+  deliberately flattens all per-node community updates into `Communities` and `CommunityEdges`,
+  preserving a usable public result shape and pinning the one-node path in
+  `AddEpisode_WithUpdateCommunities_ReturnsSingleNodeCommunityUpdate`.
 
 ## Tracked-but-unfixed divergences (low impact / latent; from the 2026-06-13 review)
 

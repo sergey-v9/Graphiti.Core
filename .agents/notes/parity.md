@@ -112,6 +112,10 @@ counterparts (`AddEpisodeAsync`, `AddEpisodeBulkAsync`, `SearchAsync`/`SearchAdv
 audit found no missing core workflow. It did record three already-tested, accepted C# public-behavior
 divergences in `decisions.md`: stronger episode removal/saga repair, bulk raw-content scrubbing when
 `storeRawEpisodeContent` is false, and caller-owned explicit/DI driver lifecycle.
+2026-06-19 follow-up: `AddEpisodeAsync(updateCommunities: true)` deliberately keeps C#'s flattened
+community-update result shape. The source workflow mis-destructures per-node update results and can
+throw or produce invalid result payloads for one, two, or three-plus nodes; C# keeps the usable
+`Communities`/`CommunityEdges` lists and now pins the one-node public path.
 
 **2026-06-19 public model-default audit:** constructor/default behavior remains a decision-gated
 public-surface divergence, not an internal parity slice. Python source models use uuid4 generation,

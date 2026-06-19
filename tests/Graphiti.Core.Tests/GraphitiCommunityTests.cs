@@ -663,6 +663,77 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
+    public async Task AddEpisode_WithUpdateCommunities_ReturnsSingleNodeCommunityUpdate()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new StaticJsonLlmClient(messages =>
+        {
+            var user = messages.Count > 0 ? messages[^1].Content : string.Empty;
+            var system = messages.Count > 0 ? messages[0].Content : string.Empty;
+            if (system.Contains("combines summaries", StringComparison.Ordinal))
+            {
+                return new JsonObject { ["summary"] = "Carol remains in the operations group" };
+            }
+
+            if (system.Contains("describes provided contents", StringComparison.Ordinal))
+            {
+                return new JsonObject { ["description"] = "Operations group" };
+            }
+
+            if (system.Contains("entity deduplication assistant", StringComparison.Ordinal))
+            {
+                return new JsonObject
+                {
+                    ["entity_resolutions"] = new JsonArray(
+                        new JsonObject { ["id"] = 0, ["name"] = "Carol", ["duplicate_candidate_id"] = 0 })
+                };
+            }
+
+            if (system.Contains("entity extraction specialist", StringComparison.Ordinal)
+                && user.Contains("Carol joined the standup", StringComparison.Ordinal))
+            {
+                return new JsonObject
+                {
+                    ["extracted_entities"] = new JsonArray(
+                        new JsonObject { ["name"] = "Carol", ["entity_type_id"] = 0 })
+                };
+            }
+
+            if (system.Contains("expert fact extractor", StringComparison.Ordinal)
+                && user.Contains("Carol joined the standup", StringComparison.Ordinal))
+            {
+                return new JsonObject { ["edges"] = new JsonArray() };
+            }
+
+            return new JsonObject();
+        });
+        var graphiti = new Graphiti(llmClient: llm, graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var carol = Entity("Carol", "group", now);
+        var community = Community("community", "Operations", "group", now);
+        await carol.GenerateNameEmbeddingAsync(graphiti.Embedder);
+        await community.GenerateNameEmbeddingAsync(graphiti.Embedder);
+        await carol.SaveAsync(driver);
+        await community.SaveAsync(driver);
+        await Member(community, carol, now).SaveAsync(driver);
+
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Carol joined the standup",
+            "message",
+            now.AddMinutes(1),
+            groupId: "group",
+            updateCommunities: true);
+
+        var node = Assert.Single(result.Nodes);
+        var updatedCommunity = Assert.Single(result.Communities);
+        Assert.Equal(carol.Uuid, node.Uuid);
+        Assert.Equal("community", updatedCommunity.Uuid);
+        Assert.Equal("Carol remains in the operations group", updatedCommunity.Summary);
+        Assert.Empty(result.CommunityEdges);
+    }
+
+    [Fact]
     public async Task UpdateCommunitiesForNodes_DeduplicatesNodesByUuidInFirstSeenOrder()
     {
         var driver = new InMemoryGraphDriver();

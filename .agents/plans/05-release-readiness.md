@@ -296,6 +296,10 @@ Recorded sweep result, 2026-06-17:
     chunking under-split was handled as its own parity slice by making `HeuristicTokenCounter` supply
     character-window boundaries and budget checks. Large covering chunks remain deterministic in C#;
     that random-sampling difference is recorded as intentional reproducibility hardening.
+19. Follow-up incremental-community audit on 2026-06-19 kept the same gate shape. The source
+    `add_episode(update_communities=True)` result destructuring bug is not reproduced: C# keeps
+    flattened `Communities` / `CommunityEdges` result lists and pins the one-node public workflow as
+    an intentional repair, documented in `decisions.md` and `parity.md`.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.
