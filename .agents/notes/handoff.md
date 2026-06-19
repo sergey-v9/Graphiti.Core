@@ -147,7 +147,9 @@ slice from this pass was test-only hardening for the search concurrency proof: a
 barrier has proven concurrent startup, it now waits on the xUnit cancellation token instead of a
 second fixed wall-clock timeout. A follow-up ontology-matching audit is also closed: custom entity
 and edge type resolution now uses exact ontology keys/signatures, so case variants and type-name
-aliases do not select custom attribute schemas. Plan 06 remains scheduled but opt-in.
+aliases do not select custom attribute schemas. A follow-up search public/extensibility audit found no
+result-composition code slice: fresh C# search recipe instances and BFS guard-skipped custom driver
+calls are documented C# API hardening decisions. Plan 06 remains scheduled but opt-in.
 
 ## LadybugDB / Kuzu
 

@@ -271,6 +271,14 @@ no wire/prompt/cache/temporal behavior changed):
   by backend query construction and in-memory/materialized matching because Python currently exposes
   the field without applying it in search filter constructors. Treat enforcement as a future API and
   behavior decision, not as current C# behavior.
+- Search recipe properties return fresh `SearchConfig` instances. Python exports module-level mutable
+  recipe objects and `search()` mutates the selected object when applying the requested limit, so recipe
+  state can leak between calls. C# deliberately avoids that public API footgun while preserving the same
+  recipe values and search outcomes for equivalent per-call inputs.
+- BFS retrieval skips driver calls when origins are null/empty or depth is below one. Python delegates
+  those shapes to custom search interfaces before its fallback guard, but built-in backend results are
+  empty. C# keeps the public driver boundary deterministic and side-effect-free for invalid BFS input
+  instead of reproducing custom-driver-observable no-op calls.
 - Date-filter Cypher uses unique parameter names across OR branches; Python's reset-per-branch
   behavior can collide.
 - Kuzu-compatible full-text query construction matches Python's `fulltext_query` KUZU branch

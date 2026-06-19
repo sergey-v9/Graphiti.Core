@@ -313,6 +313,11 @@ Recorded sweep result, 2026-06-17:
     type-selection drift was handled as its own parity slice: entity and edge custom schemas now
     resolve only from exact ontology dictionary keys, exact endpoint labels, and exact mapped
     relation names, so case variants and type-name aliases do not trigger attribute prompts.
+22. Follow-up search public/extensibility audit on 2026-06-19 kept the same gate shape. No
+    result-composition code slice remained. C# deliberately keeps fresh search recipe instances rather
+    than upstream's mutable singleton recipes, and skips custom driver BFS calls for null/empty origins
+    or nonpositive depth rather than surfacing no-op calls. These are documented API hardening
+    decisions, not release infrastructure or plan 06 work.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.
