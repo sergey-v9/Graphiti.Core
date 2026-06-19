@@ -134,7 +134,10 @@ episode-mentions ranker evidence is no longer limited to the candidate retrieval
 Python ranker queries. The model/wire audit found no safe internal code slice: UUIDv7 generation and
 deterministic epoch/empty-string model defaults are test-pinned C# public-surface behavior; aligning
 them to Python uuid4/required/ambient-time model construction is decision-gated and separate from
-plan 06 or release infrastructure. Plan 06 remains scheduled but opt-in.
+plan 06 or release infrastructure. The text utility audit also closed the heuristic chunking
+under-split: `HeuristicTokenCounter` now drives character-window budget checks and overlap boundaries,
+while deterministic large covering chunks remain documented C# hardening. Plan 06 remains scheduled
+but opt-in.
 
 ## LadybugDB / Kuzu
 
@@ -167,9 +170,10 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-19: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `1019` passed, `3` skipped, `1022` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice aligns materialized fallback rankers so
-node-distance and episode-mentions evidence is not group-scoped, matching Python ranker queries.
+credentials for the Ladybug feed: `1020` passed, `3` skipped, `1023` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice makes the heuristic content chunker use
+character-window budget checks and overlap boundaries, while documenting deterministic large
+covering chunks as C# hardening.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's

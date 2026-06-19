@@ -83,6 +83,22 @@ public class ContentChunkingTests
     }
 
     [Fact]
+    public void ChunkTextContent_HeuristicCounterUsesCharacterWindows()
+    {
+        var chunker = new DefaultContentChunker(
+            new HeuristicTokenCounter(),
+            Options.Create(new ContentChunkingOptions
+            {
+                ChunkTokenSize = 1,
+                ChunkOverlapTokens = 1
+            }));
+
+        var chunks = chunker.ChunkTextContent("abcde");
+
+        Assert.Equal(new[] { "abcd", "bcde", "cde", "de", "e" }, chunks);
+    }
+
+    [Fact]
     public void ChunkTextContent_UsesTokenBoundaryProviderForOversizedSentences()
     {
         var original = ContentChunking.TokenCounter;

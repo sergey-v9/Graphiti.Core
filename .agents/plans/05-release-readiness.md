@@ -292,6 +292,10 @@ Recorded sweep result, 2026-06-17:
     source models use uuid4, required fields, and ambient creation timestamps. Do not change this
     constructor/deserialization behavior without explicit public API direction, snapshot/test updates,
     and a separate slice.
+18. Follow-up text-utility audit on 2026-06-19 kept the same gate shape. The concrete heuristic
+    chunking under-split was handled as its own parity slice by making `HeuristicTokenCounter` supply
+    character-window boundaries and budget checks. Large covering chunks remain deterministic in C#;
+    that random-sampling difference is recorded as intentional reproducibility hardening.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

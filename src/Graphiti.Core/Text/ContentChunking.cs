@@ -786,7 +786,7 @@ public static partial class ContentChunking
             }
 
             chunks.Add(text[start..end].Trim());
-            if (end >= text.Length)
+            if (end >= text.Length && !UsesCharacterWindowBudget(tokenCounter))
             {
                 break;
             }
@@ -1236,8 +1236,16 @@ public static partial class ContentChunking
     private static bool FitsTokenBudget(
         string text,
         int tokenBudget,
-        ITokenCounter tokenCounter) =>
-        MeasureBudgetSize(text, tokenCounter) <= tokenBudget;
+        ITokenCounter tokenCounter)
+    {
+        if (tokenCounter is ITokenBoundaryProvider boundaryProvider
+            && boundaryProvider.TryGetIndexByTokenCount(text.AsSpan(), tokenBudget, out var tokenEnd))
+        {
+            return tokenEnd >= text.Length;
+        }
+
+        return MeasureBudgetSize(text, tokenCounter) <= tokenBudget;
+    }
 
     private static int MeasureBudgetSize(string? text, ITokenCounter tokenCounter)
     {
@@ -1246,8 +1254,16 @@ public static partial class ContentChunking
             return 0;
         }
 
+        if (tokenCounter is HeuristicTokenCounter heuristicCounter)
+        {
+            return Math.Max(1, (text.Length + heuristicCounter.CharsPerToken - 1) / heuristicCounter.CharsPerToken);
+        }
+
         return Math.Max(1, EstimateTokens(text, tokenCounter));
     }
+
+    private static bool UsesCharacterWindowBudget(ITokenCounter tokenCounter) =>
+        tokenCounter is HeuristicTokenCounter;
 
     private static string SerializeArray(IEnumerable<JsonArrayChunkElement> elements)
     {

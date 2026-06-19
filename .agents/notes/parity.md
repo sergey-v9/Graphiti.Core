@@ -385,6 +385,11 @@ overlap rather than disabling overlap. C# static `ContentChunking.Chunk*Content(
 constant to zero. JSON chunk output remains compact System.Text.Json formatting rather than Python
 `json.dumps`'s default separator spaces; this is whitespace-only and pinned as an intentional C#
 serialization divergence.
+2026-06-19 follow-up: `HeuristicTokenCounter` now also provides character-window token boundaries and
+budget checks, so callers that opt into the chars-per-token heuristic get source-style fixed-size
+text chunks rather than under-splitting on floor-estimated token counts. The remaining large
+`GenerateCoveringChunks` random-sampling difference is documented in `decisions.md` as deterministic
+C# hardening; the pair-coverage contract remains pinned.
 
 **2026-06-17 saga episode-retrieval follow-up:** closed the `saga` + null/empty `groupIds`
 provider drift. Python's public fallback always takes the saga branch when `saga is not None`, binds

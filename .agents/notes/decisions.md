@@ -288,14 +288,16 @@ no wire/prompt/cache/temporal behavior changed):
   Kuzu operation mismatches so the C# runtime path can persist and read Graphiti's model fields
   consistently.
 - Real tiktoken-based chunking is the default, but callers can register `HeuristicTokenCounter(4)`
-  when they need Python's exact token estimate.
+  when they need Python's character-window chunking behavior.
 - Content chunking preserves Python's zero/default overlap semantics for direct helper calls:
   `overlapTokens: 0` is treated like the default overlap, matching Python's
   `overlap_tokens or CHUNK_OVERLAP_TOKENS`. Hosts can still configure `ChunkOverlapTokens = 0` on
   `DefaultContentChunker`, which mirrors setting Python's environment-derived default overlap
   constant to zero. JSON chunk serialization intentionally uses compact System.Text.Json output
   instead of Python `json.dumps` separator spaces; the parsed JSON structure and chunk boundaries are
-  the parity contract, not whitespace.
+  the parity contract, not whitespace. Large covering-chunk generation is deterministic in C# rather
+  than random-sampled; this is an intentional reproducibility hardening for a helper whose contract is
+  pair coverage, not sampling order.
 - Saga-scoped episode retrieval follows Python's public fallback for null or empty group lists:
   `saga` still selects the saga branch, but the group parameter is null, so normal grouped sagas do
   not match and the query does not fall through to generic episode retrieval. InMemory returns an
