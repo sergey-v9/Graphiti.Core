@@ -30,7 +30,6 @@ public sealed class EntityEdgeNamespace
         int batchSize = 100,
         CancellationToken cancellationToken = default)
     {
-        NamespaceDriverHelpers.ValidateBatchSize(batchSize);
         await NamespaceDriverHelpers.SaveEdgesAsync(
             _driver,
             edges,

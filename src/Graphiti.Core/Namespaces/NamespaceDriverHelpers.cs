@@ -4,9 +4,6 @@ internal static class NamespaceDriverHelpers
 {
     private const int MaxNamespaceSaveConcurrency = 8;
 
-    public static void ValidateBatchSize(int batchSize) =>
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(batchSize);
-
     public static Task SaveNodesAsync<TNode>(
         IGraphDriver driver,
         IEnumerable<TNode> nodes,
@@ -37,7 +34,6 @@ internal static class NamespaceDriverHelpers
         Func<TItem, CancellationToken, Task> saveAsync,
         CancellationToken cancellationToken)
     {
-        ValidateBatchSize(batchSize);
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(saveAsync);
 
@@ -71,10 +67,20 @@ internal static class NamespaceDriverHelpers
         Func<IReadOnlyList<TItem>, CancellationToken, Task> processBatchAsync,
         CancellationToken cancellationToken)
     {
-        ValidateBatchSize(batchSize);
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(processBatchAsync);
         cancellationToken.ThrowIfCancellationRequested();
+
+        if (batchSize <= 0)
+        {
+            var allItems = MaterializeList(items, cancellationToken);
+            if (allItems.Count > 0)
+            {
+                await processBatchAsync(allItems, cancellationToken).ConfigureAwait(false);
+            }
+
+            return;
+        }
 
         var batch = new List<TItem>(batchSize);
         foreach (var item in items)

@@ -399,6 +399,12 @@ InMemory node delete loops, and Ladybug node delete loops now accept non-positiv
 of rejecting them. Providers that batch UUID deletes normalize non-positive values to one all-items
 batch, preserving null UUID-collection validation.
 
+**2026-06-19 namespace save-bulk batch-size follow-up:** closed the matching public namespace save
+drift. Python namespace `save_bulk` methods pass `batch_size` through, and current save operations
+ignore it on the save path. C# namespace `SaveBulkAsync` now accepts zero/negative `batchSize` for
+node and edge save namespaces, treating those values as one materialized all-items batch while
+leaving delete-batch normalization separate.
+
 **2026-06-17 entity UUID group-filter follow-up:** closed a model helper drift. Python
 `EntityNode.get_by_uuids(..., group_id=...)` accepts `group_id`, but the normal fallback query filters
 only by UUID and the Neo4j operation implementation also has no group parameter. C#

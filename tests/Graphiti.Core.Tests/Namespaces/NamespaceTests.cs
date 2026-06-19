@@ -276,24 +276,79 @@ public class NamespaceTests
     }
 
     [Fact]
-    public async Task NamespaceSaveBulk_ValidatesBatchSizeBeforeEnumeration()
+    public async Task NamespaceSaveBulk_AllowsNonPositiveBatchSizes()
     {
         var driver = new DelayedNamespaceSaveDriver();
         var graphiti = new Graphiti(graphDriver: driver);
+        var entity = new EntityNode { Uuid = "entity", Name = "Entity", GroupId = "group" };
+        var community = new CommunityNode { Uuid = "community", Name = "Community", GroupId = "group" };
+        var saga = new SagaNode { Uuid = "saga", Name = "Saga", GroupId = "group" };
+        var episodes = Enumerable.Range(0, 6)
+            .Select(index => new EpisodicNode
+            {
+                Uuid = $"episode-{index}",
+                Name = $"Episode {index}",
+                GroupId = "group"
+            })
+            .ToList();
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            graphiti.Nodes.Entity.SaveBulkAsync(new ThrowingEnumerable<EntityNode>(), batchSize: 0));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            graphiti.Nodes.Episode.SaveBulkAsync(new ThrowingEnumerable<EpisodicNode>(), batchSize: 0));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            graphiti.Nodes.Community.SaveBulkAsync(new ThrowingEnumerable<CommunityNode>(), batchSize: 0));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            graphiti.Edges.Entity.SaveBulkAsync(new ThrowingEnumerable<EntityEdge>(), batchSize: 0));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
-            graphiti.Edges.Episode.SaveBulkAsync(new ThrowingEnumerable<EpisodicEdge>(), batchSize: 0));
+        await graphiti.Nodes.Entity.SaveBulkAsync(new[] { entity }, batchSize: 0);
+        await graphiti.Nodes.Community.SaveBulkAsync(new[] { community }, batchSize: -1);
+        await graphiti.Nodes.Saga.SaveBulkAsync(new[] { saga }, batchSize: 0);
+        await graphiti.Nodes.Episode.SaveBulkAsync(episodes, batchSize: -1);
 
-        Assert.Equal(0, driver.SavedNodeCount);
-        Assert.Equal(0, driver.SavedEdgeCount);
+        Assert.Equal(9, driver.SavedNodeCount);
+        Assert.InRange(driver.MaxConcurrentSaves, 2, episodes.Count);
+
+        driver.ResetMaxConcurrentSaves();
+        var entityEdge = new EntityEdge
+        {
+            Uuid = "entity-edge",
+            SourceNodeUuid = entity.Uuid,
+            TargetNodeUuid = entity.Uuid,
+            GroupId = "group",
+            Name = "RELATED_TO",
+            Fact = "Entity relates to itself."
+        };
+        var communityEdge = new CommunityEdge
+        {
+            Uuid = "community-edge",
+            SourceNodeUuid = community.Uuid,
+            TargetNodeUuid = entity.Uuid,
+            GroupId = "group"
+        };
+        var hasEpisodeEdge = new HasEpisodeEdge
+        {
+            Uuid = "has-episode",
+            SourceNodeUuid = saga.Uuid,
+            TargetNodeUuid = episodes[0].Uuid,
+            GroupId = "group"
+        };
+        var nextEpisodeEdge = new NextEpisodeEdge
+        {
+            Uuid = "next-episode",
+            SourceNodeUuid = episodes[0].Uuid,
+            TargetNodeUuid = episodes[1].Uuid,
+            GroupId = "group"
+        };
+        var episodicEdges = Enumerable.Range(0, 5)
+            .Select(index => new EpisodicEdge
+            {
+                Uuid = $"episodic-edge-{index}",
+                SourceNodeUuid = episodes[index].Uuid,
+                TargetNodeUuid = entity.Uuid,
+                GroupId = "group"
+            })
+            .ToList();
+
+        await graphiti.Edges.Entity.SaveBulkAsync(new[] { entityEdge }, batchSize: 0);
+        await graphiti.Edges.Community.SaveBulkAsync(new[] { communityEdge }, batchSize: -1);
+        await graphiti.Edges.HasEpisode.SaveBulkAsync(new[] { hasEpisodeEdge }, batchSize: 0);
+        await graphiti.Edges.NextEpisode.SaveBulkAsync(new[] { nextEpisodeEdge }, batchSize: -1);
+        await graphiti.Edges.Episode.SaveBulkAsync(episodicEdges, batchSize: 0);
+
+        Assert.Equal(9, driver.SavedEdgeCount);
+        Assert.InRange(driver.MaxConcurrentSaves, 2, episodicEdges.Count);
     }
 
     [Fact]

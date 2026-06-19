@@ -158,10 +158,10 @@ that published version.
 Rerun verification before claiming the tree is green; historical test counts drift as coverage is
 added.
 
-Latest full verifier, 2026-06-18: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
+Latest full verifier, 2026-06-19: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
 credentials for the Ladybug feed: `1014` passed, `3` skipped, `1017` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice aligns combined extraction prompt rendering
-so custom fact types are omitted unless both fact types and a type map are supplied.
+both package-consumer smokes succeeded. The newest slice aligns namespace save-bulk batching so
+zero/negative `batchSize` values are accepted as one materialized all-items save batch.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's
@@ -445,7 +445,7 @@ public DTO field for Python wire-shape parity, but backend query construction pl
 in-memory/materialized matching now ignore it because Python defines `property_filters` without
 applying it in the node or edge search filter constructors.
 
-Open concrete follow-up candidates from the latest read-only audits: plan-folder inventory found
+Latest read-only audit follow-up state: plan-folder inventory found
 only plan 06 unchecked, and that LadybugDB merge remains a separate optional stream under
 `.agents/plans/06-merge-ladybug-into-core.md`, not release/versioning work. The endpoint-gated
 InMemory edge-save drift is now closed. Existing saga-by-name association is now aligned with
@@ -487,10 +487,10 @@ was already documented and tested, while the default `HashEmbedder` and strict p
 output validation are accepted C# adapter divergences now recorded in `decisions.md` and `parity.md`.
 Ingestion/maintenance read-only audits found one combined prompt drift, now closed: combined
 extraction omits custom fact types unless a type map is also supplied, while standalone edge
-extraction keeps its fallback signature behavior. Namespace read-only audits found one remaining
-concrete non-decision candidate to handle separately: public namespace `SaveBulkAsync` currently
-rejects non-positive `batchSize`, while Python namespace save-bulk calls pass those values through
-and current save implementations ignore them.
+extraction keeps its fallback signature behavior. Namespace read-only audits found one save-bulk
+batch-size drift, now closed separately: public namespace `SaveBulkAsync` accepts zero/negative
+`batchSize` for node and edge save namespaces and treats those values as one materialized all-items
+batch, while delete-batch normalization remains separate.
 Decision-gated release/API/provider items remain separate in plan 05 and the provider notes.
 
 Latest checkpoint, 2026-06-13:

@@ -29,7 +29,6 @@ public sealed class CommunityNodeNamespace
         int batchSize = 100,
         CancellationToken cancellationToken = default)
     {
-        NamespaceDriverHelpers.ValidateBatchSize(batchSize);
         await NamespaceDriverHelpers.SaveNodesAsync(
             _driver,
             nodes,
