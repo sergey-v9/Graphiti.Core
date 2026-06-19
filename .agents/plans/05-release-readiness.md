@@ -223,8 +223,9 @@ Recorded sweep result, 2026-06-17:
    benchmark-first performance wins.
 5. Decision-gated follow-ups stay separate and should be surfaced explicitly before implementation:
    `CommunityEdgeNamespace.SaveBulkAsync` public API shape, empty node-label filter bug-compatibility,
-   entity-attribute per-field max-length/required metadata, `GRPH0002` / `AddGraphitiCore` alias
-   migration, larger real-provider eval expansion, Linux/CI validation scope,
+   entity-attribute response-envelope/schema metadata and per-field max-length/required metadata,
+   `GRPH0002` / `AddGraphitiCore` alias migration, larger real-provider eval expansion,
+   Linux/CI validation scope,
    versioning, publish path, and metapackage shape. (Neo4j retirement is no longer pending — it
    landed 2026-06-17, M4 in `evolution.md`.)
 6. `kuzu-driver-port.md` remaining-work bullets are conditional provider follow-ups, not unhandled
@@ -308,6 +309,10 @@ Recorded sweep result, 2026-06-17:
     non-decision follow-up from this pass was test hardening: the search concurrency proof now avoids
     a second fixed wall-clock timeout after its fake-driver barrier has already proven concurrent
     startup, reducing full-suite scheduler-load sensitivity.
+21. Follow-up ontology-matching audit on 2026-06-19 kept the same gate shape. The concrete custom
+    type-selection drift was handled as its own parity slice: entity and edge custom schemas now
+    resolve only from exact ontology dictionary keys, exact endpoint labels, and exact mapped
+    relation names, so case variants and type-name aliases do not trigger attribute prompts.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.

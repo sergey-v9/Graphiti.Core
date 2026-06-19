@@ -1546,6 +1546,49 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisode_SkipsEntityAttributePromptWhenTypeLabelCaseMismatches()
+    {
+        var driver = new InMemoryGraphDriver();
+        var llm = new StaticLlmClient(new Dictionary<string, JsonObject>
+        {
+            ["extract_nodes.extract_message"] = new()
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "Alice", ["entity_type"] = "person" }
+                },
+                ["edges"] = new JsonArray()
+            },
+            ["extract_nodes.extract_attributes"] = new()
+            {
+                ["role"] = "engineer"
+            }
+        });
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm);
+
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "Alice joined the engineering team.",
+            "message",
+            new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+            groupId: "group",
+            entityTypes: new Dictionary<string, EntityTypeDefinition>
+            {
+                ["Person"] = new(
+                    "Person",
+                    attributes: new Dictionary<string, EntityAttributeDefinition>
+                    {
+                        ["role"] = new("Job title")
+                    })
+            });
+
+        var alice = Assert.Single(result.Nodes);
+        var storedAlice = await EntityNode.GetByUuidAsync(driver, alice.Uuid);
+        Assert.Empty(storedAlice.Attributes);
+        Assert.DoesNotContain("extract_nodes.extract_attributes", llm.PromptNames);
+    }
+
+    [Fact]
     public async Task AddEpisode_HydratesNestedStructuredAttributeResponses()
     {
         var driver = new InMemoryGraphDriver();

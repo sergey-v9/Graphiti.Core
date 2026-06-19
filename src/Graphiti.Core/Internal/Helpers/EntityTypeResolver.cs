@@ -59,7 +59,7 @@ internal static class EntityTypeResolver
         for (var i = 0; i < node.Labels.Count; i++)
         {
             var label = node.Labels[i];
-            if (string.Equals(label, "Entity", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(label, "Entity", StringComparison.Ordinal))
             {
                 continue;
             }
@@ -112,7 +112,7 @@ internal static class EntityTypeResolver
     {
         // "Entity" is an effective label on every node, and a node missing from the resolved-node
         // map is treated as ['Entity'] only — so a null node matches only the "Entity" label.
-        if (string.Equals(label, "Entity", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(label, "Entity", StringComparison.Ordinal))
         {
             return true;
         }
@@ -124,7 +124,7 @@ internal static class EntityTypeResolver
 
         for (var i = 0; i < node.Labels.Count; i++)
         {
-            if (string.Equals(node.Labels[i], label, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(node.Labels[i], label, StringComparison.Ordinal))
             {
                 return true;
             }
@@ -137,7 +137,7 @@ internal static class EntityTypeResolver
     {
         for (var i = 0; i < edgeTypeNames.Count; i++)
         {
-            if (string.Equals(edgeTypeNames[i], edgeName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(edgeTypeNames[i], edgeName, StringComparison.Ordinal))
             {
                 return true;
             }
@@ -150,15 +150,9 @@ internal static class EntityTypeResolver
         string typeName,
         IReadOnlyDictionary<string, EntityTypeDefinition> typeDefinitions)
     {
-        if (typeDefinitions.TryGetValue(typeName, out var direct))
-        {
-            return direct;
-        }
-
         foreach (var pair in typeDefinitions)
         {
-            if (string.Equals(pair.Key, typeName, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(pair.Value.Name, typeName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(pair.Key, typeName, StringComparison.Ordinal))
             {
                 return pair.Value;
             }

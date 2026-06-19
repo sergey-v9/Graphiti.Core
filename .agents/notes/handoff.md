@@ -145,7 +145,9 @@ recheck also confirmed that `0.17.1-dev.1.1.g6f3dbed` is still the only publishe
 version for `LadybugDB` and `LadybugDB.Native`, matching the current Graphiti pin. The only concrete
 slice from this pass was test-only hardening for the search concurrency proof: after the fake-driver
 barrier has proven concurrent startup, it now waits on the xUnit cancellation token instead of a
-second fixed wall-clock timeout. Plan 06 remains scheduled but opt-in.
+second fixed wall-clock timeout. A follow-up ontology-matching audit is also closed: custom entity
+and edge type resolution now uses exact ontology keys/signatures, so case variants and type-name
+aliases do not select custom attribute schemas. Plan 06 remains scheduled but opt-in.
 
 ## LadybugDB / Kuzu
 
@@ -178,12 +180,12 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-19: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `1021` passed, `3` skipped, `1024` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice hardens the search concurrency proof after
-the fake-driver barrier and records that the moved-docs/backlog audit found no remaining concrete
-implementation item outside plan 06 or already-recorded decision gates. Focused verification also
-passed for `SearchAsync_ExecutesConfiguredScopesConcurrently`, and the full
-`SearchEngineDriverBackedTests` class passed (`42` tests).
+credentials for the Ladybug feed: `1024` passed, `3` skipped, `1027` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice closes exact ontology matching for custom
+entity/edge type selection: case variants and `EntityTypeDefinition.Name` aliases no longer select
+custom attribute schemas. Focused verification also passed for the new workflow/internal resolver
+coverage (`4` tests), and the upstream-delta check still reports no `graphiti_core/` changes from
+anchor `0ed90b7` to `origin/main` `b9a74644fb641910a03d325ec2b8f669d3db75dc`.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's

@@ -626,8 +626,9 @@ Python custom entity field names are exact Pydantic field names: `validate_entit
 exact `EntityNode.model_fields` names, and structured attribute responses address exact field names.
 C# `EntityTypeDefinition.Attributes`, protected-name validation, dynamic attribute schemas, and
 attribute response merging now use ordinal exact keys, so case variants and C# property-style names no
-longer collide with snake_case framework fields or with each other. The separate per-field
-`max_length` / required-metadata API expansion remains decision-gated.
+longer collide with snake_case framework fields or with each other. The separate response-envelope /
+schema-metadata and per-field `max_length` / required-metadata API expansion remains
+decision-gated.
 
 **2026-06-18 node-attribute no-schema follow-up:** closed a reachable attribute-clearing drift.
 Python runs node attribute extraction for every resolved node and assigns the returned dictionary
@@ -635,6 +636,11 @@ back; when no matching entity type exists or the matched type declares no fields
 dictionary is `{}`. C# now clears resolved node attributes for omitted/empty entity-type maps and
 for nodes whose matched type has no declared attributes, while still skipping the attribute prompt in
 those no-schema cases.
+
+**2026-06-19 ontology matching follow-up:** closed a custom type-selection drift. Custom entity and
+edge attribute schemas now resolve only from exact ontology dictionary keys plus exact edge-type-map
+endpoint labels and relation names. Case variants and `EntityTypeDefinition.Name` aliases no longer
+select a custom schema or trigger the attribute prompt.
 
 **2026-06-17 Ladybug clear-data empty-list follow-up:** closed a provider clear-flow drift. Python
 `clear_data` treats only `group_ids is None` as clear-all; a non-null empty list runs scoped deletion

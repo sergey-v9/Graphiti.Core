@@ -534,6 +534,105 @@ public class EdgeResolutionEndpointFetchTests
     }
 
     [Fact]
+    public void FindEntityTypeDefinition_RequiresExactCustomTypeKey()
+    {
+        var entityTypes = new Dictionary<string, EntityTypeDefinition>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Person"] = new("Person")
+        };
+
+        var exact = EntityTypeResolver.FindEntityTypeDefinition(
+            new EntityNode { Labels = new List<string> { "Entity", "Person" } },
+            entityTypes);
+        Assert.Same(entityTypes["Person"], exact);
+
+        var lowerLabel = EntityTypeResolver.FindEntityTypeDefinition(
+            new EntityNode { Labels = new List<string> { "Entity", "person" } },
+            entityTypes);
+        Assert.Null(lowerLabel);
+
+        var nameAlias = EntityTypeResolver.FindEntityTypeDefinition(
+            new EntityNode { Labels = new List<string> { "Entity", "Human" } },
+            new Dictionary<string, EntityTypeDefinition>
+            {
+                ["Person"] = new("Human")
+            });
+        Assert.Null(nameAlias);
+    }
+
+    [Fact]
+    public void FindEdgeTypeDefinition_RequiresExactCustomTypeKeyAndSignature()
+    {
+        var edge = BuildWorksAtEdge();
+        var edgeTypes = new Dictionary<string, EntityTypeDefinition>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["WORKS_AT"] = new("WORKS_AT")
+        };
+        var nodesByUuid = new Dictionary<string, EntityNode>(StringComparer.Ordinal)
+        {
+            ["alice-uuid"] = new EntityNode
+            {
+                Uuid = "alice-uuid",
+                Name = "Alice",
+                GroupId = "group",
+                Labels = new List<string> { "Entity", "Person" }
+            },
+            ["acme-uuid"] = new EntityNode
+            {
+                Uuid = "acme-uuid",
+                Name = "Acme",
+                GroupId = "group",
+                Labels = new List<string> { "Entity", "Organization" }
+            }
+        };
+
+        var exact = EntityTypeResolver.FindEdgeTypeDefinition(
+            edge,
+            nodesByUuid,
+            edgeTypes,
+            new Dictionary<(string SourceType, string TargetType), IReadOnlyList<string>>
+            {
+                [("Person", "Organization")] = new[] { "WORKS_AT" }
+            });
+        Assert.Same(edgeTypes["WORKS_AT"], exact);
+
+        edge.Name = "works_at";
+        var lowerName = EntityTypeResolver.FindEdgeTypeDefinition(edge, nodesByUuid, edgeTypes, edgeTypeMap: null);
+        Assert.Null(lowerName);
+
+        edge.Name = "WORKS_AT";
+        var nameAlias = EntityTypeResolver.FindEdgeTypeDefinition(
+            edge,
+            nodesByUuid,
+            new Dictionary<string, EntityTypeDefinition>
+            {
+                ["WorksAtKey"] = new("WORKS_AT")
+            },
+            edgeTypeMap: null);
+        Assert.Null(nameAlias);
+
+        var lowerEndpointLabel = EntityTypeResolver.FindEdgeTypeDefinition(
+            edge,
+            nodesByUuid,
+            edgeTypes,
+            new Dictionary<(string SourceType, string TargetType), IReadOnlyList<string>>
+            {
+                [("person", "Organization")] = new[] { "WORKS_AT" }
+            });
+        Assert.Null(lowerEndpointLabel);
+
+        var lowerMappedName = EntityTypeResolver.FindEdgeTypeDefinition(
+            edge,
+            nodesByUuid,
+            edgeTypes,
+            new Dictionary<(string SourceType, string TargetType), IReadOnlyList<string>>
+            {
+                [("Person", "Organization")] = new[] { "works_at" }
+            });
+        Assert.Null(lowerMappedName);
+    }
+
+    [Fact]
     public async Task ResolveEdgeWithLlm_ExactDuplicateFastPathScansRelatedEdgesBeforePrompt()
     {
         var driver = new InMemoryGraphDriver();
