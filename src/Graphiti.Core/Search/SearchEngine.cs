@@ -222,13 +222,11 @@ internal static class SearchEngine
 
     private static ISearchGraphDriver CreateSearchDriver(
         IGraphDriver driver,
-        IReadOnlyList<string>? rankGroupIds,
         bool materializeEmbeddingsForFulltext = false) =>
         driver as ISearchGraphDriver
         ?? new MaterializingSearchGraphDriver(
             driver,
-            rankGroupIds,
-            materializeEmbeddingsForFulltext);
+            materializeEmbeddingsForFulltext: materializeEmbeddingsForFulltext);
 
     private const int EdgeSearchScope = 1;
     private const int NodeSearchScope = 1 << 1;
@@ -666,7 +664,7 @@ internal static class SearchEngine
         var hasBm25 = config.SearchMethods.Contains(EdgeSearchMethod.Bm25);
         var hasCosine = config.SearchMethods.Contains(EdgeSearchMethod.CosineSimilarity);
         var needsEmbeddings = hasCosine || config.Reranker == EdgeReranker.Mmr;
-        var searchDriver = CreateSearchDriver(driver, groupIds, needsEmbeddings);
+        var searchDriver = CreateSearchDriver(driver, needsEmbeddings);
         using var methodCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var methodCancellationToken = methodCancellation.Token;
         Task<List<(EntityEdge Item, float Score)>>? textTask = hasBm25
@@ -847,7 +845,7 @@ internal static class SearchEngine
         var hasBm25 = config.SearchMethods.Contains(NodeSearchMethod.Bm25);
         var hasCosine = config.SearchMethods.Contains(NodeSearchMethod.CosineSimilarity);
         var needsEmbeddings = hasCosine || config.Reranker == NodeReranker.Mmr;
-        var searchDriver = CreateSearchDriver(driver, groupIds, needsEmbeddings);
+        var searchDriver = CreateSearchDriver(driver, needsEmbeddings);
         using var methodCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var methodCancellationToken = methodCancellation.Token;
         Task<List<(EntityNode Item, float Score)>>? textTask = hasBm25
@@ -1019,7 +1017,7 @@ internal static class SearchEngine
         SearchConfigValidator.ValidateLimit(limit);
         GraphitiHelpers.ValidateGroupIds(groupIds);
         searchFilter ??= new SearchFilters();
-        var searchDriver = CreateSearchDriver(driver, groupIds);
+        var searchDriver = CreateSearchDriver(driver);
         var textRanked = await SearchRetrievalRunner.GetEpisodeFulltextRankedAsync(
             searchDriver,
             query,
@@ -1120,7 +1118,6 @@ internal static class SearchEngine
         var runVectorSearch = queryVector is not null;
         var searchDriver = CreateSearchDriver(
             driver,
-            groupIds,
             runVectorSearch || config.Reranker == CommunityReranker.Mmr);
         using var methodCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var methodCancellationToken = methodCancellation.Token;

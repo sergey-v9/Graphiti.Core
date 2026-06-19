@@ -319,6 +319,12 @@ predicates only inside the non-null `group_ids` block. C# Ladybug, InMemory, and
 embedding search now ignore endpoint filters when `groupIds` is null, while preserving endpoint
 filtering for non-null group scopes.
 
+**2026-06-19 fallback ranker scope follow-up:** closed a materialized-search fallback drift. Python's
+`node_distance_reranker` and `episode_mentions_reranker` do not accept or apply `group_ids`, so ranker
+evidence can come from outside the candidate-retrieval group scope. `SearchEngine` no longer passes
+the current search `groupIds` into `MaterializingSearchGraphDriver`'s ranker evidence loader; regular
+BM25/vector/BFS retrieval remains group-scoped through each search method's own `groupIds` parameter.
+
 **2026-06-16 search-helper follow-up:** closed the public helper gap for
 `graphiti_core.search.search_helpers`. C# now exposes `SearchHelpers.FormatEdgeDateRange` and
 `SearchHelpers.SearchResultsToContextString`, preserving Python's sectioned context shape, date

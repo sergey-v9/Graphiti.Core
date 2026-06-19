@@ -129,7 +129,9 @@ divergence remains unchanged. The follow-up edge-resolution block-order drift is
 resolved edges now return before invalidated chunks like Python's `resolved_edges + invalidated_edges`
 single-ingestion shape. The lower-level edge-embedding endpoint-scope drift is also closed: Ladybug,
 InMemory, and materialized search now ignore endpoint filters when `groupIds` is null, matching
-Python's Kuzu path. Plan 06 remains scheduled but opt-in.
+Python's Kuzu path. The materialized fallback ranker scope drift is also closed: node-distance and
+episode-mentions ranker evidence is no longer limited to the candidate retrieval groups, matching
+Python ranker queries. Plan 06 remains scheduled but opt-in.
 
 ## LadybugDB / Kuzu
 
@@ -162,9 +164,9 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added.
 
 Latest full verifier, 2026-06-19: `.\eng\Verify-GraphitiCore.ps1` is green with GitHub Packages
-credentials for the Ladybug feed: `1017` passed, `3` skipped, `1020` total; both packages packed and
-both package-consumer smokes succeeded. The newest slice aligns lower-level edge-embedding endpoint
-filters so they apply only when `groupIds` is non-null, matching Python's Kuzu path.
+credentials for the Ladybug feed: `1019` passed, `3` skipped, `1022` total; both packages packed and
+both package-consumer smokes succeeded. The newest slice aligns materialized fallback rankers so
+node-distance and episode-mentions evidence is not group-scoped, matching Python ranker queries.
 
 Recent verification checkpoint, 2026-06-18: plan 05 now has an explicit Step F plan-folder backlog
 triage gate before release infrastructure, search cross-encoder candidate pools preserve Python's

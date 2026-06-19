@@ -886,6 +886,92 @@ public class SearchEngineRrfTests
         Assert.Equal(10f, result.Score);
     }
 
+    [Fact]
+    public async Task FallbackNodeDistanceReranker_UsesCrossGroupGraphEvidence()
+    {
+        var driver = new NonSearchGraphDriver();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var center = Node("center", "center", new[] { 1f, 0f }, now);
+        center.GroupId = "group";
+        var neighbor = Node("neighbor", "alpha", new[] { 1f, 0f }, now);
+        neighbor.GroupId = "group";
+        var distant = Node("distant", "alpha", new[] { 1f, 0f }, now);
+        distant.GroupId = "group";
+        var crossGroupRelation = Edge("cross-group-relation", "center connected to neighbor", new[] { 1f, 0f }, now);
+        crossGroupRelation.SourceNodeUuid = center.Uuid;
+        crossGroupRelation.TargetNodeUuid = neighbor.Uuid;
+        crossGroupRelation.GroupId = "other";
+        await driver.SaveNodeAsync(center);
+        await driver.SaveNodeAsync(neighbor);
+        await driver.SaveNodeAsync(distant);
+        await driver.SaveEdgeAsync(crossGroupRelation);
+
+        var ranked = await SearchEngine.NodeSearchAsync(
+            driver,
+            new IdentityCrossEncoderClient(),
+            "alpha",
+            queryVector: null,
+            groupIds: new[] { "group" },
+            new NodeSearchConfig
+            {
+                SearchMethods = { NodeSearchMethod.Bm25 },
+                Reranker = NodeReranker.NodeDistance
+            },
+            new SearchFilters(),
+            limit: 2,
+            centerNodeUuid: center.Uuid);
+
+        Assert.Equal(new[] { neighbor.Uuid, distant.Uuid }, ranked.Select(item => item.Item.Uuid));
+        Assert.Equal(new[] { 1f, 0f }, ranked.Select(item => item.Score));
+    }
+
+    [Fact]
+    public async Task FallbackEpisodeMentionsReranker_UsesCrossGroupMentionEvidence()
+    {
+        var driver = new NonSearchGraphDriver();
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var mentioned = Node("mentioned", "alpha", new[] { 1f, 0f }, now);
+        mentioned.GroupId = "group";
+        var unmentioned = Node("unmentioned", "alpha beta", new[] { 1f, 0f }, now);
+        unmentioned.GroupId = "group";
+        var episode = new EpisodicNode
+        {
+            Uuid = "episode",
+            Name = "episode",
+            GroupId = "other",
+            CreatedAt = now,
+            ValidAt = now
+        };
+        var mention = new EpisodicEdge
+        {
+            SourceNodeUuid = episode.Uuid,
+            TargetNodeUuid = mentioned.Uuid,
+            GroupId = "other",
+            CreatedAt = now
+        };
+        await driver.SaveNodeAsync(mentioned);
+        await driver.SaveNodeAsync(unmentioned);
+        await driver.SaveNodeAsync(episode);
+        await driver.SaveEdgeAsync(mention);
+
+        var ranked = await SearchEngine.NodeSearchAsync(
+            driver,
+            new IdentityCrossEncoderClient(),
+            "alpha beta",
+            queryVector: null,
+            groupIds: new[] { "group" },
+            new NodeSearchConfig
+            {
+                SearchMethods = { NodeSearchMethod.Bm25 },
+                Reranker = NodeReranker.EpisodeMentions
+            },
+            new SearchFilters(),
+            limit: 2);
+
+        Assert.Equal(new[] { mentioned.Uuid, unmentioned.Uuid }, ranked.Select(item => item.Item.Uuid));
+        Assert.Equal(new[] { 1f, float.PositiveInfinity }, ranked.Select(item => item.Score));
+    }
+
     private static EntityEdge Edge(string name, string fact, IReadOnlyList<float> embedding, DateTime now) =>
         new()
         {

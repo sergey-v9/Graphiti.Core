@@ -282,6 +282,10 @@ Recorded sweep result, 2026-06-17:
     edge-embedding endpoint-scope drift was handled as its own parity/provider slice: Ladybug,
     InMemory, and materialized embedding search now ignore endpoint filters when `groupIds` is null
     and keep endpoint filters for non-null group scopes.
+16. Follow-up materialized-ranker audit on 2026-06-19 kept the same gate shape. The concrete fallback
+    ranker scope drift was handled as its own parity slice: materialized node-distance and
+    episode-mentions rankers no longer limit ranker evidence to the candidate retrieval groups,
+    matching Python ranker queries.
 
 **Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
 tests and commits; this coordination step needs only a docs review.
