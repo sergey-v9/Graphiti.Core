@@ -431,6 +431,34 @@ the impact grows.
   `"RELATES_TO"` relation, matching Python's rejection of the required Pydantic field
   (`extract_edges.py`/`extract_nodes_and_edges.py`) and the no-fabrication parity contract. Resolution
   of the kept edges then proceeds through `EdgeResolutionService.cs`.
+- **Bulk saga association avoids a `NEXT_EPISODE` self-loop** (promoted here from `handoff.md` so a
+  future Python-alignment pass does not "correct" it back). `SagaService.AssociateBulkAsync` passes the
+  first ordered episode's UUID as the current-episode argument to the predecessor lookup, excluding it;
+  Python passes an empty `current_episode_uuid` for the first bulk episode and can create a
+  `NEXT_EPISODE` self-loop when the only bulk item reuses an already-linked saga episode. C# is the
+  safer (cycle-free) behavior — keep it; a regression test pinning "single bulk episode reusing a linked
+  saga UUID produces no self-loop" would lock it.
+- **`CommunityClustering.LabelPropagate` caps iterations** at `Math.Max(100, n*n)` and returns the
+  (possibly non-converged) labeling on exhaustion; Python's `label_propagation` loops `while True` with
+  no cap. The tie-break and threshold logic match exactly, so results are identical for normal inputs;
+  the cap only differs for a graph that genuinely never converges (C# truncates; Python would hang). It
+  is intentional infinite-loop protection — keep it.
+
+## Open public-surface decisions to settle while still alpha (2026-06-19 review)
+
+The package is `2.0.0-alpha.1`; surface changes are cheap NOW and breaking after a stable line. Decide
+these before any versioning gate:
+
+- **`CommunityEdgeNamespace.SaveBulkAsync`** is an additive C# public method with **no Python
+  counterpart**, pinned in the API snapshot and Ladybug-tested. Make the explicit keep-or-remove call:
+  if kept, record it here as a deliberate additive-API decision (so the snapshot diff is justified); if
+  removed, do it before the release-versioning gate to avoid a post-1.0 break.
+- **Per-field attribute `MaxLength` + required-field carve-out** are absent (C# `AttributeMerger`
+  applies only the single global cap and unconditionally drops over-cap fields;
+  `EntityAttributeDefinition` exposes neither). Python's `apply_capped_attributes` has a per-field
+  override + a required-field retain path. Genuine behavioral difference, correctly decision-gated;
+  closing it is a real `EntityAttributeDefinition` API expansion (do it as one bundle with snapshot +
+  golden-schema + the required-over-cap test, not piecemeal).
 
 ## Deliberate divergences from the 2026-06-14 upstream sync
 

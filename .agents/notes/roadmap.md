@@ -78,7 +78,7 @@ discipline, in Phase 5.
 ## Phase 1 — Prompt parity for existing C# call sites (COMPLETE 2026-06-11)
 
 Port the instruction text of every live Python prompt into `src/Graphiti.Core/Prompts/`, with
-golden-text tests pinning the rendered output. Work order: `.agents/plans/01-prompt-parity.md`.
+golden-text tests pinning the rendered output.
 
 Complete for every existing C# prompt call site: prompt builders live in `Prompts/`, services no
 longer inline prompt text, and golden tests exist for each builder. Remaining `MISSING` prompt rows
@@ -87,7 +87,7 @@ extraction) and are owned by Phase 2.
 
 ## Phase 2 — Pipeline semantic parity (COMPLETE 2026-06-11)
 
-Closed 2026-06-11. Work order: `.agents/plans/02-pipeline-parity.md`. Entity summary generation,
+Closed 2026-06-11. Entity summary generation,
 removal/constraining of invented LLM-failure fallbacks, broad invalidation-candidate search,
 multi-episode attribution, combined extraction internals, true-batch bulk ingestion,
 validation-failure re-prompting, and edge attribute extraction alignment are complete. Public
@@ -96,12 +96,11 @@ not expose the internal default-false combined helper flag.
 
 ## Phase 3 — Real-provider validation (COMPLETE 2026-06-14; acceptance gate met 2026-06-13, eval harness run live)
 
-Prove the library end-to-end with a real LLM + embedder. Work order:
-`.agents/plans/03-provider-validation.md`. A sample OpenAI host, env-gated OpenAI integration
-tests, and an opt-in M.E.AI cross-encoder exist, and the port has been run successfully against a
-real LLM/embedding/reranking provider. This phase is the acceptance test for Phases 1–2. The eval
-harness (proposal in `.agents/notes/eval-harness-proposal.md`) was approved, built
-(`samples/Graphiti.Eval`), and run live 2026-06-14.
+Prove the library end-to-end with a real LLM + embedder. A sample OpenAI host, env-gated OpenAI
+integration tests, and an opt-in M.E.AI cross-encoder exist, and the port has been run successfully
+against a real LLM/embedding/reranking provider. This phase is the acceptance test for Phases 1–2. The
+eval harness was approved, built (`samples/Graphiti.Eval`), and run live 2026-06-14. (Caveat: that live
+run is a single local Windows pass, not a continuous CI signal — see Goal G2 below.)
 
 Done when: an env-gated integration test (or sample app run) ingests episodes through a real
 provider, produces a graph whose entities/edges/summaries are sane on manual inspection, and hybrid
@@ -169,6 +168,51 @@ snapshot stays a drift guard (not a freeze); surface changes regenerate the base
 NOTE for future parallel batches: do NOT run multiple worktree agents' `dotnet test` concurrently —
 the LadybugDB native package serializes poorly across worktrees and deadlocks. Stagger the test step
 or have agents build-only and run the consolidated test centrally.
+
+## Long-term goals — active development (set 2026-06-19 from the full-project review)
+
+Phases 1–3 (parity) are done and the deterministic suite is green; the port is faithful and mature.
+The forward agenda is **productionization and confidence**, not more parity micro-slices. Ordered by
+value. Each is a stream, not a one-slice; verify centrally, keep docs lean, don't drift into the
+user-gated items.
+
+- **G1 — Cross-platform proof (HIGH).** The LadybugDB driver is validated only on **win-x64**; the
+  Linux path is *known-broken*, not just unvalidated — the fork's Linux package hits an FTS-extension
+  ABI mismatch under `~/.lbdb/extension` (see `full.yml` comment + `kuzu-driver-port.md`). The binding
+  shipped the `RTLD_GLOBAL` loader fix, so this is now the remaining blocker. Reproduce it on linux-x64;
+  if it's a binding/extension-packaging gap, fix it in `W:\code\ladybug` per the **self-service
+  bindings** policy, publish a new dev package, re-pin, and add a gated Linux `fts`+`vector`
+  CREATE/QUERY round-trip smoke. **Until that lane is green, win-x64 is the only supported RID — say so
+  in README/package metadata; do not advertise cross-platform.**
+- **G2 — Continuous quality, not one-shot (HIGH).** The live-OpenAI provider run and the eval harness
+  proved themselves *once*, locally, and SKIP silently in CI without a key — so prompt-transcription and
+  extraction-quality regressions can land with no signal (the unit suite uses fake LLMs and structurally
+  cannot see prompt quality). Make the live provider run + eval a **periodic or change-triggered** check
+  (even at low episode count), fail-loud rather than silent-skip, as the extraction-quality canary.
+- **G3 — Performance & allocation program (HIGH, evidence-driven).** Moratorium lifted; the benchmark
+  harness is micro-only. Add **ingestion / bulk / end-to-end benchmarks with `[MemoryDiagnoser]`**,
+  commit baselines, and profile the hot paths (InMemory O(n) full-scan cosine, RRF/MMR merge, prompt
+  serialization). Land only measured, parity-safe wins (BenchmarkDotNet before/after). This program also
+  *gates* the deferred opt-in HNSW vector tier (G-future) — only pursue HNSW if the bench shows full-scan
+  cosine is the bottleneck at the target graph size, and keep exact cosine the default.
+- **G4 — Observability + consumer DX (HIGH/MED, additive).** C# already has rich `ActivitySource`
+  tracing but **no `Meter`** (no counters/histograms for episodes ingested, tokens, search latency,
+  cache hit-rate) and **no exporter-wiring sample/doc**. Add a Meter at the boundaries already traced,
+  an OpenTelemetry (OTLP) wiring sample + `docs/observability.md`, a minimal "hello graph" quickstart
+  sample, and at least one **non-OpenAI provider sample** to prove the M.E.AI boundary generalizes. Keep
+  Core free of exporter/provider SDK dependencies.
+- **G5 — Sustained upstream parity (MED, cheap insurance).** Keep tracking `getzep/graphiti` via
+  `upstream-sync-procedure.md`; add a low-cost recurring reminder that runs `Check-PythonUpstreamDelta`
+  and surfaces a *non-blocking* notification on delta, so new library commits get triaged promptly
+  without expanding CI.
+- **G6 — Release readiness (USER-GATED).** Resolve the remaining **2.0 public-surface decisions while
+  still alpha** (the additive `CommunityEdgeNamespace.SaveBulkAsync`; model-default and attribute-
+  metadata divergences — see `decisions.md`), then versioning/publish and the opt-in Ladybug→Core merge
+  (plan 06) **only when Sergey initiates** — and do G1 first so a merged Core isn't Windows-locked.
+
+Standing principle: continue **bounded** adversarial parity hardening (only real, reachable divergences
+verified against the Python source — not speculative churn), and keep the docs lean (the matrix +
+decisions are the durable record; the changelog lives in git).
 
 ## Standing direction (unchanged)
 
