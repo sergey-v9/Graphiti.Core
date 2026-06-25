@@ -141,7 +141,7 @@ and a consumer `README.md` + `docs/search.md`. A first benchmark-first perf pass
 
 Plan `.agents/plans/05-release-readiness.md` steps **A–E are COMPLETE (2026-06-14)**, integrated and
 green (latest `.\eng\Verify-GraphitiCore.ps1` after package-consumer workflow smoke hardening:
-984 passed, 3 skipped, 987 total; both shippable
+full suite green; both shippable
 packages pack as `.nupkg` + `.snupkg`, then fresh temp package consumers restore/build, run setup,
 add a triplet, and search it back, including a Ladybug smoke that embeds the packed driver in `Graphiti`):
 surface

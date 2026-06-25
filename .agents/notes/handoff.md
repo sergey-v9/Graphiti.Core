@@ -23,8 +23,10 @@ lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 > decisions". The code was also de-coupled from Python textually (names + comments) on 2026-06-18 —
 > keep it that way (`decisions.md` "Parity without Python coupling in the code"). Library work is solid
 > and the full suite is green. Still user-gated: **release versioning/publishing**. The
-> **Ladybug→Core merge (plan 06)** is scheduled but **opt-in — do NOT auto-pick it** via the
-> work-selection rule; run it only when Sergey initiates it.
+> **Ladybug→Core merge (plan 06) is APPROVED, in scope (Sergey, 2026-06-19) — the agent can pick it up
+> directly** as a normal stream; the accepted consequence is that Core then depends on the
+> `github_ladybug` feed and can't publish to nuget.org until LadybugDB is public there (see `roadmap.md`
+> Phase 4 / plan 06).
 
 ## Current Layout
 
@@ -139,7 +141,7 @@ while deterministic large covering chunks remain documented C# hardening. The in
 audit is also closed as a documented C# repair: `AddEpisodeAsync(updateCommunities: true)` returns
 flattened community-update results instead of reproducing the source workflow's broken per-node
 destructuring. A follow-up moved-docs/backlog audit found no remaining unchecked implementation item
-outside plan 06's opt-in Ladybug merge and already-recorded decision-gated items. The package-feed
+outside plan 06's (now approved, in-scope) Ladybug merge and already-recorded decision-gated items. The package-feed
 recheck also confirmed that `0.17.1-dev.1.1.g6f3dbed` is still the only published GitHub Packages
 version for `LadybugDB` and `LadybugDB.Native`, matching the current Graphiti pin. The only concrete
 slice from this pass was test-only hardening for the search concurrency proof: after the fake-driver
@@ -148,7 +150,7 @@ second fixed wall-clock timeout. A follow-up ontology-matching audit is also clo
 and edge type resolution now uses exact ontology keys/signatures, so case variants and type-name
 aliases do not select custom attribute schemas. A follow-up search public/extensibility audit found no
 result-composition code slice: fresh C# search recipe instances and BFS guard-skipped custom driver
-calls are documented C# API hardening decisions. Plan 06 remains scheduled but opt-in.
+calls are documented C# API hardening decisions. Plan 06 is approved and in scope (2026-06-19).
 
 ## LadybugDB / Kuzu
 
