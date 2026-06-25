@@ -224,8 +224,8 @@ Current decision-gated / user-gated release items (surface explicitly before imp
   decisions, not hidden implementation leftovers.
 - `GRPH0002` / `AddGraphitiCore` alias migration; empty node-label filter bug-compatibility; larger
   real-provider eval expansion; Linux/CI validation scope.
-- The scheduled reverse plan-05 E merge (Ladybug → Core) is its own pre-release stream, owned by
-  `.agents/plans/06-merge-ladybug-into-core.md` (opt-in; do not auto-pick). `kuzu-driver-port.md`
+- The reverse plan-05 E merge (Ladybug → Core) is its own implementation stream, owned by
+  `.agents/plans/06-merge-ladybug-into-core.md` (**approved, in scope — 2026-06-19**). `kuzu-driver-port.md`
   "Remaining Work" bullets are conditional provider follow-ups, not unhandled release-plan tasks.
 
 **Verify:** docs review only; resulting code slices carry their own tests and commits.
