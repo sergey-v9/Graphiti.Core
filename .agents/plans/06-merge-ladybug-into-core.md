@@ -7,13 +7,16 @@ should be folded back into `Graphiti.Core`.
 
 ## Status
 
-**Not started — and NOT a default work-selection pick.** Sergey scheduled this, but it is *not* top
-priority and it carries a real consequence: after the merge `Graphiti.Core` depends on the LadybugDB
-packages + the `github_ladybug` feed, so it no longer restores from nuget.org alone and **cannot be
-published to nuget.org until LadybugDB is public there**. Therefore: **do NOT auto-pick this plan** via
-the AGENTS.md "lowest-numbered plan with unchecked items" rule. Execute it only when Sergey explicitly
-initiates it, as its own implementation stream (not a versioning/publishing step or a parity
-micro-slice). Default ongoing work stays on parity hardening / docs / verification.
+**APPROVED and in scope (Sergey, 2026-06-19) — do it.** This is real, available work; pick it up as a
+normal implementation stream (its own slices, not a parity micro-slice). **Accepted consequence (Sergey
+weighed it):** after the merge `Graphiti.Core` depends on the `LadybugDB`/`LadybugDB.Native` packages +
+the `github_ladybug` feed — it no longer restores from nuget.org alone, every consumer pulls the native
+binaries + needs the credential, and Core cannot be published to nuget.org until LadybugDB is public
+there. That is fine for the current private-fork workflow; it only matters if/when public nuget.org
+publishing of Core becomes a goal (the still-user-gated release/versioning decision). Sequencing: it is
+independent of the cross-platform (G1) work, and InMemory-only Linux consumers are unaffected (they
+restore the native package but never load the FTS extension), so it can proceed anytime. Verify
+centrally (build 0-warning, full suite green, deliberately regenerate the single-assembly API snapshot).
 
 ## Prerequisite Gate
 

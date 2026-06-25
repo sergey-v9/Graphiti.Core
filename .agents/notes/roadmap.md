@@ -21,10 +21,12 @@ These were taken by the agent ahead of sign-off; Sergey has now ruled on them:
    `GraphProvider.Neo4j` enum member, the `uri`/`user`/`password` constructor parameters,
    `GraphitiOptions.Uri`/`User`/`Password`, the `Neo4j.Driver` package reference, and all Neo4j tests
    are gone; the public-API baseline was regenerated and the parity matrix and docs were updated.
-4. **Merge Ladybug into Core — SCHEDULED (reverse plan-05 E).** LadybugDB is first-class, so a separate
-   assembly/package has lost its point: move the driver into `src/Graphiti.Core/Drivers/Ladybug/` (one
-   build). See Phase 4 + `kuzu-driver-port.md` for the steps and the consequence (Core then depends on
-   the LadybugDB packages/feed and can't be published to nuget.org until LadybugDB is public there).
+4. **Merge Ladybug into Core — APPROVED, in scope (Sergey, 2026-06-19).** LadybugDB is first-class, so a
+   separate assembly/package has lost its point: move the driver into `src/Graphiti.Core/Drivers/Ladybug/`
+   (one build). This is **available work — the agent can pick up plan 06 directly** (it's a normal
+   implementation stream, not a parity micro-slice). Accepted consequence: Core then depends on the
+   LadybugDB packages + `github_ladybug` feed and can't publish to nuget.org until LadybugDB is public
+   there (fine for the private-fork workflow). Steps in plan 06 + `kuzu-driver-port.md`.
 5. **Self-service bindings (standing).** `sergey-v9/ladybug-dotnet` is our fork: a capability the
    LadybugDB engine has but the C# bindings lack can be implemented in `tools/csharp_api`, pushed to the
    fork (builds a new dev package), and consumed by bumping the pin. Supersedes "do not push remotely."
@@ -116,15 +118,16 @@ inside `Drivers/Ladybug/`; direct package parameter binding is covered through t
 LadybugDB package family; shared Kuzu branches were retired from the generic search helpers. Neo4j was
 removed 2026-06-17 and is no longer a provider.
 
-**SCHEDULED (2026-06-17): merge the Ladybug driver back into `Graphiti.Core`.** Reverse the plan-05 E
-split — move `src/Graphiti.Core.Drivers.Ladybug/*` into `src/Graphiti.Core/Drivers/Ladybug/`, fold the
+**APPROVED (Sergey, 2026-06-19), in scope: merge the Ladybug driver back into `Graphiti.Core`.** Reverse
+the plan-05 E split — move `src/Graphiti.Core.Drivers.Ladybug/*` into `src/Graphiti.Core/Drivers/Ladybug/`, fold the
 `LadybugDB`/`LadybugDB.Native` package refs + `AddLadybugDbGraphDriver`/`LadybugDbOptions`/factory into
 `Graphiti.Core`, collapse the two-assembly API snapshot to one, and retire the `GraphitiCoreOnlyTests`
 mode + the core-only CI lane. Rationale: LadybugDB is the first-class provider, so a separate build no
-longer earns its keep. **Consequence:** `Graphiti.Core` then depends on the LadybugDB packages + the
-`github_ladybug` feed — no more nuget.org-only restore, every consumer pulls natives + needs the
-credential, and Core can't publish to nuget.org until LadybugDB is public there (fine for the current
-private-fork workflow; ties into the still-user-gated release decision). Full plan in
+longer earns its keep. **Accepted consequence (Sergey weighed it):** `Graphiti.Core` then depends on the
+LadybugDB packages + the `github_ladybug` feed — no more nuget.org-only restore, every consumer pulls
+natives + needs the credential, and Core can't publish to nuget.org until LadybugDB is public there
+(fine for the current private-fork workflow; only matters if/when public nuget.org publishing of Core
+becomes a goal — the still-user-gated release decision). Full plan in
 `.agents/plans/06-merge-ladybug-into-core.md`; provider context remains in `kuzu-driver-port.md`.
 Also leverage **self-service bindings** there for any binding gaps found during the work.
 
@@ -149,7 +152,7 @@ now LadybugDB-free and restores from nuget.org alone, with the LadybugDB driver 
 both assemblies.
 
 Remaining (release infra): Step F's plan-folder sweep is recorded in plan 05 and stays ahead of both
-the optional plan-06 Ladybug merge and release decisions. Anything newly found in `.agents/plans/` or
+the approved plan-06 Ladybug merge and the user-gated release decisions. Anything newly found in `.agents/plans/` or
 directly linked notes should be split into its own parity/provider/perf/docs slice before versioning or
 publishing work. E.2 is complete: Graphiti points at the `sergey-v9/ladybug-dotnet` GitHub Packages
 feed and pins the fork-published `0.17.1-dev.1.1.g6f3dbed` LadybugDB package family; full local
@@ -207,8 +210,10 @@ user-gated items.
   without expanding CI.
 - **G6 — Release readiness (USER-GATED).** Resolve the remaining **2.0 public-surface decisions while
   still alpha** (the additive `CommunityEdgeNamespace.SaveBulkAsync`; model-default and attribute-
-  metadata divergences — see `decisions.md`), then versioning/publish and the opt-in Ladybug→Core merge
-  (plan 06) **only when Sergey initiates** — and do G1 first so a merged Core isn't Windows-locked.
+  metadata divergences — see `decisions.md`), then versioning/publish **only when Sergey initiates**.
+  (The **Ladybug→Core merge (plan 06) is approved in-scope work** — see Phase 4 — not part of this
+  user-gated item; it's independent of G1, and InMemory-only Linux consumers are unaffected since they
+  restore the native package but never load the FTS extension.)
 
 Standing principle: continue **bounded** adversarial parity hardening (only real, reachable divergences
 verified against the Python source — not speculative churn), and keep the docs lean (the matrix +
