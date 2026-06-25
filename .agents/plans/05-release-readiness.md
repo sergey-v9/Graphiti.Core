@@ -11,6 +11,10 @@ commit.
 
 ## Status — A–E COMPLETE (2026-06-14)
 
+**Supersession note (2026-06-26):** plan 06 later reversed the Step E Ladybug package split. Current
+package/provider shape lives in `06-merge-ladybug-into-core.md`, `roadmap.md`, and
+`kuzu-driver-port.md`; the Step E text below remains historical.
+
 All five steps landed on `main` and verified green: `.\eng\Verify-GraphitiCore.ps1` is full-suite
 green, with restore/format/build clean, both packages packed as `.nupkg` + `.snupkg`, and fresh temp
 consumers restored/built/run setup plus a public triplet/search workflow from strict package sources

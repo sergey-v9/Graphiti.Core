@@ -17,14 +17,10 @@ commit rules, read `.agents/notes/commit-policy.md`.
 roadmap orders them. Pick the lowest-numbered plan with unchecked actionable items, do exactly one
 item as a slice (implement → verify → commit → check it off and update `parity.md` when parity state
 changes), then stop or pick the next. Phases 1–3 are complete and plan-05 A–E are complete. Plan 06
-is scheduled as a separate pre-release stream to merge the LadybugDB driver back into
-`Graphiti.Core`, but it is opt-in because it changes package/feed consequences; do not auto-pick it
-unless Sergey explicitly initiates that merge. Before plan 06 or release-version work, use plan-05
-Step F as the plan-folder backlog gate: sweep `.agents/plans/` and directly linked notes, then handle
-any concrete leftover as its own parity/provider/perf/docs slice rather than folding it into the
-Ladybug merge or the publish decision. Remaining release-infrastructure work after that is
-decision-gated or external-feed-gated (version cadence, publish path, metapackage shape, and future
-Ladybug package publication/replacement). When the open plan items are blocked on those decisions,
+has merged the LadybugDB driver back into `Graphiti.Core`; only release versioning/publishing remains
+user-gated. Remaining release-infrastructure work is decision-gated or external-feed-gated (version
+cadence, publish path, metapackage shape, and future Ladybug package publication/replacement). When
+the open plan items are blocked on those decisions,
 choose work from `roadmap.md`/`handoff.md` that directly strengthens parity, packaging verification,
 upstream sync, or documented current state. Performance work is allowed only when it is
 benchmark-first and parity-safe.
@@ -138,15 +134,14 @@ Generated vs hand-written:
 Provider/package facts:
 - This is currently a managed `net10.0` library with central package versions in
   `Directory.Packages.props`.
-- `Graphiti.Core` is LadybugDB-free and restores from nuget.org alone. It carries the graph-driver
-  contract plus the deterministic InMemory reference/test driver.
-- `Graphiti.Core.Drivers.Ladybug` is the opt-in LadybugDB driver package. It owns the
-  `LadybugDB`/`LadybugDB.Native` package references, `LadybugDbOptions`,
-  `AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory`.
-- `Verify-GraphitiCore.ps1` packs both shippable packages and runs fresh package-consumer smoke
-  builds. LadybugDB package refs restore from the `sergey-v9/ladybug-dotnet` GitHub Packages feed
-  through source `github_ladybug`; full Ladybug restore/test runs require credentials with
-  `read:packages`. Do not bump the pinned LadybugDB version without explicit user approval.
+- `Graphiti.Core` carries the graph-driver contract, deterministic InMemory reference/test driver, and
+  first-class LadybugDB driver. It owns the `LadybugDB`/`LadybugDB.Native` package references,
+  `LadybugDbOptions`, `AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory`.
+- `Verify-GraphitiCore.ps1` packs the single shippable `Graphiti.Core` package and runs a fresh
+  package-consumer smoke that exercises both InMemory and LadybugDB from that package. LadybugDB
+  package refs restore from the `sergey-v9/ladybug-dotnet` GitHub Packages feed through source
+  `github_ladybug`; restore/test runs require credentials with `read:packages`. Do not bump the
+  pinned LadybugDB version without explicit user approval.
 - Durable provider policy lives in `.agents/notes/decisions.md`; detailed LadybugDB state lives in
   `.agents/notes/kuzu-driver-port.md`.
 

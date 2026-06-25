@@ -23,22 +23,20 @@ lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 > decisions". The code was also de-coupled from Python textually (names + comments) on 2026-06-18 —
 > keep it that way (`decisions.md` "Parity without Python coupling in the code"). Library work is solid
 > and the full suite is green. Still user-gated: **release versioning/publishing**. The
-> **Ladybug→Core merge (plan 06) is APPROVED, in scope (Sergey, 2026-06-19) — the agent can pick it up
-> directly** as a normal stream; the accepted consequence is that Core then depends on the
-> `github_ladybug` feed and can't publish to nuget.org until LadybugDB is public there (see `roadmap.md`
-> Phase 4 / plan 06).
+> **Ladybug→Core merge (plan 06) is complete (2026-06-26)**; Core now depends on the `github_ladybug`
+> feed and can't publish to nuget.org until LadybugDB is public there (see `roadmap.md` Phase 4 /
+> plan 06).
 
 ## Current Layout
 
 - `Graphiti.cs` and `Graphiti.*.cs`: public orchestrator, lifecycle, ingestion, search, removal,
   saga, community, infrastructure, and extraction parsing partials.
 - `Models/`: node, edge, result DTO, entity type, entity attribute, and episode type models.
-- `Drivers/` (in `Graphiti.Core`): only the driver contract/base (`IGraphDriver`, base driver),
-  the deterministic in-memory reference/test driver, the provider enum, and saga episode
-  content.
-- `Graphiti.Core.Drivers.Ladybug` (separate project): owns the LadybugDB driver/factory/executor,
-  statement builders, search statement/filter, record mapper, schema, and `LadybugDbOptions` +
-  `AddLadybugDbGraphDriver`.
+- `Drivers/` (in `Graphiti.Core`): the driver contract/base (`IGraphDriver`, base driver), the
+  deterministic in-memory reference/test driver, the provider enum, saga episode content, and the
+  built-in LadybugDB driver under `Drivers/Ladybug/`.
+- `Configuration/`: options, validators, DI registration, cache/resilience settings, and
+  `LadybugDbOptions` / `AddLadybugDbGraphDriver`.
 - `Namespaces/`: node and edge namespace facades over drivers.
 - `Search/`: search configs/results, hybrid search engine, rerankers, filter builders/matchers,
   fallback graph materialization, search-result composition, and search-driver retrieval adapter.
@@ -46,7 +44,6 @@ lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 - `Text/`: chunking, token counting, text helpers, and Graphiti helper functions.
 - `LlmClients/`, `Embedding/`, `CrossEncoder/`: provider abstractions, Microsoft.Extensions.AI
   adapters, deterministic/test implementations, cache/usage helpers, and rerankers.
-- `Configuration/`: options, validators, DI registration, cache/resilience settings.
 - `Telemetry/`: `ActivitySource` spans and source-generated logging.
 - `Serialization/`: System.Text.Json serializer and source-generated context.
 - `Internal/`: helper/services for extraction context, attribute merging, edge merging, type
@@ -105,15 +102,10 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
 - **Phases 1–3 are DONE.** The performance/allocation moratorium is LIFTED; further performance work
   is evidence-driven (benchmark-first) only (`roadmap.md`).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
-  1–3 are complete; the active plan-05 surface now has an explicit Step F plan-folder backlog triage
-  gate before plan 06 or release infrastructure. Anything newly found in `.agents/plans/` or directly
-  linked notes should be handled as its own parity/provider/perf/docs slice first, not bundled into the
-  optional Ladybug merge or release-version decisions. E.2 now consumes the fork-published LadybugDB dev
-  package family, and CI has both the core-only lane
-  (`.github/workflows/core-only.yml`) and full Ladybug-inclusive lane (`.github/workflows/full.yml`)
-  wired. Workflow YAML parsing and `.\eng\Verify-GraphitiCoreOnly.ps1` are green locally; the full
-  verifier is also green with GitHub Packages credentials. Versioning and publish-path decisions remain
-  decision-gated. Performance work is benchmark-first and no longer on moratorium (`roadmap.md`).
+  1–3 are complete and plan 06 is complete; the next productionization streams are the long-term goals
+  in `roadmap.md` (G4/G3/G2/G1 per the user's latest priority), while release versioning/publishing
+  remains user-gated. Full restore/test/pack requires GitHub Packages credentials for source
+  `github_ladybug`. Performance work is benchmark-first and no longer on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
   internal services and helpers. Search boundaries: `SearchEngine` orchestrates,
   `SearchRetrievalRunner` retrieves, `SearchResultComposer` shapes results. Prompt builders live
@@ -121,7 +113,13 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
 - Optional local `.agents/skills` files are specialist references only. Use them for matching tasks,
   but do not let generic AI/ML/framework advice override `decisions.md`.
 
-Latest plan-folder/backlog audit, 2026-06-19: `Check-PythonUpstreamDelta.ps1 -Fetch -FailOnDelta`
+Latest plan-folder/backlog audit, 2026-06-26: plan 06's prerequisite sweep found no unchecked concrete
+implementation item outside plan 06 itself and already-recorded decision-gated release/API items. The
+Plan 06 merge then moved the Ladybug driver into `Graphiti.Core`, folded the options/DI helper/factory
+and Ladybug package refs into Core, collapsed the public API snapshot to one assembly, retired
+`GraphitiCoreOnlyTests` / `eng\Verify-GraphitiCoreOnly.ps1` / `.github/workflows/core-only.yml`, and
+changed the package smoke to exercise both InMemory and LadybugDB from the packed `Graphiti.Core`
+package. Previous 2026-06-19 audit: `Check-PythonUpstreamDelta.ps1 -Fetch -FailOnDelta`
 reported no `graphiti_core/` upstream delta from anchor `0ed90b7` to target
 `b9a74644fb641910a03d325ec2b8f669d3db75dc`. The current concrete search-filter drift is now closed:
 the reference/materialized matcher requires every requested non-empty node label like the Ladybug/Kuzu
@@ -141,7 +139,7 @@ while deterministic large covering chunks remain documented C# hardening. The in
 audit is also closed as a documented C# repair: `AddEpisodeAsync(updateCommunities: true)` returns
 flattened community-update results instead of reproducing the source workflow's broken per-node
 destructuring. A follow-up moved-docs/backlog audit found no remaining unchecked implementation item
-outside plan 06's (now approved, in-scope) Ladybug merge and already-recorded decision-gated items. The package-feed
+outside plan 06's Ladybug merge and already-recorded decision-gated items. The package-feed
 recheck also confirmed that `0.17.1-dev.1.1.g6f3dbed` is still the only published GitHub Packages
 version for `LadybugDB` and `LadybugDB.Native`, matching the current Graphiti pin. The only concrete
 slice from this pass was test-only hardening for the search concurrency proof: after the fake-driver
@@ -150,7 +148,7 @@ second fixed wall-clock timeout. A follow-up ontology-matching audit is also clo
 and edge type resolution now uses exact ontology keys/signatures, so case variants and type-name
 aliases do not select custom attribute schemas. A follow-up search public/extensibility audit found no
 result-composition code slice: fresh C# search recipe instances and BFS guard-skipped custom driver
-calls are documented C# API hardening decisions. Plan 06 is approved and in scope (2026-06-19).
+calls are documented C# API hardening decisions. Plan 06 is complete (2026-06-26).
 
 ## LadybugDB / Kuzu
 
@@ -183,15 +181,12 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added. This section holds the single authoritative live count and the standing verify commands — do
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
-**Current verifier checkpoint (2026-06-19):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1024` passed, `3` skipped, `1027` total. The run covers
-restore, format verification, a warning-clean build including `Graphiti.Sample.OpenAI`, the full test
-suite, `dotnet pack` for both shippable packages (`Graphiti.Core` and
-`Graphiti.Core.Drivers.Ladybug`, `.nupkg` + `.snupkg`), and both fresh package-consumer smoke builds
-(core from the packed core output + nuget.org; Ladybug from both packed outputs + the fork GitHub
-Packages feed + nuget.org). The three skips are the env-gated `OpenAIProviderIntegrationTests`, which
-skip cleanly when `OPENAI_API_KEY` is unset. The upstream-delta check reports no `graphiti_core/`
-changes from anchor `0ed90b7` to `origin/main` `b9a74644fb641910a03d325ec2b8f669d3db75dc`.
+**Current verifier checkpoint (2026-06-26):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
+Packages credentials for the Ladybug feed — `1021` passed, `3` skipped, `1024` total. The verifier
+covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
+shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
+LadybugDB through the packed package. The three skips are the env-gated
+`OpenAIProviderIntegrationTests`, which skip cleanly when `OPENAI_API_KEY` is unset.
 
 This is the one authoritative live count for the repo; other notes (`parity.md`, plan-05,
 `kuzu-driver-port.md`) say "full suite green" and point here rather than embedding their own counts.
@@ -223,7 +218,6 @@ dotnet format Graphiti.Core.CSharp.slnx --verify-no-changes --verbosity minimal
 dotnet build Graphiti.Core.CSharp.slnx --no-restore --no-incremental --verbosity minimal
 dotnet test Graphiti.Core.CSharp.slnx --no-build --verbosity minimal
 dotnet pack src\Graphiti.Core\Graphiti.Core.csproj --configuration Release --no-restore --verbosity minimal
-dotnet pack src\Graphiti.Core.Drivers.Ladybug\Graphiti.Core.Drivers.Ladybug.csproj --configuration Release --no-restore --verbosity minimal
 ```
 
 The package-consumption smoke is part of normal `.\eng\Verify-GraphitiCore.ps1`; use

@@ -24,9 +24,9 @@ whenever we want to pull newer upstream work. The last execution (2026-06-14, an
   handling) that Python itself does not apply to Kuzu.
 - **Pointer move is gated on incorporation.** Only advance the local `graphiti_core` checkout after
   every library change in the delta is incorporated, dispositioned, and the C# suite is green.
-- **CI — keep as-is, do not expand** (Sergey, 2026-06-17). The two GitHub Actions lanes
-  (`core-only.yml`, `full.yml`) stay; do not add or expand CI without a new ask. See "Resolved scope
-  decisions" at the top of `roadmap.md`.
+- **CI — keep as-is, do not expand.** Plan 06 retired the old core-only lane; the remaining full
+  verifier lane stays. Do not add or expand CI without a new ask. See "Resolved scope decisions" at
+  the top of `roadmap.md`.
 
 ## Step 1 — Establish the exact delta
 

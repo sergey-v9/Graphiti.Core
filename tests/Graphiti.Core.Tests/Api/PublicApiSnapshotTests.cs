@@ -5,8 +5,7 @@ using PublicApiGenerator;
 namespace Graphiti.Core.Tests.Api;
 
 /// <summary>
-/// Locks the public API surface of the shipped assemblies (<c>Graphiti.Core</c> and
-/// <c>Graphiti.Core.Drivers.Ladybug</c>) against accidental drift.
+/// Locks the public API surface of the shipped assembly (<c>Graphiti.Core</c>) against accidental drift.
 ///
 /// <para>
 /// Each test reflects over an assembly with <see cref="ApiGenerator"/> and compares the generated
@@ -27,14 +26,6 @@ public class PublicApiSnapshotTests
     [Fact]
     public void GraphitiCore_PublicApi_MatchesApprovedBaseline()
         => AssertPublicApiMatches(typeof(Graphiti).Assembly, "Graphiti.Core");
-
-#if !GRAPHITI_CORE_ONLY_TESTS
-    [Fact]
-    public void GraphitiCoreDriversLadybug_PublicApi_MatchesApprovedBaseline()
-        => AssertPublicApiMatches(
-            typeof(global::Graphiti.Core.Configuration.LadybugDbOptions).Assembly,
-            "Graphiti.Core.Drivers.Ladybug");
-#endif
 
     private static void AssertPublicApiMatches(Assembly assembly, string baselineName)
     {

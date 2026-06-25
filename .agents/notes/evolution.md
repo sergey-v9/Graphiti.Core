@@ -133,9 +133,8 @@ The C# port now treats idiomatic .NET shape as part of the product:
 - `AGENTS.md` and `decisions.md` make idiomatic C# plus behavioral parity the standing port contract.
 - `handoff.md` records the current modular layout and audited areas.
 - `roadmap.md` treats modernization as ongoing hardening, not a future migration phase.
-- `Graphiti.Core` and `Graphiti.Core.Drivers.Ladybug` generate and ship IntelliSense XML
-  documentation files; public XML documentation in those shippable packages is enforced by the
-  Release build.
+- `Graphiti.Core` generates and ships IntelliSense XML documentation; public XML documentation in the
+  shippable package is enforced by the Release build.
 - Tests cover parity-sensitive areas such as search ranking/fusion/reranking, text utilities,
   in-memory reference behavior, maintenance, serialization/cache identity, and provider abstractions.
 
@@ -170,19 +169,18 @@ priority is not the C# product direction.
 
 ### C# Direction
 
-The C# port is moving toward a LadybugDB-centered provider model, with the LadybugDB backend split
-into its own package (plan-05 E):
+The C# port uses a LadybugDB-centered provider model, with the LadybugDB backend built into
+`Graphiti.Core` as of plan 06 (2026-06-26):
 
 - The LadybugDB package references (`LadybugDB`, `LadybugDB.Native`), the driver implementation, the
   `LadybugDbOptions` host-facing `DatabasePath` configuration, and the `AddLadybugDbGraphDriver` DI
-  registration all live in the separate `Graphiti.Core.Drivers.Ladybug` package, not in
-  `Graphiti.Core`. The driver helpers (statement, schema, mapping, full-text query, label filters,
-  package execution, executor-backed behavior) live under that package's `Drivers/Ladybug/`, and
-  `LadybugDbOptions` lives under `src/Graphiti.Core.Drivers.Ladybug/Configuration/`.
-- `Graphiti.Core` keeps only the driver contract (the `IGraphDriver`/`GraphDriverBase` surface and the
-  `GraphProvider` enum); it deliberately does not reference the LadybugDB package. Selecting
-  `GraphProvider.LadybugDb` (or `GraphProvider.Kuzu`) without registering the package throws a clear
-  `InvalidOperationException` instructing the caller to call `AddLadybugDbGraphDriver()`.
+  registration live in `Graphiti.Core`. The driver helpers (statement, schema, mapping, full-text
+  query, label filters, package execution, executor-backed behavior) live under
+  `src/Graphiti.Core/Drivers/Ladybug/`, and `LadybugDbOptions` lives under
+  `src/Graphiti.Core/Configuration/`.
+- `Graphiti.Core` still owns the driver contract (`IGraphDriver`/`GraphDriverBase` and
+  `GraphProvider`) and now also constructs the built-in LadybugDB driver directly for
+  `GraphProvider.LadybugDb` / `GraphProvider.Kuzu` when no custom `GraphDriverFactory` is supplied.
 - `GraphProvider.LadybugDb` is the driver-facing name; `GraphProvider.Kuzu` is an `[Obsolete]`
   compatibility alias that resolves to the same LadybugDB-backed driver. The concrete driver reports
   `GraphProvider.LadybugDb`; file persistence is configured through `LadybugDbOptions.DatabasePath`.
@@ -198,15 +196,15 @@ into its own package (plan-05 E):
   remaining work.
 - `GraphProvider.cs` confirms `GraphProvider.LadybugDb` (value 5) is the driver-facing name and
   `GraphProvider.Kuzu` (value 2) is the `[Obsolete]` compatibility alias.
-- The `Graphiti.Core.Drivers.Ladybug.csproj` carries the `LadybugDB`/`LadybugDB.Native` package
-  references and the driver implementation; `Graphiti.Core`'s provider-resolution switch throws an
-  `InvalidOperationException` for `LadybugDb`/`Kuzu` when the package is not registered.
+- `src/Graphiti.Core/Graphiti.Core.csproj` carries the `LadybugDB`/`LadybugDB.Native` package
+  references and the driver implementation; `Graphiti.Core`'s provider-resolution switch constructs
+  LadybugDB for `LadybugDb`/`Kuzu`.
 - Tests provide runtime proof for main ingest/search/removal/triplet/bulk/saga/community workflows,
   package/native execution, direct driver bulk-save embedding/relationship persistence,
   namespace/model embedding reloads by UUID, direct package list/null binding, public namespace
   community/saga reads and typed deletes, saga-scoped retrieval and content reads, paged group
-  reads, directed endpoint-pair and incident entity-edge reads, `Graphiti.Core.Drivers.Ladybug`
-  DI registration via `AddLadybugDbGraphDriver`, `GraphProvider.LadybugDb`/`GraphProvider.Kuzu`
+  reads, directed endpoint-pair and incident entity-edge reads, LadybugDB DI registration via
+  `AddLadybugDbGraphDriver`, `GraphProvider.LadybugDb`/`GraphProvider.Kuzu`
   resolution, file-backed `DatabasePath` persistence for both provider values, `':memory:'` sentinel
   compatibility, and active Ladybug-owned full-text/label-filter construction.
 

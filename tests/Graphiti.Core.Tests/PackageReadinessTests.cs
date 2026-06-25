@@ -5,7 +5,7 @@ namespace Graphiti.Core.Tests;
 public class PackageReadinessTests
 {
     [Fact]
-    public void CoreProject_HasNuGetMetadataAndCoreDriverDependencies()
+    public void CoreProject_HasNuGetMetadataAndMergedDriverDependencies()
     {
         var project = LoadProject("src", "Graphiti.Core", "Graphiti.Core.csproj");
         var properties = GetProperties(project);
@@ -13,54 +13,22 @@ public class PackageReadinessTests
 
         AssertShippablePackageMetadata(project, properties, "Graphiti.Core");
         Assert.Contains("temporal-graph", properties["PackageTags"], StringComparison.Ordinal);
+        Assert.Contains("ladybugdb", properties["PackageTags"], StringComparison.Ordinal);
+        Assert.Contains("kuzu", properties["PackageTags"], StringComparison.Ordinal);
         Assert.DoesNotContain("neo4j", properties["PackageTags"], StringComparison.Ordinal);
         Assert.DoesNotContain("Neo4j.Driver", packageReferences);
-        // After the Step E package split, Graphiti.Core is LadybugDB-free so it restores from
-        // nuget.org alone; the LadybugDB packages live in Graphiti.Core.Drivers.Ladybug instead.
-        Assert.DoesNotContain("LadybugDB", packageReferences);
-        Assert.DoesNotContain("LadybugDB.Native", packageReferences);
+        Assert.Contains("LadybugDB", packageReferences);
+        Assert.Contains("LadybugDB.Native", packageReferences);
         Assert.DoesNotContain("OpenTelemetry", packageReferences);
     }
 
     [Fact]
-    public void LadybugDriverProject_OwnsLadybugPackagesAndReferencesCore()
-    {
-        var project = LoadProject(
-            "src",
-            "Graphiti.Core.Drivers.Ladybug",
-            "Graphiti.Core.Drivers.Ladybug.csproj");
-        var properties = GetProperties(project);
-        var packageReferences = GetPackageReferences(project);
-        var projectReferences = project.Root!
-            .Elements("ItemGroup")
-            .Elements("ProjectReference")
-            .Select(element => element.Attribute("Include")?.Value)
-            .OfType<string>()
-            .ToList();
-
-        AssertShippablePackageMetadata(project, properties, "Graphiti.Core.Drivers.Ladybug");
-        Assert.Contains("temporal-graph", properties["PackageTags"], StringComparison.Ordinal);
-        Assert.Contains("ladybugdb", properties["PackageTags"], StringComparison.Ordinal);
-        Assert.Contains("kuzu", properties["PackageTags"], StringComparison.Ordinal);
-        Assert.Contains("LadybugDB", packageReferences);
-        Assert.Contains("LadybugDB.Native", packageReferences);
-        Assert.Contains(
-            projectReferences,
-            value => value!.EndsWith(@"Graphiti.Core\Graphiti.Core.csproj", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void ShippablePackageProjects_UseSameSemVerVersion()
+    public void ShippablePackageProject_UsesSemVerVersion()
     {
         var coreProperties = GetProperties(LoadProject("src", "Graphiti.Core", "Graphiti.Core.csproj"));
-        var ladybugProperties = GetProperties(LoadProject(
-            "src",
-            "Graphiti.Core.Drivers.Ladybug",
-            "Graphiti.Core.Drivers.Ladybug.csproj"));
         var version = coreProperties["Version"];
 
         AssertSemVerLike(version);
-        Assert.Equal(version, ladybugProperties["Version"]);
     }
 
     [Fact]
@@ -97,6 +65,7 @@ public class PackageReadinessTests
         Assert.Contains("xunit.v3", testPackageReferences);
         Assert.Equal("0.17.1-dev.1.1.g6f3dbed", packageVersionsById["LadybugDB"]);
         Assert.Equal("0.17.1-dev.1.1.g6f3dbed", packageVersionsById["LadybugDB.Native"]);
+        Assert.Equal("3.0.3", packageVersionsById["SQLitePCLRaw.bundle_e_sqlite3"]);
     }
 
     [Fact]
@@ -141,42 +110,41 @@ public class PackageReadinessTests
     }
 
     [Fact]
-    public void VerifyScript_PacksBothShippableProjects()
+    public void VerifyScript_PacksOnlyCorePackageProject()
     {
         var csharpRoot = FindCSharpRoot();
         var verifyScript = File.ReadAllText(Path.Combine(csharpRoot, "eng", "Verify-GraphitiCore.ps1"));
 
         Assert.Contains("src/Graphiti.Core/Graphiti.Core.csproj", verifyScript);
-        Assert.Contains(
-            "src/Graphiti.Core.Drivers.Ladybug/Graphiti.Core.Drivers.Ladybug.csproj",
-            verifyScript);
+        Assert.DoesNotContain("src/Graphiti.Core.Drivers.Ladybug", verifyScript);
         Assert.Contains("dotnet pack $packageProject", verifyScript);
     }
 
     [Fact]
-    public void VerifyScript_BuildsFreshPackageConsumersWithStrictNuGetSources()
+    public void VerifyScript_BuildsFreshPackageConsumerWithStrictNuGetSources()
     {
         var csharpRoot = FindCSharpRoot();
         var verifyScript = File.ReadAllText(Path.Combine(csharpRoot, "eng", "Verify-GraphitiCore.ps1"));
 
         Assert.Contains("package consumer smoke", verifyScript);
         Assert.Contains("GraphitiCorePackageSmoke", verifyScript);
-        Assert.Contains("GraphitiLadybugPackageSmoke", verifyScript);
-        Assert.Contains("Graphiti.Core.Drivers.Ladybug", verifyScript);
+        Assert.DoesNotContain("GraphitiLadybugPackageSmoke", verifyScript);
+        Assert.Contains("LadybugDbGraphDriverFactory.CreateInMemory", verifyScript);
         Assert.Contains("Invoke-DotNetCommandOutput", verifyScript);
         Assert.Contains("\"run\"", verifyScript);
         Assert.Contains("BuildIndicesAndConstraintsAsync", verifyScript);
         Assert.Contains("AddTripletAsync", verifyScript);
-        Assert.Contains("SearchAsync(\"Alice works on Atlas\"", verifyScript);
+        Assert.Contains("SearchAsync", verifyScript);
+        Assert.Contains("\"Alice works on Atlas\"", verifyScript);
         Assert.Contains("smoke-edge", verifyScript);
+        Assert.Contains("smoke-ladybug-edge", verifyScript);
         Assert.Contains("new Graphiti.Core.Graphiti(graphDriver: driver)", verifyScript);
-        Assert.Contains("-ExpectedOutput \"InMemory:smoke-edge\"", verifyScript);
-        Assert.Contains("-ExpectedOutput \"LadybugDb:smoke-edge\"", verifyScript);
+        Assert.Contains("-ExpectedOutput \"InMemory:smoke-edge|LadybugDb:smoke-ladybug-edge\"", verifyScript);
         Assert.Contains("--configfile", verifyScript);
         Assert.Contains("--no-cache", verifyScript);
         Assert.Contains("<clear />", verifyScript);
         Assert.Contains("graphiti-core-pack", verifyScript);
-        Assert.Contains("graphiti-ladybug-pack", verifyScript);
+        Assert.DoesNotContain("graphiti-ladybug-pack", verifyScript);
         Assert.Contains("github_ladybug", verifyScript);
         Assert.Contains("https://nuget.pkg.github.com/sergey-v9/index.json", verifyScript);
         Assert.DoesNotContain("ladybug-local", verifyScript, StringComparison.OrdinalIgnoreCase);
@@ -184,40 +152,38 @@ public class PackageReadinessTests
     }
 
     [Fact]
-    public void CoreOnlyVerifyScript_UsesNuGetOrgOnlyAndExcludesLadybugTests()
+    public void CoreOnlyVerifierMode_IsRetired()
     {
         var csharpRoot = FindCSharpRoot();
-        var verifyScript = File.ReadAllText(Path.Combine(csharpRoot, "eng", "Verify-GraphitiCoreOnly.ps1"));
         var testProject = File.ReadAllText(Path.Combine(
             csharpRoot,
             "tests",
             "Graphiti.Core.Tests",
             "Graphiti.Core.Tests.csproj"));
 
-        Assert.Contains("<clear />", verifyScript);
-        Assert.Contains("https://api.nuget.org/v3/index.json", verifyScript);
-        Assert.DoesNotContain("ladybug-local", verifyScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("GraphitiCoreOnlyTests=true", verifyScript);
-        Assert.Contains("GRAPHITI_CORE_ONLY_TESTS", testProject);
-        Assert.Contains(@"Compile Remove=""Drivers\Ladybug\**\*.cs""", testProject);
-        Assert.Contains("Condition=\"'$(GraphitiCoreOnlyTests)' != 'true'\"", testProject);
+        Assert.False(File.Exists(Path.Combine(csharpRoot, "eng", "Verify-GraphitiCoreOnly.ps1")));
+        Assert.False(File.Exists(Path.Combine(csharpRoot, ".github", "workflows", "core-only.yml")));
+        Assert.DoesNotContain("GraphitiCoreOnlyTests", testProject);
+        Assert.DoesNotContain("GRAPHITI_CORE_ONLY_TESTS", testProject);
+        Assert.DoesNotContain(@"Compile Remove=""Drivers\Ladybug\**\*.cs""", testProject);
     }
 
     [Fact]
-    public void CoreOnlyWorkflow_RunsCoreOnlyVerifierWithoutLadybugFeed()
+    public void FullWorkflow_RunsFullVerifierWithLadybugFeed()
     {
         var csharpRoot = FindCSharpRoot();
         var workflow = File.ReadAllText(Path.Combine(
             csharpRoot,
             ".github",
             "workflows",
-            "core-only.yml"));
+            "full.yml"));
 
         Assert.Contains("actions/checkout@", workflow);
         Assert.Contains("actions/setup-dotnet@", workflow);
         Assert.Contains("dotnet-version: \"10.0.x\"", workflow);
-        Assert.Contains("./eng/Verify-GraphitiCoreOnly.ps1", workflow);
-        Assert.DoesNotContain("Verify-GraphitiCore.ps1", workflow);
+        Assert.Contains("./eng/Verify-GraphitiCore.ps1", workflow);
+        Assert.Contains("NuGetPackageSourceCredentials_github_ladybug", workflow);
+        Assert.Contains("packages: read", workflow);
         Assert.DoesNotContain("ladybug-local", workflow, StringComparison.OrdinalIgnoreCase);
     }
 

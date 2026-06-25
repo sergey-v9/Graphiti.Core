@@ -1,6 +1,6 @@
 name: Graphiti Core C# Full
 
-# Runs the full verifier, including the LadybugDB driver package.
+# Runs the full verifier, including the built-in LadybugDB driver.
 # Requires GitHub Packages "Manage Actions access" read permission for this repository
 # on the LadybugDB package family in the sergey-v9 account-scoped feed.
 

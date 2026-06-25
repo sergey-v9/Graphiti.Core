@@ -1,7 +1,6 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Graphiti.Core/Graphiti.Core.csproj" />
-    <Project Path="src/Graphiti.Core.Drivers.Ladybug/Graphiti.Core.Drivers.Ladybug.csproj" />
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Graphiti.Eval/Graphiti.Eval.csproj" />

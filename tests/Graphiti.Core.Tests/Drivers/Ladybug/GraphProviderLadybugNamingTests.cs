@@ -7,10 +7,7 @@ namespace Graphiti.Core.Tests.Drivers.Ladybug;
 /// <summary>
 /// Step B/C/E release-readiness coverage: the driver-facing <see cref="GraphProvider.LadybugDb"/>
 /// value and the obsolete <see cref="GraphProvider.Kuzu"/> alias both resolve to a working
-/// LadybugDB-backed driver. After the Step E package split, core DI alone cannot construct the
-/// LadybugDB driver — the LadybugDB driver lives in the separate Graphiti.Core.Drivers.Ladybug
-/// package, so the test also calls <c>AddLadybugDbGraphDriver</c> to register the
-/// <see cref="GraphitiOptions.GraphDriverFactory"/> that core honors for both provider values.
+/// LadybugDB-backed driver through Core DI.
 /// </summary>
 public class GraphProviderLadybugNamingTests
 {
@@ -23,12 +20,6 @@ public class GraphProviderLadybugNamingTests
         var services = new ServiceCollection();
         services.AddGraphiti(options => options.Provider = provider);
 
-        // Post-split: the LadybugDB driver is opt-in. AddLadybugDbGraphDriver (from the
-        // Graphiti.Core.Drivers.Ladybug package) registers the GraphDriverFactory that core uses to
-        // construct the LadybugDB-backed driver for both GraphProvider.LadybugDb and the obsolete
-        // GraphProvider.Kuzu alias.
-        services.AddLadybugDbGraphDriver();
-
         await using var serviceProvider = services.BuildServiceProvider(
             new ServiceProviderOptions
             {
@@ -40,9 +31,8 @@ public class GraphProviderLadybugNamingTests
         var options = scope.ServiceProvider.GetRequiredService<IOptions<GraphitiOptions>>().Value;
         var driver = scope.ServiceProvider.GetRequiredService<IGraphDriver>();
 
-        // The selected enum value drives a LadybugDB-backed driver, and the concrete driver reports
-        // the driver-facing LadybugDb value for both selections.
         Assert.Equal(provider, options.Provider);
+        Assert.Null(options.GraphDriverFactory);
         Assert.IsType<LadybugGraphDriver>(driver);
         Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
         Assert.Equal(GraphProvider.LadybugDb, driver.Provider);

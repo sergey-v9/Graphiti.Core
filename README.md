@@ -10,11 +10,10 @@ JSON), prompt identity, ranking semantics, and cache keys all mirror Python so t
 compatible.
 
 > **Status:** `2.0.0-alpha.1`. The library is functionally complete and validated against a real
-> OpenAI provider, but it is **not yet published to NuGet**. `Graphiti.Core` is now LadybugDB-free:
-> its deterministic InMemory reference driver restores from nuget.org alone. The first-class LadybugDB
-> driver lives in the separate `Graphiti.Core.Drivers.Ladybug` package, which consumes LadybugDB
-> packages from the `sergey-v9/ladybug-dotnet` GitHub Packages feed. See
-> [Install / reference](#install--reference).
+> OpenAI provider, but it is **not yet published to NuGet**. `Graphiti.Core` includes the deterministic
+> InMemory reference driver and the first-class LadybugDB driver. Restores require the
+> `sergey-v9/ladybug-dotnet` GitHub Packages feed because the LadybugDB package family is private
+> today. See [Install / reference](#install--reference).
 
 ## Contents
 
@@ -61,46 +60,31 @@ Graphiti Core is **not on NuGet yet**. Reference it from source today by adding 
 
 The library targets **`net10.0`**.
 
-`Graphiti.Core` is **LadybugDB-free**: it carries the driver *contract* (`IGraphDriver`,
-`GraphProvider`, `GraphDriverBase`) and the deterministic InMemory reference/test driver. It depends
-only on packages available from nuget.org, so core-only consumers do not need GitHub Packages
-credentials. To use the first-class LadybugDB backend,
-add a second project/package reference to
-`src/Graphiti.Core.Drivers.Ladybug/Graphiti.Core.Drivers.Ladybug.csproj` — that package owns the
-`LadybugDB` / `LadybugDB.Native` references and the `AddLadybugDbGraphDriver` DI helper:
-
-```xml
-<ItemGroup>
-  <ProjectReference Include="path/to/csharp/src/Graphiti.Core.Drivers.Ladybug/Graphiti.Core.Drivers.Ladybug.csproj" />
-</ItemGroup>
-```
-
-Selecting `GraphProvider.LadybugDb` (or the obsolete `GraphProvider.Kuzu` alias) without referencing
-that package throws a clear `InvalidOperationException` telling you to add it and call
-`AddLadybugDbGraphDriver()`.
+`Graphiti.Core` carries the graph-driver contract, the deterministic InMemory reference/test driver,
+and the first-class LadybugDB backend. The LadybugDB code lives under
+`src/Graphiti.Core/Drivers/Ladybug/`, and the same package exposes `LadybugDbOptions`,
+`AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory`.
 
 ### LadybugDB GitHub Packages feed
 
-This applies **only** to the `Graphiti.Core.Drivers.Ladybug` package; `Graphiti.Core` itself is
-unaffected. The LadybugDB driver depends on the `LadybugDB` / `LadybugDB.Native` packages (the C#
-port's primary graph backend). On this branch those packages are restored from the
-`sergey-v9/ladybug-dotnet` GitHub Packages feed configured in [`NuGet.config`](NuGet.config):
+`Graphiti.Core` depends on the `LadybugDB` / `LadybugDB.Native` packages. On this branch those
+packages are restored from the `sergey-v9/ladybug-dotnet` GitHub Packages feed configured in
+[`NuGet.config`](NuGet.config):
 
 ```xml
 <add key="github_ladybug" value="https://nuget.pkg.github.com/sergey-v9/index.json" />
 ```
 
-GitHub Packages requires credentials with `read:packages` for this feed. A plain `dotnet restore` of
-the Ladybug package (or its tests) without credentials will fail to resolve `LadybugDB`. Keep
-credentials out of the repository and supply them through user-level NuGet config or the NuGet
-environment variable for the source name:
+GitHub Packages requires credentials with `read:packages` for this feed. A plain `dotnet restore`
+without credentials will fail to resolve `LadybugDB`. Keep credentials out of the repository and
+supply them through user-level NuGet config or the NuGet environment variable for the source name:
 
 ```powershell
 $env:NuGetPackageSourceCredentials_github_ladybug = "Username=sergey-v9;Password=<PAT_WITH_read:packages>"
 ```
 
-Referencing only `Graphiti.Core` (InMemory reference/test driver) restores from nuget.org alone and
-does **not** need the GitHub Packages feed. The current pinned Ladybug package family is:
+Even InMemory-only consumers restore these native packages, although they do not load the LadybugDB
+runtime unless a Ladybug driver is constructed. The current pinned Ladybug package family is:
 
 ```text
 LadybugDB        0.17.1-dev.1.1.g6f3dbed
@@ -297,17 +281,16 @@ Key option types (all under `Graphiti.Core.Configuration` / `Graphiti.Core.LlmCl
 | Type | Purpose | Notable members |
 |---|---|---|
 | `GraphitiOptions` | Which backend and instance behavior | `Provider`, `Database`, `EmbeddingDimension` (default `1024`), `MaxCoroutines`, `StoreRawEpisodeContent`, `GraphDriverFactory` |
-| `LadybugDbOptions` | LadybugDB driver (in the `Graphiti.Core.Drivers.Ladybug` package) | `DatabasePath` (empty or `:memory:` = in-memory) |
+| `LadybugDbOptions` | LadybugDB driver | `DatabasePath` (empty or `:memory:` = in-memory) |
 | `LlmConfig` | Bound from the `Llm` section | `Model`, `SmallModel`, `Temperature`, `MaxTokens`, `ApiKey`, `BaseUrl` |
 | `EmbeddingConfig` | Bound from the `Embedding` section | `EmbeddingDimension`, `ModelId`, `BatchSize`, `BatchConcurrency` |
 | `GraphitiCacheOptions` | LLM response cache (HybridCache) | `LlmResponseExpiration`, `LlmResponseLocalCacheExpiration`, `LlmResponseTags` |
 | `GraphitiResilienceOptions` | Polly retry/timeout/concurrency for provider calls | `MaxRetryAttempts` (default `3`), `RetryDelay`, `MaxRetryDelay`, `AttemptTimeout`, `ProviderConcurrencyLimit` |
 
-Use `AddLadybugDbGraphDriver(...)` (from the `Graphiti.Core.Drivers.Ladybug` package) to point the
-driver factory at LadybugDB; it sets `GraphitiOptions.GraphDriverFactory` for you.
-`AddLadybugDbGraphDriver(configuration)` binds `LadybugDbOptions` from a configuration section. Because
-`Graphiti.Core` no longer references the LadybugDB packages, this call is what makes
-`GraphProvider.LadybugDb`/`Kuzu` resolvable.
+Use `AddLadybugDbGraphDriver(...)` to configure a LadybugDB database path and point the driver factory
+at LadybugDB. `AddLadybugDbGraphDriver(configuration)` binds `LadybugDbOptions` from a configuration
+section. Selecting `GraphProvider.LadybugDb` or the obsolete `GraphProvider.Kuzu` alias also resolves
+the built-in LadybugDB driver directly, using the default in-memory LadybugDB path unless configured.
 
 ## Drivers
 
@@ -317,7 +300,7 @@ A graph driver implements `IGraphDriver` (`Graphiti.Core.Drivers`). Backends are
 | Driver | `GraphProvider` | Status | Notes |
 |---|---|---|---|
 | **InMemory** | `InMemory` | Deterministic reference/test driver | `new InMemoryGraphDriver(database)`. In-process, fully featured (persistence + search), ideal for tests, samples, and ephemeral graphs. Used by both samples. |
-| **LadybugDB** | `LadybugDb` | Primary provider target (opt-in package) | The C# port's investment backend (a Kuzu-lineage embedded graph DB). Lives in the separate **`Graphiti.Core.Drivers.Ladybug`** package — add it, then build via `LadybugDbGraphDriverFactory.Create(databasePath)` / `.CreateInMemory()`, or wire through DI with `AddLadybugDbGraphDriver`. Selecting `LadybugDb`/`Kuzu` without that package throws a clear `InvalidOperationException`. See the [GitHub Packages feed](#ladybugdb-github-packages-feed). |
+| **LadybugDB** | `LadybugDb` | Primary provider target (built in) | The C# port's investment backend (a Kuzu-lineage embedded graph DB). Build via `LadybugDbGraphDriverFactory.Create(databasePath)` / `.CreateInMemory()`, or wire through DI with `AddLadybugDbGraphDriver`. See the [GitHub Packages feed](#ladybugdb-github-packages-feed). |
 | FalkorDB / Neptune | `FalkorDb` / `Neptune` | Compatibility surface only | Present on the `GraphProvider` enum for wire compatibility with Python; **not** implemented as configured C# providers. |
 
 The driver-facing provider value is `GraphProvider.LadybugDb`. `GraphProvider.Kuzu` remains as an
@@ -516,15 +499,12 @@ full verifier from the `csharp` folder:
 .\eng\Verify-GraphitiCore.ps1
 ```
 
-It runs restore, formatting checks, build, tests, package creation for both `Graphiti.Core` and
-`Graphiti.Core.Drivers.Ladybug`, and a package-consumption smoke check. The smoke check creates
-fresh temporary `net10.0` console projects with strict `NuGet.config` files (`<clear />`) and isolated
-`NUGET_PACKAGES`: the core consumer restores, builds, runs, and calls
-`BuildIndicesAndConstraintsAsync()`, adds a public triplet, and searches it back from the packed
-`Graphiti.Core` output plus nuget.org, while the Ladybug consumer restores from both packed Graphiti
-outputs plus the fork GitHub Packages feed and runs the same workflow through `Graphiti` with a packed
-LadybugDB driver. Use `-SkipPackageSmoke` only when iterating on non-packaging changes. For a quick local
-test-only loop:
+It runs restore, formatting checks, build, tests, package creation for `Graphiti.Core`, and a
+package-consumption smoke check. The smoke check creates a fresh temporary `net10.0` console project
+with a strict `NuGet.config` (`<clear />`) and isolated `NUGET_PACKAGES`; it restores the packed
+`Graphiti.Core` output plus the fork GitHub Packages feed, runs an InMemory triplet/search workflow,
+then runs the same workflow through a LadybugDB driver from the same package. Use `-SkipPackageSmoke`
+only when iterating on non-packaging changes. For a quick local test-only loop:
 
 ```powershell
 dotnet test Graphiti.Core.CSharp.slnx
@@ -538,20 +518,15 @@ $env:OPENAI_API_KEY = "..."
 dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~OpenAIProviderIntegrationTests"
 ```
 
-> The `Graphiti.Core.Drivers.Ladybug` project and the LadybugDB tests restore `LadybugDB` /
-> `LadybugDB.Native` from the `sergey-v9/ladybug-dotnet` GitHub Packages feed in
-> [`NuGet.config`](NuGet.config). Configure `read:packages` credentials for source
-> `github_ladybug` before running the full verifier. `Graphiti.Core` and the samples restore from
-> nuget.org alone and are unaffected.
+> `Graphiti.Core` and the LadybugDB tests restore `LadybugDB` / `LadybugDB.Native` from the
+> `sergey-v9/ladybug-dotnet` GitHub Packages feed in [`NuGet.config`](NuGet.config). Configure
+> `read:packages` credentials for source `github_ladybug` before running the verifier.
 
 ## Project layout
 
 - `src/Graphiti.Core` — core library: models, the `Graphiti` orchestrator, the graph-driver contract,
-  the deterministic InMemory reference/test driver, search, maintenance helpers, and
-  LLM/embedder/reranker contracts. LadybugDB-free (restores from nuget.org alone).
-- `src/Graphiti.Core.Drivers.Ladybug` — opt-in LadybugDB graph driver: owns the `LadybugDB` /
-  `LadybugDB.Native` package references, the driver/executor/statement implementation, and the
-  `AddLadybugDbGraphDriver` DI helper.
+  the deterministic InMemory reference/test driver, the built-in LadybugDB driver, search,
+  maintenance helpers, and LLM/embedder/reranker contracts.
 - `tests/Graphiti.Core.Tests` — parity-oriented xUnit tests for ingestion, search/ranking, text
   utilities, provider infrastructure, serialization/cache behavior, and graph-driver contracts.
 - `samples/Graphiti.Sample.OpenAI` — console host wiring the core to real OpenAI chat, embedding, and
@@ -572,7 +547,7 @@ lives under a matching sub-namespace:
 | `Graphiti.Core.Models.Edges` | `Edge`, `EntityEdge`, `EpisodicEdge`, `CommunityEdge`, `HasEpisodeEdge`, `NextEpisodeEdge` |
 | `Graphiti.Core.Models.Results` | `AddEpisodeResults`, `AddBulkEpisodeResults`, `AddTripletResults`, `RawEpisode`, `GraphitiClients` |
 | `Graphiti.Core.Drivers` | `IGraphDriver`, `GraphDriverBase`, `InMemoryGraphDriver`, `GraphProvider`, `SagaEpisodeContent` |
-| `Graphiti.Core.Drivers.Ladybug` | `LadybugDbGraphDriverFactory` and the LadybugDB driver internals (ships in the separate `Graphiti.Core.Drivers.Ladybug` package) |
+| `Graphiti.Core.Drivers.Ladybug` | `LadybugDbGraphDriverFactory` and the LadybugDB driver internals |
 | `Graphiti.Core.Search` | search engine, configuration, filters, and reranking |
 | `Graphiti.Core.LlmClients` | `ILlmClient`, `LlmClient`, `LlmConfig`, response caches, token usage |
 | `Graphiti.Core.Embedding` | `IEmbedderClient`, `EmbedderClient`, `HashEmbedder` |
@@ -608,7 +583,5 @@ FalkorDB/Neptune are compatibility surfaces only.
 
 ## License
 
-Apache-2.0. See [`LICENSE`](LICENSE) and the `PackageLicenseExpression` in both shippable package
-projects (`src/Graphiti.Core/Graphiti.Core.csproj` and
-`src/Graphiti.Core.Drivers.Ladybug/Graphiti.Core.Drivers.Ladybug.csproj`), matching upstream
-Graphiti.
+Apache-2.0. See [`LICENSE`](LICENSE) and the `PackageLicenseExpression` in
+`src/Graphiti.Core/Graphiti.Core.csproj`, matching upstream Graphiti.

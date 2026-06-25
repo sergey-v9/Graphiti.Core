@@ -93,12 +93,12 @@ comment.
 - Root orchestration files stay in `Graphiti.Core`, especially `Graphiti.cs`, `Graphiti.*.cs`
   partials, and `Exceptions.cs`.
 - Prefer one public type per file.
-- The two shippable package projects (`Graphiti.Core` and `Graphiti.Core.Drivers.Ladybug`) generate
-  XML documentation files and `.snupkg` symbol packages. With warnings treated as errors, missing or
-  broken XML docs on their public surface are build failures; tests/samples do not enable package XML
-  generation. `PackageReadinessTests` guards shared NuGet metadata, README packing, symbol settings,
-  same-version alignment, the two-project `Verify-GraphitiCore.ps1` pack loop, and the strict package
-  consumer restore/build/setup/run smoke path.
+- The single shippable package project (`Graphiti.Core`) generates XML documentation files and a
+  `.snupkg` symbol package. With warnings treated as errors, missing or broken XML docs on its public
+  surface are build failures; tests/samples do not enable package XML generation.
+  `PackageReadinessTests` guards NuGet metadata, README packing, symbol settings, the one-project
+  `Verify-GraphitiCore.ps1` pack loop, and the strict package consumer restore/build/setup/run smoke
+  path.
 
 ## Public API surface (plan 05, 2026-06-14)
 
@@ -127,24 +127,18 @@ no wire/prompt/cache/temporal behavior changed):
   and `ContentChunking.TokenCounter` are get-only (token-counter selection is the DI/`IContentChunker`
   path). `GraphDriverBase`, the `*Namespace` facades, `EpisodeTypeExtensions` (wire-value helpers), and
   the schema/cache-identity DTOs stay public.
-- `Graphiti.Core` and `Graphiti.Core.Drivers.Ladybug` ship IntelliSense XML docs from their public XML
-  comments. Keep docs complete when adding public members to either package.
-- **LadybugDB is a separate package.** `Graphiti.Core` carries the driver contract (`IGraphDriver`,
-  `GraphProvider`, `GraphDriverBase`) and the deterministic `InMemoryGraphDriver` reference/test
-  backend. It depends only on
-  nuget.org packages and restores off-machine without Ladybug package credentials. The first-class
-  LadybugDB driver, `LadybugDbOptions`, `AddLadybugDbGraphDriver`, and
-  `LadybugDbGraphDriverFactory` live in `src/Graphiti.Core.Drivers.Ladybug/` (which owns the
-  `LadybugDB`/`LadybugDB.Native` package refs).
-  Core resolves `GraphProvider.LadybugDb`/`Kuzu` via `GraphitiOptions.GraphDriverFactory` (set by
-  `AddLadybugDbGraphDriver`) and throws a clear `InvalidOperationException` if the package is not
-  referenced/registered. `Graphiti.Core` adds `InternalsVisibleTo("Graphiti.Core.Drivers.Ladybug")`; the
-  Ladybug package adds `InternalsVisibleTo("Graphiti.Core.Tests")`. The public-API snapshot guards both
-  assemblies in the normal suite; the `GraphitiCoreOnlyTests=true` test-project mode compiles out the
-  Ladybug-only tests and the Ladybug snapshot half so `eng\Verify-GraphitiCoreOnly.ps1` can prove
-  `Graphiti.Core` restore/build/test/pack from nuget.org only. `.github/workflows/core-only.yml` runs
-  that verifier as the core-only CI lane. `.github/workflows/full.yml` runs the full
-  Ladybug-inclusive verifier on Windows in a single serialized job.
+- `Graphiti.Core` ships IntelliSense XML docs from its public XML comments. Keep docs complete when
+  adding public members.
+- **LadybugDB is built into `Graphiti.Core` (plan 06, 2026-06-26).** `Graphiti.Core` carries the driver
+  contract (`IGraphDriver`, `GraphProvider`, `GraphDriverBase`), deterministic `InMemoryGraphDriver`,
+  first-class LadybugDB driver, `LadybugDbOptions`, `AddLadybugDbGraphDriver`, and
+  `LadybugDbGraphDriverFactory`. It owns the `LadybugDB` / `LadybugDB.Native` package refs and restores
+  through the `github_ladybug` feed. `GraphProvider.LadybugDb` and the obsolete `GraphProvider.Kuzu`
+  alias resolve directly to the built-in LadybugDB driver; `AddLadybugDbGraphDriver` remains the
+  ergonomic way to configure `LadybugDbOptions.DatabasePath` and select LadybugDB through
+  `GraphitiOptions.GraphDriverFactory`. The public-API snapshot guards one assembly, and the retired
+  `GraphitiCoreOnlyTests` mode / `eng\Verify-GraphitiCoreOnly.ps1` / `.github/workflows/core-only.yml`
+  lane are intentionally gone.
 
   **RESOLVED (Sergey, 2026-06-17):** CI lanes stay (keep as-is, do not expand). The LadybugDB feed is
   **GitHub Packages only** (`sergey-v9/ladybug-dotnet`) — NO local offline fallback; a `github_ladybug`
@@ -154,19 +148,9 @@ no wire/prompt/cache/temporal behavior changed):
   it in `tools/csharp_api`, commit, and **push to the fork** — its dev-packages workflow builds a new
   version that Graphiti consumes by bumping the pin in `Directory.Packages.props`. This **supersedes**
   the old "do not push the ladybug repo remotely / keep changes local-only" rule.
-  **SCHEDULED — reverse this split:** merge the Ladybug driver back into `Graphiti.Core` (its own
-  `Drivers/Ladybug/` folder; one assembly) because LadybugDB is the first-class provider and a separate
-  build has lost its point. The executable plan is
-  `.agents/plans/06-merge-ladybug-into-core.md`. Consequence to accept when executed:
-  `Graphiti.Core` will then depend on the
-  `LadybugDB`/`LadybugDB.Native` packages + the `github_ladybug` feed, so it no longer restores from
-  nuget.org alone, every consumer (even InMemory-only) pulls the native binaries and needs the
-  credential, and `Graphiti.Core` cannot be published to nuget.org until LadybugDB itself is published
-  there (today it lives only on the private fork feed). The `GraphitiCoreOnlyTests` mode and the
-  core-only CI lane lose their purpose and retire with the merge. The LadybugDB package refs restore
-  from the `sergey-v9/ladybug-dotnet` GitHub Packages feed, currently pinned to
-  `0.17.1-dev.1.1.g6f3dbed`; full Ladybug restores require source `github_ladybug` credentials with
-  `read:packages` (CI uses `GITHUB_TOKEN` plus package Actions access; local runs use
+  The LadybugDB package refs restore from the `sergey-v9/ladybug-dotnet` GitHub Packages feed,
+  currently pinned to `0.17.1-dev.1.1.g6f3dbed`; restores require source `github_ladybug`
+  credentials with `read:packages` (CI uses `GITHUB_TOKEN` plus package Actions access; local runs use
   `NuGetPackageSourceCredentials_github_ladybug`). `OPENAI_API_KEY` is optional in CI, so live-provider
   tests skip by default unless the secret is present.
 
@@ -204,8 +188,7 @@ no wire/prompt/cache/temporal behavior changed):
   does this. The M.E.AI cross-encoder uses a structured boolean+confidence response because generic
   M.E.AI does not expose OpenAI top-logprob controls needed for Python's exact reranker scoring.
 - Use official provider SDKs behind adapters where possible. LadybugDB is the core graph-provider
-  investment target; its package/native references and driver are owned by the separate
-  `Graphiti.Core.Drivers.Ladybug` project (see plan-05 Step E split above), not `Graphiti.Core`.
+  investment target; its package/native references and driver are owned by `Graphiti.Core`.
 - Use `HybridCache` for LLM response caching and preserve cache-key semantics for parity-sensitive
   structured calls.
 - LLM cache keys intentionally include the response schema fingerprint, response-model identity,
@@ -486,8 +469,7 @@ strip (#1531) is N/A (no FalkorDB driver).
 ## Provider Status
 
 - LadybugDB is the primary graph provider target for the C# port. It is the package/backend we will
-  invest in; its package refs and driver live in the separate `Graphiti.Core.Drivers.Ladybug` project
-  (plan-05 Step E split above), while `Graphiti.Core` carries only the driver contract.
+  invest in; its package refs and driver live in `Graphiti.Core`.
 - The LadybugDB provider uses the LadybugDB NuGet package, which comes from the alternative Kuzu fork.
   Kuzu remains the Python parity lineage and compatibility vocabulary, while the driver-facing provider
   name is `GraphProvider.LadybugDb`. See `kuzu-driver-port.md`.
@@ -496,8 +478,8 @@ strip (#1531) is N/A (no FalkorDB driver).
   backend rather than a product provider. `GraphProvider.FalkorDb` and `GraphProvider.Neptune` remain
   enum/helper compatibility surfaces and are rejected by default options validation unless a separate
   provider decision changes that. LadybugDB is the provider path to invest in.
-- `GraphProvider.Kuzu` is a valid obsolete compatibility alias in core DI/options and, when
-  `AddLadybugDbGraphDriver` is registered, resolves to the LadybugDB-backed driver. The concrete
+- `GraphProvider.Kuzu` is a valid obsolete compatibility alias in core DI/options and resolves to the
+  LadybugDB-backed driver. The concrete
   driver reports `GraphProvider.LadybugDb`; file persistence is configured through
   `LadybugDbOptions.DatabasePath`, with the Python Kuzu `':memory:'` sentinel normalized by the
   Ladybug driver factory. See `kuzu-driver-port.md` for current runtime coverage.

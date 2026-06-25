@@ -7,16 +7,11 @@ should be folded back into `Graphiti.Core`.
 
 ## Status
 
-**APPROVED and in scope (Sergey, 2026-06-19) — do it.** This is real, available work; pick it up as a
-normal implementation stream (its own slices, not a parity micro-slice). **Accepted consequence (Sergey
-weighed it):** after the merge `Graphiti.Core` depends on the `LadybugDB`/`LadybugDB.Native` packages +
-the `github_ladybug` feed — it no longer restores from nuget.org alone, every consumer pulls the native
-binaries + needs the credential, and Core cannot be published to nuget.org until LadybugDB is public
-there. That is fine for the current private-fork workflow; it only matters if/when public nuget.org
-publishing of Core becomes a goal (the still-user-gated release/versioning decision). Sequencing: it is
-independent of the cross-platform (G1) work, and InMemory-only Linux consumers are unaffected (they
-restore the native package but never load the FTS extension), so it can proceed anytime. Verify
-centrally (build 0-warning, full suite green, deliberately regenerate the single-assembly API snapshot).
+**DONE 2026-06-26.** `Graphiti.Core` now owns the LadybugDB driver, options, DI helper, factory, and
+`LadybugDB` / `LadybugDB.Native` package references. The separate driver package, core-only verifier,
+core-only CI lane, and second public-API snapshot are retired. Accepted consequence remains:
+`Graphiti.Core` no longer restores from nuget.org alone and needs the `github_ladybug` feed credential
+until LadybugDB is public there.
 
 ## Prerequisite Gate
 
@@ -27,19 +22,19 @@ into the Ladybug merge checklist below.
 
 ## Work Items
 
-- [ ] Re-run the plan-folder backlog gate from plan 05 Step F and handle any concrete leftover in
+- [x] Re-run the plan-folder backlog gate from plan 05 Step F and handle any concrete leftover in
   `.agents/plans/` or directly linked planning notes as a separate slice before continuing this merge.
-- [ ] Move the Ladybug driver implementation from `src/Graphiti.Core.Drivers.Ladybug/` into
+- [x] Move the Ladybug driver implementation from `src/Graphiti.Core.Drivers.Ladybug/` into
   `src/Graphiti.Core/Drivers/Ladybug/`.
-- [ ] Fold `LadybugDbOptions`, `AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory` into
+- [x] Fold `LadybugDbOptions`, `AddLadybugDbGraphDriver`, and `LadybugDbGraphDriverFactory` into
   `Graphiti.Core`.
-- [ ] Move the `LadybugDB` and `LadybugDB.Native` package references into `Graphiti.Core`.
-- [ ] Remove the separate `Graphiti.Core.Drivers.Ladybug` project/package from the solution, pack loop,
+- [x] Move the `LadybugDB` and `LadybugDB.Native` package references into `Graphiti.Core`.
+- [x] Remove the separate `Graphiti.Core.Drivers.Ladybug` project/package from the solution, pack loop,
   package-consumer smoke path, and public API snapshot coverage.
-- [ ] Collapse the public API snapshot back to one assembly and regenerate the baseline deliberately.
-- [ ] Retire `GraphitiCoreOnlyTests`, `eng/Verify-GraphitiCoreOnly.ps1`, and the core-only CI lane because
+- [x] Collapse the public API snapshot back to one assembly and regenerate the baseline deliberately.
+- [x] Retire `GraphitiCoreOnlyTests`, `eng/Verify-GraphitiCoreOnly.ps1`, and the core-only CI lane because
   Core will intentionally require the `github_ladybug` feed after the merge.
-- [ ] Update README/package docs and the provider notes so consumers know `Graphiti.Core` now pulls the
+- [x] Update README/package docs and the provider notes so consumers know `Graphiti.Core` now pulls the
   LadybugDB native package family even for InMemory-only use.
 
 ## Non-Goals

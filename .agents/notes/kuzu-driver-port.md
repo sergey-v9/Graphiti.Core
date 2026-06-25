@@ -3,16 +3,14 @@
 LadybugDB is the C# port's main graph-provider target. Kuzu remains the Python parity lineage and
 compatibility vocabulary.
 
-**Update 2026-06-14 (plan 05 B + E):** the driver-facing provider value is
-`GraphProvider.LadybugDb`; `GraphProvider.Kuzu` is an `[Obsolete]` compatibility alias that still
-resolves through core DI/options when `AddLadybugDbGraphDriver` is registered. The LadybugDB driver
-was extracted into a separate opt-in package `src/Graphiti.Core.Drivers.Ladybug/`. `Graphiti.Core`
-no longer references the LadybugDB packages; the new project owns them, `AddLadybugDbGraphDriver`,
-driver-owned full-text query construction, and Ladybug label-filter syntax. Step E.2 now consumes the
-`sergey-v9/ladybug-dotnet` fork's GitHub Packages feed rather than the sibling local artifact feed:
-Graphiti pins `LadybugDB` / `LadybugDB.Native` to `0.17.1-dev.1.1.g6f3dbed` from
-`https://nuget.pkg.github.com/sergey-v9/index.json`. Restores that include the Ladybug driver require
-a NuGet credential for source `github_ladybug` with `read:packages`.
+**Update 2026-06-26 (plan 06):** the LadybugDB driver is folded back into `Graphiti.Core` under
+`src/Graphiti.Core/Drivers/Ladybug/`. `Graphiti.Core` owns the `LadybugDB` / `LadybugDB.Native`
+package refs, `AddLadybugDbGraphDriver`, `LadybugDbOptions`, the factory, full-text query
+construction, and Ladybug label-filter syntax. The driver-facing provider value is
+`GraphProvider.LadybugDb`; `GraphProvider.Kuzu` is an `[Obsolete]` compatibility alias that resolves
+through core DI/options. Graphiti pins the fork-published package family
+`0.17.1-dev.1.1.g6f3dbed` from `https://nuget.pkg.github.com/sergey-v9/index.json`; restores require a
+NuGet credential for source `github_ladybug` with `read:packages`.
 
 ## Native search adoption (deep-dive 2026-06-14)
 
@@ -60,12 +58,10 @@ mirror Graphiti's `QUERY_FTS_INDEX(... $query, TOP := $limit)` and inline
 `dlopen(RTLD_NOW | RTLD_GLOBAL)` on Unix-like systems and rethrows undefined-symbol failures.
 
 Graphiti cross-platform audit result: Graphiti itself does not hard-code a `win-x64` package or runtime
-identifier; the Ladybug driver references the cross-platform meta packages. Follow-up on 2026-06-14
-added package-consumption smoke checks to `Verify-GraphitiCore.ps1`: fresh temp consumers
-restore/build/setup/run `Graphiti.Core` from the packed core output + nuget.org only, and
-`Graphiti.Core.Drivers.Ladybug` from both packed Graphiti outputs + the Ladybug GitHub Packages feed
-and nuget.org, with strict `NuGet.config`, temp `NUGET_PACKAGES`, `--no-cache`, setup through
-`Graphiti` with a packed LadybugDB driver, and asserted provider output. The remaining Linux risk is runtime validation on a Linux runner, not an
+identifier; the Ladybug driver references the cross-platform meta packages. Plan 06 now has
+`Verify-GraphitiCore.ps1` pack one `Graphiti.Core` package and run a strict fresh temp consumer against
+both InMemory and LadybugDB paths from that package, with the Ladybug GitHub Packages feed and isolated
+`NUGET_PACKAGES`. The remaining Linux risk is runtime validation on a Linux runner, not an
 obvious source-level Windows dependency or a missing Windows package-consumer proof. Follow-up on
 2026-06-14 made persisted Ladybug setup idempotent across reopen: duplicate errors for the four exact
 Graphiti FTS indexes are ignored because LadybugDB's `CREATE_FTS_INDEX` has no `IF NOT EXISTS`/skip flag,
@@ -78,10 +74,9 @@ Current package pin: Graphiti consumes the fork-published dev package family
 `Directory.Packages.props`. This was the only published version on that feed at the time of writing,
 and the root `NuGet.config` has no active local/offline package source — old
 `0.17.0-alpha.2-graphiti.1` mentions are historical recovery notes, not an active restore path.
-Restores that include the Ladybug driver require a `read:packages` credential for source
-`github_ladybug` (passed as `NuGetPackageSourceCredentials_github_ladybug`); `Graphiti.Core` itself
-stays Ladybug-free and restores from nuget.org alone. `LadybugDB.Extensions` is **not** adopted by
-default in Graphiti Core: the Graphiti package already owns its DI helper, options, factory, and driver
+Restores require a `read:packages` credential for source `github_ladybug` (passed as
+`NuGetPackageSourceCredentials_github_ladybug`). `LadybugDB.Extensions` is **not** adopted by default
+in Graphiti Core: the Graphiti package already owns its DI helper, options, factory, and driver
 boundary, so the Extensions package would add host-level abstractions without a demonstrated Core need.
 Bump the pin only when the binding repo publishes a newer dev version (see "Self-service bindings"
 below); the binding checkout at `W:\code\ladybug\tools\csharp_api` was last confirmed clean on
@@ -101,27 +96,19 @@ in the binding repo, not in Graphiti; first verify the capability really exists 
 engine — bindings gap, not an engine gap — and prefer wrapping the existing engine feature over
 inventing new surface.)
 
-## SCHEDULED: merge the Ladybug driver back into Graphiti.Core (2026-06-17)
+## DONE: merge the Ladybug driver back into Graphiti.Core (2026-06-26)
 
-Decision (Sergey): the plan-05 E package split is being **reversed**. The executable work order is
-`.agents/plans/06-merge-ladybug-into-core.md`. LadybugDB is the first-class
-provider, so a separate assembly/package (`Graphiti.Core.Drivers.Ladybug`) has lost its point — the
-driver should move into its own `src/Graphiti.Core/Drivers/Ladybug/` folder inside the Core assembly,
-one build. When executed this collapses the two-assembly public-API snapshot to one, retires the
-`GraphitiCoreOnlyTests` mode and the core-only CI lane, folds the `LadybugDB`/`LadybugDB.Native`
-package refs into `Graphiti.Core.csproj`, and moves `AddLadybugDbGraphDriver`/`LadybugDbOptions`/the
-factory into Core. **Consequence to accept:** `Graphiti.Core` then depends on the LadybugDB packages +
-the `github_ladybug` feed — it no longer restores from nuget.org alone, every consumer pulls the
-native binaries and needs the credential, and Core can't be published to nuget.org until LadybugDB is
-public there. Acceptable for the current private-fork workflow; revisit only if public nuget.org
-publishing of `Graphiti.Core` becomes a goal (that is the still-user-gated release decision).
+Plan 06 reversed the plan-05 E package split. The driver now lives in
+`src/Graphiti.Core/Drivers/Ladybug/` inside the Core assembly. The public-API snapshot is back to one
+assembly, `GraphitiCoreOnlyTests` / `eng\Verify-GraphitiCoreOnly.ps1` / `.github/workflows/core-only.yml`
+are retired, and the package-consumer smoke exercises both InMemory and LadybugDB through the packed
+`Graphiti.Core` package. Consequence accepted: every restore needs the `github_ladybug` credential
+until LadybugDB is public on nuget.org.
 
 ## Current Status
 
-- The LadybugDB package and native references are owned by the `Graphiti.Core.Drivers.Ladybug` project
-  (superseding the historical "`Graphiti.Core` owns" bullets below). **(Scheduled to change — see the
-  merge-into-Core decision above.)**
-- `Drivers/Ladybug/` owns schema, statement construction, record mapping,
+- The LadybugDB package and native references are owned by `Graphiti.Core`.
+- `src/Graphiti.Core/Drivers/Ladybug/` owns schema, statement construction, record mapping,
   full-text query construction, Ladybug label-filter fragments, the concrete package executor, and
   executor-backed graph/search behavior.
 - `LadybugGraphDriver` is internal, implements the graph-driver surface, and delegates search through
@@ -130,8 +117,7 @@ publishing of `Graphiti.Core` becomes a goal (that is the still-user-gated relea
 - `LadybugDbOptions` and `AddLadybugDbGraphDriver` provide host-facing `DatabasePath`
   configuration.
 - `GraphProvider.Kuzu` is an obsolete but supported core options/DI alias that resolves to the
-  LadybugDB-backed driver when the LadybugDB package registration is present; the concrete driver
-  reports `GraphProvider.LadybugDb`.
+  LadybugDB-backed driver; the concrete driver reports `GraphProvider.LadybugDb`.
 - Runtime proof covers the main ingest/search/removal/triplet/bulk/saga/community workflows,
   direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by
   UUID, saga-scoped episode retrieval, saga content filtering/order/limit behavior, saga predecessor
@@ -178,9 +164,8 @@ publishing of `Graphiti.Core` becomes a goal (that is the still-user-gated relea
 
 - Package id: `LadybugDB`; version comes from central package management. Graphiti currently uses
   the fork-published dev package family `0.17.1-dev.1.1.g6f3dbed` from the
-  `sergey-v9/ladybug-dotnet` GitHub Packages feed via `NuGet.config`. Restores that include the
-  Ladybug driver require credentials for source `github_ladybug` with `read:packages`. `Graphiti.Core`
-  itself remains Ladybug-free and restores from nuget.org alone.
+  `sergey-v9/ladybug-dotnet` GitHub Packages feed via `NuGet.config`. Restores require credentials
+  for source `github_ladybug` with `read:packages`.
 - Native assets are packaged separately, for example `LadybugDB.Native` and RID-specific native
   packages.
 - Exposed API includes `Database`, `Connection`, `Query`, `Prepare`, `Execute`,
@@ -215,13 +200,13 @@ publishing of `Graphiti.Core` becomes a goal (that is the still-user-gated relea
 ## Existing Touchpoints
 
 - `Drivers/GraphProvider.cs`: keeps `GraphProvider.Kuzu` as compatibility vocabulary.
-- `src/Graphiti.Core.Drivers.Ladybug/Drivers/Ladybug/`: schema, statement, record mapper, driver,
+- `src/Graphiti.Core/Drivers/Ladybug/`: schema, statement, record mapper, driver,
   concrete executor, search full-text query helper, search-filter adapter, statements, search
   executor, and driver factory.
-- `src/Graphiti.Core.Drivers.Ladybug/Configuration/LadybugDbOptions.cs`: host-facing LadybugDB driver options.
-- `src/Graphiti.Core.Drivers.Ladybug/Configuration/LadybugDbServiceCollectionExtensions.cs`: LadybugDB DI helper.
-- `Configuration/GraphitiServiceCollectionExtensions.cs`: core delegates LadybugDb/Kuzu to the
-  Ladybug-package-registered `GraphDriverFactory` and throws if absent.
+- `src/Graphiti.Core/Configuration/LadybugDbOptions.cs`: host-facing LadybugDB driver options.
+- `src/Graphiti.Core/Configuration/LadybugDbServiceCollectionExtensions.cs`: LadybugDB DI helper.
+- `Configuration/GraphitiServiceCollectionExtensions.cs`: core constructs LadybugDb/Kuzu directly
+  unless an explicit `GraphDriverFactory` override is configured.
 - `Search/CompiledSearchFilter.cs`: uses the shared Cypher-style colon-label syntax for generic callers;
   active Ladybug search owns Ladybug/Kuzu label-filter fragments in
   `Drivers/Ladybug/LadybugSearchFilter`.
@@ -242,7 +227,7 @@ publishing of `Graphiti.Core` becomes a goal (that is the still-user-gated relea
    `GraphProvider.Kuzu` retained as an `[Obsolete]` compatibility alias.
 5. DONE (plan-05 B2): shared Kuzu compatibility helpers were retired from `SearchUtilities` and
    `CompiledSearchFilter`; active Ladybug full-text and label-filter behavior lives in the
-   Ladybug driver package.
+   Ladybug driver.
 6. DONE (plan-05 B2): the Kuzu-to-LadybugDB terminology transition is complete for the C# provider
    surface. `GraphProvider.Kuzu` remains only as an obsolete compatibility alias.
 7. Update `decisions.md`, `evolution.md`, `handoff.md`, and `roadmap.md` when provider status or

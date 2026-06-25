@@ -207,7 +207,6 @@ function Invoke-PackageConsumerSmoke {
 function Invoke-PackageConsumerSmokes {
     $version = Get-ProjectProperty -ProjectPath "src/Graphiti.Core/Graphiti.Core.csproj" -PropertyName "Version"
     $corePackageSource = (Resolve-Path "src/Graphiti.Core/bin/Release").Path
-    $ladybugPackageSource = (Resolve-Path "src/Graphiti.Core.Drivers.Ladybug/bin/Release").Path
     $ladybugGitHubSource = "https://nuget.pkg.github.com/sergey-v9/index.json"
     $nugetSource = "https://api.nuget.org/v3/index.json"
 
@@ -217,37 +216,6 @@ function Invoke-PackageConsumerSmokes {
         -Version $version `
         -PackageSources @{
             "graphiti-core-pack" = $corePackageSource
-            "nuget.org" = $nugetSource
-        } `
-        -ProgramSource @'
-using Graphiti.Core.Models.Edges;
-using Graphiti.Core.Models.Nodes;
-
-await using var graphiti = new Graphiti.Core.Graphiti();
-await graphiti.BuildIndicesAndConstraintsAsync();
-await graphiti.AddTripletAsync(
-    new EntityNode { Uuid = "smoke-alice", Name = "Alice", GroupId = "smoke" },
-    new EntityEdge
-    {
-        Uuid = "smoke-edge",
-        Name = "WORKS_ON",
-        Fact = "Alice works on Atlas",
-        GroupId = "smoke",
-        ValidAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-    },
-    new EntityNode { Uuid = "smoke-atlas", Name = "Atlas", GroupId = "smoke" });
-var hits = await graphiti.SearchAsync("Alice works on Atlas", groupIds: new[] { "smoke" }, numResults: 1);
-Console.WriteLine($"{graphiti.Driver.Provider}:{hits.Single().Uuid}");
-'@ `
-        -ExpectedOutput "InMemory:smoke-edge"
-
-    Invoke-PackageConsumerSmoke `
-        -Name "GraphitiLadybugPackageSmoke" `
-        -PackageId "Graphiti.Core.Drivers.Ladybug" `
-        -Version $version `
-        -PackageSources @{
-            "graphiti-core-pack" = $corePackageSource
-            "graphiti-ladybug-pack" = $ladybugPackageSource
             "github_ladybug" = $ladybugGitHubSource
             "nuget.org" = $nugetSource
         } `
@@ -256,10 +224,9 @@ using Graphiti.Core.Drivers.Ladybug;
 using Graphiti.Core.Models.Edges;
 using Graphiti.Core.Models.Nodes;
 
-await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
-await using var graphiti = new Graphiti.Core.Graphiti(graphDriver: driver);
-await graphiti.BuildIndicesAndConstraintsAsync();
-await graphiti.AddTripletAsync(
+await using var inMemoryGraphiti = new Graphiti.Core.Graphiti();
+await inMemoryGraphiti.BuildIndicesAndConstraintsAsync();
+await inMemoryGraphiti.AddTripletAsync(
     new EntityNode { Uuid = "smoke-alice", Name = "Alice", GroupId = "smoke" },
     new EntityEdge
     {
@@ -270,10 +237,35 @@ await graphiti.AddTripletAsync(
         ValidAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
     },
     new EntityNode { Uuid = "smoke-atlas", Name = "Atlas", GroupId = "smoke" });
-var hits = await graphiti.SearchAsync("Alice works on Atlas", groupIds: new[] { "smoke" }, numResults: 1);
-Console.WriteLine($"{graphiti.Driver.Provider}:{hits.Single().Uuid}");
+var inMemoryHits = await inMemoryGraphiti.SearchAsync(
+    "Alice works on Atlas",
+    groupIds: new[] { "smoke" },
+    numResults: 1);
+
+await using var driver = LadybugDbGraphDriverFactory.CreateInMemory();
+await using var ladybugGraphiti = new Graphiti.Core.Graphiti(graphDriver: driver);
+await ladybugGraphiti.BuildIndicesAndConstraintsAsync();
+await ladybugGraphiti.AddTripletAsync(
+    new EntityNode { Uuid = "smoke-ladybug-alice", Name = "Alice", GroupId = "smoke" },
+    new EntityEdge
+    {
+        Uuid = "smoke-ladybug-edge",
+        Name = "WORKS_ON",
+        Fact = "Alice works on Atlas",
+        GroupId = "smoke",
+        ValidAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+    },
+    new EntityNode { Uuid = "smoke-ladybug-atlas", Name = "Atlas", GroupId = "smoke" });
+var ladybugHits = await ladybugGraphiti.SearchAsync(
+    "Alice works on Atlas",
+    groupIds: new[] { "smoke" },
+    numResults: 1);
+
+Console.WriteLine(
+    $"{inMemoryGraphiti.Driver.Provider}:{inMemoryHits.Single().Uuid}|" +
+    $"{ladybugGraphiti.Driver.Provider}:{ladybugHits.Single().Uuid}");
 '@ `
-        -ExpectedOutput "LadybugDb:smoke-edge"
+        -ExpectedOutput "InMemory:smoke-edge|LadybugDb:smoke-ladybug-edge"
 }
 
 Invoke-VerifyStep "restore" {
@@ -311,8 +303,7 @@ Invoke-VerifyStep "test" {
 
 if (-not $SkipPack) {
     $packageProjects = @(
-        "src/Graphiti.Core/Graphiti.Core.csproj",
-        "src/Graphiti.Core.Drivers.Ladybug/Graphiti.Core.Drivers.Ladybug.csproj"
+        "src/Graphiti.Core/Graphiti.Core.csproj"
     )
 
     foreach ($packageProject in $packageProjects) {

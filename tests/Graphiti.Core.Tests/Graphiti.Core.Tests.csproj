@@ -5,15 +5,9 @@
     <NoWarn>$(NoWarn);CA1707;CA1852;CA1861;xUnit1051</NoWarn>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(GraphitiCoreOnlyTests)' == 'true'">
-    <DefineConstants>$(DefineConstants);GRAPHITI_CORE_ONLY_TESTS</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup Condition="'$(GraphitiCoreOnlyTests)' == 'true'">
-    <Compile Remove="Drivers\Ladybug\**\*.cs" />
-  </ItemGroup>
-
   <ItemGroup>
+    <PackageReference Include="LadybugDB" PrivateAssets="all" />
+    <PackageReference Include="LadybugDB.Native" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" PrivateAssets="all" />
@@ -30,17 +24,8 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup Condition="'$(GraphitiCoreOnlyTests)' != 'true'">
-    <PackageReference Include="LadybugDB" PrivateAssets="all" />
-    <PackageReference Include="LadybugDB.Native" PrivateAssets="all" />
-  </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\Graphiti.Core\Graphiti.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(GraphitiCoreOnlyTests)' != 'true'">
-    <ProjectReference Include="..\..\src\Graphiti.Core.Drivers.Ladybug\Graphiti.Core.Drivers.Ladybug.csproj" />
   </ItemGroup>
 
 </Project>

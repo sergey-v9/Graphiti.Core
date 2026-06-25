@@ -52,11 +52,16 @@ public static class LadybugDbServiceCollectionExtensions
         return services;
     }
 
-    private static void AddLadybugDbServices(IServiceCollection services)
+    internal static void AddLadybugDbOptions(IServiceCollection services)
     {
         services.AddOptions<LadybugDbOptions>();
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IValidateOptions<LadybugDbOptions>, LadybugDbOptionsValidator>());
+    }
+
+    private static void AddLadybugDbServices(IServiceCollection services)
+    {
+        AddLadybugDbOptions(services);
         services.Configure<GraphitiOptions>(static options =>
             options.GraphDriverFactory = static services =>
             {

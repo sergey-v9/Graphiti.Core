@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using Graphiti.Core.Drivers.Ladybug;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
@@ -103,6 +104,7 @@ public static class GraphitiServiceCollectionExtensions
         services.AddOptions<ContentChunkingOptions>();
         services.AddOptions<GraphitiCacheOptions>();
         services.AddOptions<GraphitiResilienceOptions>();
+        LadybugDbServiceCollectionExtensions.AddLadybugDbOptions(services);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IValidateOptions<GraphitiOptions>, GraphitiOptionsValidator>());
         services.TryAddEnumerable(
@@ -238,13 +240,8 @@ public static class GraphitiServiceCollectionExtensions
         {
             GraphProvider.InMemory => new InMemoryGraphDriver(options.Database),
 #pragma warning disable GRPH0001
-            // LadybugDb is the driver-facing value; Kuzu is the obsolete compatibility alias. Both
-            // are backed by the LadybugDB-backed driver, which now lives in the separate
-            // Graphiti.Core.Drivers.Ladybug package. That package's AddLadybugDbGraphDriver()
-            // registers a GraphDriverFactory (handled above); without it, core cannot construct the
-            // driver because it deliberately does not reference the LadybugDB package.
-            GraphProvider.LadybugDb or GraphProvider.Kuzu => throw new InvalidOperationException(
-                "GraphProvider.LadybugDb requires the Graphiti.Core.Drivers.Ladybug package — call AddLadybugDbGraphDriver()."),
+            GraphProvider.LadybugDb or GraphProvider.Kuzu => LadybugDbGraphDriverFactory.Create(
+                services.GetRequiredService<IOptions<LadybugDbOptions>>().Value.DatabasePath),
 #pragma warning restore GRPH0001
             _ => throw new NotSupportedException($"{options.Provider} is not supported by the C# port yet.")
         };
