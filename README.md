@@ -22,6 +22,7 @@ compatible.
 - [Quickstart](#quickstart)
 - [Using a real provider (OpenAI)](#using-a-real-provider-openai)
 - [Dependency injection](#dependency-injection)
+- [Observability](#observability)
 - [Drivers](#drivers)
 - [Search](#search)
 - [Custom entity & edge types](#custom-entity--edge-types)
@@ -102,6 +103,9 @@ build indices, ingest an episode, and search. This uses the built-in default cli
 deterministic hash embedder, and an identity cross-encoder), so it runs with **no API key** — but
 because there is no real LLM, extraction produces no entities or facts. It is the right shape to start
 from; swap in a real provider (next section) to get real extraction.
+
+For a runnable no-key sample that creates a useful fact directly, see
+`samples/Graphiti.Sample.Quickstart`.
 
 ```csharp
 using Graphiti.Core;
@@ -292,6 +296,17 @@ at LadybugDB. `AddLadybugDbGraphDriver(configuration)` binds `LadybugDbOptions` 
 section. Selecting `GraphProvider.LadybugDb` or the obsolete `GraphProvider.Kuzu` alias also resolves
 the built-in LadybugDB driver directly, using the default in-memory LadybugDB path unless configured.
 
+## Observability
+
+Graphiti Core emits traces through `GraphitiTelemetry.ActivitySourceName` and metrics through
+`GraphitiTelemetry.MeterName` (both `Graphiti.Core`). Core has no exporter dependency; hosts subscribe
+with OpenTelemetry and choose their exporter.
+
+Metrics include episodes ingested, ingestion duration/result counts, search duration/result counts,
+LLM token usage, and LLM cache hit/miss lookups. The OTLP wiring sample is in
+`samples/Graphiti.Sample.Observability`, and the full signal list is in
+[docs/observability.md](docs/observability.md).
+
 ## Drivers
 
 A graph driver implements `IGraphDriver` (`Graphiti.Core.Drivers`). Backends are identified by the
@@ -459,7 +474,26 @@ cleans up the graph elements only it produced (data still referenced by other ep
 
 ## Samples & evaluation
 
-Both samples use the in-memory driver and real OpenAI clients, and require `OPENAI_API_KEY`.
+- **`samples/Graphiti.Sample.Quickstart`** — no-key "hello graph" using InMemory and direct
+  `AddTripletAsync`.
+
+  ```powershell
+  dotnet run --project samples/Graphiti.Sample.Quickstart
+  ```
+
+- **`samples/Graphiti.Sample.GenericProvider`** — offline non-OpenAI provider sample using local
+  `Microsoft.Extensions.AI` chat and embedding implementations behind Graphiti's adapters.
+
+  ```powershell
+  dotnet run --project samples/Graphiti.Sample.GenericProvider
+  ```
+
+- **`samples/Graphiti.Sample.Observability`** — OTLP host wiring sample for Graphiti traces and
+  metrics. Set `OTEL_EXPORTER_OTLP_ENDPOINT` when sending to a collector.
+
+  ```powershell
+  dotnet run --project samples/Graphiti.Sample.Observability
+  ```
 
 - **`samples/Graphiti.Sample.OpenAI`** — ingests a small fixture (the "Atlas rollout" story),
   prints the extracted entities and facts with their temporal markers, and runs a few searches.
@@ -529,6 +563,9 @@ dotnet test Graphiti.Core.CSharp.slnx --filter "FullyQualifiedName~OpenAIProvide
   maintenance helpers, and LLM/embedder/reranker contracts.
 - `tests/Graphiti.Core.Tests` — parity-oriented xUnit tests for ingestion, search/ranking, text
   utilities, provider infrastructure, serialization/cache behavior, and graph-driver contracts.
+- `samples/Graphiti.Sample.Quickstart` — no-key hello graph sample.
+- `samples/Graphiti.Sample.GenericProvider` — non-OpenAI `Microsoft.Extensions.AI` provider sample.
+- `samples/Graphiti.Sample.Observability` — OpenTelemetry/OTLP wiring sample.
 - `samples/Graphiti.Sample.OpenAI` — console host wiring the core to real OpenAI chat, embedding, and
   reranking providers via `Microsoft.Extensions.AI.OpenAI`.
 - `samples/Graphiti.Eval` — graph-building and retrieval-QA evaluation harness.
@@ -556,7 +593,7 @@ lives under a matching sub-namespace:
 | `Graphiti.Core.Prompts` | LLM prompt builders ported from Python `graphiti_core/prompts/` |
 | `Graphiti.Core.Text` | content chunking, token counting, text helpers |
 | `Graphiti.Core.Namespaces` | node/edge namespace facades |
-| `Graphiti.Core.Telemetry` | `ActivitySource` and logging |
+| `Graphiti.Core.Telemetry` | `ActivitySource`, `Meter`, and logging |
 | `Graphiti.Core.Configuration` | options and DI registration |
 | `Graphiti.Core.Serialization` | `System.Text.Json` context |
 

@@ -47,16 +47,19 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
         var payload = await GetPayloadAsync(key, cancellationToken).ConfigureAwait(false);
         if (payload is null)
         {
+            GraphitiTelemetry.RecordLlmCacheLookup(nameof(SqliteLlmResponseCache), hit: false);
             return null;
         }
 
         var parsed = LlmResponseCachePayload.Clone(payload);
         if (parsed is not null)
         {
+            GraphitiTelemetry.RecordLlmCacheLookup(nameof(SqliteLlmResponseCache), hit: true);
             return parsed;
         }
 
         await RemoveAsync(key, cancellationToken).ConfigureAwait(false);
+        GraphitiTelemetry.RecordLlmCacheLookup(nameof(SqliteLlmResponseCache), hit: false);
         return null;
     }
 

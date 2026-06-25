@@ -4,7 +4,10 @@
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Graphiti.Eval/Graphiti.Eval.csproj" />
+    <Project Path="samples/Graphiti.Sample.GenericProvider/Graphiti.Sample.GenericProvider.csproj" />
+    <Project Path="samples/Graphiti.Sample.Observability/Graphiti.Sample.Observability.csproj" />
     <Project Path="samples/Graphiti.Sample.OpenAI/Graphiti.Sample.OpenAI.csproj" />
+    <Project Path="samples/Graphiti.Sample.Quickstart/Graphiti.Sample.Quickstart.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Graphiti.Core.Tests/Graphiti.Core.Tests.csproj" />

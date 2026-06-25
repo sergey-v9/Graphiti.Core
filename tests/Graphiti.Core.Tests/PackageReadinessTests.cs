@@ -19,7 +19,9 @@ public class PackageReadinessTests
         Assert.DoesNotContain("Neo4j.Driver", packageReferences);
         Assert.Contains("LadybugDB", packageReferences);
         Assert.Contains("LadybugDB.Native", packageReferences);
-        Assert.DoesNotContain("OpenTelemetry", packageReferences);
+        Assert.DoesNotContain(
+            packageReferences,
+            packageReference => packageReference.StartsWith("OpenTelemetry", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -56,7 +58,8 @@ public class PackageReadinessTests
             .OfType<string>()
             .ToHashSet(StringComparer.Ordinal);
 
-        Assert.DoesNotContain("OpenTelemetry", packageVersions);
+        Assert.Contains("OpenTelemetry.Exporter.OpenTelemetryProtocol", packageVersions);
+        Assert.Contains("OpenTelemetry.Extensions.Hosting", packageVersions);
         Assert.DoesNotContain("Microsoft.Extensions.Resilience", packageVersions);
         Assert.Contains("Polly.Core", packageVersions);
         Assert.DoesNotContain("xunit", packageVersions);

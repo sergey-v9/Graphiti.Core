@@ -118,8 +118,8 @@ Port contract:
   infrastructure.
 - `Microsoft.Extensions.AI` is the adapter boundary for chat and embeddings; keep `ILlmClient`,
   `IEmbedderClient`, and `ICrossEncoderClient` as Graphiti-facing contracts.
-- `HybridCache`, Polly `ResiliencePipeline<T>`, `ActivitySource`, `Microsoft.ML.Tokenizers`, and
-  tensor primitives are infrastructure choices, not permission to change Graphiti behavior or hide
+- `HybridCache`, Polly `ResiliencePipeline<T>`, `ActivitySource`, `Meter`, `Microsoft.ML.Tokenizers`,
+  and tensor primitives are infrastructure choices, not permission to change Graphiti behavior or hide
   avoidable allocations behind fashionable abstractions.
 - Neo4j was removed 2026-06-17 and is no longer a C# provider.
   FalkorDB and Neptune are compatibility/helper surfaces, not supported configured C# providers today.

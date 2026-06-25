@@ -1165,7 +1165,9 @@ namespace Graphiti.Core.Telemetry
     public static class GraphitiTelemetry
     {
         public const string ActivitySourceName = "Graphiti.Core";
+        public const string MeterName = "Graphiti.Core";
         public static System.Diagnostics.ActivitySource ActivitySource { get; }
+        public static System.Diagnostics.Metrics.Meter Meter { get; }
     }
 }
 namespace Graphiti.Core.Text

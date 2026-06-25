@@ -31,9 +31,14 @@ public sealed class MemoryLlmResponseCache : ILlmResponseCache, IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult(TryGetPayload(key, out var payload)
-            ? LlmResponseCachePayload.Clone(payload)
-            : null);
+        JsonObject? response = null;
+        if (TryGetPayload(key, out var payload))
+        {
+            response = LlmResponseCachePayload.Clone(payload);
+        }
+
+        GraphitiTelemetry.RecordLlmCacheLookup(nameof(MemoryLlmResponseCache), response is not null);
+        return Task.FromResult(response);
     }
 
     /// <inheritdoc />

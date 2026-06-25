@@ -41,16 +41,19 @@ public sealed class HybridCacheLlmResponseCache : ILlmResponseCache
         if (payload == CacheMissSentinel)
         {
             await _cache.RemoveAsync(key, cancellationToken).ConfigureAwait(false);
+            GraphitiTelemetry.RecordLlmCacheLookup(nameof(HybridCacheLlmResponseCache), hit: false);
             return null;
         }
 
         var parsed = LlmResponseCachePayload.Clone(payload);
         if (parsed is not null)
         {
+            GraphitiTelemetry.RecordLlmCacheLookup(nameof(HybridCacheLlmResponseCache), hit: true);
             return parsed;
         }
 
         await _cache.RemoveAsync(key, cancellationToken).ConfigureAwait(false);
+        GraphitiTelemetry.RecordLlmCacheLookup(nameof(HybridCacheLlmResponseCache), hit: false);
         return null;
     }
 
@@ -98,13 +101,19 @@ public sealed class HybridCacheLlmResponseCache : ILlmResponseCache
 
         if (generatedSnapshot is { } generated)
         {
+            GraphitiTelemetry.RecordLlmCacheLookup(nameof(HybridCacheLlmResponseCache), hit: false);
             return generated;
         }
 
-        return payload != CacheMissSentinel
-            && LlmResponseCachePayload.TryCreateSnapshot(payload, out var snapshot)
-            ? snapshot
-            : await RegenerateSnapshotAsync(key, factory).ConfigureAwait(false);
+        if (payload != CacheMissSentinel
+            && LlmResponseCachePayload.TryCreateSnapshot(payload, out var snapshot))
+        {
+            GraphitiTelemetry.RecordLlmCacheLookup(nameof(HybridCacheLlmResponseCache), hit: true);
+            return snapshot;
+        }
+
+        GraphitiTelemetry.RecordLlmCacheLookup(nameof(HybridCacheLlmResponseCache), hit: false);
+        return await RegenerateSnapshotAsync(key, factory).ConfigureAwait(false);
     }
 
     private async Task<LlmResponseCachePayloadSnapshot> RegenerateSnapshotAsync(

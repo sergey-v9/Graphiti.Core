@@ -202,7 +202,9 @@ no wire/prompt/cache/temporal behavior changed):
 - Use typed/source-generated payloads for deterministic internal serialization paths such as LLM
   cache keys when possible, but preserve property order, JSON names, and hash bytes.
 - Use Polly `ResiliencePipeline<T>` for provider retry/backoff/timeout behavior.
-- Use `ActivitySource` and standard logging patterns; hosts choose exporters.
+- Use `ActivitySource`, `Meter`, and standard logging patterns; hosts choose exporters. Core emits
+  BCL diagnostics only and carries no OpenTelemetry exporter dependency; the OTLP wiring lives in the
+  observability sample/docs.
 - Shared concurrency helpers should fail fast on invalid throttling settings and observe pre-canceled
   tokens before launching work.
 - Bulk graph writes should observe cancellation before materializing caller-provided enumerables and

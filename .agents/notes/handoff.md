@@ -44,7 +44,7 @@ lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 - `Text/`: chunking, token counting, text helpers, and Graphiti helper functions.
 - `LlmClients/`, `Embedding/`, `CrossEncoder/`: provider abstractions, Microsoft.Extensions.AI
   adapters, deterministic/test implementations, cache/usage helpers, and rerankers.
-- `Telemetry/`: `ActivitySource` spans and source-generated logging.
+- `Telemetry/`: `ActivitySource` spans, `Meter` metrics, and source-generated logging.
 - `Serialization/`: System.Text.Json serializer and source-generated context.
 - `Internal/`: helper/services for extraction context, attribute merging, edge merging, type
   resolution, deterministic text, throttling, rate limiting, saga/community/attribute/edge/node
@@ -102,10 +102,11 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
 - **Phases 1–3 are DONE.** The performance/allocation moratorium is LIFTED; further performance work
   is evidence-driven (benchmark-first) only (`roadmap.md`).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
-  1–3 are complete and plan 06 is complete; the next productionization streams are the long-term goals
-  in `roadmap.md` (G4/G3/G2/G1 per the user's latest priority), while release versioning/publishing
-  remains user-gated. Full restore/test/pack requires GitHub Packages credentials for source
-  `github_ladybug`. Performance work is benchmark-first and no longer on moratorium (`roadmap.md`).
+  1–3 are complete, plan 06 is complete, and G4 is complete; the next productionization streams are the
+  long-term goals in `roadmap.md` (G3/G2/G1 per the user's latest priority), while release
+  versioning/publishing remains user-gated. Full restore/test/pack requires GitHub Packages credentials
+  for source `github_ladybug`. Performance work is benchmark-first and no longer on moratorium
+  (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
   internal services and helpers. Search boundaries: `SearchEngine` orchestrates,
   `SearchRetrievalRunner` retrieves, `SearchResultComposer` shapes results. Prompt builders live
@@ -150,6 +151,14 @@ aliases do not select custom attribute schemas. A follow-up search public/extens
 result-composition code slice: fresh C# search recipe instances and BFS guard-skipped custom driver
 calls are documented C# API hardening decisions. Plan 06 is complete (2026-06-26).
 
+G4 is complete (2026-06-26): `GraphitiTelemetry` now exposes a public `Meter` alongside the existing
+`ActivitySource`, with counters/histograms for episodes ingested, ingestion/search duration, search
+and ingestion result counts, search result counts, LLM token usage, and LLM response-cache hit/miss
+lookups. Core still has no
+OpenTelemetry exporter dependency. Consumer DX additions are `docs/observability.md`,
+`samples/Graphiti.Sample.Observability`, `samples/Graphiti.Sample.Quickstart`, and
+`samples/Graphiti.Sample.GenericProvider`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
@@ -182,7 +191,7 @@ added. This section holds the single authoritative live count and the standing v
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
 **Current verifier checkpoint (2026-06-26):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1021` passed, `3` skipped, `1024` total. The verifier
+Packages credentials for the Ladybug feed — `1025` passed, `3` skipped, `1028` total. The verifier
 covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
 shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
 LadybugDB through the packed package. The three skips are the env-gated

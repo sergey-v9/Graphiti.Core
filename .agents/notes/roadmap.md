@@ -185,12 +185,13 @@ user-gated items.
   serialization). Land only measured, parity-safe wins (BenchmarkDotNet before/after). This program also
   *gates* the deferred opt-in HNSW vector tier (G-future) — only pursue HNSW if the bench shows full-scan
   cosine is the bottleneck at the target graph size, and keep exact cosine the default.
-- **G4 — Observability + consumer DX (HIGH/MED, additive).** C# already has rich `ActivitySource`
-  tracing but **no `Meter`** (no counters/histograms for episodes ingested, tokens, search latency,
-  cache hit-rate) and **no exporter-wiring sample/doc**. Add a Meter at the boundaries already traced,
-  an OpenTelemetry (OTLP) wiring sample + `docs/observability.md`, a minimal "hello graph" quickstart
-  sample, and at least one **non-OpenAI provider sample** to prove the M.E.AI boundary generalizes. Keep
-  Core free of exporter/provider SDK dependencies.
+- **G4 — Observability + consumer DX (DONE 2026-06-26).** `GraphitiTelemetry` exposes a public `Meter`
+  next to the existing `ActivitySource`; metrics cover episodes ingested, ingestion/search duration,
+  ingestion and search result counts, LLM tokens, and LLM response-cache hit/miss lookups. `docs/observability.md`
+  documents OTLP wiring and cache hit-rate calculation, `samples/Graphiti.Sample.Observability` wires
+  OTLP export in a host-owned sample, `samples/Graphiti.Sample.Quickstart` is the no-key hello graph,
+  and `samples/Graphiti.Sample.GenericProvider` proves the `Microsoft.Extensions.AI` boundary without
+  OpenAI. Core remains free of exporter/provider SDK dependencies.
 - **G5 — Sustained upstream parity (MED, cheap insurance).** Keep tracking `getzep/graphiti` via
   `upstream-sync-procedure.md`; add a low-cost recurring reminder that runs `Check-PythonUpstreamDelta`
   and surfaces a *non-blocking* notification on delta, so new library commits get triaged promptly

@@ -24,6 +24,7 @@ public sealed partial class Graphiti
         CancellationToken cancellationToken = default)
     {
         using var activity = GraphitiTelemetry.StartActivity("SearchEdges");
+        var metricsTimestamp = GraphitiTelemetry.GetTimestamp();
         activity?.SetTag("graphiti.query.length", query.Length);
         activity?.SetTag("graphiti.limit", numResults);
         GraphitiTelemetry.SetGroupIds(activity, groupIds);
@@ -48,11 +49,26 @@ public sealed partial class Graphiti
 
             activity?.SetTag("graphiti.result.edges", results.Edges.Count);
             GraphitiLog.EdgeSearchCompleted(_logger, results.Edges.Count);
+            GraphitiTelemetry.RecordSearch(
+                "search_edges",
+                groupIds,
+                numResults,
+                results.Edges.Count,
+                nodeCount: 0,
+                episodeCount: 0,
+                communityCount: 0,
+                GraphitiTelemetry.GetElapsedTime(metricsTimestamp));
             GraphitiTelemetry.SetOk(activity);
             return results.Edges;
         }
         catch (Exception exception)
         {
+            GraphitiTelemetry.RecordSearchDuration(
+                "search_edges",
+                groupIds,
+                numResults,
+                GraphitiTelemetry.GetElapsedTime(metricsTimestamp),
+                success: false);
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
         }
@@ -120,6 +136,7 @@ public sealed partial class Graphiti
     {
         config ??= SearchConfigRecipes.CombinedHybridSearchCrossEncoder;
         using var activity = GraphitiTelemetry.StartActivity("Search");
+        var metricsTimestamp = GraphitiTelemetry.GetTimestamp();
         activity?.SetTag("graphiti.query.length", query.Length);
         activity?.SetTag("graphiti.limit", config.Limit);
         activity?.SetTag("graphiti.has_center_node", centerNodeUuid is not null);
@@ -150,11 +167,26 @@ public sealed partial class Graphiti
                 results.Edges.Count,
                 results.Episodes.Count,
                 results.Communities.Count);
+            GraphitiTelemetry.RecordSearch(
+                "search",
+                groupIds,
+                config.Limit,
+                results.Edges.Count,
+                results.Nodes.Count,
+                results.Episodes.Count,
+                results.Communities.Count,
+                GraphitiTelemetry.GetElapsedTime(metricsTimestamp));
             GraphitiTelemetry.SetOk(activity);
             return results;
         }
         catch (Exception exception)
         {
+            GraphitiTelemetry.RecordSearchDuration(
+                "search",
+                groupIds,
+                config.Limit,
+                GraphitiTelemetry.GetElapsedTime(metricsTimestamp),
+                success: false);
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
         }

@@ -46,6 +46,7 @@ public sealed partial class Graphiti
         CancellationToken cancellationToken = default)
     {
         using var activity = GraphitiTelemetry.StartActivity("AddEpisode");
+        var metricsTimestamp = GraphitiTelemetry.GetTimestamp();
         activity?.SetTag("graphiti.episode.source", source.ToString());
         activity?.SetTag("graphiti.episode_body.length", episodeBody.Length);
 
@@ -169,11 +170,26 @@ public sealed partial class Graphiti
                 result.Nodes.Count,
                 result.Edges.Count,
                 result.EpisodicEdges.Count);
+            GraphitiTelemetry.RecordEpisodesIngested(
+                "add_episode",
+                groupId,
+                source.ToString(),
+                1,
+                result.Nodes.Count,
+                result.Edges.Count,
+                result.EpisodicEdges.Count,
+                GraphitiTelemetry.GetElapsedTime(metricsTimestamp));
             GraphitiTelemetry.SetOk(activity);
             return result;
         }
         catch (Exception exception)
         {
+            GraphitiTelemetry.RecordEpisodeIngestionDuration(
+                "add_episode",
+                groupId,
+                source.ToString(),
+                GraphitiTelemetry.GetElapsedTime(metricsTimestamp),
+                success: false);
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
         }
@@ -242,6 +258,7 @@ public sealed partial class Graphiti
         CancellationToken cancellationToken = default)
     {
         using var activity = GraphitiTelemetry.StartActivity("AddEpisodeBulk");
+        var metricsTimestamp = GraphitiTelemetry.GetTimestamp();
         activity?.SetTag("graphiti.episodes.count", bulkEpisodes.Count);
 
         try
@@ -449,11 +466,26 @@ public sealed partial class Graphiti
                 result.Nodes.Count,
                 result.Edges.Count,
                 result.EpisodicEdges.Count);
+            GraphitiTelemetry.RecordEpisodesIngested(
+                "add_episode_bulk",
+                groupId,
+                "mixed",
+                result.Episodes.Count,
+                result.Nodes.Count,
+                result.Edges.Count,
+                result.EpisodicEdges.Count,
+                GraphitiTelemetry.GetElapsedTime(metricsTimestamp));
             GraphitiTelemetry.SetOk(activity);
             return result;
         }
         catch (Exception exception)
         {
+            GraphitiTelemetry.RecordEpisodeIngestionDuration(
+                "add_episode_bulk",
+                groupId,
+                "mixed",
+                GraphitiTelemetry.GetElapsedTime(metricsTimestamp),
+                success: false);
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
         }

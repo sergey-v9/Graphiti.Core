@@ -301,6 +301,7 @@ public abstract class LlmClient : ILlmClient, IDisposable
         }
 
         TokenTracker.AddUsage(usage.PromptName, usage.InputTokens, usage.OutputTokens);
+        GraphitiTelemetry.RecordLlmTokens(usage.PromptName, usage.InputTokens, usage.OutputTokens);
         ClearPendingTokenUsage();
     }
 
