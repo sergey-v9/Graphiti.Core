@@ -43,7 +43,6 @@ public class SerializationBenchmarks
             MaxTokens: 8192,
             ResponseModel: "Graphiti.Core.Prompts.ExtractedEntitiesResponse, Graphiti.Core",
             ResponseSchemaFingerprint: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
-            PromptName: "extract_nodes",
             Messages: messages);
 
         _responsePayload = new JsonObject

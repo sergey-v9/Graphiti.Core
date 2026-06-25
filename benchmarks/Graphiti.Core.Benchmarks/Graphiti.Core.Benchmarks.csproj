@@ -2,7 +2,7 @@
 
   <!--
     Standalone BenchmarkDotNet harness for performance investigation of Graphiti.Core hot
-    paths (serialization, text chunking/tokenization, search fusion/reranking/scoring).
+    paths (ingestion workflows, serialization, text chunking/tokenization, search fusion/reranking/scoring).
 
     Intentionally NOT part of Graphiti.Core.CSharp.slnx so it stays out of CI build/test/pack
     verification. Build/run directly with "dotnet run -c Release" against this project.

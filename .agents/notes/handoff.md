@@ -152,12 +152,18 @@ result-composition code slice: fresh C# search recipe instances and BFS guard-sk
 calls are documented C# API hardening decisions. Plan 06 is complete (2026-06-26).
 
 G4 is complete (2026-06-26): `GraphitiTelemetry` now exposes a public `Meter` alongside the existing
-`ActivitySource`, with counters/histograms for episodes ingested, ingestion/search duration, search
-and ingestion result counts, search result counts, LLM token usage, and LLM response-cache hit/miss
-lookups. Core still has no
-OpenTelemetry exporter dependency. Consumer DX additions are `docs/observability.md`,
+`ActivitySource`, with counters/histograms for episodes ingested, ingestion/search duration,
+ingestion/search result counts, LLM token usage, and LLM response-cache hit/miss lookups. Core still
+has no OpenTelemetry exporter dependency. Consumer DX additions are `docs/observability.md`,
 `samples/Graphiti.Sample.Observability`, `samples/Graphiti.Sample.Quickstart`, and
 `samples/Graphiti.Sample.GenericProvider`.
+
+G3 first benchmark-baseline slice is complete (2026-06-26): `IngestionBenchmarks` now covers
+single-episode ingestion, six sequential episodes, six-episode bulk ingestion, and a bulk ingest plus
+search workflow with `[MemoryDiagnoser]`. The committed local win-x64 ShortRun baseline is
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-ingestion-win-x64.md`. No performance changes
+were made in this slice; future wins should compare BenchmarkDotNet before/after and update/add
+baselines only with fresh measurements.
 
 ## LadybugDB / Kuzu
 

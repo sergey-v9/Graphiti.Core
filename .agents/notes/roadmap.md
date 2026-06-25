@@ -179,12 +179,14 @@ user-gated items.
   extraction-quality regressions can land with no signal (the unit suite uses fake LLMs and structurally
   cannot see prompt quality). Make the live provider run + eval a **periodic or change-triggered** check
   (even at low episode count), fail-loud rather than silent-skip, as the extraction-quality canary.
-- **G3 — Performance & allocation program (HIGH, evidence-driven).** Moratorium lifted; the benchmark
-  harness is micro-only. Add **ingestion / bulk / end-to-end benchmarks with `[MemoryDiagnoser]`**,
-  commit baselines, and profile the hot paths (InMemory O(n) full-scan cosine, RRF/MMR merge, prompt
-  serialization). Land only measured, parity-safe wins (BenchmarkDotNet before/after). This program also
-  *gates* the deferred opt-in HNSW vector tier (G-future) — only pursue HNSW if the bench shows full-scan
-  cosine is the bottleneck at the target graph size, and keep exact cosine the default.
+- **G3 — Performance & allocation program (HIGH, evidence-driven; IN PROGRESS).** Moratorium lifted.
+  The first baseline slice landed 2026-06-26: `IngestionBenchmarks` covers single ingestion, sequential
+  six-episode ingestion, true-bulk six-episode ingestion, and bulk-ingest-then-search with
+  `[MemoryDiagnoser]`, plus a committed win-x64 ShortRun baseline. Remaining work: profile the hot paths
+  (InMemory O(n) full-scan cosine, RRF/MMR merge, prompt serialization) and land only measured,
+  parity-safe wins (BenchmarkDotNet before/after). This program also *gates* the deferred opt-in HNSW
+  vector tier (G-future) — only pursue HNSW if the bench shows full-scan cosine is the bottleneck at the
+  target graph size, and keep exact cosine the default.
 - **G4 — Observability + consumer DX (DONE 2026-06-26).** `GraphitiTelemetry` exposes a public `Meter`
   next to the existing `ActivitySource`; metrics cover episodes ingested, ingestion/search duration,
   ingestion and search result counts, LLM tokens, and LLM response-cache hit/miss lookups. `docs/observability.md`
