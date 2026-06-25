@@ -72,32 +72,20 @@ Graphiti FTS indexes are ignored because LadybugDB's `CREATE_FTS_INDEX` has no `
 and `LadybugRuntimeDriverTests.FileBackedDriverCanRebuildIndicesAfterReopenAndSearch` proves
 build-write-close-reopen-build-search on a file-backed database.
 
-Decision point resolved 2026-06-17: the user directed Graphiti to consume packages published by the
-`sergey-v9/ladybug-dotnet` fork's GitHub Packages workflow. Graphiti now pins the normalized fork dev
-package family `0.17.1-dev.1.1.g6f3dbed` instead of the local
-`0.17.0-alpha.2-graphiti.1` artifact family. `LadybugDB.Extensions` should not be adopted by default
-in Graphiti Core: the current Graphiti package already owns its DI helper, options, factory, and
-driver boundary, and adopting the Extensions package would add host-level abstractions without a
-demonstrated Graphiti Core requirement.
-
-2026-06-17 recheck: the nested binding repo is still clean on
-`feature/parity-extensions-2026-06` at `0e709a0`. The actual local NuGet artifacts and their nuspecs
-are versioned `0.17.1` (`LadybugDB`, `LadybugDB.Native`, all RID native packages, `LadybugDB.Arrow`,
-and `LadybugDB.Extensions`), even though binding-side `version.txt`/README text says package family
-`0.17.1.0`. The fork's `github-packages-dev.yml` run
-`https://github.com/sergey-v9/ladybug-dotnet/actions/runs/27654947039` published normalized dev
-version `0.17.1-dev.1.1.g6f3dbed`; Graphiti consumes that published version. A 2026-06-17 GitHub
-Packages recheck reports only that version for both `LadybugDB` and `LadybugDB.Native`. With the
-active `read:packages` GitHub token passed as `NuGetPackageSourceCredentials_github_ladybug`,
-`dotnet restore src\Graphiti.Core.Drivers.Ladybug\Graphiti.Core.Drivers.Ladybug.csproj --locked-mode`
-and `.\eng\Verify-GraphitiCore.ps1` are green (`1021` passed, `3` skipped; both Graphiti packages and
-fresh package-consumer smoke builds succeeded).
-
-2026-06-19 recheck: GitHub Packages still reports only `0.17.1-dev.1.1.g6f3dbed` for both
-`LadybugDB` and `LadybugDB.Native` under `sergey-v9/ladybug-dotnet`, matching
-`Directory.Packages.props`. The Graphiti root `NuGet.config` points at the fork GitHub Packages feed
-and has no active local/offline package source. Old `0.17.0-alpha.2-graphiti.1` mentions are
-historical recovery notes only, not an active restore path.
+Current package pin: Graphiti consumes the fork-published dev package family
+`0.17.1-dev.1.1.g6f3dbed` for both `LadybugDB` and `LadybugDB.Native` from the
+`sergey-v9/ladybug-dotnet` GitHub Packages feed (via `NuGet.config`), matching
+`Directory.Packages.props`. This was the only published version on that feed at the time of writing,
+and the root `NuGet.config` has no active local/offline package source — old
+`0.17.0-alpha.2-graphiti.1` mentions are historical recovery notes, not an active restore path.
+Restores that include the Ladybug driver require a `read:packages` credential for source
+`github_ladybug` (passed as `NuGetPackageSourceCredentials_github_ladybug`); `Graphiti.Core` itself
+stays Ladybug-free and restores from nuget.org alone. `LadybugDB.Extensions` is **not** adopted by
+default in Graphiti Core: the Graphiti package already owns its DI helper, options, factory, and driver
+boundary, so the Extensions package would add host-level abstractions without a demonstrated Core need.
+Bump the pin only when the binding repo publishes a newer dev version (see "Self-service bindings"
+below); the binding checkout at `W:\code\ladybug\tools\csharp_api` was last confirmed clean on
+`feature/parity-extensions-2026-06`.
 
 ## Self-service bindings (2026-06-17)
 

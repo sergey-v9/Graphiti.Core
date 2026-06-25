@@ -1,20 +1,20 @@
 # Plan 05 — Release readiness: API ergonomics, naming, and packaging
 
 Created 2026-06-14. The library is functionally complete and validated (Phases 1–3), documented, and
-guarded by a public-API snapshot test. This plan turns the pre-freeze review
-(`.agents/notes/api-freeze-review.md`) into an ordered implementation plan. **Decision (user,
-2026-06-14): no API freeze — implement all of A–E**, then triage any remaining `.agents/plans/`
-backlog separately before release infrastructure. The snapshot test is kept as a drift guard, not a
-freeze: each step that changes the public surface regenerates
-`tests/Graphiti.Core.Tests/Api/Graphiti.Core.approved.txt` in the same commit.
+guarded by a public-API snapshot test. This plan is the ordered implementation plan for the
+pre-freeze surface review; the surface-hardening decisions it produced live in `decisions.md`
+("Public API surface (plan 05, 2026-06-14)"). **Decision (user, 2026-06-14): no API freeze —
+implement all of A–E**, then triage any remaining `.agents/plans/` backlog separately before release
+infrastructure. The snapshot test is kept as a drift guard, not a freeze: each step that changes the
+public surface regenerates `tests/Graphiti.Core.Tests/Api/Graphiti.Core.approved.txt` in the same
+commit.
 
 ## Status — A–E COMPLETE (2026-06-14)
 
-All five steps landed on `main` and verified green. Latest direct full verification after the
-package-consumer workflow smoke hardening is `.\eng\Verify-GraphitiCore.ps1` on 2026-06-14: 984 passed,
-3 skipped, 987 total, with restore/format/build clean, both packages packed as `.nupkg` +
-`.snupkg`, and fresh temp consumers restored/built/run setup plus a public triplet/search workflow
-from strict package sources:
+All five steps landed on `main` and verified green: `.\eng\Verify-GraphitiCore.ps1` is full-suite
+green, with restore/format/build clean, both packages packed as `.nupkg` + `.snupkg`, and fresh temp
+consumers restored/built/run setup plus a public triplet/search workflow from strict package sources
+(authoritative live count in `handoff.md`):
 - **A** — `init` setters, `Options`/`ActivitySource`/`TokenCounter` get-only, 7 port-artifact helpers
   internalized, and shippable package projects generating IntelliSense XML documentation.
 - **B+C** — `GraphProvider.LadybugDb=5` and `AddGraphiti` primary; `Kuzu`/`AddGraphitiCore` `[Obsolete]`
@@ -51,14 +51,14 @@ from strict package sources:
 `LadybugDB.Native` from the `sergey-v9/ladybug-dotnet` GitHub Packages feed in `NuGet.config`, pinned
 to `0.17.1-dev.1.1.g6f3dbed`. GitHub Packages currently reports only that published version for both
 packages. With `NuGetPackageSourceCredentials_github_ladybug` set from the active GitHub token,
-`.\eng\Verify-GraphitiCore.ps1` is green (`1021` passed, `3` skipped; both shippable packages packed
-and both fresh package-consumer smoke builds succeeded). Future binding fixes should land in the
+`.\eng\Verify-GraphitiCore.ps1` is full-suite green (both shippable packages packed and both fresh
+package-consumer smoke builds succeeded). Future binding fixes should land in the
 separate `W:\code\ladybug` repo, push the fork's `dev` branch, let the GitHub Packages workflow publish
 a new dev version, and then bump Graphiti to that published version.
 
 **CI checkpoint (2026-06-17):** both workflow YAML files parse locally, the core-only verifier is green
-(`937` passed, `0` skipped; core pack succeeded), and the full verifier is green locally with GitHub
-Packages credentials (`1025` passed, `3` skipped; both packages and consumer smokes succeeded).
+(core pack succeeded), and the full verifier is full-suite green locally with GitHub Packages
+credentials (both packages and consumer smokes succeeded).
 
 ## Standing constraints (apply to every step)
 
@@ -207,120 +207,28 @@ full Verify green; both packages `pack`. This is a milestone (`evolution.md`:
 its own stream before release-version/publish decisions. This is a coordination step, not a request to
 fold unrelated work into plan 05.
 
-Recorded sweep result, 2026-06-17:
+**Standing rule:** handle any plan-folder/linked-note leftover as its own slice before plan 06 /
+release. Concrete, parity-safe work (focused Python parity fixes from ongoing audits, repeatable
+upstream-sync checks, deterministic hardening of a confirmed flaky test, benchmark-first performance
+wins) lands as a separate verified slice with its own tests and commit — never bundled into the
+versioning, publish-path, or metapackage decisions. The many such slices already closed under this
+gate are in git history; new read-only audit candidates are tracked in `handoff.md`.
 
-1. Plans 01-04 have no unchecked checklist items and remain closed. Plan 03's stale "remaining eval
-   harness" wording was corrected after rechecking the checked item and roadmap state. Reopen these
-   plans only for a confirmed Python-vs-C# regression or upstream `graphiti_core/` delta.
-2. Plan 05 A-E and E.2 are implemented; CI wiring is present. Remaining release infrastructure is
-   decision-gated: version cadence, publish path, and whether to ship a metapackage.
-3. Concrete parity fixes surfaced during this gate landed as separate slices, not as release-infra
-   work: Python `normalize_l2` non-finite behavior and `EntityEdge.get_by_group_ids` empty-result
-   exceptions.
-4. Non-decision implementation work should continue to land as separate slices before release
-   decisions when it is concrete and parity-safe: focused Python parity fixes from ongoing audits,
-   repeatable upstream-sync checks, deterministic hardening of any confirmed flaky test, and
-   benchmark-first performance wins.
-5. Decision-gated follow-ups stay separate and should be surfaced explicitly before implementation:
-   `CommunityEdgeNamespace.SaveBulkAsync` public API shape, empty node-label filter bug-compatibility,
-   entity-attribute response-envelope/schema metadata and per-field max-length/required metadata,
-   `GRPH0002` / `AddGraphitiCore` alias migration, larger real-provider eval expansion,
-   Linux/CI validation scope,
-   versioning, publish path, and metapackage shape. (Neo4j retirement is no longer pending — it
-   landed 2026-06-17, M4 in `evolution.md`.)
-6. `kuzu-driver-port.md` remaining-work bullets are conditional provider follow-ups, not unhandled
-   release-plan tasks: broaden Ladybug workflow coverage only for uncovered behavior, add
-   host-facing options only for real runtime needs, and add native-gated smoke tests only for a new
-   platform/CI requirement or coverage gap.
-   The scheduled reverse plan-05 E merge is now owned by
-   `.agents/plans/06-merge-ladybug-into-core.md` and should be handled as its own pre-release stream.
-7. Follow-up sweep during the 2026-06-17 parity audit split confirmed issues into separate streams.
-   Concrete implementation slices now handled: InMemory typed node/edge UUID storage boundaries,
-   `BuildCommunitiesAsync` explicit-empty `groupIds` semantics, and default empty-string group
-   discovery for community builds, and namespace all-miss plural-read behavior for entity/episodic
-   edge namespaces while preserving static model helper exceptions, and lazy search-config numeric
-   validation/zero-limit behavior, negative-limit text truncation, and entity/fact prompt type-key
-   rendering, MMR first-seen candidate ordering, and edge episode-mentions score-list ordering.
-   Resolved/invalidated edge result duplicate preservation and bulk-ingestion type-validation
-   asymmetry were also split out and closed. A Ladybug provider clear-data empty-list no-op drift was
-   then split out and closed. Top-level community-search empty-method embedding fallback was also
-   split out and closed. Community summary same-layer pair fan-out was also split out and closed. No
-   earlier concrete non-decision follow-up from this audit remains in plan 05. New read-only audit
-   candidates after that checkpoint are tracked in `handoff.md` and should land as separate verified
-   slices rather than release-infra work.
-8. Follow-up sweep on 2026-06-18 kept this gate ahead of plan 06 and release decisions: upstream
-   `graphiti_core/` delta was empty, search-result merge/context helpers showed no confirmed drift,
-   and the model/namespace CRUD audit found no confirmed, undocumented drift. Continue to treat any
-   newly found plan-folder leftover as a separate slice first; do not bundle it into the Ladybug merge,
-   versioning, publish path, or metapackage decisions.
-9. Follow-up sweep after the moved-docs recheck found no unchecked implementation checklist items in
-   plans 01-05 and only plan 06's opt-in Ladybug merge checklist. The concrete `Edge.Equals` audit
-   candidate was handled as its own parity slice; the bulk-saga predecessor self-loop remains
-   decision-gated, and release/API/provider decisions remain separate from this gate.
-10. Follow-up removal/LLM audit on 2026-06-18 kept the same gate shape. The concrete node-delete
-    non-positive batch-size drift was handled as its own parity/provider slice. LLM cache-key breadth is
-    now recorded as an intentional infrastructure decision; live extraction required-field tightening
-    was handled as its own parity slice. Schema-description metadata remains compatibility-sensitive,
-    not release infrastructure, because it changes schema JSON, fingerprints, and cache keys.
-11. Follow-up plan-folder audit after the moved-docs request found no unchecked implementation items
-    outside plan 06's opt-in Ladybug merge checklist. The newly confirmed remaining structured response
-    required-field drift was handled as its own parity slice before plan 06/release decisions, preserving
-    this gate's "separate slice first" rule.
-12. Follow-up ingestion/namespace audits kept the same gate shape. The combined extraction prompt's
-    custom fact-type map drift was handled as its own parity slice. Namespace save-bulk handling for
-    non-positive `batchSize` was then handled as its own parity slice before plan 06/release decisions,
-    not release infrastructure.
-13. Follow-up search-filter audit on 2026-06-19 kept the same gate shape. Upstream `graphiti_core/`
-    delta was empty through target `b9a74644fb641910a03d325ec2b8f669d3db75dc`; the concrete
-    reference/materialized multi-label matcher drift was handled as its own parity slice, aligning
-    non-empty node-label matching with the Ladybug/Kuzu all-label predicate while preserving the
-    existing empty-label hardening divergence.
-14. Follow-up edge-resolution audit on 2026-06-19 kept the same gate shape. The concrete
-    resolved-vs-invalidated block-order drift was handled as its own parity slice: edge resolution
-    now returns all resolved edges before invalidated chunks, matching Python single-ingestion
-    `resolved_edges + invalidated_edges` ordering.
-15. Follow-up search-provider audit on 2026-06-19 kept the same gate shape. The concrete
-    edge-embedding endpoint-scope drift was handled as its own parity/provider slice: Ladybug,
-    InMemory, and materialized embedding search now ignore endpoint filters when `groupIds` is null
-    and keep endpoint filters for non-null group scopes.
-16. Follow-up materialized-ranker audit on 2026-06-19 kept the same gate shape. The concrete fallback
-    ranker scope drift was handled as its own parity slice: materialized node-distance and
-    episode-mentions rankers no longer limit ranker evidence to the candidate retrieval groups,
-    matching Python ranker queries.
-17. Follow-up model/wire audit on 2026-06-19 kept the same gate shape. The remaining UUID/default
-    construction candidates are public-surface questions, not hidden implementation leftovers: C#
-    currently pins UUIDv7 generation plus deterministic epoch/empty-string model defaults, while the
-    source models use uuid4, required fields, and ambient creation timestamps. Do not change this
-    constructor/deserialization behavior without explicit public API direction, snapshot/test updates,
-    and a separate slice.
-18. Follow-up text-utility audit on 2026-06-19 kept the same gate shape. The concrete heuristic
-    chunking under-split was handled as its own parity slice by making `HeuristicTokenCounter` supply
-    character-window boundaries and budget checks. Large covering chunks remain deterministic in C#;
-    that random-sampling difference is recorded as intentional reproducibility hardening.
-19. Follow-up incremental-community audit on 2026-06-19 kept the same gate shape. The source
-    `add_episode(update_communities=True)` result destructuring bug is not reproduced: C# keeps
-    flattened `Communities` / `CommunityEdges` result lists and pins the one-node public workflow as
-    an intentional repair, documented in `decisions.md` and `parity.md`.
-20. Follow-up moved-docs/backlog and package-feed audit on 2026-06-19 kept the same gate shape. The
-    plan folder has no unchecked implementation checklist outside plan 06's opt-in Ladybug merge.
-    The visible leftovers are decision-gated/user-gated items already listed above. GitHub Packages
-    currently reports only `0.17.1-dev.1.1.g6f3dbed` for `LadybugDB` and `LadybugDB.Native`, matching
-    `Directory.Packages.props`; no package bump is available or needed. The only concrete
-    non-decision follow-up from this pass was test hardening: the search concurrency proof now avoids
-    a second fixed wall-clock timeout after its fake-driver barrier has already proven concurrent
-    startup, reducing full-suite scheduler-load sensitivity.
-21. Follow-up ontology-matching audit on 2026-06-19 kept the same gate shape. The concrete custom
-    type-selection drift was handled as its own parity slice: entity and edge custom schemas now
-    resolve only from exact ontology dictionary keys, exact endpoint labels, and exact mapped
-    relation names, so case variants and type-name aliases do not trigger attribute prompts.
-22. Follow-up search public/extensibility audit on 2026-06-19 kept the same gate shape. No
-    result-composition code slice remained. C# deliberately keeps fresh search recipe instances rather
-    than upstream's mutable singleton recipes, and skips custom driver BFS calls for null/empty origins
-    or nonpositive depth rather than surfacing no-op calls. These are documented API hardening
-    decisions, not release infrastructure or plan 06 work.
+Current decision-gated / user-gated release items (surface explicitly before implementing):
 
-**Verify:** this coordination gate is now recorded. Code changes from resulting slices get their own
-tests and commits; this coordination step needs only a docs review.
+- Versioning (confirm the `2.0.0` line / alpha→beta→rc cadence), publish path, and whether to ship a
+  metapackage. See the Release-infrastructure section below.
+- `CommunityEdgeNamespace.SaveBulkAsync` public API shape; entity-attribute response-envelope/schema
+  metadata and per-field max-length/required metadata; the model-default/UUID construction surface
+  (UUIDv7 + deterministic defaults vs. source uuid4/required/ambient-time). All are public-surface
+  decisions, not hidden implementation leftovers.
+- `GRPH0002` / `AddGraphitiCore` alias migration; empty node-label filter bug-compatibility; larger
+  real-provider eval expansion; Linux/CI validation scope.
+- The scheduled reverse plan-05 E merge (Ladybug → Core) is its own pre-release stream, owned by
+  `.agents/plans/06-merge-ladybug-into-core.md` (opt-in; do not auto-pick). `kuzu-driver-port.md`
+  "Remaining Work" bullets are conditional provider follow-ups, not unhandled release-plan tasks.
+
+**Verify:** docs review only; resulting code slices carry their own tests and commits.
 
 ---
 
