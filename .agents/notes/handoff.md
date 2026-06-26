@@ -193,6 +193,11 @@ G3 TextScorer allocation slice is complete (2026-06-26): short-query distinct-ma
 55.84 KB to 0 B at 200 candidates and from 139.29 KB to 0 B at 500 candidates; see
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-search-textscorer-win-x64.md`.
 
+G3 serialization baseline slice is complete (2026-06-26): `SerializationBenchmarks` now has a
+committed win-x64 ShortRun baseline covering cache-key serialize/hash/hex and Graphiti JSON
+serialize/parse/deep-clone paths. No implementation change was made in this slice; see
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-serialization-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

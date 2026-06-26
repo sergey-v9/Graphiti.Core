@@ -185,8 +185,9 @@ user-gated items.
   landed 2026-06-26 using `SearchBenchmarks.Bm25_Rank` before/after, followed by a measured uncached LLM
   cache-key allocation win, a small bulk throttling list-copy cleanup using `IngestionBenchmarks`
   before/after, an RRF bounded-queue allocation win using `SearchBenchmarks.Rrf_*`, and a TextScorer
-  short-query allocation win using `SearchBenchmarks.TextScorer_ScoreAll`. Remaining work:
-  profile the hot paths (InMemory O(n) full-scan cosine, MMR merge, prompt serialization, bulk edge
+  short-query allocation win using `SearchBenchmarks.TextScorer_ScoreAll`. A serialization baseline
+  for cache-key/payload JSON paths was also committed. Remaining work:
+  profile the hot paths (InMemory O(n) full-scan cosine, MMR merge, bulk edge
   dedupe) and land only measured, parity-safe wins (BenchmarkDotNet before/after). This program also
   *gates* the deferred
   opt-in HNSW vector tier (G-future) — only pursue HNSW if the bench shows full-scan cosine is the
