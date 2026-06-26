@@ -102,11 +102,12 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
 - **Phases 1–3 are DONE.** The performance/allocation moratorium is LIFTED; further performance work
   is evidence-driven (benchmark-first) only (`roadmap.md`).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
-  1–3 are complete, plan 06 is complete, and G4 is complete; the next productionization streams are the
-  long-term goals in `roadmap.md` (G3/G2/G1 per the user's latest priority), while release
-  versioning/publishing remains user-gated. Full restore/test/pack requires GitHub Packages credentials
-  for source `github_ladybug`. Performance work is benchmark-first and no longer on moratorium
-  (`roadmap.md`).
+  1–3 are complete, plan 06 is complete, G4 is complete, and the first wave of G3 perf/allocation slices
+  landed 2026-06-26. **The current actionable plan is `.agents/plans/07-cross-platform-linux.md` (roadmap
+  goal G1 — Linux x64 proof)**, with a documented non-stall fallback to the remaining G3 hot-path
+  profiling; G2 (continuous-quality canary) follows. Release versioning/publishing remains user-gated.
+  Full restore/test/pack requires GitHub Packages credentials for source `github_ladybug`. Performance
+  work is benchmark-first and no longer on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
   internal services and helpers. Search boundaries: `SearchEngine` orchestrates,
   `SearchRetrievalRunner` retrieves, `SearchResultComposer` shapes results. Prompt builders live

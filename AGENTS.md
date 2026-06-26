@@ -16,11 +16,13 @@ commit rules, read `.agents/notes/commit-policy.md`.
 **Current priority - how to pick work.** Concrete work orders live in `.agents/plans/`; the
 roadmap orders them. Pick the lowest-numbered plan with unchecked actionable items, do exactly one
 item as a slice (implement → verify → commit → check it off and update `parity.md` when parity state
-changes), then stop or pick the next. Phases 1–3 are complete and plan-05 A–E are complete. Plan 06
-has merged the LadybugDB driver back into `Graphiti.Core`; only release versioning/publishing remains
-user-gated. Remaining release-infrastructure work is decision-gated or external-feed-gated (version
-cadence, publish path, metapackage shape, and future Ladybug package publication/replacement). When
-the open plan items are blocked on those decisions,
+changes), then stop or pick the next. Phases 1–3 are complete, plan-05 A–E are complete, and plan 06
+has merged the LadybugDB driver back into `Graphiti.Core`. **The current actionable plan is plan 07 —
+cross-platform (Linux x64) proof (roadmap goal G1)**; do its steps in order, with the documented
+non-stall fallback to G3 hot-path profiling if the native binding fix stalls. Only release
+versioning/publishing remains user-gated; remaining release-infrastructure work is decision-gated or
+external-feed-gated (version cadence, publish path, metapackage shape, and future Ladybug package
+publication/replacement). When the open plan items are blocked on those decisions,
 choose work from `roadmap.md`/`handoff.md` that directly strengthens parity, packaging verification,
 upstream sync, or documented current state. Performance work is allowed only when it is
 benchmark-first and parity-safe.

@@ -173,7 +173,9 @@ user-gated items.
   if it's a binding/extension-packaging gap, fix it in `W:\code\ladybug` per the **self-service
   bindings** policy, publish a new dev package, re-pin, and add a gated Linux `fts`+`vector`
   CREATE/QUERY round-trip smoke. **Until that lane is green, win-x64 is the only supported RID — say so
-  in README/package metadata; do not advertise cross-platform.**
+  in README/package metadata; do not advertise cross-platform.** Scoped as the work order
+  `.agents/plans/07-cross-platform-linux.md` and selected as the current priority (2026-06-26), with a
+  non-stall fallback to the remaining G3 hot-path profiling if the native binding fix stalls.
 - **G2 — Continuous quality, not one-shot (HIGH).** The live-OpenAI provider run and the eval harness
   proved themselves *once*, locally, and SKIP silently in CI without a key — so prompt-transcription and
   extraction-quality regressions can land with no signal (the unit suite uses fake LLMs and structurally
