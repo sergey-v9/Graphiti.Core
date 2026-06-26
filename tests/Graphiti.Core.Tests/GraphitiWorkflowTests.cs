@@ -1332,6 +1332,47 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisode_PreservesRepeatedResolvedEntitySlots()
+    {
+        var driver = new InMemoryGraphDriver();
+        var embedder = new ConstantEmbedder();
+        var existing = new EntityNode
+        {
+            Name = "OpenAI",
+            GroupId = "group",
+            Labels = new List<string> { "Entity" },
+            Summary = "Existing summary",
+            NameEmbedding = ConstantEmbedder.Vector.ToList()
+        };
+        await existing.SaveAsync(driver);
+
+        var graphiti = new Graphiti(
+            graphDriver: driver,
+            embedder: embedder,
+            llmClient: new StaticLlmClient(new JsonObject
+            {
+                ["extracted_entities"] = new JsonArray
+                {
+                    new JsonObject { ["name"] = "OpenAI", ["entity_type"] = "Organization" },
+                    new JsonObject { ["name"] = "Open AI", ["entity_type"] = "Organization" }
+                }
+            }));
+
+        var result = await graphiti.AddEpisodeAsync(
+            "conversation",
+            "OpenAI, also written Open AI, announced a launch.",
+            "message",
+            new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+            groupId: "group");
+
+        Assert.Equal(2, result.Nodes.Count);
+        Assert.All(result.Nodes, node => Assert.Equal(existing.Uuid, node.Uuid));
+
+        var mentions = await EpisodicEdge.GetByGroupIdsAsync(driver, new[] { "group" });
+        Assert.Equal(2, mentions.Count(edge => edge.TargetNodeUuid == existing.Uuid));
+    }
+
+    [Fact]
     public async Task AddEpisode_CollapsesExactDuplicateExtractedEntitiesBySpecificity()
     {
         var driver = new InMemoryGraphDriver();
@@ -5841,6 +5882,31 @@ public class GraphitiWorkflowTests
             }
 
             return _responsesByPromptName.TryGetValue(promptName, out response!);
+        }
+    }
+
+    private sealed class ConstantEmbedder : IEmbedderClient
+    {
+        public static readonly float[] Vector = [1f, 0f, 0f, 0f];
+
+        public int EmbeddingDimension => Vector.Length;
+
+        public Task<IReadOnlyList<float>> CreateAsync(
+            string input,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<float>>(Vector);
+
+        public Task<IReadOnlyList<IReadOnlyList<float>>> CreateBatchAsync(
+            IReadOnlyList<string> input,
+            CancellationToken cancellationToken = default)
+        {
+            var results = new List<IReadOnlyList<float>>(input.Count);
+            for (var i = 0; i < input.Count; i++)
+            {
+                results.Add(Vector);
+            }
+
+            return Task.FromResult<IReadOnlyList<IReadOnlyList<float>>>(results);
         }
     }
 

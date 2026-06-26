@@ -399,12 +399,10 @@ internal sealed class NodeResolutionService(
         IReadOnlyList<EntityNode> extractedNodes,
         Dictionary<string, EntityNode> nodesByExtractedName)
     {
-        var nodes = new List<EntityNode>();
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var nodes = new List<EntityNode>(extractedNodes.Count);
         foreach (var extractedNode in extractedNodes)
         {
-            if (!nodesByExtractedName.TryGetValue(extractedNode.Name, out var resolvedNode)
-                || !seen.Add(resolvedNode.Uuid))
+            if (!nodesByExtractedName.TryGetValue(extractedNode.Name, out var resolvedNode))
             {
                 continue;
             }
