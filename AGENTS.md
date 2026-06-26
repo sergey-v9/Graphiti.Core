@@ -17,12 +17,15 @@ commit rules, read `.agents/notes/commit-policy.md`.
 roadmap orders them. Pick the lowest-numbered plan with unchecked actionable items, do exactly one
 item as a slice (implement → verify → commit → check it off and update `parity.md` when parity state
 changes), then stop or pick the next. Phases 1–3 are complete, plan-05 A–E are complete, and plan 06
-has merged the LadybugDB driver back into `Graphiti.Core`, and plan 07 has completed the linux-x64
-LadybugDB proof, and G2 has added the fail-loud live-provider/eval workflow. **The next roadmap
-priority is the remaining G3 benchmark-first performance/allocation work.** Only release
-versioning/publishing remains user-gated; remaining release-infrastructure work is decision-gated or
-external-feed-gated (version cadence, publish path, metapackage shape, and future Ladybug package
-publication/replacement). When the open plan items are blocked on those decisions,
+has merged the LadybugDB driver back into `Graphiti.Core`, plan 07 has completed the linux-x64
+LadybugDB proof, and G2 has added the fail-loud live-provider/eval workflow. **The current actionable
+plan is plan 08 — release-surface finalization (the non-gated part of G6): settle the open
+public-surface decisions while still `2.0.0-alpha.1`, freeze the public API, and run a pack dry run, but
+do NOT stamp a version or publish.** The remaining G3 benchmark-first performance/allocation work and G5
+upstream cadence are lower-priority follow-ups. Only release versioning/publishing remains user-gated;
+remaining release-infrastructure work is decision-gated or external-feed-gated (version cadence,
+publish path, metapackage shape, and future Ladybug package publication/replacement). When the open
+plan items are blocked on those decisions,
 choose work from `roadmap.md`/`handoff.md` that directly strengthens parity, packaging verification,
 upstream sync, or documented current state. Performance work is allowed only when it is
 benchmark-first and parity-safe.

@@ -102,10 +102,13 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
 - **Phases 1–3 are DONE.** The performance/allocation moratorium is LIFTED; further performance work
   is evidence-driven (benchmark-first) only (`roadmap.md`).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
-  1–3 are complete, plan 06 is complete, G4 is complete, and the first wave of G3 perf/allocation slices
+  1–3 are complete, plan 06 is complete, G4 is complete, the first wave of G3 perf/allocation slices
   landed 2026-06-26, plan 07/G1 linux-x64 proof is complete, and G2 fail-loud live-provider/eval CI is
-  wired. **The next roadmap priority is the remaining G3 benchmark-first performance/allocation work.**
-  Release versioning/publishing remains user-gated.
+  wired. **The current actionable plan is `.agents/plans/08-release-surface-finalization.md` (the
+  non-gated part of G6): settle the open public-surface decisions while still `2.0.0-alpha.1`, freeze the
+  public API, and run a release-readiness pack dry run — but do NOT stamp a version or publish.** The
+  remaining G3 benchmark-first performance/allocation work and G5 upstream cadence are the lower-priority
+  follow-ups. Release versioning/publishing remains user-gated.
   Full restore/test/pack requires GitHub Packages credentials for source `github_ladybug`. Performance
   work is benchmark-first and no longer on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus

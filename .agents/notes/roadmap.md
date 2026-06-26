@@ -203,11 +203,14 @@ user-gated items.
   `upstream-sync-procedure.md`; add a low-cost recurring reminder that runs `Check-PythonUpstreamDelta`
   and surfaces a *non-blocking* notification on delta, so new library commits get triaged promptly
   without expanding CI.
-- **G6 — Release readiness (USER-GATED).** Resolve the remaining **2.0 public-surface decisions while
-  still alpha** (the additive `CommunityEdgeNamespace.SaveBulkAsync`; model-default and attribute-
-  metadata divergences — see `decisions.md`), then versioning/publish **only when Sergey initiates**.
-  (The **Ladybug→Core merge (plan 06) is complete** — see Phase 4 — and is independent of this
-  user-gated item and G1.)
+- **G6 — Release readiness (publish is USER-GATED).** The **non-gated** surface work is now scoped as
+  the current-priority work order `.agents/plans/08-release-surface-finalization.md` (2026-06-26):
+  resolve the remaining **2.0 public-surface decisions while still alpha** (the additive
+  `CommunityEdgeNamespace.SaveBulkAsync`; attribute `MaxLength`/required-field metadata — see
+  `decisions.md`), freeze the public API, and run a release-readiness pack dry run. Then
+  versioning/publish **only when Sergey initiates** — plan 08 explicitly stops before any `<Version>`
+  stamp or push. (The **Ladybug→Core merge (plan 06)** and **plan 07/G1 linux-x64 proof** are complete
+  and independent of the publish gate.)
 
 Standing principle: continue **bounded** adversarial parity hardening (only real, reachable divergences
 verified against the Python source — not speculative churn), and keep the docs lean (the matrix +
