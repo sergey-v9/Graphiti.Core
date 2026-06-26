@@ -185,7 +185,8 @@ user-gated items.
   `[MemoryDiagnoser]`, plus a committed win-x64 ShortRun baseline. A measured BM25 allocation win also
   landed 2026-06-26 using `SearchBenchmarks.Bm25_Rank` before/after, followed by a measured uncached LLM
   cache-key allocation win, a small bulk throttling list-copy cleanup using `IngestionBenchmarks`
-  before/after, and an RRF bounded-queue allocation win using `SearchBenchmarks.Rrf_*`. Remaining work:
+  before/after, an RRF bounded-queue allocation win using `SearchBenchmarks.Rrf_*`, and a TextScorer
+  short-query allocation win using `SearchBenchmarks.TextScorer_ScoreAll`. Remaining work:
   profile the hot paths (InMemory O(n) full-scan cosine, MMR merge, prompt serialization, bulk edge
   dedupe) and land only measured, parity-safe wins (BenchmarkDotNet before/after). This program also
   *gates* the deferred

@@ -186,6 +186,12 @@ priority queue when candidate count is known. Local `SearchBenchmarks.Rrf_*` Sho
 showed allocation drops across all six RRF cases; see
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-search-rrf-queue-win-x64.md`.
 
+G3 TextScorer allocation slice is complete (2026-06-26): short-query distinct-match tracking now uses a
+64-bit mask and keeps the existing hash-set fallback for very large query term sets. Local
+`SearchBenchmarks.TextScorer_ScoreAll` ShortRun before/after dropped benchmark allocations from
+55.84 KB to 0 B at 200 candidates and from 139.29 KB to 0 B at 500 candidates; see
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-search-textscorer-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
@@ -218,7 +224,7 @@ added. This section holds the single authoritative live count and the standing v
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
 **Current verifier checkpoint (2026-06-26):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1026` passed, `3` skipped, `1029` total. The verifier
+Packages credentials for the Ladybug feed — `1027` passed, `3` skipped, `1030` total. The verifier
 covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
 shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
 LadybugDB through the packed package. The three skips are the env-gated

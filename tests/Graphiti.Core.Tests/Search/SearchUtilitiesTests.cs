@@ -204,6 +204,17 @@ public class SearchUtilitiesTests
     }
 
     [Fact]
+    public void TextScorer_LargeQuerySetKeepsCurrentFormula()
+    {
+        var query = string.Join(' ', Enumerable.Range(0, 65).Select(index => $"term{index}"));
+        var scorer = SearchUtilities.CreateTextScorer(query);
+
+        var score = scorer.Score("term0 term0 term64 unrelated");
+
+        Assert.Equal(5f / 69f, score, precision: 6);
+    }
+
+    [Fact]
     public void Bm25TextScorer_RanksCorpusTermsWithLengthNormalization()
     {
         var documents = new[]

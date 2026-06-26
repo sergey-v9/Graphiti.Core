@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Numerics;
 
 namespace Graphiti.Core.Search;
 
@@ -8,7 +9,10 @@ namespace Graphiti.Core.Search;
 /// </summary>
 internal sealed class TextScorer
 {
+    private const int DistinctMatchBitLimit = 64;
+
     private readonly FrozenSet<string> _queryTerms;
+    private readonly string[] _queryTermList;
 
     internal TextScorer(string query)
     {
@@ -18,6 +22,7 @@ internal sealed class TextScorer
             queryTerms,
             static (term, terms) => terms.Add(term));
         _queryTerms = queryTerms.ToFrozenSet(StringComparer.Ordinal);
+        _queryTermList = [.. queryTerms];
     }
 
     /// <summary>Scores the given text against the query terms; higher means more overlap.</summary>
@@ -28,7 +33,9 @@ internal sealed class TextScorer
             return 0;
         }
 
-        var state = new ScoreState(_queryTerms.GetAlternateLookup<ReadOnlySpan<char>>());
+        var state = new ScoreState(
+            _queryTerms.GetAlternateLookup<ReadOnlySpan<char>>(),
+            _queryTermList.Length <= DistinctMatchBitLimit ? _queryTermList : null);
         SearchUtilities.VisitTokenSpans<ScoreState, ScoreTokenVisitor>(
             text,
             ref state);
@@ -38,17 +45,26 @@ internal sealed class TextScorer
             return 0;
         }
 
-        return (float)((state.MatchCount + (state.DistinctMatches?.Count ?? 0))
+        var distinctMatchCount = state.QueryTermsByIndex is null
+            ? state.DistinctMatches?.Count ?? 0
+            : BitOperations.PopCount(state.DistinctMatchBits);
+        return (float)((state.MatchCount + distinctMatchCount)
                        / (double)(state.TextTermCount + _queryTerms.Count));
     }
 
-    private struct ScoreState(FrozenSet<string>.AlternateLookup<ReadOnlySpan<char>> queryTerms)
+    private struct ScoreState(
+        FrozenSet<string>.AlternateLookup<ReadOnlySpan<char>> queryTerms,
+        string[]? queryTermsByIndex)
     {
         public FrozenSet<string>.AlternateLookup<ReadOnlySpan<char>> QueryTerms { get; } = queryTerms;
+
+        public string[]? QueryTermsByIndex { get; } = queryTermsByIndex;
 
         public int TextTermCount { get; set; }
 
         public int MatchCount { get; set; }
+
+        public ulong DistinctMatchBits { get; set; }
 
         public HashSet<string>? DistinctMatches { get; set; }
 
@@ -67,6 +83,20 @@ internal sealed class TextScorer
             }
 
             state.MatchCount++;
+            if (state.QueryTermsByIndex is { } queryTermsByIndex)
+            {
+                for (var i = 0; i < queryTermsByIndex.Length; i++)
+                {
+                    if (term.SequenceEqual(queryTermsByIndex[i].AsSpan()))
+                    {
+                        state.DistinctMatchBits |= 1UL << i;
+                        return;
+                    }
+                }
+
+                return;
+            }
+
             if (state.DistinctMatches is null)
             {
                 var distinct = new HashSet<string>(StringComparer.Ordinal);
