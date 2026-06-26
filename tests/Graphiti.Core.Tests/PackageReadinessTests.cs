@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using System.Xml.Linq;
 
 namespace Graphiti.Core.Tests;
@@ -195,6 +196,38 @@ public class PackageReadinessTests
     }
 
     [Fact]
+    public void LiveProviderWorkflow_RunsFailLoudPeriodicProviderAndEvalChecks()
+    {
+        var csharpRoot = FindCSharpRoot();
+        var workflow = File.ReadAllText(Path.Combine(
+            csharpRoot,
+            ".github",
+            "workflows",
+            "live-provider.yml"));
+
+        Assert.Contains("workflow_dispatch:", workflow);
+        Assert.Contains("schedule:", workflow);
+        Assert.DoesNotContain("pull_request:", workflow);
+        Assert.DoesNotContain("push:", workflow);
+        Assert.Contains("OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}", workflow);
+        Assert.Contains("Require OpenAI secret", workflow);
+        Assert.Contains("./eng/Run-OpenAIProviderValidation.ps1", workflow);
+        Assert.Contains("GRAPHITI_EVAL_BASELINE_PATH: samples\\Graphiti.Eval\\baselines\\baseline_graph_results.json", workflow);
+        Assert.Contains("GRAPHITI_EVAL_FAIL_LOUD: \"1\"", workflow);
+        Assert.Contains("GRAPHITI_EVAL_REQUIRE_BASELINE: \"1\"", workflow);
+        var baselinePath = Path.Combine(
+            csharpRoot,
+            "samples",
+            "Graphiti.Eval",
+            "baselines",
+            "baseline_graph_results.json");
+        Assert.True(File.Exists(baselinePath));
+        Assert.NotEmpty(JsonNode.Parse(File.ReadAllText(baselinePath))!.AsArray());
+        Assert.Equal(2, CountOccurrences(workflow, @"samples\Graphiti.Eval\Graphiti.Eval.csproj"));
+        Assert.Contains("-- --qa", workflow);
+    }
+
+    [Fact]
     public void GeneratedXmlDocs_DoNotDescribeBulkInvalidationBackwards()
     {
         var xmlPath = Path.ChangeExtension(typeof(global::Graphiti.Core.Graphiti).Assembly.Location, ".xml");
@@ -313,6 +346,19 @@ public class PackageReadinessTests
                 Assert.True(valid, $"{section} identifier '{identifier}' contains invalid character '{character}'.");
             }
         }
+    }
+
+    private static int CountOccurrences(string text, string value)
+    {
+        var count = 0;
+        var index = 0;
+        while ((index = text.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += value.Length;
+        }
+
+        return count;
     }
 
     private static string FindCSharpRoot()

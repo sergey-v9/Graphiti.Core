@@ -171,11 +171,13 @@ user-gated items.
   consumed through fork package `0.17.1-dev.2.1.g53e5ab5`. Graphiti now has a gated linux-x64
   `fts`+`vector` CREATE/QUERY smoke in `.github/workflows/full.yml`; win-x64 remains the unconditional
   full verifier lane.
-- **G2 — Continuous quality, not one-shot (HIGH).** The live-OpenAI provider run and the eval harness
-  proved themselves *once*, locally, and SKIP silently in CI without a key — so prompt-transcription and
-  extraction-quality regressions can land with no signal (the unit suite uses fake LLMs and structurally
-  cannot see prompt quality). Make the live provider run + eval a **periodic or change-triggered** check
-  (even at low episode count), fail-loud rather than silent-skip, as the extraction-quality canary.
+- **G2 — Continuous quality, not one-shot (HIGH): DONE 2026-06-26.** A dedicated
+  `.github/workflows/live-provider.yml` workflow now runs on `workflow_dispatch` and a weekly schedule,
+  requires `OPENAI_API_KEY`, runs `eng/Run-OpenAIProviderValidation.ps1`, and then runs
+  `samples/Graphiti.Eval` in fail-loud mode against the committed
+  `samples/Graphiti.Eval/baselines/baseline_graph_results.json` graph-building baseline plus the
+  retrieval-QA mode. Normal PR CI remains unchanged: the full verifier still lets OpenAI provider tests
+  skip cleanly when no key is present.
 - **G3 — Performance & allocation program (HIGH, evidence-driven; IN PROGRESS).** Moratorium lifted.
   The first baseline slice landed 2026-06-26: `IngestionBenchmarks` covers single ingestion, sequential
   six-episode ingestion, true-bulk six-episode ingestion, and bulk-ingest-then-search with

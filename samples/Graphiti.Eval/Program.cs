@@ -27,7 +27,9 @@ using Microsoft.Extensions.AI;
 //              answer is NOT in the fixture: a perfect pass there would signal a retrieval/judge leak.
 //
 // Both modes are gated on OPENAI_API_KEY (exit 2 if absent), use temperature 0, and bound the
-// question/episode counts. The runner injects OPENAI_API_KEY; this program never reads .env itself.
+// question/episode counts. Set GRAPHITI_EVAL_FAIL_LOUD=1 in CI to turn regression/leak signals into
+// nonzero exits, and GRAPHITI_EVAL_REQUIRE_BASELINE=1 to fail instead of bootstrapping a missing
+// graph-building baseline. The runner injects OPENAI_API_KEY; this program never reads .env itself.
 const string GroupId = "eval-atlas";
 
 var qaMode = args.Any(arg => string.Equals(arg, "--qa", StringComparison.OrdinalIgnoreCase))
@@ -40,7 +42,7 @@ var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 if (string.IsNullOrWhiteSpace(apiKey))
 {
     Console.Error.WriteLine("Set OPENAI_API_KEY before running the eval harness.");
-    Console.Error.WriteLine("Optional: OPENAI_CHAT_MODEL, OPENAI_SMALL_MODEL, OPENAI_RERANKER_MODEL, OPENAI_EMBEDDING_MODEL, OPENAI_EMBEDDING_DIMENSIONS.");
+    Console.Error.WriteLine("Optional: OPENAI_CHAT_MODEL, OPENAI_SMALL_MODEL, OPENAI_RERANKER_MODEL, OPENAI_EMBEDDING_MODEL, OPENAI_EMBEDDING_DIMENSIONS, GRAPHITI_EVAL_FAIL_LOUD, GRAPHITI_EVAL_MIN_QA_CORRECT, GRAPHITI_EVAL_BASELINE_PATH, GRAPHITI_EVAL_REQUIRE_BASELINE.");
     Console.Error.WriteLine("Modes: default = graph-building regression eval; --qa = retrieval-QA eval.");
     Console.Error.WriteLine("Usage: dotnet run --project samples/Graphiti.Eval [--qa]");
     return 2;
@@ -53,6 +55,9 @@ var rerankerModel = GetEnvironmentValue(
     MicrosoftExtensionsAICrossEncoderClient.DefaultModel);
 var embeddingModel = GetEnvironmentValue("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small");
 var embeddingDimensions = GetEnvironmentInt("OPENAI_EMBEDDING_DIMENSIONS", 1536);
+var failLoud = GetEnvironmentBool("GRAPHITI_EVAL_FAIL_LOUD", fallback: false);
+var minimumQaCorrect = GetEnvironmentInt("GRAPHITI_EVAL_MIN_QA_CORRECT", 3);
+var requireBaseline = GetEnvironmentBool("GRAPHITI_EVAL_REQUIRE_BASELINE", fallback: false);
 
 var chatClient = new OpenAI.Chat.ChatClient(chatModel, apiKey).AsIChatClient();
 var embeddingGenerator = new OpenAI.Embeddings.EmbeddingClient(embeddingModel, apiKey)
@@ -147,6 +152,7 @@ var episodes = new[]
 
 Console.WriteLine($"Using chat model {chatModel}, reranker model {rerankerModel}, embedding model {embeddingModel} ({embeddingDimensions.ToString(CultureInfo.InvariantCulture)} dimensions).");
 Console.WriteLine($"Mode: {(qaMode ? "retrieval-QA (measures whether top-1 retrieved fact answers a gold question)" : "graph-building regression (measures whether the candidate extraction is worse than a persisted baseline)")}.");
+Console.WriteLine($"Fail-loud: {(failLoud ? "enabled" : "disabled")}.");
 Console.WriteLine("Ingesting fixture episodes...");
 
 // Ingest every episode through the real pipeline, capturing each per-episode AddEpisodeResults.
@@ -182,7 +188,9 @@ async Task<int> RunGraphBuildingAsync()
     // detection, writing baseline_graph_results.json / candidate_graph_results.json.
     var artifactDir = Path.Combine(AppContext.BaseDirectory, "eval-artifacts");
     Directory.CreateDirectory(artifactDir);
-    var baselinePath = Path.Combine(artifactDir, "baseline_graph_results.json");
+    var baselinePath = GetEnvironmentValue(
+        "GRAPHITI_EVAL_BASELINE_PATH",
+        Path.Combine(artifactDir, "baseline_graph_results.json"));
     var candidatePath = Path.Combine(artifactDir, "candidate_graph_results.json");
 
     // Serialize the candidate per-episode extraction results with stable snake_case Graphiti JSON,
@@ -203,6 +211,13 @@ async Task<int> RunGraphBuildingAsync()
 
     if (!File.Exists(baselinePath))
     {
+        if (requireBaseline)
+        {
+            Console.Error.WriteLine($"Required baseline artifact not found: {baselinePath}");
+            return 2;
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(baselinePath) ?? artifactDir);
         await File.WriteAllTextAsync(
             baselinePath,
             candidateArtifact.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
@@ -273,6 +288,14 @@ async Task<int> RunGraphBuildingAsync()
         ["score"] = Math.Round(score, 2)
     };
     Console.WriteLine(summary.ToJsonString(new JsonSerializerOptions { WriteIndented = false }));
+    if (failLoud && notWorse < episodeCount)
+    {
+        Console.Error.WriteLine(string.Create(
+            CultureInfo.InvariantCulture,
+            $"FAIL-LOUD: {episodeCount - notWorse} episode(s) were judged worse than the baseline."));
+        return 1;
+    }
+
     return 0;
 }
 
@@ -363,6 +386,20 @@ async Task<int> RunRetrievalQaAsync()
         ["distractor_leak"] = leakDetected
     };
     Console.WriteLine(summary.ToJsonString(new JsonSerializerOptions { WriteIndented = false }));
+    if (failLoud && leakDetected)
+    {
+        Console.Error.WriteLine("FAIL-LOUD: the distractor question was judged correct.");
+        return 1;
+    }
+
+    if (failLoud && passed < minimumQaCorrect)
+    {
+        Console.Error.WriteLine(string.Create(
+            CultureInfo.InvariantCulture,
+            $"FAIL-LOUD: retrieval-QA passed {passed}/{total}, below required minimum {minimumQaCorrect}."));
+        return 1;
+    }
+
     return 0;
 }
 
@@ -483,6 +520,19 @@ static int GetEnvironmentInt(string name, int fallback)
     return int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) && parsed > 0
         ? parsed
         : throw new InvalidOperationException($"{name} must be a positive integer.");
+}
+
+static bool GetEnvironmentBool(string name, bool fallback)
+{
+    var value = Environment.GetEnvironmentVariable(name);
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        return fallback;
+    }
+
+    return string.Equals(value, "1", StringComparison.Ordinal)
+        || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
 }
 
 internal readonly record struct EpisodeInput(

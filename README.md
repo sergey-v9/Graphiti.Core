@@ -520,6 +520,12 @@ cleans up the graph elements only it produced (data still referenced by other ep
   dotnet run --project samples/Graphiti.Eval -- --qa  # retrieval QA
   ```
 
+  Set `GRAPHITI_EVAL_FAIL_LOUD=1` when running the eval as a CI canary. In that mode, graph-building
+  returns nonzero if any episode is judged worse than the baseline, and retrieval-QA returns nonzero
+  on a distractor leak or if it falls below `GRAPHITI_EVAL_MIN_QA_CORRECT` (default `3`). CI can point
+  `GRAPHITI_EVAL_BASELINE_PATH` at `samples/Graphiti.Eval/baselines/baseline_graph_results.json` and
+  set `GRAPHITI_EVAL_REQUIRE_BASELINE=1` to avoid bootstrapping a same-run baseline.
+
 To run the full live-provider validation loop (restore, build, OpenAI integration tests, then the
 OpenAI sample) in one command — it also loads a local, gitignored `.env` for `OPENAI_API_KEY`:
 
@@ -527,6 +533,10 @@ OpenAI sample) in one command — it also loads a local, gitignored `.env` for `
 $env:OPENAI_API_KEY = "..."
 .\eng\Run-OpenAIProviderValidation.ps1
 ```
+
+The `.github/workflows/live-provider.yml` workflow runs that live-provider loop plus fail-loud evals
+on `workflow_dispatch` and a weekly schedule. It intentionally lives outside normal PR CI and fails if
+the `OPENAI_API_KEY` secret is not configured.
 
 ## Building & verifying
 

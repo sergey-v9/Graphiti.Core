@@ -1,0 +1,942 @@
+[
+  {
+    "episode": {
+      "source": "message",
+      "source_description": "chat transcript",
+      "content": "User: My name is Maya Patel. I manage the Atlas migration project at Nimbus Health.",
+      "valid_at": "2026-01-10T09:00:00Z",
+      "entity_edges": [
+        "019ec340-c817-7168-8131-ea520f1ff9ca",
+        "019ec340-c817-7b60-bc93-2ca22a7ab936"
+      ],
+      "episode_metadata": null,
+      "uuid": "019ec340-b240-7970-93d6-214a5607c742",
+      "name": "Intro",
+      "group_id": "eval-atlas",
+      "labels": [],
+      "created_at": "2026-06-13T23:10:57.5920695Z"
+    },
+    "episodic_edges": [
+      {
+        "uuid": "019ec340-cda3-7a7a-994e-993cef3843fd",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-b240-7970-93d6-214a5607c742",
+        "target_node_uuid": "019ec340-c181-75ed-b502-fb88624f7e9b",
+        "created_at": "2026-06-13T23:10:57.5920695Z"
+      },
+      {
+        "uuid": "019ec340-cda3-7644-b8cd-1a8212400b1a",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-b240-7970-93d6-214a5607c742",
+        "target_node_uuid": "019ec340-c182-7d4a-ad38-45df7b3403e4",
+        "created_at": "2026-06-13T23:10:57.5920695Z"
+      },
+      {
+        "uuid": "019ec340-cda3-72cc-be1b-5050d976cb09",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-b240-7970-93d6-214a5607c742",
+        "target_node_uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "created_at": "2026-06-13T23:10:57.5920695Z"
+      },
+      {
+        "uuid": "019ec340-cda3-75c3-9f2f-33ba715843a7",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-b240-7970-93d6-214a5607c742",
+        "target_node_uuid": "019ec340-c182-7992-ab49-08a1ba5535c2",
+        "created_at": "2026-06-13T23:10:57.5920695Z"
+      }
+    ],
+    "nodes": [
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel manages the Atlas migration project at Nimbus Health.",
+        "attributes": {},
+        "uuid": "019ec340-c181-75ed-b502-fb88624f7e9b",
+        "name": "User",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.5063753Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel manages the Atlas migration project\nMaya Patel works at Nimbus Health",
+        "attributes": {},
+        "uuid": "019ec340-c182-7d4a-ad38-45df7b3403e4",
+        "name": "Maya Patel",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.506886Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel manages the Atlas migration project",
+        "attributes": {},
+        "uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "name": "Atlas migration project",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.5068963Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel works at Nimbus Health",
+        "attributes": {},
+        "uuid": "019ec340-c182-7992-ab49-08a1ba5535c2",
+        "name": "Nimbus Health",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.506899Z"
+      }
+    ],
+    "edges": [
+      {
+        "name": "MANAGES",
+        "fact": "Maya Patel manages the Atlas migration project",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec340-b240-7970-93d6-214a5607c742"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-01-10T09:00:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:00:00Z",
+        "attributes": {},
+        "uuid": "019ec340-c817-7168-8131-ea520f1ff9ca",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-c182-7d4a-ad38-45df7b3403e4",
+        "target_node_uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "created_at": "2026-06-13T23:10:57.5920695Z"
+      },
+      {
+        "name": "WORKS_AT",
+        "fact": "Maya Patel works at Nimbus Health",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec340-b240-7970-93d6-214a5607c742"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-01-10T09:00:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:00:00Z",
+        "attributes": {},
+        "uuid": "019ec340-c817-7b60-bc93-2ca22a7ab936",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-c182-7d4a-ad38-45df7b3403e4",
+        "target_node_uuid": "019ec340-c182-7992-ab49-08a1ba5535c2",
+        "created_at": "2026-06-13T23:10:57.5920695Z"
+      }
+    ],
+    "communities": [],
+    "community_edges": []
+  },
+  {
+    "episode": {
+      "source": "message",
+      "source_description": "chat transcript",
+      "content": "User: Leo Chen from Operations is the deployment owner for Atlas. The first rollout window is March 15, 2026.",
+      "valid_at": "2026-01-10T09:05:00Z",
+      "entity_edges": [
+        "019ec340-e723-78f7-bb1e-d85df3e50ff3",
+        "019ec340-e723-7d9d-becb-178d1acb443f"
+      ],
+      "episode_metadata": null,
+      "uuid": "019ec340-cf90-7446-85a3-c598de2b7d2b",
+      "name": "Atlas owner",
+      "group_id": "eval-atlas",
+      "labels": [],
+      "created_at": "2026-06-13T23:11:05.1034701Z"
+    },
+    "episodic_edges": [
+      {
+        "uuid": "019ec340-eabd-756c-a854-79ac150f91ca",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-cf90-7446-85a3-c598de2b7d2b",
+        "target_node_uuid": "019ec340-c181-75ed-b502-fb88624f7e9b",
+        "created_at": "2026-06-13T23:11:05.1034701Z"
+      },
+      {
+        "uuid": "019ec340-eabd-745b-8127-619bce9549c0",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-cf90-7446-85a3-c598de2b7d2b",
+        "target_node_uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "created_at": "2026-06-13T23:11:05.1034701Z"
+      },
+      {
+        "uuid": "019ec340-eabd-71f1-ba58-bf3fe152ad09",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-cf90-7446-85a3-c598de2b7d2b",
+        "target_node_uuid": "019ec340-da9c-7494-b734-186f61d84e46",
+        "created_at": "2026-06-13T23:11:05.1034701Z"
+      },
+      {
+        "uuid": "019ec340-eabd-754d-a427-6f77085e7398",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-cf90-7446-85a3-c598de2b7d2b",
+        "target_node_uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "created_at": "2026-06-13T23:11:05.1034701Z"
+      }
+    ],
+    "nodes": [
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel manages the Atlas migration project at Nimbus Health.",
+        "attributes": {},
+        "uuid": "019ec340-c181-75ed-b502-fb88624f7e9b",
+        "name": "User",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.5063753Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Leo Chen is from Operations\nLeo Chen is the deployment owner for Atlas",
+        "attributes": {},
+        "uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "name": "Leo Chen",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:07.9325637Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Leo Chen is from Operations",
+        "attributes": {},
+        "uuid": "019ec340-da9c-7494-b734-186f61d84e46",
+        "name": "Operations",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:07.9325647Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel manages the Atlas migration project\nLeo Chen is the deployment owner for Atlas",
+        "attributes": {},
+        "uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "name": "Atlas migration project",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.5068963Z"
+      }
+    ],
+    "edges": [
+      {
+        "name": "WORKS_IN",
+        "fact": "Leo Chen is from Operations",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec340-cf90-7446-85a3-c598de2b7d2b"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-01-10T09:05:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:05:00Z",
+        "attributes": {},
+        "uuid": "019ec340-e723-78f7-bb1e-d85df3e50ff3",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "target_node_uuid": "019ec340-da9c-7494-b734-186f61d84e46",
+        "created_at": "2026-06-13T23:11:05.1034701Z"
+      },
+      {
+        "name": "IS_DEPLOYMENT_OWNER_OF",
+        "fact": "Leo Chen is the deployment owner for Atlas",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec340-cf90-7446-85a3-c598de2b7d2b"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-01-10T09:05:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:05:00Z",
+        "attributes": {},
+        "uuid": "019ec340-e723-7d9d-becb-178d1acb443f",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "target_node_uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "created_at": "2026-06-13T23:11:05.1034701Z"
+      }
+    ],
+    "communities": [],
+    "community_edges": []
+  },
+  {
+    "episode": {
+      "source": "message",
+      "source_description": "chat transcript",
+      "content": "User: Change of plan: the Atlas rollout moved from March 15, 2026 to March 29, 2026 because QA found authentication issues.",
+      "valid_at": "2026-01-10T09:10:00Z",
+      "entity_edges": [],
+      "episode_metadata": null,
+      "uuid": "019ec340-ec47-74a1-9f25-4888eaa95a4e",
+      "name": "Rollout change",
+      "group_id": "eval-atlas",
+      "labels": [],
+      "created_at": "2026-06-13T23:11:12.4547418Z"
+    },
+    "episodic_edges": [
+      {
+        "uuid": "019ec340-f5bf-7863-86ab-1979d373f68e",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-ec47-74a1-9f25-4888eaa95a4e",
+        "target_node_uuid": "019ec340-c181-75ed-b502-fb88624f7e9b",
+        "created_at": "2026-06-13T23:11:12.4547418Z"
+      }
+    ],
+    "nodes": [
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel manages the Atlas migration project at Nimbus Health.",
+        "attributes": {},
+        "uuid": "019ec340-c181-75ed-b502-fb88624f7e9b",
+        "name": "User",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.5063753Z"
+      }
+    ],
+    "edges": [],
+    "communities": [],
+    "community_edges": []
+  },
+  {
+    "episode": {
+      "source": "json",
+      "source_description": "project status JSON",
+      "content": "{\n  \u0022project\u0022: \u0022Atlas migration\u0022,\n  \u0022company\u0022: \u0022Nimbus Health\u0022,\n  \u0022status\u0022: \u0022blocked\u0022,\n  \u0022blocker\u0022: \u0022authentication regression\u0022,\n  \u0022owner\u0022: \u0022Leo Chen\u0022,\n  \u0022review_date\u0022: \u00222026-03-22\u0022\n}",
+      "valid_at": "2026-01-10T09:15:00Z",
+      "entity_edges": [
+        "019ec341-0de1-7d78-a2bf-760f6acc41cc",
+        "019ec341-0de1-7433-bf73-d37244bd3a6f",
+        "019ec341-0de1-7a1a-a627-290dec051ba3",
+        "019ec340-c817-7168-8131-ea520f1ff9ca",
+        "019ec340-e723-7d9d-becb-178d1acb443f"
+      ],
+      "episode_metadata": null,
+      "uuid": "019ec340-f66f-7dbf-9235-8b7aaf2ca5e8",
+      "name": "Project status",
+      "group_id": "eval-atlas",
+      "labels": [],
+      "created_at": "2026-06-13T23:11:15.0553081Z"
+    },
+    "episodic_edges": [
+      {
+        "uuid": "019ec341-142a-7f2c-8d14-d8639c5c5a3c",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-f66f-7dbf-9235-8b7aaf2ca5e8",
+        "target_node_uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "created_at": "2026-06-13T23:11:15.0553081Z"
+      },
+      {
+        "uuid": "019ec341-142a-706b-9cbc-e470f203623c",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-f66f-7dbf-9235-8b7aaf2ca5e8",
+        "target_node_uuid": "019ec340-c182-7992-ab49-08a1ba5535c2",
+        "created_at": "2026-06-13T23:11:15.0553081Z"
+      },
+      {
+        "uuid": "019ec341-142a-70c0-885d-129f204ebe65",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-f66f-7dbf-9235-8b7aaf2ca5e8",
+        "target_node_uuid": "019ec341-0266-7458-9f80-ac76f5dd635b",
+        "created_at": "2026-06-13T23:11:15.0553081Z"
+      },
+      {
+        "uuid": "019ec341-142a-7536-af24-73d16830ab70",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-f66f-7dbf-9235-8b7aaf2ca5e8",
+        "target_node_uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "created_at": "2026-06-13T23:11:15.0553081Z"
+      }
+    ],
+    "nodes": [
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel manages the Atlas migration project\nLeo Chen is the deployment owner for Atlas\nThe project Atlas migration belongs to the company Nimbus Health\nThe project Atlas migration is blocked by the authentication regression\nThe project Atlas migration is owned by Leo Chen",
+        "attributes": {},
+        "uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "name": "Atlas migration project",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.5068963Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel works at Nimbus Health\nThe project Atlas migration belongs to the company Nimbus Health",
+        "attributes": {},
+        "uuid": "019ec340-c182-7992-ab49-08a1ba5535c2",
+        "name": "Nimbus Health",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.506899Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "The project Atlas migration is blocked by the authentication regression",
+        "attributes": {},
+        "uuid": "019ec341-0266-7458-9f80-ac76f5dd635b",
+        "name": "authentication regression",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:18.1188569Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Leo Chen is from Operations\nLeo Chen is the deployment owner for Atlas\nThe project Atlas migration is owned by Leo Chen",
+        "attributes": {},
+        "uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "name": "Leo Chen",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:07.9325637Z"
+      }
+    ],
+    "edges": [
+      {
+        "name": "BELONGS_TO",
+        "fact": "The project Atlas migration belongs to the company Nimbus Health",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec340-f66f-7dbf-9235-8b7aaf2ca5e8"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-01-10T09:15:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:15:00Z",
+        "attributes": {},
+        "uuid": "019ec341-0de1-7d78-a2bf-760f6acc41cc",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "target_node_uuid": "019ec340-c182-7992-ab49-08a1ba5535c2",
+        "created_at": "2026-06-13T23:11:15.0553081Z"
+      },
+      {
+        "name": "IS_BLOCKED_BY",
+        "fact": "The project Atlas migration is blocked by the authentication regression",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec340-f66f-7dbf-9235-8b7aaf2ca5e8"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-01-10T09:15:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:15:00Z",
+        "attributes": {},
+        "uuid": "019ec341-0de1-7433-bf73-d37244bd3a6f",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "target_node_uuid": "019ec341-0266-7458-9f80-ac76f5dd635b",
+        "created_at": "2026-06-13T23:11:15.0553081Z"
+      },
+      {
+        "name": "OWNED_BY",
+        "fact": "The project Atlas migration is owned by Leo Chen",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec340-f66f-7dbf-9235-8b7aaf2ca5e8"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-01-10T09:15:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:15:00Z",
+        "attributes": {},
+        "uuid": "019ec341-0de1-7a1a-a627-290dec051ba3",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "target_node_uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "created_at": "2026-06-13T23:11:15.0553081Z"
+      },
+      {
+        "name": "MANAGES",
+        "fact": "Maya Patel manages the Atlas migration project",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec340-b240-7970-93d6-214a5607c742"
+        ],
+        "expired_at": "2026-06-13T23:11:15.0553081Z",
+        "valid_at": "2026-01-10T09:00:00Z",
+        "invalid_at": "2026-01-10T09:15:00Z",
+        "reference_time": "2026-01-10T09:00:00Z",
+        "attributes": {},
+        "uuid": "019ec340-c817-7168-8131-ea520f1ff9ca",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-c182-7d4a-ad38-45df7b3403e4",
+        "target_node_uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "created_at": "2026-06-13T23:10:57.5920695Z"
+      },
+      {
+        "name": "IS_DEPLOYMENT_OWNER_OF",
+        "fact": "Leo Chen is the deployment owner for Atlas",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec340-cf90-7446-85a3-c598de2b7d2b"
+        ],
+        "expired_at": "2026-06-13T23:11:15.0553081Z",
+        "valid_at": "2026-01-10T09:05:00Z",
+        "invalid_at": "2026-01-10T09:15:00Z",
+        "reference_time": "2026-01-10T09:05:00Z",
+        "attributes": {},
+        "uuid": "019ec340-e723-7d9d-becb-178d1acb443f",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "target_node_uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "created_at": "2026-06-13T23:11:05.1034701Z"
+      }
+    ],
+    "communities": [],
+    "community_edges": []
+  },
+  {
+    "episode": {
+      "source": "message",
+      "source_description": "chat transcript",
+      "content": "User: QA cleared the Atlas authentication regression on March 22, 2026. Maya asked Leo to prepare the March 29 launch checklist.",
+      "valid_at": "2026-01-10T09:20:00Z",
+      "entity_edges": [
+        "019ec341-33f5-75b4-87b2-8bb73aef9e31",
+        "019ec341-0de1-7433-bf73-d37244bd3a6f",
+        "019ec341-33f5-72a8-9b92-01cf428b192c"
+      ],
+      "episode_metadata": null,
+      "uuid": "019ec341-15d6-72de-8f5e-9ecc1921fec0",
+      "name": "QA cleared",
+      "group_id": "eval-atlas",
+      "labels": [],
+      "created_at": "2026-06-13T23:11:23.0940599Z"
+    },
+    "episodic_edges": [
+      {
+        "uuid": "019ec341-3d2b-761b-9663-c9f16a2c246f",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-15d6-72de-8f5e-9ecc1921fec0",
+        "target_node_uuid": "019ec340-c181-75ed-b502-fb88624f7e9b",
+        "created_at": "2026-06-13T23:11:23.0940599Z"
+      },
+      {
+        "uuid": "019ec341-3d2b-77bc-86f7-dd6c114c4d1b",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-15d6-72de-8f5e-9ecc1921fec0",
+        "target_node_uuid": "019ec341-27a7-79d9-a66d-b034b8b9b618",
+        "created_at": "2026-06-13T23:11:23.0940599Z"
+      },
+      {
+        "uuid": "019ec341-3d2b-7d42-a8dd-744b574b6128",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-15d6-72de-8f5e-9ecc1921fec0",
+        "target_node_uuid": "019ec341-0266-7458-9f80-ac76f5dd635b",
+        "created_at": "2026-06-13T23:11:23.0940599Z"
+      },
+      {
+        "uuid": "019ec341-3d2b-7de3-8b46-610a97fe369c",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-15d6-72de-8f5e-9ecc1921fec0",
+        "target_node_uuid": "019ec340-c182-7d4a-ad38-45df7b3403e4",
+        "created_at": "2026-06-13T23:11:23.0940599Z"
+      },
+      {
+        "uuid": "019ec341-3d2b-737c-8f7c-9b03e87107a9",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-15d6-72de-8f5e-9ecc1921fec0",
+        "target_node_uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "created_at": "2026-06-13T23:11:23.0940599Z"
+      },
+      {
+        "uuid": "019ec341-3d2b-7eea-b462-170312105915",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-15d6-72de-8f5e-9ecc1921fec0",
+        "target_node_uuid": "019ec341-27a7-7ced-8c58-24071d85145c",
+        "created_at": "2026-06-13T23:11:23.0940599Z"
+      }
+    ],
+    "nodes": [
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel manages the Atlas migration project at Nimbus Health.",
+        "attributes": {},
+        "uuid": "019ec340-c181-75ed-b502-fb88624f7e9b",
+        "name": "User",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.5063753Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "QA cleared the Atlas authentication regression",
+        "attributes": {},
+        "uuid": "019ec341-27a7-79d9-a66d-b034b8b9b618",
+        "name": "QA",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:27.6556935Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "The project Atlas migration is blocked by the authentication regression\nQA cleared the Atlas authentication regression",
+        "attributes": {},
+        "uuid": "019ec341-0266-7458-9f80-ac76f5dd635b",
+        "name": "authentication regression",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:18.1188569Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel manages the Atlas migration project\nMaya Patel works at Nimbus Health\nMaya asked Leo to prepare the March 29 launch checklist",
+        "attributes": {},
+        "uuid": "019ec340-c182-7d4a-ad38-45df7b3403e4",
+        "name": "Maya Patel",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.506886Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Leo Chen is from Operations\nLeo Chen is the deployment owner for Atlas\nThe project Atlas migration is owned by Leo Chen\nMaya asked Leo to prepare the March 29 launch checklist",
+        "attributes": {},
+        "uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "name": "Leo Chen",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:07.9325637Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "The March 29 launch checklist for the Atlas migration project at Nimbus Health is being prepared by Leo Chen from Operations following QA clearance of the Atlas authentication regression on March 22, 2026. The rollout was rescheduled from March 15, 2026 to March 29, 2026 due to authentication issues found by QA.",
+        "attributes": {},
+        "uuid": "019ec341-27a7-7ced-8c58-24071d85145c",
+        "name": "March 29 launch checklist",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:27.6556969Z"
+      }
+    ],
+    "edges": [
+      {
+        "name": "CLEARED",
+        "fact": "QA cleared the Atlas authentication regression",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec341-15d6-72de-8f5e-9ecc1921fec0"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-03-22T00:00:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:20:00Z",
+        "attributes": {},
+        "uuid": "019ec341-33f5-75b4-87b2-8bb73aef9e31",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-27a7-79d9-a66d-b034b8b9b618",
+        "target_node_uuid": "019ec341-0266-7458-9f80-ac76f5dd635b",
+        "created_at": "2026-06-13T23:11:23.0940599Z"
+      },
+      {
+        "name": "IS_BLOCKED_BY",
+        "fact": "The project Atlas migration is blocked by the authentication regression",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec340-f66f-7dbf-9235-8b7aaf2ca5e8"
+        ],
+        "expired_at": "2026-06-13T23:11:23.0940599Z",
+        "valid_at": "2026-01-10T09:15:00Z",
+        "invalid_at": "2026-03-22T00:00:00Z",
+        "reference_time": "2026-01-10T09:15:00Z",
+        "attributes": {},
+        "uuid": "019ec341-0de1-7433-bf73-d37244bd3a6f",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-c182-7de1-89fc-bf2226bfc2b3",
+        "target_node_uuid": "019ec341-0266-7458-9f80-ac76f5dd635b",
+        "created_at": "2026-06-13T23:11:15.0553081Z"
+      },
+      {
+        "name": "ASKED_TO_PREPARE",
+        "fact": "Maya asked Leo to prepare the March 29 launch checklist",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec341-15d6-72de-8f5e-9ecc1921fec0"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-01-10T09:20:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:20:00Z",
+        "attributes": {},
+        "uuid": "019ec341-33f5-72a8-9b92-01cf428b192c",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec340-c182-7d4a-ad38-45df7b3403e4",
+        "target_node_uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "created_at": "2026-06-13T23:11:23.0940599Z"
+      }
+    ],
+    "communities": [],
+    "community_edges": []
+  },
+  {
+    "episode": {
+      "source": "message",
+      "source_description": "assistant memory note",
+      "content": "Assistant: For future Atlas questions, remember Maya Patel, Leo Chen, Nimbus Health, the March 29 rollout, and that QA cleared the auth issue.",
+      "valid_at": "2026-01-10T09:25:00Z",
+      "entity_edges": [
+        "019ec341-6344-7f7c-80b9-716ee21f6874",
+        "019ec341-6344-713d-9310-f3b36a05adf5",
+        "019ec341-6344-73ff-a0c9-d7d719e31cbd",
+        "019ec341-6345-71e8-ac0e-16e1fa4e84b5",
+        "019ec341-6345-7ddf-9ec5-30443dfd36bd"
+      ],
+      "episode_metadata": null,
+      "uuid": "019ec341-3eee-70ff-b7c3-3ceab41a8fe7",
+      "name": "Memory check",
+      "group_id": "eval-atlas",
+      "labels": [],
+      "created_at": "2026-06-13T23:11:33.6136595Z"
+    },
+    "episodic_edges": [
+      {
+        "uuid": "019ec341-6d17-706c-a2b5-4da324e49e71",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-3eee-70ff-b7c3-3ceab41a8fe7",
+        "target_node_uuid": "019ec341-5001-705d-bab8-bf948ef08998",
+        "created_at": "2026-06-13T23:11:33.6136595Z"
+      },
+      {
+        "uuid": "019ec341-6d17-7bcd-859e-5f18deaba0cd",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-3eee-70ff-b7c3-3ceab41a8fe7",
+        "target_node_uuid": "019ec340-c182-7d4a-ad38-45df7b3403e4",
+        "created_at": "2026-06-13T23:11:33.6136595Z"
+      },
+      {
+        "uuid": "019ec341-6d17-78d8-b45b-4f6c41bc8646",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-3eee-70ff-b7c3-3ceab41a8fe7",
+        "target_node_uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "created_at": "2026-06-13T23:11:33.6136595Z"
+      },
+      {
+        "uuid": "019ec341-6d17-7243-a220-91d582f92641",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-3eee-70ff-b7c3-3ceab41a8fe7",
+        "target_node_uuid": "019ec340-c182-7992-ab49-08a1ba5535c2",
+        "created_at": "2026-06-13T23:11:33.6136595Z"
+      },
+      {
+        "uuid": "019ec341-6d17-71d9-a7c2-fb488a41fcd1",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-3eee-70ff-b7c3-3ceab41a8fe7",
+        "target_node_uuid": "019ec341-27a7-7ced-8c58-24071d85145c",
+        "created_at": "2026-06-13T23:11:33.6136595Z"
+      },
+      {
+        "uuid": "019ec341-6d17-7298-8560-c01a101a4990",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-3eee-70ff-b7c3-3ceab41a8fe7",
+        "target_node_uuid": "019ec341-27a7-79d9-a66d-b034b8b9b618",
+        "created_at": "2026-06-13T23:11:33.6136595Z"
+      }
+    ],
+    "nodes": [
+      {
+        "name_embedding": null,
+        "summary": "Assistant remembers Maya Patel for future Atlas questions\nAssistant remembers Leo Chen for future Atlas questions\nAssistant remembers Nimbus Health for future Atlas questions\nAssistant remembers the March 29, 2026 rollout for future Atlas questions\nAssistant remembers that QA cleared the authentication issue for future Atlas questions",
+        "attributes": {},
+        "uuid": "019ec341-5001-705d-bab8-bf948ef08998",
+        "name": "Assistant",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:37.9853491Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel manages the Atlas migration project\nMaya Patel works at Nimbus Health\nMaya asked Leo to prepare the March 29 launch checklist\nAssistant remembers Maya Patel for future Atlas questions",
+        "attributes": {},
+        "uuid": "019ec340-c182-7d4a-ad38-45df7b3403e4",
+        "name": "Maya Patel",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.506886Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Leo Chen is from Operations\nLeo Chen is the deployment owner for Atlas\nThe project Atlas migration is owned by Leo Chen\nMaya asked Leo to prepare the March 29 launch checklist\nAssistant remembers Leo Chen for future Atlas questions",
+        "attributes": {},
+        "uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "name": "Leo Chen",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:07.9325637Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "Maya Patel works at Nimbus Health\nThe project Atlas migration belongs to the company Nimbus Health\nAssistant remembers Nimbus Health for future Atlas questions",
+        "attributes": {},
+        "uuid": "019ec340-c182-7992-ab49-08a1ba5535c2",
+        "name": "Nimbus Health",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:01.506899Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "The March 29 launch checklist for the Atlas migration project at Nimbus Health is being prepared by Leo Chen from Operations following QA clearance of the Atlas authentication regression on March 22, 2026. The rollout was rescheduled from March 15, 2026 to March 29, 2026 due to authentication issues found by QA.\nAssistant remembers the March 29, 2026 rollout for future Atlas questions",
+        "attributes": {},
+        "uuid": "019ec341-27a7-7ced-8c58-24071d85145c",
+        "name": "March 29 launch checklist",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:27.6556969Z"
+      },
+      {
+        "name_embedding": null,
+        "summary": "QA cleared the Atlas authentication regression\nAssistant remembers that QA cleared the authentication issue for future Atlas questions",
+        "attributes": {},
+        "uuid": "019ec341-27a7-79d9-a66d-b034b8b9b618",
+        "name": "QA",
+        "group_id": "eval-atlas",
+        "labels": [
+          "Entity"
+        ],
+        "created_at": "2026-06-13T23:11:27.6556935Z"
+      }
+    ],
+    "edges": [
+      {
+        "name": "REMEMBERS",
+        "fact": "Assistant remembers Maya Patel for future Atlas questions",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec341-3eee-70ff-b7c3-3ceab41a8fe7"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-01-10T09:25:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:25:00Z",
+        "attributes": {},
+        "uuid": "019ec341-6344-7f7c-80b9-716ee21f6874",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-5001-705d-bab8-bf948ef08998",
+        "target_node_uuid": "019ec340-c182-7d4a-ad38-45df7b3403e4",
+        "created_at": "2026-06-13T23:11:33.6136595Z"
+      },
+      {
+        "name": "REMEMBERS",
+        "fact": "Assistant remembers Leo Chen for future Atlas questions",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec341-3eee-70ff-b7c3-3ceab41a8fe7"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-01-10T09:25:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:25:00Z",
+        "attributes": {},
+        "uuid": "019ec341-6344-713d-9310-f3b36a05adf5",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-5001-705d-bab8-bf948ef08998",
+        "target_node_uuid": "019ec340-da9c-7c84-a8d8-670df906da53",
+        "created_at": "2026-06-13T23:11:33.6136595Z"
+      },
+      {
+        "name": "REMEMBERS",
+        "fact": "Assistant remembers Nimbus Health for future Atlas questions",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec341-3eee-70ff-b7c3-3ceab41a8fe7"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-01-10T09:25:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:25:00Z",
+        "attributes": {},
+        "uuid": "019ec341-6344-73ff-a0c9-d7d719e31cbd",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-5001-705d-bab8-bf948ef08998",
+        "target_node_uuid": "019ec340-c182-7992-ab49-08a1ba5535c2",
+        "created_at": "2026-06-13T23:11:33.6136595Z"
+      },
+      {
+        "name": "REMEMBERS",
+        "fact": "Assistant remembers the March 29, 2026 rollout for future Atlas questions",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec341-3eee-70ff-b7c3-3ceab41a8fe7"
+        ],
+        "expired_at": null,
+        "valid_at": "2026-01-10T09:25:00Z",
+        "invalid_at": null,
+        "reference_time": "2026-01-10T09:25:00Z",
+        "attributes": {},
+        "uuid": "019ec341-6345-71e8-ac0e-16e1fa4e84b5",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-5001-705d-bab8-bf948ef08998",
+        "target_node_uuid": "019ec341-27a7-7ced-8c58-24071d85145c",
+        "created_at": "2026-06-13T23:11:33.6136595Z"
+      },
+      {
+        "name": "REMEMBERS",
+        "fact": "Assistant remembers that QA cleared the authentication issue for future Atlas questions",
+        "fact_embedding": null,
+        "episodes": [
+          "019ec341-3eee-70ff-b7c3-3ceab41a8fe7"
+        ],
+        "expired_at": "2026-06-13T23:11:33.6136595Z",
+        "valid_at": "2026-01-10T09:25:00Z",
+        "invalid_at": "2026-03-22T00:00:00Z",
+        "reference_time": "2026-01-10T09:25:00Z",
+        "attributes": {},
+        "uuid": "019ec341-6345-7ddf-9ec5-30443dfd36bd",
+        "group_id": "eval-atlas",
+        "source_node_uuid": "019ec341-5001-705d-bab8-bf948ef08998",
+        "target_node_uuid": "019ec341-27a7-79d9-a66d-b034b8b9b618",
+        "created_at": "2026-06-13T23:11:33.6136595Z"
+      }
+    ],
+    "communities": [],
+    "community_edges": []
+  }
+]

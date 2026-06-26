@@ -18,8 +18,8 @@ roadmap orders them. Pick the lowest-numbered plan with unchecked actionable ite
 item as a slice (implement → verify → commit → check it off and update `parity.md` when parity state
 changes), then stop or pick the next. Phases 1–3 are complete, plan-05 A–E are complete, and plan 06
 has merged the LadybugDB driver back into `Graphiti.Core`, and plan 07 has completed the linux-x64
-LadybugDB proof. **The next roadmap priority is G2 — make the live-provider run and eval a fail-loud
-periodic check.** Only release
+LadybugDB proof, and G2 has added the fail-loud live-provider/eval workflow. **The next roadmap
+priority is the remaining G3 benchmark-first performance/allocation work.** Only release
 versioning/publishing remains user-gated; remaining release-infrastructure work is decision-gated or
 external-feed-gated (version cadence, publish path, metapackage shape, and future Ladybug package
 publication/replacement). When the open plan items are blocked on those decisions,
