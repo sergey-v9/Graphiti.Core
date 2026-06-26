@@ -127,7 +127,11 @@ internal static partial class SearchUtilities
         }
 
         var comparer = StableScorePriorityComparer.Instance;
-        var queue = new PriorityQueue<ScoredCandidate<T>, StableScorePriority>(comparer);
+        var queue = candidates.TryGetNonEnumeratedCount(out var candidateCount)
+            ? new PriorityQueue<ScoredCandidate<T>, StableScorePriority>(
+                Math.Min(limit, candidateCount),
+                comparer)
+            : new PriorityQueue<ScoredCandidate<T>, StableScorePriority>(comparer);
         var index = 0;
         foreach (var candidate in candidates)
         {
@@ -198,7 +202,9 @@ internal static partial class SearchUtilities
         }
 
         var comparer = StableScorePriorityComparer.Instance;
-        var queue = new PriorityQueue<ScoredCandidate<T>, StableScorePriority>(comparer);
+        var queue = new PriorityQueue<ScoredCandidate<T>, StableScorePriority>(
+            Math.Min(limit, candidates.Count),
+            comparer);
         var stableIndex = 0;
         for (var i = 0; i < candidates.Count; i++)
         {

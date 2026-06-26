@@ -181,6 +181,11 @@ G3 bulk throttling list-copy slice is complete (2026-06-26): private throttling 
 allocation change is small and recorded in
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-bulk-throttling-list-win-x64.md`.
 
+G3 RRF queue-capacity slice is complete (2026-06-26): `TopByScoreCore` now pre-sizes its bounded
+priority queue when candidate count is known. Local `SearchBenchmarks.Rrf_*` ShortRun before/after
+showed allocation drops across all six RRF cases; see
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-search-rrf-queue-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
@@ -213,7 +218,7 @@ added. This section holds the single authoritative live count and the standing v
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
 **Current verifier checkpoint (2026-06-26):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1025` passed, `3` skipped, `1028` total. The verifier
+Packages credentials for the Ladybug feed — `1026` passed, `3` skipped, `1029` total. The verifier
 covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
 shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
 LadybugDB through the packed package. The three skips are the env-gated
