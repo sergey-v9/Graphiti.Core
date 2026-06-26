@@ -31,13 +31,13 @@ public sealed partial class Graphiti
         ThrottledWork.ForEachAsync(items, operation, GetMaxDegreeOfParallelism(), cancellationToken);
 
     private Task<TResult[]> SelectThrottledAsync<TSource, TResult>(
-        List<TSource> items,
+        IReadOnlyList<TSource> items,
         Func<TSource, CancellationToken, Task<TResult>> operation,
         CancellationToken cancellationToken) =>
         ThrottledWork.SelectAsync(items, operation, GetMaxDegreeOfParallelism(), cancellationToken);
 
     private static Task<TResult[]> SelectWithDefaultThrottlingAsync<TSource, TResult>(
-        List<TSource> items,
+        IReadOnlyList<TSource> items,
         Func<TSource, CancellationToken, Task<TResult>> operation,
         CancellationToken cancellationToken) =>
         ThrottledWork.SelectAsync(items, operation, GraphitiHelpers.DefaultSemaphoreLimit, cancellationToken);

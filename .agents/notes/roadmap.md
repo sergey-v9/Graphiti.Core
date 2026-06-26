@@ -184,9 +184,10 @@ user-gated items.
   six-episode ingestion, true-bulk six-episode ingestion, and bulk-ingest-then-search with
   `[MemoryDiagnoser]`, plus a committed win-x64 ShortRun baseline. A measured BM25 allocation win also
   landed 2026-06-26 using `SearchBenchmarks.Bm25_Rank` before/after, followed by a measured uncached LLM
-  cache-key allocation win using `IngestionBenchmarks` before/after. Remaining work: profile the hot paths
-  (InMemory O(n) full-scan cosine, RRF/MMR merge, prompt serialization, bulk edge dedupe) and land only
-  measured, parity-safe wins (BenchmarkDotNet before/after). This program also *gates* the deferred
+  cache-key allocation win and a small bulk throttling list-copy cleanup using `IngestionBenchmarks`
+  before/after. Remaining work: profile the hot paths (InMemory O(n) full-scan cosine, RRF/MMR merge,
+  prompt serialization, bulk edge dedupe) and land only measured, parity-safe wins (BenchmarkDotNet
+  before/after). This program also *gates* the deferred
   opt-in HNSW vector tier (G-future) — only pursue HNSW if the bench shows full-scan cosine is the
   bottleneck at the target graph size, and keep exact cosine the default.
 - **G4 — Observability + consumer DX (DONE 2026-06-26).** `GraphitiTelemetry` exposes a public `Meter`

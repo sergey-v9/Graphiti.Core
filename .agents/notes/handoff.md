@@ -176,6 +176,11 @@ serialization and SHA-256 hashing when no response cache is configured. Local `I
 ShortRun before/after showed allocation drops across all four cases; see
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-uncached-llm-cachekey-win-x64.md`.
 
+G3 bulk throttling list-copy slice is complete (2026-06-26): private throttling helpers now accept
+`IReadOnlyList<T>`, removing two `AddEpisodeBulkAsync` `.ToList()` copies. The local before/after
+allocation change is small and recorded in
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-bulk-throttling-list-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

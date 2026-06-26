@@ -527,7 +527,7 @@ public sealed partial class Graphiti
         CancellationToken cancellationToken)
     {
         var firstPassResults = await SelectWithDefaultThrottlingAsync(
-            extractedEpisodes.ToList(),
+            extractedEpisodes,
             async (extraction, token) =>
             {
                 // Do NOT widen the candidate pool with the whole group. The bulk first pass resolves
@@ -838,7 +838,7 @@ public sealed partial class Graphiti
         }
 
         var resolutionResults = await SelectWithDefaultThrottlingAsync(
-            extractedEpisodes.ToList(),
+            extractedEpisodes,
             async (extraction, token) =>
             {
                 var nodes = uniqueNodesByEpisode[extraction.Episode.Uuid];
