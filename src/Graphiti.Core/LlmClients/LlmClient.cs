@@ -130,9 +130,9 @@ public abstract class LlmClient : ILlmClient, IDisposable
         try
         {
             var prepared = PrepareMessages(messages, responseModel, responseSchema, groupId, attributeExtraction);
-            var cacheKey = GetCacheKey(prepared, responseModel, responseSchema, resolvedMaxTokens, modelSize, promptName);
             if (Cache is not null)
             {
+                var cacheKey = GetCacheKey(prepared, responseModel, responseSchema, resolvedMaxTokens, modelSize, promptName);
                 var cachedOrCreated = await Cache.GetOrCreateAsync(
                     cacheKey,
                     async token =>

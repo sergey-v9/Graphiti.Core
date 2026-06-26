@@ -171,6 +171,11 @@ span-token visitor and materializes only matching query tokens. Local ShortRun b
 444.94 KB to 207.01 KB at 500 candidates; see
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-search-bm25-win-x64.md`.
 
+G3 uncached LLM cache-key slice is complete (2026-06-26): `LlmClient` skips cache-key JSON
+serialization and SHA-256 hashing when no response cache is configured. Local `IngestionBenchmarks`
+ShortRun before/after showed allocation drops across all four cases; see
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-uncached-llm-cachekey-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
