@@ -66,8 +66,8 @@ public class PackageReadinessTests
         Assert.Contains("xunit.v3", packageVersions);
         Assert.DoesNotContain("xunit", testPackageReferences);
         Assert.Contains("xunit.v3", testPackageReferences);
-        Assert.Equal("0.17.1-dev.1.1.g6f3dbed", packageVersionsById["LadybugDB"]);
-        Assert.Equal("0.17.1-dev.1.1.g6f3dbed", packageVersionsById["LadybugDB.Native"]);
+        Assert.Equal("0.17.1-dev.2.1.g53e5ab5", packageVersionsById["LadybugDB"]);
+        Assert.Equal("0.17.1-dev.2.1.g53e5ab5", packageVersionsById["LadybugDB.Native"]);
         Assert.Equal("3.0.3", packageVersionsById["SQLitePCLRaw.bundle_e_sqlite3"]);
     }
 
@@ -187,6 +187,10 @@ public class PackageReadinessTests
         Assert.Contains("./eng/Verify-GraphitiCore.ps1", workflow);
         Assert.Contains("NuGetPackageSourceCredentials_github_ladybug", workflow);
         Assert.Contains("packages: read", workflow);
+        Assert.Contains("linux-ladybug-smoke", workflow);
+        Assert.Contains("GRAPHITI_ENABLE_LINUX_LADYBUG_SMOKE", workflow);
+        Assert.Contains("GRAPHITI_RUN_LINUX_LADYBUG_SMOKE", workflow);
+        Assert.Contains("Category=LinuxLadybugSmoke", workflow);
         Assert.DoesNotContain("ladybug-local", workflow, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -88,13 +88,17 @@ Even InMemory-only consumers restore these native packages, although they do not
 runtime unless a Ladybug driver is constructed. The current pinned Ladybug package family is:
 
 ```text
-LadybugDB        0.17.1-dev.1.1.g6f3dbed
-LadybugDB.Native 0.17.1-dev.1.1.g6f3dbed
+LadybugDB        0.17.1-dev.2.1.g53e5ab5
+LadybugDB.Native 0.17.1-dev.2.1.g53e5ab5
 ```
 
 Those packages were published by the fork's `dev` branch workflow at
 `sergey-v9/ladybug-dotnet`; future binding repairs can be pushed there and consumed by bumping the
 central versions in [`Directory.Packages.props`](Directory.Packages.props).
+
+Graphiti Core validates the LadybugDB driver on win-x64 through the full verifier and on linux-x64
+through the gated `fts` + `vector` extension smoke. The LadybugDB native package family also ships
+linux-arm64 and macOS assets, but those RIDs are not Graphiti-validated yet.
 
 ## Quickstart
 

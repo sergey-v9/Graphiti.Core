@@ -5,8 +5,8 @@
 
   <ItemGroup>
     <PackageVersion Include="JsonSchema.Net" Version="9.2.1" />
-    <PackageVersion Include="LadybugDB" Version="0.17.1-dev.1.1.g6f3dbed" />
-    <PackageVersion Include="LadybugDB.Native" Version="0.17.1-dev.1.1.g6f3dbed" />
+    <PackageVersion Include="LadybugDB" Version="0.17.1-dev.2.1.g53e5ab5" />
+    <PackageVersion Include="LadybugDB.Native" Version="0.17.1-dev.2.1.g53e5ab5" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.6.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.6.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.6.0" />

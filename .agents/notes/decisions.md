@@ -149,7 +149,7 @@ no wire/prompt/cache/temporal behavior changed):
   version that Graphiti consumes by bumping the pin in `Directory.Packages.props`. This **supersedes**
   the old "do not push the ladybug repo remotely / keep changes local-only" rule.
   The LadybugDB package refs restore from the `sergey-v9/ladybug-dotnet` GitHub Packages feed,
-  currently pinned to `0.17.1-dev.1.1.g6f3dbed`; restores require source `github_ladybug`
+  currently pinned to `0.17.1-dev.2.1.g53e5ab5`; restores require source `github_ladybug`
   credentials with `read:packages` (CI uses `GITHUB_TOKEN` plus package Actions access; local runs use
   `NuGetPackageSourceCredentials_github_ladybug`). `OPENAI_API_KEY` is optional in CI, so live-provider
   tests skip by default unless the secret is present.

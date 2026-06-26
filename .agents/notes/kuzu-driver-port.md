@@ -9,7 +9,7 @@ package refs, `AddLadybugDbGraphDriver`, `LadybugDbOptions`, the factory, full-t
 construction, and Ladybug label-filter syntax. The driver-facing provider value is
 `GraphProvider.LadybugDb`; `GraphProvider.Kuzu` is an `[Obsolete]` compatibility alias that resolves
 through core DI/options. Graphiti pins the fork-published package family
-`0.17.1-dev.1.1.g6f3dbed` from `https://nuget.pkg.github.com/sergey-v9/index.json`; restores require a
+`0.17.1-dev.2.1.g53e5ab5` from `https://nuget.pkg.github.com/sergey-v9/index.json`; restores require a
 NuGet credential for source `github_ladybug` with `read:packages`.
 
 ## Native search adoption (deep-dive 2026-06-14)
@@ -41,7 +41,7 @@ a full `fts` (and ideally `vector`) `CREATE/QUERY` round-trip on linux-x64, sinc
 validated on win-x64 today; (2) optional WS-C first-class `FLOAT[N]` array binding would let us drop
 the inline `CAST($search_vector AS FLOAT[dim])`. The local binding has since advanced to `0.17.1` with
 a `LadybugDB.Extensions` package and the P0–P3 `feature/parity-extensions-2026-06` initiative;
-Graphiti now pins the fork-published `0.17.1-dev.1.1.g6f3dbed` package family (C API unchanged
+Graphiti now pins the fork-published `0.17.1-dev.2.1.g53e5ab5` package family (C API unchanged
 0.17.0→0.17.2).
 
 ## WS-1 binding and cross-platform audit (2026-06-14)
@@ -68,11 +68,33 @@ Graphiti FTS indexes are ignored because LadybugDB's `CREATE_FTS_INDEX` has no `
 and `LadybugRuntimeDriverTests.FileBackedDriverCanRebuildIndicesAfterReopenAndSearch` proves
 build-write-close-reopen-build-search on a file-backed database.
 
+## Plan 07 linux-x64 loader repair (2026-06-26)
+
+WSL2 Ubuntu-24.04 reproduced the Graphiti package-consumer failure against
+`0.17.1-dev.1.1.g6f3dbed`: `LOAD EXTENSION FTS` failed loading
+`~/.lbdb/extension/0.17.0/linux_amd64/fts/libfts.lbug_extension` with undefined symbol
+`_ZTIN4lbug7catalog12IndexAuxInfoE`. `nm -D` showed the symbol was exported by the package-copied
+`runtimes/linux-x64/native/liblbug.so`, and `LD_PRELOAD` of that exact file made the same Graphiti
+tests pass. Classification: a `ladybug-dotnet` loader gap, not a Graphiti query/RID bug and not a
+missing extension binary.
+
+Fix landed in `W:\code\ladybug\tools\csharp_api` commit `53e5ab5`: the native resolver now probes
+NuGet package runtime assets under `runtimes/<rid>/native` and loads them with
+`RTLD_NOW | RTLD_GLOBAL` before the fallback `NativeLibrary.TryLoad`. The fork workflow published
+`0.17.1-dev.2.1.g53e5ab5`, and Graphiti re-pinned both `LadybugDB` and `LadybugDB.Native` to that
+version. Local WSL verification restored the fixed package from an isolated cache and passed the three
+previously failing tests without `LD_PRELOAD`.
+
+Graphiti now has an additive gated linux-x64 smoke,
+`PackageRuntime_LinuxFtsAndVectorExtensionsCreateAndQuery`, tagged `Category=LinuxLadybugSmoke`.
+It is wired in `.github/workflows/full.yml` behind repo variable
+`GRAPHITI_ENABLE_LINUX_LADYBUG_SMOKE=1` and runtime env `GRAPHITI_RUN_LINUX_LADYBUG_SMOKE=1`; the
+normal win-x64 full verifier remains unconditional.
+
 Current package pin: Graphiti consumes the fork-published dev package family
-`0.17.1-dev.1.1.g6f3dbed` for both `LadybugDB` and `LadybugDB.Native` from the
+`0.17.1-dev.2.1.g53e5ab5` for both `LadybugDB` and `LadybugDB.Native` from the
 `sergey-v9/ladybug-dotnet` GitHub Packages feed (via `NuGet.config`), matching
-`Directory.Packages.props`. This was the only published version on that feed at the time of writing,
-and the root `NuGet.config` has no active local/offline package source — old
+`Directory.Packages.props`. The root `NuGet.config` has no active local/offline package source — old
 `0.17.0-alpha.2-graphiti.1` mentions are historical recovery notes, not an active restore path.
 Restores require a `read:packages` credential for source `github_ladybug` (passed as
 `NuGetPackageSourceCredentials_github_ladybug`). `LadybugDB.Extensions` is **not** adopted by default
@@ -163,7 +185,7 @@ until LadybugDB is public on nuget.org.
 ## Confirmed Package/API Facts
 
 - Package id: `LadybugDB`; version comes from central package management. Graphiti currently uses
-  the fork-published dev package family `0.17.1-dev.1.1.g6f3dbed` from the
+  the fork-published dev package family `0.17.1-dev.2.1.g53e5ab5` from the
   `sergey-v9/ladybug-dotnet` GitHub Packages feed via `NuGet.config`. Restores require credentials
   for source `github_ladybug` with `read:packages`.
 - Native assets are packaged separately, for example `LadybugDB.Native` and RID-specific native

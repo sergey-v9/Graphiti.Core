@@ -1,3 +1,4 @@
+using System.Globalization;
 using Graphiti.Core.Drivers.Ladybug;
 using LadybugDB;
 using GraphitiSagaNode = Graphiti.Core.Models.Nodes.SagaNode;
@@ -6,6 +7,8 @@ namespace Graphiti.Core.Tests.Drivers.Ladybug;
 
 public class LadybugPackageRuntimeTests
 {
+    private const string LinuxSmokeEnvironmentVariable = "GRAPHITI_RUN_LINUX_LADYBUG_SMOKE";
+
     [Fact]
     public async Task PackageRuntime_BuildsSchemaAndRoundTripsScalarSagaThroughInternalDriver()
     {
@@ -1993,6 +1996,67 @@ public class LadybugPackageRuntimeTests
         var row = Assert.Single(result.Rows());
         Assert.Equal("n1", Assert.IsType<string>(row[0]));
         Assert.True(Assert.IsType<double>(row[1]) > 0);
+    }
+
+    [Fact]
+    [Trait("Category", "LinuxLadybugSmoke")]
+    public void PackageRuntime_LinuxFtsAndVectorExtensionsCreateAndQuery()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            Assert.Skip("Linux-only LadybugDB extension smoke.");
+        }
+
+        if (Environment.GetEnvironmentVariable(LinuxSmokeEnvironmentVariable) != "1")
+        {
+            Assert.Skip($"Set {LinuxSmokeEnvironmentVariable}=1 to run the linux-x64 LadybugDB extension smoke.");
+        }
+
+        using var database = new Database("");
+        using var connection = new Connection(database);
+
+        connection.Query("INSTALL FTS;").Dispose();
+        connection.Query("LOAD EXTENSION FTS;").Dispose();
+        connection.Query("CREATE NODE TABLE SmokeFts(uuid STRING PRIMARY KEY, body STRING);").Dispose();
+        connection.Query("CREATE (:SmokeFts {uuid: 'fts-1', body: 'Alice builds temporal graph search'});").Dispose();
+        connection.Query("CREATE (:SmokeFts {uuid: 'fts-2', body: 'Bob paints murals'});").Dispose();
+        connection.Query("CALL CREATE_FTS_INDEX('SmokeFts', 'smoke_fts_body', ['body']);").Dispose();
+
+        using (var result = connection.Execute(
+            """
+            CALL QUERY_FTS_INDEX('SmokeFts', 'smoke_fts_body', $query, TOP := $limit)
+            RETURN node.uuid AS uuid, score AS score
+            ORDER BY score DESC;
+            """,
+            new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["query"] = "temporal graph",
+                ["limit"] = 3
+            }))
+        {
+            var row = Assert.Single(result.Rows());
+            Assert.Equal("fts-1", Assert.IsType<string>(row[0]));
+            Assert.True(Assert.IsType<double>(row[1]) > 0);
+        }
+
+        connection.Query("INSTALL VECTOR;").Dispose();
+        connection.Query("LOAD EXTENSION VECTOR;").Dispose();
+        connection.Query("CREATE NODE TABLE SmokeVector(uuid STRING PRIMARY KEY, embedding FLOAT[3]);").Dispose();
+        connection.Query("CREATE (:SmokeVector {uuid: 'vec-1', embedding: [1.0, 0.0, 0.0]});").Dispose();
+        connection.Query("CREATE (:SmokeVector {uuid: 'vec-2', embedding: [0.0, 1.0, 0.0]});").Dispose();
+        connection.Query("CALL CREATE_VECTOR_INDEX('SmokeVector', 'smoke_vector_embedding', 'embedding');").Dispose();
+
+        using (var result = connection.Query(
+            """
+            CALL QUERY_VECTOR_INDEX('SmokeVector', 'smoke_vector_embedding', [1.0, 0.0, 0.0], 2)
+            RETURN node.uuid AS uuid, distance AS distance
+            ORDER BY distance;
+            """))
+        {
+            var row = Assert.Single(result.Rows().Take(1));
+            Assert.Equal("vec-1", Assert.IsType<string>(row[0]));
+            Assert.True(Convert.ToDouble(row[1], CultureInfo.InvariantCulture) >= 0.0);
+        }
     }
 
     private static string FindCSharpRoot()

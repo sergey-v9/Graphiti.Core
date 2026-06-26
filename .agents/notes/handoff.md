@@ -103,9 +103,8 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
   is evidence-driven (benchmark-first) only (`roadmap.md`).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
   1–3 are complete, plan 06 is complete, G4 is complete, and the first wave of G3 perf/allocation slices
-  landed 2026-06-26. **The current actionable plan is `.agents/plans/07-cross-platform-linux.md` (roadmap
-  goal G1 — Linux x64 proof)**, with a documented non-stall fallback to the remaining G3 hot-path
-  profiling; G2 (continuous-quality canary) follows. Release versioning/publishing remains user-gated.
+  landed 2026-06-26, and plan 07/G1 linux-x64 proof is complete. **The next roadmap priority is G2:
+  make the live-provider run and eval a fail-loud periodic check.** Release versioning/publishing remains user-gated.
   Full restore/test/pack requires GitHub Packages credentials for source `github_ladybug`. Performance
   work is benchmark-first and no longer on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
@@ -142,8 +141,8 @@ audit is also closed as a documented C# repair: `AddEpisodeAsync(updateCommuniti
 flattened community-update results instead of reproducing the source workflow's broken per-node
 destructuring. A follow-up moved-docs/backlog audit found no remaining unchecked implementation item
 outside plan 06's Ladybug merge and already-recorded decision-gated items. The package-feed
-recheck also confirmed that `0.17.1-dev.1.1.g6f3dbed` is still the only published GitHub Packages
-version for `LadybugDB` and `LadybugDB.Native`, matching the current Graphiti pin. The only concrete
+recheck found the old `0.17.1-dev.1.1.g6f3dbed` package pin before plan 07 published and consumed
+`0.17.1-dev.2.1.g53e5ab5`. The only concrete
 slice from this pass was test-only hardening for the search concurrency proof: after the fake-driver
 barrier has proven concurrent startup, it now waits on the xUnit cancellation token instead of a
 second fixed wall-clock timeout. A follow-up ontology-matching audit is also closed: custom entity
@@ -206,10 +205,18 @@ boundary. Active Ladybug full-text search builds Python Kuzu-style raw whitespac
 `Drivers/Ladybug/LadybugSearchFilter`; the generic `SearchUtilities` and `CompiledSearchFilter` no
 longer carry separate `GraphProvider.Kuzu` compatibility branches.
 Graphiti now consumes the fork-published LadybugDB package family
-`0.17.1-dev.1.1.g6f3dbed` from the `sergey-v9/ladybug-dotnet` GitHub Packages feed via
+`0.17.1-dev.2.1.g53e5ab5` from the `sergey-v9/ladybug-dotnet` GitHub Packages feed via
 `NuGet.config`; that binding supports Graphiti's list/array/empty-list/null parameters directly, so
 the former `LadybugStatementNormalizer` workaround has been removed. Restores that include the
 Ladybug driver require a NuGet credential for source `github_ladybug` with `read:packages`.
+
+Plan 07 linux-x64 proof is complete. The original failure was an FTS extension undefined-symbol error
+because the binding resolver did not globally load the NuGet `runtimes/linux-x64/native/liblbug.so`
+asset before extension `dlopen`; `LD_PRELOAD` of that file proved the classification. The fix was
+committed in `W:\code\ladybug\tools\csharp_api` as `53e5ab5`, published by the fork dev workflow, and
+consumed here. Graphiti has a gated linux-x64 `fts` + `vector` create/query smoke tagged
+`Category=LinuxLadybugSmoke`; the workflow job is disabled until repo variable
+`GRAPHITI_ENABLE_LINUX_LADYBUG_SMOKE=1` is set.
 
 For provider status, package facts, package bug recovery, runtime proof, and remaining work, read
 `kuzu-driver-port.md`. If implementation uncovers a likely LadybugDB package/binding issue, mark it
@@ -225,11 +232,16 @@ added. This section holds the single authoritative live count and the standing v
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
 **Current verifier checkpoint (2026-06-26):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1027` passed, `3` skipped, `1030` total. The verifier
+Packages credentials for the Ladybug feed — `1027` passed, `4` skipped, `1031` total. The verifier
 covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
 shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
-LadybugDB through the packed package. The three skips are the env-gated
-`OpenAIProviderIntegrationTests`, which skip cleanly when `OPENAI_API_KEY` is unset.
+LadybugDB through the packed package. The skips are the env-gated
+`OpenAIProviderIntegrationTests`, which skip cleanly when `OPENAI_API_KEY` is unset, plus the
+Linux-only LadybugDB extension smoke when running on win-x64.
+
+The gated linux-x64 LadybugDB extension smoke also passed 2026-06-26 in WSL against the published
+`0.17.1-dev.2.1.g53e5ab5` GitHub Packages feed from a clean NuGet cache, with
+`GRAPHITI_RUN_LINUX_LADYBUG_SMOKE=1` and no `LD_PRELOAD`: `1` passed, `0` skipped, `0` failed.
 
 This is the one authoritative live count for the repo; other notes (`parity.md`, plan-05,
 `kuzu-driver-port.md`) say "full suite green" and point here rather than embedding their own counts.

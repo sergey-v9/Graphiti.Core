@@ -53,7 +53,8 @@ consumers restored/built/run setup plus a public triplet/search workflow from st
 
 **Completed E.2 checkpoint (2026-06-17):** `Graphiti.Core.Drivers.Ladybug` restores `LadybugDB` /
 `LadybugDB.Native` from the `sergey-v9/ladybug-dotnet` GitHub Packages feed in `NuGet.config`, pinned
-to `0.17.1-dev.1.1.g6f3dbed`. GitHub Packages currently reports only that published version for both
+to `0.17.1-dev.1.1.g6f3dbed`. Plan 07 later bumped the active pin to `0.17.1-dev.2.1.g53e5ab5`.
+GitHub Packages had only reported the older published version for both
 packages. With `NuGetPackageSourceCredentials_github_ladybug` set from the active GitHub token,
 `.\eng\Verify-GraphitiCore.ps1` is full-suite green (both shippable packages packed and both fresh
 package-consumer smoke builds succeeded). Future binding fixes should land in the
@@ -189,7 +190,7 @@ This is the largest item and gates a real NuGet release. Sub-steps:
    the Ladybug package; core fails cleanly with a clear message if `LadybugDb` is selected without the
    package). Move the Ladybug tests to a matching test project (or keep in the suite with a project ref).
 2. **Consume the fork-published LadybugDB package family.** The build now pins the fork-published
-   `0.17.1-dev.1.1.g6f3dbed` package family via the `sergey-v9/ladybug-dotnet` GitHub Packages feed in
+   `0.17.1-dev.2.1.g53e5ab5` package family via the `sergey-v9/ladybug-dotnet` GitHub Packages feed in
    `NuGet.config`. Restores that include the Ladybug driver require source `github_ladybug`
    credentials with `read:packages`. Coordinate future package fixes through the separate
    `W:\code\ladybug` repo, push the fork's `dev` branch, then bump Graphiti to the new published dev

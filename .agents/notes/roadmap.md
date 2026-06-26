@@ -10,9 +10,8 @@ in `parity.md`. Keep completed history out of this file (`evolution.md` owns mil
 These were taken by the agent ahead of sign-off; Sergey has now ruled on them:
 
 1. **CI — KEEP AS-IS, DO NOT EXPAND.** Plan 06 retired the old core-only lane, leaving the full
-   authenticated verifier lane. No further CI investment without a new ask. (Known limitation: the
-   Linux full lane does not work yet — the fork Ladybug Linux package hits an FTS extension ABI
-   mismatch under `~/.lbdb/extension`; the full lane is Windows-only.)
+   authenticated verifier lane. Plan 07 added a separately gated linux-x64 LadybugDB extension smoke;
+   keep it behind `GRAPHITI_ENABLE_LINUX_LADYBUG_SMOKE=1` unless Sergey asks to make it unconditional.
 2. **LadybugDB feed — GITHUB PACKAGES ONLY.** Keep `NuGet.config` pointed at the
    `sergey-v9/ladybug-dotnet` GitHub Packages feed; do NOT re-add a local offline fallback. A
    `read:packages` credential for source `github_ladybug` is required for any full (Ladybug-inclusive)
@@ -143,7 +142,7 @@ Remaining (release infra): Step F's plan-folder sweep is recorded in plan 05 and
 the approved plan-06 Ladybug merge and the user-gated release decisions. Anything newly found in `.agents/plans/` or
 directly linked notes should be split into its own parity/provider/perf/docs slice before versioning or
 publishing work. E.2 is complete: Graphiti points at the `sergey-v9/ladybug-dotnet` GitHub Packages
-feed and pins the fork-published `0.17.1-dev.1.1.g6f3dbed` LadybugDB package family; full local
+feed and pins the fork-published `0.17.1-dev.2.1.g53e5ab5` LadybugDB package family; full local
 verification requires a NuGet credential for source `github_ladybug` with `read:packages`.
 **Versioning** (2.0.0 line / alpha→beta cadence), publish path, and metapackage shape remain
 decision-gated. CI has the full Ladybug-inclusive Windows lane running `eng\Verify-GraphitiCore.ps1`
@@ -166,16 +165,12 @@ The forward agenda is **productionization and confidence**, not more parity micr
 value. Each is a stream, not a one-slice; verify centrally, keep docs lean, don't drift into the
 user-gated items.
 
-- **G1 — Cross-platform proof (HIGH).** The LadybugDB driver is validated only on **win-x64**; the
-  Linux path is *known-broken*, not just unvalidated — the fork's Linux package hits an FTS-extension
-  ABI mismatch under `~/.lbdb/extension` (see `full.yml` comment + `kuzu-driver-port.md`). The binding
-  shipped the `RTLD_GLOBAL` loader fix, so this is now the remaining blocker. Reproduce it on linux-x64;
-  if it's a binding/extension-packaging gap, fix it in `W:\code\ladybug` per the **self-service
-  bindings** policy, publish a new dev package, re-pin, and add a gated Linux `fts`+`vector`
-  CREATE/QUERY round-trip smoke. **Until that lane is green, win-x64 is the only supported RID — say so
-  in README/package metadata; do not advertise cross-platform.** Scoped as the work order
-  `.agents/plans/07-cross-platform-linux.md` and selected as the current priority (2026-06-26), with a
-  non-stall fallback to the remaining G3 hot-path profiling if the native binding fix stalls.
+- **G1 — Cross-platform proof (HIGH): DONE 2026-06-26.** The linux-x64 failure was reproduced as an
+  FTS extension undefined-symbol error under `~/.lbdb/extension`, classified as a `ladybug-dotnet`
+  package runtime-asset loader gap, fixed in `W:\code\ladybug\tools\csharp_api` commit `53e5ab5`, and
+  consumed through fork package `0.17.1-dev.2.1.g53e5ab5`. Graphiti now has a gated linux-x64
+  `fts`+`vector` CREATE/QUERY smoke in `.github/workflows/full.yml`; win-x64 remains the unconditional
+  full verifier lane.
 - **G2 — Continuous quality, not one-shot (HIGH).** The live-OpenAI provider run and the eval harness
   proved themselves *once*, locally, and SKIP silently in CI without a key — so prompt-transcription and
   extraction-quality regressions can land with no signal (the unit suite uses fake LLMs and structurally

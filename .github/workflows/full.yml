@@ -24,9 +24,8 @@ jobs:
     name: Full verifier
     # Keep Ladybug-inclusive verification in one job. The native package has hung when multiple
     # dotnet test runs execute concurrently across worktrees/jobs.
-    # The fork LadybugDB Linux package currently loads the upstream FTS extension from
-    # ~/.lbdb/extension and fails with an ABI mismatch there. Keep this workflow focused on
-    # authenticated package restore plus the full Graphiti verifier on the known-good RID.
+    # The Linux extension smoke is additive and separately gated below so the full win-x64 verifier
+    # remains unconditional.
     runs-on: windows-latest
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
@@ -46,3 +45,25 @@ jobs:
       - name: Run full verifier
         shell: pwsh
         run: ./eng/Verify-GraphitiCore.ps1
+
+  linux-ladybug-smoke:
+    name: Linux LadybugDB smoke
+    if: ${{ vars.GRAPHITI_ENABLE_LINUX_LADYBUG_SMOKE == '1' }}
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      GRAPHITI_RUN_LINUX_LADYBUG_SMOKE: "1"
+      NuGetPackageSourceCredentials_github_ladybug: "Username=sergey-v9;Password=${{ secrets.GITHUB_TOKEN }};ValidAuthenticationTypes=Basic"
+    steps:
+      - name: Preserve LF checkout
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Set up .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Run Linux LadybugDB extension smoke
+        run: dotnet test tests/Graphiti.Core.Tests/Graphiti.Core.Tests.csproj --filter "Category=LinuxLadybugSmoke" --verbosity normal
