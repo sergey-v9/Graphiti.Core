@@ -165,6 +165,12 @@ search workflow with `[MemoryDiagnoser]`. The committed local win-x64 ShortRun b
 were made in this slice; future wins should compare BenchmarkDotNet before/after and update/add
 baselines only with fresh measurements.
 
+G3 BM25 allocation slice is complete (2026-06-26): `Bm25TextScorer` now scans document tokens via the
+span-token visitor and materializes only matching query tokens. Local ShortRun before/after for
+`SearchBenchmarks.Bm25_Rank` dropped allocations from 182.16 KB to 88.21 KB at 200 candidates and from
+444.94 KB to 207.01 KB at 500 candidates; see
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-search-bm25-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

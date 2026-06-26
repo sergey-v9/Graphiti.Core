@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Runtime.InteropServices;
 
 namespace Graphiti.Core.Search;
@@ -128,8 +129,10 @@ internal static class Bm25TextScorer
         List<Document<T>> documents,
         ref int totalDocumentLength)
     {
-        var state = new DocumentBuildState(queryTerms.TermSet, documentFrequencies);
-        SearchUtilities.VisitTokens<DocumentBuildState, DocumentTokenVisitor>(
+        var state = new DocumentBuildState(
+            queryTerms.TermSet.GetAlternateLookup<ReadOnlySpan<char>>(),
+            documentFrequencies);
+        SearchUtilities.VisitTokenSpans<DocumentBuildState, DocumentTokenVisitor>(
             textSelector(candidate),
             ref state);
 
@@ -151,7 +154,9 @@ internal static class Bm25TextScorer
                 }
             });
 
-        return new QueryTerms(accumulator.Terms, accumulator.TermSet);
+        return new QueryTerms(
+            accumulator.Terms,
+            accumulator.TermSet.ToFrozenSet(StringComparer.Ordinal));
     }
 
     private static Dictionary<string, double> BuildInverseDocumentFrequencies(
@@ -228,7 +233,7 @@ internal static class Bm25TextScorer
 
     private sealed record QueryTerms(
         List<string> Terms,
-        HashSet<string> TermSet);
+        FrozenSet<string> TermSet);
 
     private sealed record Document<T>(
         T Item,
@@ -236,7 +241,7 @@ internal static class Bm25TextScorer
         Dictionary<string, int>? QueryTermFrequencies);
 
     private record struct DocumentBuildState(
-        HashSet<string> QueryTerms,
+        FrozenSet<string>.AlternateLookup<ReadOnlySpan<char>> QueryTerms,
         Dictionary<string, int> DocumentFrequencies)
     {
         public int Length { get; set; }
@@ -245,9 +250,9 @@ internal static class Bm25TextScorer
     }
 
     private readonly record struct DocumentTokenVisitor
-        : SearchUtilities.ITokenVisitor<DocumentBuildState>
+        : SearchUtilities.ISpanTokenVisitor<DocumentBuildState>
     {
-        public static void Visit(string token, ref DocumentBuildState state)
+        public static void Visit(ReadOnlySpan<char> token, ref DocumentBuildState state)
         {
             state.Length++;
             if (!state.QueryTerms.Contains(token))
@@ -255,10 +260,11 @@ internal static class Bm25TextScorer
                 return;
             }
 
+            var term = token.ToString();
             state.TermFrequencies ??= new Dictionary<string, int>(StringComparer.Ordinal);
-            ref var frequency = ref CollectionsMarshal.GetValueRefOrAddDefault(
+            ref var frequency = ref CollectionsMarshal.GetValueRefOrAddDefault<string, int>(
                 state.TermFrequencies,
-                token,
+                term,
                 out var exists);
             frequency++;
             if (exists)
@@ -266,9 +272,9 @@ internal static class Bm25TextScorer
                 return;
             }
 
-            ref var documentFrequency = ref CollectionsMarshal.GetValueRefOrAddDefault(
+            ref var documentFrequency = ref CollectionsMarshal.GetValueRefOrAddDefault<string, int>(
                 state.DocumentFrequencies,
-                token,
+                term,
                 out _);
             documentFrequency++;
         }
