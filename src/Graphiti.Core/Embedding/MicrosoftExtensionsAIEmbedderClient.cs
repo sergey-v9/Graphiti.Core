@@ -94,7 +94,7 @@ public sealed class MicrosoftExtensionsAIEmbedderClient : EmbedderClient
             activity?.SetTag("graphiti.embedding.batch_size", Config.BatchSize);
             activity?.SetTag("graphiti.embedding.batch_count", chunks.Count);
             var options = CreateOptions();
-            var orderedVectors = new IReadOnlyList<float>?[input.Count];
+            var output = new IReadOnlyList<float>[input.Count];
             await Parallel.ForEachAsync(
                 chunks,
                 new ParallelOptions
@@ -113,20 +113,21 @@ public sealed class MicrosoftExtensionsAIEmbedderClient : EmbedderClient
                     ValidateEmbeddingCount(embeddings.Count, chunk.Inputs.Length);
                     for (var i = 0; i < embeddings.Count; i++)
                     {
-                        orderedVectors[chunk.StartIndex + i] =
+                        output[chunk.StartIndex + i] =
                             MaterializeEmbeddingVector(embeddings[i], chunk.StartIndex + i);
                     }
                 }).ConfigureAwait(false);
 
-            var output = new List<IReadOnlyList<float>>(orderedVectors.Length);
-            for (var i = 0; i < orderedVectors.Length; i++)
+            for (var i = 0; i < output.Length; i++)
             {
-                output.Add(orderedVectors[i]
-                    ?? throw new InvalidOperationException(
-                        $"Embedding provider did not return a vector at index {i}."));
+                if (output[i] is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Embedding provider did not return a vector at index {i}.");
+                }
             }
 
-            activity?.SetTag("graphiti.embedding.output_count", output.Count);
+            activity?.SetTag("graphiti.embedding.output_count", output.Length);
             GraphitiTelemetry.SetOk(activity);
             return output;
 

@@ -132,7 +132,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
 - [x] **EdgeResolutionService.TryGetNodeByExactExtractedName** (`Internal/Services/EdgeResolutionService.cs`
   ~348) — O(edges×nodes) full-dict scan because the map is `OrdinalIgnoreCase`; build a one-time
   `Ordinal` lookup for O(1) endpoint resolution (mind the first-winner nuance). *parity? ; bench.*
-- [ ] **EmbeddingVectorValidation.MaterializeVector** (`Embedding/EmbeddingVectorValidation.cs` ~80/113)
+- [x] **EmbeddingVectorValidation.MaterializeVector** (`Embedding/EmbeddingVectorValidation.cs` ~80/113)
   and **MicrosoftExtensionsAIEmbedderClient.CreateBatchAsync** (~121) — fill a pre-sized backing span via
   `CollectionsMarshal.SetCount`/return the pre-built array instead of element-by-element `Add`/re-copy.
   *parity low; bench.*

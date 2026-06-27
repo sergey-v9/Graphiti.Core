@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace Graphiti.Core.Embedding;
 
 internal static class EmbeddingVectorValidation
@@ -60,9 +62,11 @@ internal static class EmbeddingVectorValidation
         }
 
         var materialized = new List<List<float>>(expectedCount);
+        CollectionsMarshal.SetCount(materialized, expectedCount);
+        var materializedSpan = CollectionsMarshal.AsSpan(materialized);
         for (var i = 0; i < embeddings.Count; i++)
         {
-            materialized.Add(MaterializeVector(embeddings[i], expectedDimension, itemDescription(i)));
+            materializedSpan[i] = MaterializeVector(embeddings[i], expectedDimension, itemDescription(i));
         }
 
         return materialized;
@@ -94,8 +98,10 @@ internal static class EmbeddingVectorValidation
                 $"Embedding provider returned dimension {embedding.Count} for {itemDescription}; expected {expectedDimension}.");
         }
 
-        var materialized = new List<float>(embedding.Count);
-        for (var i = 0; i < embedding.Count; i++)
+        var actualDimension = embedding.Count;
+        var materialized = CreateSizedVector(actualDimension);
+        var materializedSpan = CollectionsMarshal.AsSpan(materialized);
+        for (var i = 0; i < actualDimension; i++)
         {
             var value = embedding[i];
             if (!float.IsFinite(value))
@@ -104,7 +110,7 @@ internal static class EmbeddingVectorValidation
                     $"Embedding provider returned non-finite value at dimension {i} for {itemDescription}.");
             }
 
-            materialized.Add(value);
+            materializedSpan[i] = value;
         }
 
         return materialized;
@@ -121,7 +127,8 @@ internal static class EmbeddingVectorValidation
                 $"Embedding provider returned dimension {embedding.Length} for {itemDescription}; expected {expectedDimension}.");
         }
 
-        var materialized = new List<float>(embedding.Length);
+        var materialized = CreateSizedVector(embedding.Length);
+        var materializedSpan = CollectionsMarshal.AsSpan(materialized);
         for (var i = 0; i < embedding.Length; i++)
         {
             var value = embedding[i];
@@ -131,9 +138,16 @@ internal static class EmbeddingVectorValidation
                     $"Embedding provider returned non-finite value at dimension {i} for {itemDescription}.");
             }
 
-            materialized.Add(value);
+            materializedSpan[i] = value;
         }
 
         return materialized;
+    }
+
+    private static List<float> CreateSizedVector(int dimension)
+    {
+        var vector = new List<float>(dimension);
+        CollectionsMarshal.SetCount(vector, dimension);
+        return vector;
     }
 }

@@ -321,6 +321,16 @@ empty-episode fast return. Local ShortRun for `EdgeResolutionBenchmarks` dropped
 allocations down about 48-54 KB. See
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-edge-resolution-endpoint-lookup-win-x64.md`.
 
+Plan 10 embedding materialization slice is complete (2026-06-27): embedding vector validation now
+fills pre-sized `List<float>` backing storage, and `MicrosoftExtensionsAIEmbedderClient.CreateBatchAsync`
+returns its validated ordered array directly instead of copying into a second list. Existing provider
+tests pin defensive provider-vector copies, count/dimension/non-finite validation, chunk ordering,
+rate limiting, cancellation, and concurrency. Local ShortRun for `EmbeddingBenchmarks` dropped
+single-vector materialization from 265.7 ns to 186.9 ns at 256 dimensions and 1,001.3 ns to
+633.9 ns at 1024 dimensions; the adapter batch fixture dropped from 20.10 us to 8.90 us at 256
+dimensions and 46.48 us to 33.59 us at 1024 dimensions. See
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-embedding-materialization-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
@@ -361,7 +371,7 @@ added. This section holds the single authoritative live count and the standing v
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
 **Current verifier checkpoint (2026-06-27):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1038` passed, `4` skipped, `1042` total. The verifier
+Packages credentials for the Ladybug feed — `1041` passed, `4` skipped, `1045` total. The verifier
 covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
 shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
 LadybugDB through the packed package. The skips are the env-gated

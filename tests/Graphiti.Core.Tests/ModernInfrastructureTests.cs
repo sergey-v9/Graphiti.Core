@@ -592,6 +592,61 @@ public class ModernInfrastructureTests
     }
 
     [Fact]
+    public async Task MicrosoftExtensionsAIEmbedderClient_OutOfOrderBatchChunksPreserveOutputOrder()
+    {
+        var generator = new OutOfOrderEmbeddingGenerator();
+        var embedder = new MicrosoftExtensionsAIEmbedderClient(
+            generator,
+            embeddingDimension: 3,
+            batchSize: 1,
+            batchConcurrency: 3);
+        var batchTask = embedder.CreateBatchAsync(new[] { "0", "1", "2" });
+
+        await generator.SlowStarted.WaitAsync(TimeSpan.FromSeconds(5));
+        await generator.FastChunksCompleted.WaitAsync(TimeSpan.FromSeconds(5));
+        generator.ReleaseSlow();
+
+        var batch = await batchTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(CreateEmbeddingVector(1, 3), batch[0]);
+        Assert.Equal(CreateEmbeddingVector(2, 3), batch[1]);
+        Assert.Equal(CreateEmbeddingVector(3, 3), batch[2]);
+    }
+
+    [Fact]
+    public async Task MicrosoftExtensionsAIEmbedderClient_BatchDimensionFailureReportsAbsoluteIndex()
+    {
+        var embedder = new MicrosoftExtensionsAIEmbedderClient(
+            new FixedEmbeddingGenerator([1f, 2f, 3f], [1f, 2f]),
+            embeddingDimension: 3,
+            batchSize: 2,
+            batchConcurrency: 1);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            embedder.CreateBatchAsync(new[] { "first", "second" }));
+
+        Assert.Contains("dimension 2", exception.Message);
+        Assert.Contains("provider embedding at index 1", exception.Message);
+    }
+
+    [Fact]
+    public async Task MicrosoftExtensionsAIEmbedderClient_BatchNonFiniteFailureReportsAbsoluteIndex()
+    {
+        var embedder = new MicrosoftExtensionsAIEmbedderClient(
+            new FixedEmbeddingGenerator([1f, 2f, 3f], [1f, float.NaN, 3f]),
+            embeddingDimension: 3,
+            batchSize: 2,
+            batchConcurrency: 1);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            embedder.CreateBatchAsync(new[] { "first", "second" }));
+
+        Assert.Contains("non-finite value", exception.Message);
+        Assert.Contains("dimension 1", exception.Message);
+        Assert.Contains("provider embedding at index 1", exception.Message);
+    }
+
+    [Fact]
     public async Task MicrosoftExtensionsAIEmbedderClient_BoundsConcurrentBatchChunks()
     {
         var generator = new ConcurrencyTrackingEmbeddingGenerator(TimeSpan.FromMilliseconds(25));
@@ -1671,6 +1726,51 @@ public class ModernInfrastructureTests
                 new Embedding<float>(CreateEmbeddingVector(value.Length, dimensions)));
             return Task.FromResult(new GeneratedEmbeddings<Embedding<float>>(embeddings));
         }
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class OutOfOrderEmbeddingGenerator : IEmbeddingGenerator<string, Embedding<float>>
+    {
+        private readonly TaskCompletionSource _slowStarted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _releaseSlow =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _fastChunksCompleted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _fastChunkCount;
+
+        public Task SlowStarted => _slowStarted.Task;
+        public Task FastChunksCompleted => _fastChunksCompleted.Task;
+
+        public async Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(
+            IEnumerable<string> values,
+            EmbeddingGenerationOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var input = values.Single();
+            var index = int.Parse(input, CultureInfo.InvariantCulture);
+            if (index == 0)
+            {
+                _slowStarted.TrySetResult();
+                await _releaseSlow.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            else if (Interlocked.Increment(ref _fastChunkCount) == 2)
+            {
+                _fastChunksCompleted.TrySetResult();
+            }
+
+            var dimensions = options?.Dimensions ?? 3;
+            return new GeneratedEmbeddings<Embedding<float>>(
+                new[] { new Embedding<float>(CreateEmbeddingVector(index + 1, dimensions)) });
+        }
+
+        public void ReleaseSlow() => _releaseSlow.TrySetResult();
 
         public object? GetService(Type serviceType, object? serviceKey = null) => null;
 
