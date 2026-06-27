@@ -100,7 +100,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   `Load*EmbeddingsByUuidAsync` maps a full `EntityNode`/`EntityEdge` (lists, attribute dict, date parses)
   to read one embedding column. Add a `LadybugRecordMapper.GetFloatList(record, "name_embedding")` and
   read the column directly. *parity none; bench.*
-- [ ] **AttributeMerger.ExtractDeclaredAttributes** (`Internal/Helpers/AttributeMerger.cs` ~45) — drop the
+- [x] **AttributeMerger.ExtractDeclaredAttributes** (`Internal/Helpers/AttributeMerger.cs` ~45) — drop the
   full copy of the response `attributes` object into a `Dictionary`; call `source.TryGetPropertyValue`
   directly per declared name. *parity low.*
 - [ ] **ContentChunking.GetOverlapMessages** (`Text/ContentChunking.cs` ~936) — O(n²) `Insert(0, …)`;

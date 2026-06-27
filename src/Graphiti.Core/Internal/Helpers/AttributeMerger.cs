@@ -43,16 +43,10 @@ internal static class AttributeMerger
             ? attributes
             : response;
         var result = new Dictionary<string, object?>(StringComparer.Ordinal);
-        var valuesByName = new Dictionary<string, JsonNode?>(StringComparer.Ordinal);
-        foreach (var pair in source)
-        {
-            valuesByName[pair.Key] = pair.Value;
-        }
-
         var attributeNames = SortedAttributeNames(entityType);
         foreach (var attributeName in attributeNames)
         {
-            if (valuesByName.TryGetValue(attributeName, out var value))
+            if (source.TryGetPropertyValue(attributeName, out var value))
             {
                 result[attributeName] = JsonNodeToObject(value);
             }

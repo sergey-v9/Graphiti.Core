@@ -264,6 +264,10 @@ before/after dropped node record mapping from 795.4 ns / 1.66 KB to 108.9 ns / 3
 mapping from 730.5 ns / 1.66 KB to 109.0 ns / 312 B. See
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-ladybug-embedding-load-win-x64.md`.
 
+Plan 10 attribute extraction slice is complete (2026-06-27): `AttributeMerger` now probes declared
+attribute names directly from the response `JsonObject` instead of copying all response attributes into
+a temporary dictionary; focused AttributeMerger tests and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
