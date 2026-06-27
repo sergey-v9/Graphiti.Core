@@ -258,6 +258,12 @@ Plan 10 search group-sentinel slice is complete (2026-06-27): `SearchEngine.Sear
 single empty-group sentinel with direct count/index access instead of allocating an array and using
 LINQ; focused search-engine suites and the full verifier were green.
 
+Plan 10 Ladybug embedding-load slice is complete (2026-06-27): namespace embedding loads now read the
+projected embedding column directly instead of mapping full entity nodes/edges. Local ShortRun
+before/after dropped node record mapping from 795.4 ns / 1.66 KB to 108.9 ns / 312 B and edge record
+mapping from 730.5 ns / 1.66 KB to 109.0 ns / 312 B. See
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-ladybug-embedding-load-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

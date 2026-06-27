@@ -564,9 +564,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         var records = await _executor.QueryAsync(
             LadybugStatementBuilder.BuildNodesLoadEmbeddings<EntityNode>(nodeUuids),
             cancellationToken).ConfigureAwait(false);
-        return BuildEmbeddingLookup(
-            records,
-            static record => LadybugRecordMapper.MapEntityNode(record).NameEmbedding);
+        return BuildEmbeddingLookup(records, "name_embedding");
     }
 
     async Task<IReadOnlyDictionary<string, List<float>?>> IEmbeddingLoadGraphDriver
@@ -583,9 +581,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         var records = await _executor.QueryAsync(
             LadybugStatementBuilder.BuildEntityEdgesLoadEmbeddings(edgeUuids),
             cancellationToken).ConfigureAwait(false);
-        return BuildEmbeddingLookup(
-            records,
-            static record => LadybugRecordMapper.MapEntityEdge(record).FactEmbedding);
+        return BuildEmbeddingLookup(records, "fact_embedding");
     }
 
     /// <inheritdoc />
@@ -944,7 +940,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
 
     private static Dictionary<string, List<float>?> BuildEmbeddingLookup(
         IReadOnlyList<IReadOnlyDictionary<string, object?>> records,
-        Func<IReadOnlyDictionary<string, object?>, List<float>?> getEmbedding)
+        string embeddingColumn)
     {
         var embeddings = new Dictionary<string, List<float>?>(records.Count, StringComparer.Ordinal);
         for (var i = 0; i < records.Count; i++)
@@ -952,7 +948,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             var uuid = GetString(records[i], "uuid");
             if (uuid is not null)
             {
-                embeddings[uuid] = getEmbedding(records[i]);
+                embeddings[uuid] = LadybugRecordMapper.GetFloatList(records[i], embeddingColumn);
             }
         }
 

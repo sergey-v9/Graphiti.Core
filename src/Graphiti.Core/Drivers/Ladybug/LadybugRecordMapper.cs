@@ -89,6 +89,9 @@ internal static class LadybugRecordMapper
     internal static NextEpisodeEdge MapNextEpisodeEdge(IReadOnlyDictionary<string, object?> record) =>
         MapSimpleEdge<NextEpisodeEdge>(record);
 
+    internal static List<float>? GetFloatList(IReadOnlyDictionary<string, object?> record, string key) =>
+        GetList<float>(record, key);
+
     internal static Dictionary<string, object?> ParseAttributes(object? value)
     {
         if (value is null)

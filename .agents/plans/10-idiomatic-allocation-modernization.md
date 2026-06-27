@@ -96,7 +96,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
 - [x] **SearchAsync group-id sentinel** (`Search/SearchEngine.cs` ~61) — replace
   `!groupIds.SequenceEqual(new[]{ string.Empty })` (array + LINQ per search) with a direct
   `Count == 1 && groupIds[0].Length == 0` check. *parity none.*
-- [ ] **Ladybug embedding-load reads whole entity** (`Drivers/Ladybug/LadybugGraphDriver.cs` ~564/583) —
+- [x] **Ladybug embedding-load reads whole entity** (`Drivers/Ladybug/LadybugGraphDriver.cs` ~564/583) —
   `Load*EmbeddingsByUuidAsync` maps a full `EntityNode`/`EntityEdge` (lists, attribute dict, date parses)
   to read one embedding column. Add a `LadybugRecordMapper.GetFloatList(record, "name_embedding")` and
   read the column directly. *parity none; bench.*
