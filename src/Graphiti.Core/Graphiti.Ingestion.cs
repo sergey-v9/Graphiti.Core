@@ -1210,6 +1210,9 @@ public sealed partial class Graphiti
         List<EntityEdge> allEdges)
     {
         var candidates = new List<EntityEdge>();
+        HashSet<string>.AlternateLookup<ReadOnlySpan<char>> edgeFactWordLookup = default;
+        var hasEdgeFactWords = false;
+        var edgeFactWordsInitialized = false;
         for (var i = 0; i < allEdges.Count; i++)
         {
             var candidate = allEdges[i];
@@ -1220,7 +1223,19 @@ public sealed partial class Graphiti
                 continue;
             }
 
-            if (FactsHaveWordOverlap(edge.Fact, candidate.Fact)
+            if (!edgeFactWordsInitialized)
+            {
+                var edgeFactWords = BuildFactWordSet(edge.Fact);
+                hasEdgeFactWords = edgeFactWords.Count > 0;
+                if (hasEdgeFactWords)
+                {
+                    edgeFactWordLookup = edgeFactWords.GetAlternateLookup<ReadOnlySpan<char>>();
+                }
+
+                edgeFactWordsInitialized = true;
+            }
+
+            if ((hasEdgeFactWords && FactsHaveWordOverlap(edgeFactWordLookup, candidate.Fact))
                 || SearchUtilities.CalculateCosineSimilarity(edge.FactEmbedding, candidate.FactEmbedding) >= 0.6f)
             {
                 candidates.Add(candidate);
@@ -1230,24 +1245,36 @@ public sealed partial class Graphiti
         return candidates;
     }
 
-    private static bool FactsHaveWordOverlap(string left, string right)
+    private static HashSet<string> BuildFactWordSet(string fact)
     {
-        var leftWords = left.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (leftWords.Length == 0)
-        {
-            return false;
-        }
+        var words = fact.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return new HashSet<string>(words, StringComparer.OrdinalIgnoreCase);
+    }
 
-        var words = new HashSet<string>(leftWords, StringComparer.OrdinalIgnoreCase);
-        foreach (var word in right.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+    private static bool FactsHaveWordOverlap(
+        HashSet<string>.AlternateLookup<ReadOnlySpan<char>> leftWords,
+        string right)
+    {
+        var remaining = right.AsSpan();
+        while (true)
         {
-            if (words.Contains(word))
+            var separatorIndex = remaining.IndexOf(' ');
+            var word = separatorIndex < 0
+                ? remaining
+                : remaining[..separatorIndex];
+            word = word.Trim();
+            if (!word.IsEmpty && leftWords.Contains(word))
             {
                 return true;
             }
-        }
 
-        return false;
+            if (separatorIndex < 0)
+            {
+                return false;
+            }
+
+            remaining = remaining[(separatorIndex + 1)..];
+        }
     }
 
     private static Dictionary<string, string> BuildDirectedUuidMap(IEnumerable<UuidMapPair> pairs)

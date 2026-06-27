@@ -88,7 +88,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
 - [x] **LlmClient.PrepareMessages** (`LlmClients/LlmClient.cs` ~334) — drop the eager
   `new Message(...)` clone of every message; `Message` is an immutable record and all mutations already
   use `with`, so alias the originals. *parity none; bench.*
-- [ ] **FactsHaveWordOverlap in bulk edge dedupe** (`Graphiti.Ingestion.cs` ~1208) — invoked O(edges²);
+- [x] **FactsHaveWordOverlap in bulk edge dedupe** (`Graphiti.Ingestion.cs` ~1208) — invoked O(edges²);
   hoist the left-fact word `HashSet` out of the inner candidate loop and span-tokenize the right side
   (keep `RemoveEmptyEntries|TrimEntries` semantics). *parity low; bench.*
 - [ ] **Drop redundant `CopyList(episodes)`** (`Graphiti.Search.cs` ~209) — `episodes` is already

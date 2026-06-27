@@ -244,6 +244,12 @@ Local ShortRun before/after for clean no-schema preparation dropped from 628.8 n
 498.6 ns / 672 B. See
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-llm-preparemessages-win-x64.md`.
 
+Plan 10 bulk edge word-overlap slice is complete (2026-06-27): bulk edge dedupe now builds the
+left-fact word set once per edge and span-scans candidate facts, preserving the existing split/trim
+semantics. Local ShortRun allocations dropped from 4.95 MB to 4.52 MB at 8 endpoint pairs and
+11.18 MB to 10.39 MB at 16 endpoint pairs, while wall-clock timings remained noisy. See
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-bulk-edge-wordoverlap-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
