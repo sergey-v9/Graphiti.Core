@@ -277,13 +277,13 @@ internal static class SearchFallbackGraph
     private static Dictionary<string, List<EntityEdge>> BuildEntityEdgesBySource(
         IReadOnlyList<EntityEdge> edges)
     {
-        var edgesBySource = new Dictionary<string, List<EntityEdge>>(StringComparer.Ordinal);
+        var edgesBySource = new Dictionary<string, List<EntityEdge>>(edges.Count, StringComparer.Ordinal);
         for (var i = 0; i < edges.Count; i++)
         {
             var edge = edges[i];
             if (!edgesBySource.TryGetValue(edge.SourceNodeUuid, out var sourceEdges))
             {
-                sourceEdges = new List<EntityEdge>();
+                sourceEdges = new List<EntityEdge>(1);
                 edgesBySource.Add(edge.SourceNodeUuid, sourceEdges);
             }
 
@@ -296,13 +296,13 @@ internal static class SearchFallbackGraph
     private static Dictionary<string, List<EpisodicEdge>> BuildEpisodicEdgesBySource(
         IReadOnlyList<EpisodicEdge> edges)
     {
-        var edgesBySource = new Dictionary<string, List<EpisodicEdge>>(StringComparer.Ordinal);
+        var edgesBySource = new Dictionary<string, List<EpisodicEdge>>(edges.Count, StringComparer.Ordinal);
         for (var i = 0; i < edges.Count; i++)
         {
             var edge = edges[i];
             if (!edgesBySource.TryGetValue(edge.SourceNodeUuid, out var sourceEdges))
             {
-                sourceEdges = new List<EpisodicEdge>();
+                sourceEdges = new List<EpisodicEdge>(1);
                 edgesBySource.Add(edge.SourceNodeUuid, sourceEdges);
             }
 

@@ -339,6 +339,12 @@ dropped from 386.6 us to 379.0 us at 200 candidates and 2,282.1 us to 2,222.8 us
 with allocations unchanged. See
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-search-mmr-dimension-win-x64.md`.
 
+Plan 10 lookup/list pre-sizing slice is complete (2026-06-27): `SearchFallbackGraph` now pre-sizes
+entity/episodic edge adjacency dictionaries to the edge snapshot count and starts per-source lists at
+capacity 1; `MaintenanceUtilities.BuildEpisodicEdges` now estimates result-list capacity from mapped
+or default episode links. This is a behavior-neutral capacity hint slice; focused maintenance and
+search fallback/traversal tests plus the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

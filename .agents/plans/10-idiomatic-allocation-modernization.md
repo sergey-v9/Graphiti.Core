@@ -138,7 +138,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   *parity low; bench.*
 - [x] **MMR pairwise dimension re-validation** (`Search/SearchUtilities.cs` ~636) — hoist the invariant
   dimension check out of the O(n²) loop; `TensorPrimitives.Dot` directly. *parity low; bench.*
-- [ ] **Pre-size build-once lookups** — `SearchFallbackGraph` adjacency dicts (~277/296);
+- [x] **Pre-size build-once lookups** — `SearchFallbackGraph` adjacency dicts (~277/296);
   `MaintenanceUtilities.BuildEpisodicEdges` result list (~32). *parity none.*
 - [ ] **MinHash redundant UTF-8 encoding (32×)** (`Maintenance/EntityNodeDeduplication.cs` ~284) — encode
   each shingle once, vary only the cheap seed mix. **Changes hash/LSH bucket values** — adopt only if

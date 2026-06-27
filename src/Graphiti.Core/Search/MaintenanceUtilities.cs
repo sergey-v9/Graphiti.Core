@@ -29,7 +29,8 @@ internal static class MaintenanceUtilities
         DateTime createdAt,
         IReadOnlyDictionary<string, IReadOnlyList<int>>? nodeEpisodeIndexMap = null)
     {
-        var edges = new List<EpisodicEdge>();
+        var edges = new List<EpisodicEdge>(
+            EstimateEpisodicEdgeCapacity(entityNodes, episodeUuids, nodeEpisodeIndexMap));
         foreach (var node in entityNodes)
         {
             if (nodeEpisodeIndexMap is not null && nodeEpisodeIndexMap.TryGetValue(node.Uuid, out var mapped))
@@ -65,6 +66,34 @@ internal static class MaintenanceUtilities
         }
 
         return edges;
+    }
+
+    private static int EstimateEpisodicEdgeCapacity(
+        IReadOnlyList<EntityNode> entityNodes,
+        IReadOnlyList<string> episodeUuids,
+        IReadOnlyDictionary<string, IReadOnlyList<int>>? nodeEpisodeIndexMap)
+    {
+        if (entityNodes.Count == 0 || episodeUuids.Count == 0)
+        {
+            return 0;
+        }
+
+        long capacity = 0;
+        for (var i = 0; i < entityNodes.Count; i++)
+        {
+            var node = entityNodes[i];
+            capacity += nodeEpisodeIndexMap is not null
+                        && nodeEpisodeIndexMap.TryGetValue(node.Uuid, out var mapped)
+                ? mapped.Count
+                : episodeUuids.Count;
+
+            if (capacity >= int.MaxValue)
+            {
+                return int.MaxValue;
+            }
+        }
+
+        return (int)capacity;
     }
 
     /// <summary>Builds community edges linking a community node to its member entity nodes.</summary>
