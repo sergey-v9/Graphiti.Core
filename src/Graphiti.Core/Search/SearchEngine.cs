@@ -58,7 +58,7 @@ internal static class SearchEngine
                 return new SearchResults();
             }
 
-            groupIds = groupIds is { Count: > 0 } && !groupIds.SequenceEqual(new[] { string.Empty })
+            groupIds = groupIds is { Count: > 0 } && (groupIds.Count != 1 || groupIds[0].Length != 0)
                 ? groupIds
                 : null;
 

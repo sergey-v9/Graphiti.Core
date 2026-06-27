@@ -254,6 +254,10 @@ Plan 10 episode-attribution search copy slice is complete (2026-06-27): `GetNode
 now passes the fetched episode list directly into throttled edge lookup instead of materializing a
 second list; focused episode-attribution tests and the full verifier were green.
 
+Plan 10 search group-sentinel slice is complete (2026-06-27): `SearchEngine.SearchAsync` now checks the
+single empty-group sentinel with direct count/index access instead of allocating an array and using
+LINQ; focused search-engine suites and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

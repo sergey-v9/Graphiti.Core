@@ -93,7 +93,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   (keep `RemoveEmptyEntries|TrimEntries` semantics). *parity low; bench.*
 - [x] **Drop redundant `CopyList(episodes)`** (`Graphiti.Search.cs` ~209) — `episodes` is already
   `IReadOnlyList`; pass it straight into `SelectThrottledAsync`. *parity none.*
-- [ ] **SearchAsync group-id sentinel** (`Search/SearchEngine.cs` ~61) — replace
+- [x] **SearchAsync group-id sentinel** (`Search/SearchEngine.cs` ~61) — replace
   `!groupIds.SequenceEqual(new[]{ string.Empty })` (array + LINQ per search) with a direct
   `Count == 1 && groupIds[0].Length == 0` check. *parity none.*
 - [ ] **Ladybug embedding-load reads whole entity** (`Drivers/Ladybug/LadybugGraphDriver.cs` ~564/583) —
