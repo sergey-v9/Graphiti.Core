@@ -22,7 +22,7 @@ repeatedly added guards). This plan does **not** touch the parked publish line.
 
 ## Step 0 — close the two roadmap residuals first (housekeeping)
 
-- [ ] **0a. Settle the HNSW gate with the new baseline data.** `2026-06-27-inmemory-vector-win-x64.md`
+- [x] **0a. Settle the HNSW gate with the new baseline data.** `2026-06-27-inmemory-vector-win-x64.md`
   now measures the InMemory full-scan vector search. Read it and **decide**: if full-scan cosine is
   comfortably within budget at the target graph size, formally close HNSW as *not needed — exact cosine
   stays the default* in `decisions.md`/`roadmap.md` (record the numbers). If the baseline shows a cliff

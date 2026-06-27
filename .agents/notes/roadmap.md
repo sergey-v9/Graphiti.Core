@@ -197,9 +197,11 @@ through `.agents/plans/10-idiomatic-allocation-modernization.md`:
   zero-risk reductions can land without a benchmark but never at the cost of clarity or parity.
 
 Discipline: small, reviewable slices; never trade behavior or parity for cleverness; if a "modern" form
-is less clear or less correct, don't do it. As the language moves (C# next / .NET 11), revisit. The
-deferred opt-in HNSW vector tier still belongs to this program — only pursue it if a benchmark shows
-full-scan cosine is the bottleneck at the target graph size, and keep exact cosine the default.
+is less clear or less correct, don't do it. As the language moves (C# next / .NET 11), revisit.
+The HNSW gate is closed for the current InMemory reference/test backend target: exact full-scan cosine
+stays the default, with a 2026-06-27 win-x64 ShortRun baseline of 104.5 us at 500 candidates and
+387.4 us at 2,000 candidates. Reopen an opt-in approximate tier only if future same-machine benchmarks
+at a materially larger target graph size show full-scan cosine is the bottleneck.
 
 - **G1 — Cross-platform proof (HIGH): DONE 2026-06-26.** The linux-x64 failure was reproduced as an
   FTS extension undefined-symbol error under `~/.lbdb/extension`, classified as a `ladybug-dotnet`
@@ -226,13 +228,11 @@ full-scan cosine is the bottleneck at the target graph size, and keep exact cosi
   baseline landed 2026-06-27, covering the reference driver's O(n) cosine path with
   `[MemoryDiagnoser]`. A bulk edge-dedupe public-workflow baseline also landed 2026-06-27; endpoint
   bucketing was measured there but not kept because the same workflow showed no material win.
-  Remaining work:
-  use the vector baseline to decide whether full-scan cosine needs optimization at target graph size,
-  and land only measured, parity-safe wins (BenchmarkDotNet before/after).
-  This program also
-  *gates* the deferred
-  opt-in HNSW vector tier (G-future) — only pursue HNSW if the bench shows full-scan cosine is the
-  bottleneck at the target graph size, and keep exact cosine the default.
+  The vector baseline closed the HNSW gate for the current InMemory reference/test backend target:
+  exact full-scan cosine remains the default, and an opt-in approximate tier should only be reopened if
+  future same-machine benchmarks at a materially larger target graph size show full-scan cosine is the
+  bottleneck. Remaining work is limited to measured, parity-safe wins (BenchmarkDotNet before/after)
+  when new bottlenecks are demonstrated.
 - **G4 — Observability + consumer DX (DONE 2026-06-26).** `GraphitiTelemetry` exposes a public `Meter`
   next to the existing `ActivitySource`; metrics cover episodes ingested, ingestion/search duration,
   ingestion and search result counts, LLM tokens, and LLM response-cache hit/miss lookups. `docs/observability.md`

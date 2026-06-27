@@ -245,6 +245,11 @@ no wire/prompt/cache/temporal behavior changed):
 - Use tensor/vector primitives for low-level math when helpful, but keep Graphiti ranking algorithms
   custom and parity-tested. Reject non-finite embedding values at Graphiti-owned embedding boundaries
   before persistence or ranking.
+- HNSW is **not needed** for the current InMemory reference/test backend target. The 2026-06-27
+  win-x64 ShortRun baseline for exact full-scan node-vector search was 104.5 us at 500 candidates and
+  387.4 us at 2,000 candidates, including filter checks, top-k selection, and result cloning. Keep
+  exact cosine the default; only reopen an opt-in approximate tier if future same-machine benchmarks at
+  a materially larger target graph size show full-scan cosine is the bottleneck.
 - Provider-backed C# embedders also require exact provider output counts and exact configured vector
   dimensions before persistence/ranking. Python provider clients generally slice or forward returned
   vectors, but the C# port treats malformed provider output as an adapter boundary error so downstream

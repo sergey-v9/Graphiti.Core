@@ -393,6 +393,11 @@ projections while preserving the single-episode fast path, timestamp formatting,
 and capacity estimate. Focused text/prompt tests and the full verifier were green. This completes the
 Plan 10 checklist; roadmap now points next work back to the outstanding non-release robustness stream.
 
+Plan 09 Step 0a is complete (2026-06-27): the HNSW gate is closed for the current InMemory
+reference/test backend target. The committed exact full-scan node-vector benchmark baseline measured
+104.5 us at 500 candidates and 387.4 us at 2,000 candidates, so exact cosine remains the default and an
+opt-in approximate tier should only be reopened if future larger-target benchmarks prove a bottleneck.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
