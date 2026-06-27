@@ -427,7 +427,12 @@ var entityTypes = new Dictionary<string, EntityTypeDefinition>
         attributes: new Dictionary<string, EntityAttributeDefinition>
         {
             ["role"] = new EntityAttributeDefinition(
-                description: "The person's job title or role."),
+                description: "The person's job title or role.",
+                maxLength: 120,
+                required: true),
+            ["bio"] = new EntityAttributeDefinition(
+                description: "Short profile summary when explicitly stated.",
+                maxLength: 2_000),
         }),
     ["Project"] = new EntityTypeDefinition(
         name: "Project",
@@ -449,6 +454,10 @@ source/target type pair), and `customExtractionInstructions` (extra natural-lang
 to the extraction prompt). The same `entityTypes` / `edgeTypes` parameters exist on
 `AddEpisodeBulkAsync`. Extracted attributes land in `EntityNode.Attributes` /
 `EntityEdge.Attributes`.
+`EntityAttributeDefinition.MaxLength` overrides the default string/list length guard for that field.
+Required fields (`required: true`) are included in the structured response schema and retained if a
+provider emits an over-cap value. Optional fields are omitted from the schema's required set and are
+dropped/restored according to the normal attribute merge mode when over cap.
 
 ## The temporal model
 

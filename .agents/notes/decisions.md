@@ -429,21 +429,21 @@ the impact grows.
   the cap only differs for a graph that genuinely never converges (C# truncates; Python would hang). It
   is intentional infinite-loop protection — keep it.
 
-## Open public-surface decisions to settle while still alpha (2026-06-19 review)
+## Public-surface decisions settled while still alpha (2026-06-27)
 
-The package is `2.0.0-alpha.1`; surface changes are cheap NOW and breaking after a stable line. Decide
-these before any versioning gate:
+The package is `2.0.0-alpha.1`; these release-surface calls were settled before the stable-version
+gate so future releases are not forced into avoidable breaking changes:
 
-- **`CommunityEdgeNamespace.SaveBulkAsync`** is an additive C# public method with **no Python
-  counterpart**, pinned in the API snapshot and Ladybug-tested. Make the explicit keep-or-remove call:
-  if kept, record it here as a deliberate additive-API decision (so the snapshot diff is justified); if
-  removed, do it before the release-versioning gate to avoid a post-1.0 break.
-- **Per-field attribute `MaxLength` + required-field carve-out** are absent (C# `AttributeMerger`
-  applies only the single global cap and unconditionally drops over-cap fields;
-  `EntityAttributeDefinition` exposes neither). Python's `apply_capped_attributes` has a per-field
-  override + a required-field retain path. Genuine behavioral difference, correctly decision-gated;
-  closing it is a real `EntityAttributeDefinition` API expansion (do it as one bundle with snapshot +
-  golden-schema + the required-over-cap test, not piecemeal).
+- **`CommunityEdgeNamespace.SaveBulkAsync` is KEPT** as a deliberate additive C# API. It has no Python
+  counterpart, but it is symmetric with every other public node/edge namespace bulk-save path, already
+  pinned in the API snapshot, and covered by namespace plus LadybugDB runtime tests. Removing only this
+  one bulk method would make the namespace surface less coherent for consumers.
+- **`EntityAttributeDefinition.MaxLength` and `EntityAttributeDefinition.Required` are public API.**
+  `MaxLength` supplies a per-field cap override for extracted string and string-list values;
+  `Required` controls whether the dynamic structured response schema requires the field and whether an
+  over-cap value is retained rather than dropped. The default `Required = false` preserves the existing
+  C# over-cap drop/restore behavior for current callers; callers can set `required: true` for fields
+  that must survive the cap so subsequent validation can decide whether to reject them.
 
 ## Deliberate divergences from the 2026-06-14 upstream sync
 

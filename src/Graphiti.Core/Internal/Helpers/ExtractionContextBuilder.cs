@@ -45,14 +45,24 @@ internal static class ExtractionContextBuilder
         for (var i = 0; i < attributes.Count; i++)
         {
             var pair = attributes[i];
-            attributeProperties[pair.Key] = new JsonObject
+            var jsonSchemaType = NormalizeJsonSchemaType(pair.Value.Type);
+            var attributeSchema = new JsonObject
             {
                 ["type"] = new JsonArray(
-                    JsonValue.Create(NormalizeJsonSchemaType(pair.Value.Type)),
+                    JsonValue.Create(jsonSchemaType),
                     JsonValue.Create("null")),
                 ["description"] = pair.Value.Description
             };
-            requiredAttributes.Add(JsonValue.Create(pair.Key));
+            if (pair.Value.MaxLength is int maxLength && jsonSchemaType == "string")
+            {
+                attributeSchema["maxLength"] = maxLength;
+            }
+
+            attributeProperties[pair.Key] = attributeSchema;
+            if (pair.Value.Required)
+            {
+                requiredAttributes.Add(JsonValue.Create(pair.Key));
+            }
         }
 
         return new StructuredResponseSchema(

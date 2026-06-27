@@ -240,8 +240,8 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added. This section holds the single authoritative live count and the standing verify commands — do
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
-**Current verifier checkpoint (2026-06-26):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1028` passed, `4` skipped, `1032` total. The verifier
+**Current verifier checkpoint (2026-06-27):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
+Packages credentials for the Ladybug feed — `1031` passed, `4` skipped, `1035` total. The verifier
 covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
 shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
 LadybugDB through the packed package. The skips are the env-gated

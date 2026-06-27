@@ -14,6 +14,7 @@ internal static class AttributeMerger
         JsonObject response) =>
         MergeExtractedAttributes(
             priorAttributes,
+            entityType,
             ExtractDeclaredAttributes(entityType, response),
             AttributeMergeMode.Replace);
 
@@ -24,6 +25,7 @@ internal static class AttributeMerger
     {
         var merged = MergeExtractedAttributes(
             node.Attributes,
+            entityType,
             ExtractDeclaredAttributes(entityType, response),
             AttributeMergeMode.Overlay);
         node.Attributes.Clear();
@@ -73,10 +75,11 @@ internal static class AttributeMerger
 
     private static Dictionary<string, object?> MergeExtractedAttributes(
         Dictionary<string, object?> priorAttributes,
+        EntityTypeDefinition entityType,
         Dictionary<string, object?> extractedAttributes,
         AttributeMergeMode mergeMode)
     {
-        var capped = CapExtractedAttributes(extractedAttributes);
+        var capped = CapExtractedAttributes(entityType, extractedAttributes);
         if (mergeMode == AttributeMergeMode.Overlay)
         {
             var merged = new Dictionary<string, object?>(priorAttributes, StringComparer.Ordinal);
@@ -106,15 +109,24 @@ internal static class AttributeMerger
     }
 
     private static AttributeCapResult CapExtractedAttributes(
+        EntityTypeDefinition entityType,
         Dictionary<string, object?> attributes)
     {
-        var maxLength = ResolveAttributeMaxLength();
+        var defaultMaxLength = ResolveAttributeMaxLength();
         var kept = new Dictionary<string, object?>(StringComparer.Ordinal);
         HashSet<string>? dropped = null;
         foreach (var pair in attributes)
         {
+            var definition = entityType.Attributes[pair.Key];
+            var maxLength = definition.MaxLength ?? defaultMaxLength;
             if (AttributeExceedsCap(pair.Value, maxLength))
             {
+                if (definition.Required)
+                {
+                    kept[pair.Key] = pair.Value;
+                    continue;
+                }
+
                 (dropped ??= new HashSet<string>(StringComparer.Ordinal)).Add(pair.Key);
                 continue;
             }
@@ -147,7 +159,7 @@ internal static class AttributeMerger
         }
 
         var maxItemLength = 0;
-        var totalLength = 0;
+        long totalLength = 0;
         foreach (var item in values)
         {
             if (item is not string itemText)
@@ -160,7 +172,7 @@ internal static class AttributeMerger
         }
 
         return maxItemLength > maxLength
-               || totalLength > maxLength * AttributeListTotalLengthMultiplier;
+               || totalLength > (long)maxLength * AttributeListTotalLengthMultiplier;
     }
 
     private static object? JsonNodeToObject(JsonNode? node)

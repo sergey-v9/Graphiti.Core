@@ -22,12 +22,12 @@ now so that when Sergey says "ship", it is a version stamp, not a scramble of br
 
 ## Steps (one slice each — implement → verify → commit → check off)
 
-- [ ] **A. `CommunityEdgeNamespace.SaveBulkAsync` — keep-or-remove.** It is an additive C# public method
+- [x] **A. `CommunityEdgeNamespace.SaveBulkAsync` — keep-or-remove.** It is an additive C# public method
   with **no Python counterpart**, pinned in the API snapshot and Ladybug-tested. Make the explicit call:
   if it earns its place (real consumer value, symmetric with the other bulk save paths), **keep** it and
   record it in `decisions.md` as a deliberate additive-API decision so the snapshot diff is justified;
   otherwise **remove** it before the versioning gate. Update the API snapshot either way.
-- [ ] **B. Attribute `MaxLength` + required-field carve-out — close or formally document.** Python's
+- [x] **B. Attribute `MaxLength` + required-field carve-out — close or formally document.** Python's
   `apply_capped_attributes` has a **per-field cap override** and a **required-field retain** path; C#
   `AttributeMerger` applies only the single global cap and unconditionally drops over-cap fields, and
   `EntityAttributeDefinition` exposes neither. Behavioral parity is the product contract, so the default
@@ -67,6 +67,8 @@ required CI lanes to do it.
 ## Verification
 
 `.\eng\Verify-GraphitiCore.ps1` must be green on win-x64 after each slice; A/B that touch structured
-schemas or the snapshot must regenerate the API baseline and golden schema in the same commit. The
+schemas or the snapshot must regenerate the API baseline and golden schema in the same commit. A/B is
+green as of 2026-06-27 (`1031` passed, `4` skipped, `1035` total; pack and fresh package-consumer
+smoke included). The
 linux-x64 and live-provider lanes stay additive and gated. Keep exact-cosine the default vector path;
 this plan does not touch the deferred HNSW gate (G3).

@@ -626,8 +626,10 @@ namespace Graphiti.Core.Models
 {
     public sealed class EntityAttributeDefinition
     {
-        public EntityAttributeDefinition(string? description = null, string? type = null) { }
+        public EntityAttributeDefinition(string? description = null, string? type = null, int? maxLength = default, bool required = false) { }
         public string Description { get; }
+        public int? MaxLength { get; }
+        public bool Required { get; }
         public string Type { get; }
     }
     public sealed class EntityTypeDefinition

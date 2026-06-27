@@ -14,8 +14,8 @@ public class GraphitiWorkflowTests
     {
         var attributes = new Dictionary<string, EntityAttributeDefinition>(StringComparer.Ordinal)
         {
-            ["Role"] = new("Job title"),
-            ["active"] = new("Whether the person is active", "boolean")
+            ["Role"] = new("Job title", maxLength: 120),
+            ["active"] = new("Whether the person is active", "boolean", required: true)
         };
 
         var typeDefinition = new EntityTypeDefinition("Person", attributes: attributes);
@@ -28,7 +28,10 @@ public class GraphitiWorkflowTests
         Assert.False(typeDefinition.Attributes.ContainsKey("ACTIVE"));
         Assert.False(typeDefinition.Attributes.ContainsKey("location"));
         Assert.Equal("Job title", typeDefinition.Attributes["Role"].Description);
+        Assert.Equal(120, typeDefinition.Attributes["Role"].MaxLength);
+        Assert.False(typeDefinition.Attributes["Role"].Required);
         Assert.Equal("boolean", typeDefinition.Attributes["active"].Type);
+        Assert.True(typeDefinition.Attributes["active"].Required);
     }
 
     [Fact]

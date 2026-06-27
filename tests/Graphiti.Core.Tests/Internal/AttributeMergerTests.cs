@@ -67,6 +67,57 @@ public class AttributeMergerTests
     }
 
     [Fact]
+    public void ReplaceExtractedAttributes_UsesPerFieldMaxLengthOverride()
+    {
+        var prior = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["code"] = "stable"
+        };
+        var entityType = new EntityTypeDefinition(
+            "Project",
+            attributes: new Dictionary<string, EntityAttributeDefinition>
+            {
+                ["description"] = new("Long-form description", maxLength: 2_000, required: false),
+                ["code"] = new("Short code", maxLength: 50, required: false)
+            });
+        var longDescription = new string('a', 1_500);
+        var response = new JsonObject
+        {
+            ["description"] = longDescription,
+            ["code"] = new string('b', 51)
+        };
+
+        var merged = AttributeMerger.ReplaceExtractedAttributes(prior, entityType, response);
+
+        Assert.Equal(longDescription, merged["description"]);
+        Assert.Equal("stable", merged["code"]);
+    }
+
+    [Fact]
+    public void ReplaceExtractedAttributes_RetainsRequiredOverlongFields()
+    {
+        var prior = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["full_name"] = "Existing Name"
+        };
+        var entityType = new EntityTypeDefinition(
+            "Person",
+            attributes: new Dictionary<string, EntityAttributeDefinition>
+            {
+                ["full_name"] = new("Full legal name", required: true)
+            });
+        var overlongName = new string('x', 251);
+        var response = new JsonObject
+        {
+            ["full_name"] = overlongName
+        };
+
+        var merged = AttributeMerger.ReplaceExtractedAttributes(prior, entityType, response);
+
+        Assert.Equal(overlongName, merged["full_name"]);
+    }
+
+    [Fact]
     public void ReplaceExtractedAttributes_UsesExactDeclaredAttributeNames()
     {
         var prior = new Dictionary<string, object?>(StringComparer.Ordinal);
@@ -108,5 +159,4 @@ public class AttributeMergerTests
 
         Assert.Empty(merged);
     }
-
 }
