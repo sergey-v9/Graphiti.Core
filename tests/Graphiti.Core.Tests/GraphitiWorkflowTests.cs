@@ -3805,6 +3805,43 @@ public class GraphitiWorkflowTests
     }
 
     [Fact]
+    public async Task AddEpisodeBulk_NormalizedNodeDedupeKeepsFirstInputWinnerWhenExtractionsCompleteOutOfOrder()
+    {
+        var driver = new EmptyEdgeSearchGraphDriver
+        {
+            ReturnEmptyNodeEmbeddingHits = true
+        };
+        var llm = new OutOfOrderNormalizedBulkNodeLlmClient();
+        var graphiti = new Graphiti(graphDriver: driver, llmClient: llm, maxCoroutines: 2);
+
+        var result = await graphiti.AddEpisodeBulkAsync(
+            new[]
+            {
+                new RawEpisode
+                {
+                    Name = "first",
+                    Content = "First ACME mention.",
+                    SourceDescription = "message",
+                    ReferenceTime = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc)
+                },
+                new RawEpisode
+                {
+                    Name = "second",
+                    Content = "Second ACME mention.",
+                    SourceDescription = "message",
+                    ReferenceTime = new DateTime(2026, 1, 1, 12, 5, 0, DateTimeKind.Utc)
+                }
+            },
+            groupId: "group");
+
+        var node = Assert.Single(result.Nodes);
+        Assert.Equal("ACME Corp", node.Name);
+        Assert.Equal(new[] { "Second ACME mention.", "First ACME mention." }, llm.CompletedContents);
+        Assert.Equal(2, result.EpisodicEdges.Count);
+        Assert.All(result.EpisodicEdges, mention => Assert.Equal(node.Uuid, mention.TargetNodeUuid));
+    }
+
+    [Fact]
     public async Task AddEpisodeBulk_CollapsesDuplicateFactsToSingleReturnedEdgeWithBothEpisodes()
     {
         var driver = new InMemoryGraphDriver();
@@ -6033,6 +6070,61 @@ public class GraphitiWorkflowTests
             content.StartsWith("Alpha", StringComparison.Ordinal)
                 ? TimeSpan.FromMilliseconds(150)
                 : TimeSpan.FromMilliseconds(15);
+    }
+
+    private sealed class OutOfOrderNormalizedBulkNodeLlmClient : ILlmClient
+    {
+        private readonly Lock _gate = new();
+
+        public TokenUsageTracker TokenTracker { get; } = new();
+        public List<string> CompletedContents { get; } = new();
+
+        public async Task<JsonObject> GenerateResponseAsync(
+            IReadOnlyList<Message> messages,
+            Type? responseModel = null,
+            StructuredResponseSchema? responseSchema = null,
+            int? maxTokens = null,
+            ModelSize modelSize = ModelSize.Medium,
+            string? groupId = null,
+            string? promptName = null,
+            bool attributeExtraction = false,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.Equals(promptName, "extract_edges.edge", StringComparison.Ordinal))
+            {
+                return new JsonObject { ["edges"] = new JsonArray() };
+            }
+
+            if (!IsNodeExtractionPrompt(promptName))
+            {
+                return new JsonObject();
+            }
+
+            var content = ReadEpisodeContent(messages);
+            await Task.Delay(
+                content.StartsWith("First", StringComparison.Ordinal)
+                    ? TimeSpan.FromMilliseconds(150)
+                    : TimeSpan.FromMilliseconds(15),
+                cancellationToken).ConfigureAwait(false);
+
+            lock (_gate)
+            {
+                CompletedContents.Add(content);
+            }
+
+            return new JsonObject
+            {
+                ["extracted_entities"] = new JsonArray(
+                    new JsonObject
+                    {
+                        ["name"] = content.StartsWith("First", StringComparison.Ordinal)
+                            ? "ACME Corp"
+                            : " acme   corp ",
+                        ["entity_type"] = "Entity",
+                        ["episode_indices"] = new JsonArray { 0 }
+                    })
+            };
+        }
     }
 
     private sealed class FailingBulkExtractionLlmClient : ILlmClient

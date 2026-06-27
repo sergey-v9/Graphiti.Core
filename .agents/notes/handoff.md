@@ -304,6 +304,14 @@ allocations for `BulkEdgeDedupeBenchmarks` dropped from 10.41 MB to 10.38 MB at 
 (8-pair case rounded unchanged at 4.52 MB). See
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-bulk-edge-override-values-win-x64.md`.
 
+Plan 10 bulk node dedupe slice is complete (2026-06-27): final bulk node dedupe now keeps a
+first-admission normalized-name index and canonical node list, avoiding repeated normalized scans
+and canonical-value snapshots while preserving first input winner semantics. Focused bulk workflow
+coverage pins out-of-order extraction completion. Local ShortRun allocations for
+`BulkEdgeDedupeBenchmarks` dropped from 4.52 MB to 4.46 MB at 8 endpoint pairs and 10.31 MB to
+10.05 MB at 16 endpoint pairs. See
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-bulk-node-dedupe-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

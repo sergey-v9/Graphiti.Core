@@ -125,7 +125,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   O(E·N) snapshot of the growing canonical-edge dict each episode; widen the callee param to
   `IReadOnlyCollection` and pass `.Values`, or reuse one buffer (cross-file: `EdgeResolutionService`).
   *parity low; bench.*
-- [ ] **Bulk node dedupe O(n²)** (`Graphiti.Ingestion.cs` `DedupeBulkNodesAsync` ~589 /
+- [x] **Bulk node dedupe O(n²)** (`Graphiti.Ingestion.cs` `DedupeBulkNodesAsync` ~589 /
   `FindCanonicalNodeByNormalizedName` ~1094) — per-node full-dict copy + repeated `NormalizeEntityKey`;
   index canonical nodes by a precomputed normalized (Ordinal) key for O(1) lookup; reuse scratch buffers.
   *parity? ; bench.*

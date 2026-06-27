@@ -546,6 +546,8 @@ public sealed partial class Graphiti
             cancellationToken).ConfigureAwait(false);
 
         var canonicalNodes = new Dictionary<string, EntityNode>(StringComparer.Ordinal);
+        var canonicalNodeList = new List<EntityNode>();
+        var canonicalNodesByNormalizedName = new Dictionary<string, EntityNode>(StringComparer.Ordinal);
         var uuidPairs = new List<UuidMapPair>();
         foreach (var firstPass in firstPassResults)
         {
@@ -563,7 +565,11 @@ public sealed partial class Graphiti
             {
                 if (canonicalNodes.Count == 0)
                 {
-                    canonicalNodes[node.Uuid] = node;
+                    TryAddCanonicalNode(
+                        canonicalNodes,
+                        canonicalNodeList,
+                        canonicalNodesByNormalizedName,
+                        node);
                     continue;
                 }
 
@@ -573,8 +579,7 @@ public sealed partial class Graphiti
                 }
 
                 var normalized = GraphitiHelpers.NormalizeEntityKey(node.Name);
-                var exactMatch = FindCanonicalNodeByNormalizedName(canonicalNodes.Values, normalized);
-                if (exactMatch is not null)
+                if (canonicalNodesByNormalizedName.TryGetValue(normalized, out var exactMatch))
                 {
                     if (!string.Equals(node.Uuid, exactMatch.Uuid, StringComparison.Ordinal))
                     {
@@ -586,16 +591,24 @@ public sealed partial class Graphiti
 
                 var deterministic = EntityNodeDeduplicator.Resolve(
                     new List<EntityNode> { node },
-                    CopyDictionaryValues(canonicalNodes),
+                    canonicalNodeList,
                     NodeResolutionService.MergeExtractedNode);
                 var resolved = deterministic.Nodes.Count == 0 ? node : deterministic.Nodes[0];
                 if (string.Equals(resolved.Uuid, node.Uuid, StringComparison.Ordinal))
                 {
-                    canonicalNodes[node.Uuid] = node;
+                    TryAddCanonicalNode(
+                        canonicalNodes,
+                        canonicalNodeList,
+                        canonicalNodesByNormalizedName,
+                        node);
                     continue;
                 }
 
-                canonicalNodes.TryAdd(resolved.Uuid, resolved);
+                TryAddCanonicalNode(
+                    canonicalNodes,
+                    canonicalNodeList,
+                    canonicalNodesByNormalizedName,
+                    resolved);
                 uuidPairs.Add(new UuidMapPair(node.Uuid, resolved.Uuid));
             }
         }
@@ -1091,21 +1104,6 @@ public sealed partial class Graphiti
         return copy;
     }
 
-    private static EntityNode? FindCanonicalNodeByNormalizedName(
-        IEnumerable<EntityNode> nodes,
-        string normalizedName)
-    {
-        foreach (var node in nodes)
-        {
-            if (GraphitiHelpers.NormalizeEntityKey(node.Name) == normalizedName)
-            {
-                return node;
-            }
-        }
-
-        return null;
-    }
-
     private static List<string> BuildEntityEdgeUuidList(List<EntityEdge> edges)
     {
         var uuids = new List<string>(edges.Count);
@@ -1133,6 +1131,22 @@ public sealed partial class Graphiti
         }
 
         return uuids;
+    }
+
+    private static bool TryAddCanonicalNode(
+        Dictionary<string, EntityNode> canonicalNodes,
+        List<EntityNode> canonicalNodeList,
+        Dictionary<string, EntityNode> canonicalNodesByNormalizedName,
+        EntityNode node)
+    {
+        if (!canonicalNodes.TryAdd(node.Uuid, node))
+        {
+            return false;
+        }
+
+        canonicalNodeList.Add(node);
+        canonicalNodesByNormalizedName.TryAdd(GraphitiHelpers.NormalizeEntityKey(node.Name), node);
+        return true;
     }
 
     private static void AddResolvedEntityEdgeUuids(
