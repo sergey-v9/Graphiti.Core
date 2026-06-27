@@ -31,21 +31,21 @@ internal static class EdgeMergeHelpers
         IReadOnlyList<EntityEdge> invalidationCandidates,
         Func<DateTime> utcNow)
     {
+        var resolvedValidAt = resolvedEdge.ValidAt is null
+            ? (DateTime?)null
+            : GraphitiHelpers.EnsureUtc(resolvedEdge.ValidAt.Value);
+        var resolvedInvalidAt = resolvedEdge.InvalidAt is null
+            ? (DateTime?)null
+            : GraphitiHelpers.EnsureUtc(resolvedEdge.InvalidAt.Value);
         var invalidatedEdges = new List<EntityEdge>();
         foreach (var edge in invalidationCandidates)
         {
             var edgeInvalidAt = edge.InvalidAt is null
                 ? (DateTime?)null
                 : GraphitiHelpers.EnsureUtc(edge.InvalidAt.Value);
-            var resolvedValidAt = resolvedEdge.ValidAt is null
-                ? (DateTime?)null
-                : GraphitiHelpers.EnsureUtc(resolvedEdge.ValidAt.Value);
             var edgeValidAt = edge.ValidAt is null
                 ? (DateTime?)null
                 : GraphitiHelpers.EnsureUtc(edge.ValidAt.Value);
-            var resolvedInvalidAt = resolvedEdge.InvalidAt is null
-                ? (DateTime?)null
-                : GraphitiHelpers.EnsureUtc(resolvedEdge.InvalidAt.Value);
 
             if ((edgeInvalidAt is not null && resolvedValidAt is not null && edgeInvalidAt <= resolvedValidAt)
                 || (edgeValidAt is not null && resolvedInvalidAt is not null && resolvedInvalidAt <= edgeValidAt))

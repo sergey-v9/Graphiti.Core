@@ -162,7 +162,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   `static readonly`/`[…]` (`HybridCacheLlmResponseCache` ~28, `GraphitiServiceCollectionExtensions` ~156);
   `TokenUsageTracker.GetTotalUsage` two `.Sum()`→one `foreach`; `GraphitiCacheOptionsValidator` `.Any(…)`→
   `foreach`; `GraphDriverBase` cache the default-group single-element array.
-- [ ] **`System.Threading.Lock` + loop-invariant hoists.** `EdgeResolutionService` shared mutation gate
+- [x] **`System.Threading.Lock` + loop-invariant hoists.** `EdgeResolutionService` shared mutation gate
   `object`→`Lock` (~165); `EdgeMergeHelpers.ResolveEdgeContradictions` hoist `resolvedValidAt/InvalidAt`
   out of the loop (~41). (Note: Ladybug `SchemaLock` is an **async** `SemaphoreSlim` — do **not** convert.)
 - [ ] **InMemoryGraphDriver 18-parameter clone ctor → a single `SharedStore` object** (mirroring

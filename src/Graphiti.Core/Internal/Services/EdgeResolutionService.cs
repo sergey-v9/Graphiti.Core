@@ -162,7 +162,7 @@ internal sealed class EdgeResolutionService(
             // expiry) are serialised under sharedEdgeMutationLock so real-thread parallelism stays
             // safe. SelectAsync preserves input order in the returned array, keeping the result
             // collection deterministic.
-            var sharedEdgeMutationLock = new object();
+            var sharedEdgeMutationLock = new Lock();
             var outcomes = await ThrottledWork.SelectAsync(
                 prepared,
                 (candidate, token) => ResolvePreparedEdgeAsync(
@@ -216,7 +216,7 @@ internal sealed class EdgeResolutionService(
         EntityEdge candidate,
         EpisodicNode episode,
         string groupId,
-        object sharedEdgeMutationLock,
+        Lock sharedEdgeMutationLock,
         IReadOnlyCollection<EntityEdge>? existingEdgesOverride,
         IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes,
         IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap,
@@ -524,7 +524,7 @@ internal sealed class EdgeResolutionService(
         IReadOnlyDictionary<string, EntityNode>? nodesByUuid = null,
         ConcurrentDictionary<EntityTypeDefinition, StructuredResponseSchema>? attributeSchemaCache = null,
         IReadOnlyList<EntityNode>? nodes = null,
-        object? sharedEdgeMutationLock = null)
+        Lock? sharedEdgeMutationLock = null)
     {
         nodesByUuid ??= BuildNodesByUuid(nodes);
         attributeSchemaCache ??= new ConcurrentDictionary<EntityTypeDefinition, StructuredResponseSchema>();
@@ -677,7 +677,7 @@ internal sealed class EdgeResolutionService(
             .CompareTo(GraphitiHelpers.EnsureUtc(right.ValidAt.Value));
     }
 
-    private static void RunSharedEdgeMutation(object? sharedEdgeMutationLock, Action mutation)
+    private static void RunSharedEdgeMutation(Lock? sharedEdgeMutationLock, Action mutation)
     {
         if (sharedEdgeMutationLock is null)
         {

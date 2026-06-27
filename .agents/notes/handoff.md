@@ -376,6 +376,12 @@ single loop; `TokenUsageTracker.GetTotalUsage` totals input/output tokens in one
 `GraphDriverBase` reuses the default-group singleton list. Focused config/cache/token/group-id tests
 and the full verifier were green.
 
+Plan 10 Lock / loop-invariant slice is complete (2026-06-27): `EdgeResolutionService` now uses
+`System.Threading.Lock` for the shared synchronous edge-mutation gate, and
+`EdgeMergeHelpers.ResolveEdgeContradictions` normalizes the resolved edge's valid/invalid timestamps
+once per call instead of once per candidate. Focused edge-resolution/merge tests and the full verifier
+were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
