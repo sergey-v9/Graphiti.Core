@@ -161,15 +161,15 @@ or have agents build-only and run the consolidated test centrally.
 ## Long-term goals — active development (set 2026-06-19 from the full-project review)
 
 > **Status 2026-06-27 — this productionization agenda is COMPLETE, and the project paradigm has
-> shifted.** G1–G4 and the non-gated part of G6 all landed (suite green `1032/4/1036`; pack +
+> shifted.** G1–G5 and the non-gated part of G6 all landed (suite green `1032/4/1036`; pack +
 > fresh-consumer dry run green). Sergey then re-set the project's purpose: this is **our own embeddable
 > internal library** (likely to be renamed), **not** a release-bound product — see `decisions.md` →
 > "What this project is (paradigm)". So **release/publishing is parked** (it was never the point), and
 > the **forward agenda is now the code itself: idiomatic modern C# (C# 14 / .NET 10, toward .NET 11) +
 > allocation/GC discipline**, parity-safe. The G1–G6 list below is kept as completed history, and
 > `.agents/plans/10-idiomatic-allocation-modernization.md` is now **complete** (2026-06-27). Plan 09
-> (robustness + the residual HNSW-gate decision and G5 check-script) is the next outstanding
-> non-release workstream. Behavioral/feature parity with Python stays the functional floor and is
+> Step 0 is complete too (HNSW settled; G5 reminder wrapper committed), so the robustness risk map is
+> the next outstanding non-release workstream. Behavioral/feature parity with Python stays the functional floor and is
 > essentially complete; we keep tracking upstream cheaply via `upstream-sync-procedure.md`.
 
 Phases 1–3 (parity) are done and the deterministic suite is green; the port is faithful and mature.
@@ -240,10 +240,11 @@ at a materially larger target graph size show full-scan cosine is the bottleneck
   OTLP export in a host-owned sample, `samples/Graphiti.Sample.Quickstart` is the no-key hello graph,
   and `samples/Graphiti.Sample.GenericProvider` proves the `Microsoft.Extensions.AI` boundary without
   OpenAI. Core remains free of exporter/provider SDK dependencies.
-- **G5 — Sustained upstream parity (MED, cheap insurance).** Keep tracking `getzep/graphiti` via
-  `upstream-sync-procedure.md`; add a low-cost recurring reminder that runs `Check-PythonUpstreamDelta`
-  and surfaces a *non-blocking* notification on delta, so new library commits get triaged promptly
-  without expanding CI.
+- **G5 — Sustained upstream parity (DONE 2026-06-27).** Keep tracking `getzep/graphiti` via
+  `upstream-sync-procedure.md`. `eng/Invoke-UpstreamDeltaReminder.ps1` is the committed, non-blocking
+  reminder wrapper around `Check-PythonUpstreamDelta`: it fetches, reports `graphiti_core` deltas, and
+  exits `0` for no-delta and delta cases so Sergey can wire it through a scheduled task, cron, or manual
+  dispatch without expanding CI.
 - **G6 — Release readiness (publish is USER-GATED).** The **non-gated** surface work is complete
   (2026-06-27): `.agents/plans/08-release-surface-finalization.md` settled the remaining alpha
   public-surface decisions (kept `CommunityEdgeNamespace.SaveBulkAsync`; added attribute

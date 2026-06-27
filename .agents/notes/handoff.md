@@ -108,15 +108,11 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
   is evidence-driven (benchmark-first) only (`roadmap.md`).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
   1–3 are complete, plans 05–08 are complete, and the whole 2026-06-19 G1–G6 agenda is done (parity,
-  merge, observability, linux-x64 proof, live-provider canary, the G3 perf program, and the non-gated
-  release-surface finalization). Per the 2026-06-27 paradigm shift, the library is **not** release-bound,
-  so release-versioning/publishing is parked. **The current actionable plan is
-  `.agents/plans/10-idiomatic-allocation-modernization.md`: a parity-safe sweep making the code itself
-  more idiomatic modern C# (C# 14 / .NET 10) and lowering allocations / GC pressure.** Idiomatic/
-  readability changes must stay behavior- and wire-preserving and warning-clean; hot-path allocation
-  changes stay benchmark-first. Plan 09 (robustness hardening) is **deferred** below plan 10 — its
-  Step 0 residuals (HNSW-gate decision, G5 committed check-script) are still worth doing but are not the
-  current priority.
+  merge, observability, linux-x64 proof, live-provider canary, the G3 perf program, sustained upstream
+  reminder, and the non-gated release-surface finalization). Per the 2026-06-27 paradigm shift, the
+  library is **not** release-bound, so release-versioning/publishing is parked. Plan 10 is complete.
+  **The current actionable plan is `.agents/plans/09-robustness-hardening.md`, starting with item A:
+  map the fragile real-LLM parsing/coercion boundary.**
   Full restore/test/pack requires GitHub Packages credentials for source `github_ladybug`. Performance
   work is benchmark-first and no longer on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
@@ -397,6 +393,11 @@ Plan 09 Step 0a is complete (2026-06-27): the HNSW gate is closed for the curren
 reference/test backend target. The committed exact full-scan node-vector benchmark baseline measured
 104.5 us at 500 candidates and 387.4 us at 2,000 candidates, so exact cosine remains the default and an
 opt-in approximate tier should only be reopened if future larger-target benchmarks prove a bottleneck.
+
+Plan 09 Step 0b is complete (2026-06-27): `eng/Invoke-UpstreamDeltaReminder.ps1` is the committed G5
+artifact. It wraps `Check-PythonUpstreamDelta`, fetches by default, warns on `graphiti_core` deltas, and
+exits `0` for both no-delta and delta cases so Sergey can wire it through a scheduled task, cron, or
+manual dispatch without adding a CI lane. The next unchecked plan item is the robustness risk map.
 
 ## LadybugDB / Kuzu
 

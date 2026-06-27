@@ -48,6 +48,18 @@ The same check is executable from `W:\code\graphiti\csharp`:
 
 Use `-FailOnDelta` when a no-library-delta check should fail automation.
 
+For the G5 recurring reminder, schedule the non-blocking wrapper instead of adding a CI lane:
+
+```
+.\eng\Invoke-UpstreamDeltaReminder.ps1
+```
+
+The wrapper fetches by default, runs the same library-delta check, prints a warning when
+`graphiti_core` has upstream changes, and exits `0` for both no-delta and delta cases so the reminder
+does not block unrelated work. Unexpected git or script failures still fail the task. Sergey can wire it
+as a Windows Scheduled Task, cron entry, or manual dispatch; the command above is the only repository
+setup required.
+
 The `git diff --stat … -- graphiti_core` is the source of truth for "what library code changed":
 it is the NET file set regardless of how many commits touched it. If every file/hunk in that net
 diff is explained by the commits you review, coverage is complete. (Most commits in the full

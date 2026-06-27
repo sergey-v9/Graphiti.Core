@@ -9,11 +9,9 @@ user-gated.
 
 ## Status
 
-**DEFERRED (2026-06-27) — below plan 10.** Still worthwhile, but the 2026-06-27 paradigm shift made the
-**idiomatic + allocation modernization** sweep (`.agents/plans/10-idiomatic-allocation-modernization.md`)
-the current priority. Pick this up after plan 10, or earlier if a parse/coercion robustness gap is
-actually hit. Step 0 here (the HNSW-gate decision and the G5 committed check-script) remains a small,
-high-value housekeeping bundle that can be done independently at any time.
+**ACTIVE (2026-06-27) — plan 10 is complete.** Step 0's housekeeping residuals are now complete:
+the HNSW gate is settled and G5 has a committed non-blocking reminder wrapper. The next slice is the
+robustness risk map in item A.
 
 The substance still stands: the highest remaining *real-world* risk is the layer the deterministic
 golden tests (which use fake LLMs) cannot fully stress — parsing and coercing **actual** LLM output into
@@ -28,7 +26,7 @@ repeatedly added guards). This plan does **not** touch the parked publish line.
   stays the default* in `decisions.md`/`roadmap.md` (record the numbers). If the baseline shows a cliff
   at realistic N, scope an opt-in HNSW tier as its own plan (do **not** implement it by default). Either
   way, convert the open "G-future HNSW gate" into a decided item, not a standing maybe.
-- [ ] **0b. Land G5 as a committed artifact, not a faked CI lane.** The in-session scheduler tool isn't
+- [x] **0b. Land G5 as a committed artifact, not a faked CI lane.** The in-session scheduler tool isn't
   available and the notes constrain CI expansion, so don't invent a workflow. Instead commit a small
   `eng/` wrapper around `Check-PythonUpstreamDelta` plus a short doc note in `upstream-sync-procedure.md`
   describing how Sergey wires the recurring, **non-blocking** reminder (OS scheduled task / cron / manual
