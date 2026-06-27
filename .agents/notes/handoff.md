@@ -276,6 +276,10 @@ Plan 10 snapshot-helper slice is complete (2026-06-27): `GraphitiHelpers` now us
 expressions for non-`ICollection` embedding/operation snapshots and the duplicate copy helpers are
 gone; focused helper/concurrency tests and the full verifier were green.
 
+Plan 10 dead-code slice is complete (2026-06-27): removed unused `Text.Helpers` whitespace regex
+generation and unused in-memory saga/group helper methods after reference checks; focused
+Graphiti helper / in-memory saga / routing tests and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

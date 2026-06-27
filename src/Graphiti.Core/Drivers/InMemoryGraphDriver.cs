@@ -1677,27 +1677,6 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         return null;
     }
 
-    private SagaNode? FindFirstStoredSagaByName(string name)
-    {
-        foreach (var pair in _sagaNodeUuidsByGroupAndName)
-        {
-            if (!string.Equals(pair.Key.Name, name, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            foreach (var uuid in pair.Value)
-            {
-                if (TryGetNode<SagaNode>(uuid, out var saga))
-                {
-                    return saga;
-                }
-            }
-        }
-
-        return null;
-    }
-
     private List<IndexedEpisode> GetSagaEpisodeRows(
         string sagaUuid,
         EpisodeType? source,
@@ -2204,9 +2183,6 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         results.Sort(StringComparer.Ordinal);
         return results;
     }
-
-    private static bool GroupMatches(string groupId, IReadOnlyList<string>? groupIds) =>
-        groupIds is null || groupIds.Count == 0 || groupIds.Contains(groupId, StringComparer.Ordinal);
 
     private static string EntityNodeFulltextText(EntityNode node) =>
         $"{node.Name} {node.Summary} {node.GroupId}";

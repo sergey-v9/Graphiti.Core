@@ -109,7 +109,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   `SnapshotOperations` keep byte-identical `CopyReadOnlyList`/`CopyList`/`CopyOperationList` loops and a
   List-then-array fallback; collapse the non-`ICollection` paths to `[.. x]` and delete the dead helpers.
   *parity none.*
-- [ ] **Dead-code removal** — unused `WhitespaceRegex()` (`Text/Helpers.cs` ~987); verify-then-remove
+- [x] **Dead-code removal** — unused `WhitespaceRegex()` (`Text/Helpers.cs` ~987); verify-then-remove
   `FindFirstStoredSagaByName` / `GroupMatches` (`Drivers/InMemoryGraphDriver.cs`). *parity none.*
 - [ ] **TextUtilities.AppendEpisode** (`Text/TextUtilities.cs` ~104) — `builder.Append(index)` instead of
   `builder.Append(index.ToString(...))`. *parity none.*

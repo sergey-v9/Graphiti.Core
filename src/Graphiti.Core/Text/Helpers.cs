@@ -923,7 +923,4 @@ public static partial class GraphitiHelpers
 
     [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant)]
     private static partial Regex NodeLabelRegex();
-
-    [GeneratedRegex("\\s+", RegexOptions.CultureInvariant)]
-    private static partial Regex WhitespaceRegex();
 }
