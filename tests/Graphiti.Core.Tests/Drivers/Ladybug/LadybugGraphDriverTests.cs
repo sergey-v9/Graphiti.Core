@@ -126,6 +126,30 @@ public class LadybugGraphDriverTests
     }
 
     [Fact]
+    public async Task TypedNodeDeletes_KeepEntityCleanupAndUseSingleNonEntityStatements()
+    {
+        var executor = new RecordingLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var typed = Assert.IsAssignableFrom<ITypedNodeDeleteGraphDriver>(driver);
+
+        await typed.DeleteNodeAsync<EntityNode>("entity-1");
+        await typed.DeleteNodeAsync<EpisodicNode>("episode-1");
+        await typed.DeleteNodesByGroupIdAsync<CommunityNode>("tenant");
+        await typed.DeleteNodesByUuidsAsync<SagaNode>(["saga-1", "saga-2"]);
+
+        Assert.Equal(5, executor.Executed.Count);
+        Assert.Contains("MATCH (n:Entity {uuid: $uuid})-[:RELATES_TO]->(r:RelatesToNode_)", executor.Executed[0].Query, StringComparison.Ordinal);
+        Assert.Contains("MATCH (n:Entity {uuid: $uuid})", executor.Executed[1].Query, StringComparison.Ordinal);
+        Assert.Contains("MATCH (n:Episodic {uuid: $uuid})", executor.Executed[2].Query, StringComparison.Ordinal);
+        Assert.Contains("MATCH (n:Community {group_id: $group_id})", executor.Executed[3].Query, StringComparison.Ordinal);
+        Assert.Contains("MATCH (n:Saga)", executor.Executed[4].Query, StringComparison.Ordinal);
+        Assert.Equal("entity-1", executor.Executed[0].Parameters["uuid"]);
+        Assert.Equal("episode-1", executor.Executed[2].Parameters["uuid"]);
+        Assert.Equal("tenant", executor.Executed[3].Parameters["group_id"]);
+        Assert.Equal(new[] { "saga-1", "saga-2" }, Assert.IsType<List<string>>(executor.Executed[4].Parameters["uuids"]));
+    }
+
+    [Fact]
     public async Task NonSearchReadSurface_UsesLadybugStatementsAndMapsRecords()
     {
         var executor = new RecordingLadybugExecutor();

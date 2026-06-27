@@ -200,13 +200,13 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             LadybugStatementBuilder.BuildNodeDeleteByUuidStatements<EntityNode>(uuid),
             cancellationToken).ConfigureAwait(false);
         await _executor.ExecuteAsync(
-            LadybugStatementBuilder.BuildNodeDeleteByUuidStatements<EpisodicNode>(uuid)[0],
+            LadybugStatementBuilder.BuildNodeDeleteByUuidStatement<EpisodicNode>(uuid),
             cancellationToken).ConfigureAwait(false);
         await _executor.ExecuteAsync(
-            LadybugStatementBuilder.BuildNodeDeleteByUuidStatements<CommunityNode>(uuid)[0],
+            LadybugStatementBuilder.BuildNodeDeleteByUuidStatement<CommunityNode>(uuid),
             cancellationToken).ConfigureAwait(false);
         await _executor.ExecuteAsync(
-            LadybugStatementBuilder.BuildNodeDeleteByUuidStatements<SagaNode>(uuid)[0],
+            LadybugStatementBuilder.BuildNodeDeleteByUuidStatement<SagaNode>(uuid),
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -214,8 +214,16 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         string uuid,
         CancellationToken cancellationToken)
     {
-        await ExecuteAllAsync(
-            LadybugStatementBuilder.BuildNodeDeleteByUuidStatements<TNode>(uuid),
+        if (typeof(TNode) == typeof(EntityNode))
+        {
+            await ExecuteAllAsync(
+                LadybugStatementBuilder.BuildNodeDeleteByUuidStatements<TNode>(uuid),
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        await _executor.ExecuteAsync(
+            LadybugStatementBuilder.BuildNodeDeleteByUuidStatement<TNode>(uuid),
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -224,8 +232,16 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         int batchSize,
         CancellationToken cancellationToken)
     {
-        await ExecuteAllAsync(
-            LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<TNode>(groupId),
+        if (typeof(TNode) == typeof(EntityNode))
+        {
+            await ExecuteAllAsync(
+                LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<TNode>(groupId),
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        await _executor.ExecuteAsync(
+            LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatement<TNode>(groupId),
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -242,9 +258,19 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             cancellationToken.ThrowIfCancellationRequested();
             var batchCount = Math.Min(effectiveBatchSize, uuidList.Count - batchStart);
             var batch = CopyRange(uuidList, batchStart, batchCount);
-            await ExecuteAllAsync(
-                LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<TNode>(batch),
-                cancellationToken).ConfigureAwait(false);
+            if (typeof(TNode) == typeof(EntityNode))
+            {
+                await ExecuteAllAsync(
+                    LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<TNode>(batch),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                await _executor.ExecuteAsync(
+                    LadybugStatementBuilder.BuildNodesDeleteByUuidsStatement<TNode>(batch),
+                    cancellationToken).ConfigureAwait(false);
+            }
+
             batchStart += batchCount;
         }
     }
@@ -259,13 +285,13 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
             LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<EntityNode>(groupId),
             cancellationToken).ConfigureAwait(false);
         await _executor.ExecuteAsync(
-            LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<EpisodicNode>(groupId)[0],
+            LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatement<EpisodicNode>(groupId),
             cancellationToken).ConfigureAwait(false);
         await _executor.ExecuteAsync(
-            LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<CommunityNode>(groupId)[0],
+            LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatement<CommunityNode>(groupId),
             cancellationToken).ConfigureAwait(false);
         await _executor.ExecuteAsync(
-            LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<SagaNode>(groupId)[0],
+            LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatement<SagaNode>(groupId),
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -287,13 +313,13 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
                 LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<EntityNode>(batch),
                 cancellationToken).ConfigureAwait(false);
             await _executor.ExecuteAsync(
-                LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<EpisodicNode>(batch)[0],
+                LadybugStatementBuilder.BuildNodesDeleteByUuidsStatement<EpisodicNode>(batch),
                 cancellationToken).ConfigureAwait(false);
             await _executor.ExecuteAsync(
-                LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<CommunityNode>(batch)[0],
+                LadybugStatementBuilder.BuildNodesDeleteByUuidsStatement<CommunityNode>(batch),
                 cancellationToken).ConfigureAwait(false);
             await _executor.ExecuteAsync(
-                LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<SagaNode>(batch)[0],
+                LadybugStatementBuilder.BuildNodesDeleteByUuidsStatement<SagaNode>(batch),
                 cancellationToken).ConfigureAwait(false);
             batchStart += batchCount;
         }
@@ -386,10 +412,10 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
                     LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<EntityNode>(groupId),
                     cancellationToken).ConfigureAwait(false);
                 await _executor.ExecuteAsync(
-                    LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<EpisodicNode>(groupId)[0],
+                    LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatement<EpisodicNode>(groupId),
                     cancellationToken).ConfigureAwait(false);
                 await _executor.ExecuteAsync(
-                    LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<CommunityNode>(groupId)[0],
+                    LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatement<CommunityNode>(groupId),
                     cancellationToken).ConfigureAwait(false);
             }
 

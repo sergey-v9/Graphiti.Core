@@ -291,6 +291,11 @@ one-parameter maps, 72 B for three-parameter/vector maps, and 616 B for repeated
 unchanged because it uses `SearchParameters`. See
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-ladybug-statement-builder-win-x64.md`.
 
+Plan 10 Ladybug delete statement slice is complete (2026-06-27): broad and typed non-Entity node
+delete paths now use single-statement builders instead of allocating one-element statement arrays
+and indexing `[0]`; Entity deletes still use the two-statement RelatesTo cleanup path. Focused
+Ladybug builder/driver tests and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

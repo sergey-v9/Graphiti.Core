@@ -281,6 +281,9 @@ public class LadybugFoundationTests
         var byUuid = LadybugStatementBuilder.BuildNodeDeleteByUuidStatements<EntityNode>("entity-1");
         var byGroup = LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatements<EntityNode>("tenant");
         var byUuids = LadybugStatementBuilder.BuildNodesDeleteByUuidsStatements<EntityNode>(["entity-1", "entity-2"]);
+        var episodicByUuid = LadybugStatementBuilder.BuildNodeDeleteByUuidStatement<EpisodicNode>("episode-1");
+        var communityByGroup = LadybugStatementBuilder.BuildNodesDeleteByGroupIdStatement<CommunityNode>("tenant");
+        var sagaByUuids = LadybugStatementBuilder.BuildNodesDeleteByUuidsStatement<SagaNode>(["saga-1", "saga-2"]);
 
         Assert.Equal(2, byUuid.Count);
         Assert.Contains(
@@ -301,6 +304,16 @@ public class LadybugFoundationTests
         Assert.Contains("WHERE n.uuid IN $uuids", byUuids[0].Query, StringComparison.Ordinal);
         Assert.Contains("MATCH (n)-[:RELATES_TO]->(r:RelatesToNode_)", byUuids[0].Query, StringComparison.Ordinal);
         Assert.Equal(new[] { "entity-1", "entity-2" }, Assert.IsType<List<string>>(byUuids[0].Parameters["uuids"]));
+
+        Assert.Contains("MATCH (n:Episodic {uuid: $uuid})", episodicByUuid.Query, StringComparison.Ordinal);
+        Assert.Contains("DETACH DELETE n", episodicByUuid.Query, StringComparison.Ordinal);
+        Assert.Equal("episode-1", episodicByUuid.Parameters["uuid"]);
+        Assert.Contains("MATCH (n:Community {group_id: $group_id})", communityByGroup.Query, StringComparison.Ordinal);
+        Assert.Equal("tenant", communityByGroup.Parameters["group_id"]);
+        Assert.Contains("MATCH (n:Saga)", sagaByUuids.Query, StringComparison.Ordinal);
+        Assert.Equal(new[] { "saga-1", "saga-2" }, Assert.IsType<List<string>>(sagaByUuids.Parameters["uuids"]));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => LadybugStatementBuilder.BuildNodeDeleteByUuidStatement<EntityNode>("entity-1"));
     }
 
     [Fact]

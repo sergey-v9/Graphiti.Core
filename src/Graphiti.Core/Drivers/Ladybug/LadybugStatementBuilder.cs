@@ -131,10 +131,20 @@ internal static class LadybugStatementBuilder
         where TNode : Node =>
         BuildNodeDeleteStatements<TNode>(NodeUuidDeleteMatch<TNode>(), Parameters(("uuid", uuid)));
 
+    internal static LadybugStatement BuildNodeDeleteByUuidStatement<TNode>(string uuid)
+        where TNode : Node =>
+        BuildSingleNodeDeleteStatement<TNode>(NodeUuidDeleteMatch<TNode>(), Parameters(("uuid", uuid)));
+
     internal static IReadOnlyList<LadybugStatement> BuildNodesDeleteByGroupIdStatements<TNode>(
         string groupId)
         where TNode : Node =>
         BuildNodeDeleteStatements<TNode>(
+            NodeGroupDeleteMatch<TNode>(),
+            Parameters(("group_id", groupId)));
+
+    internal static LadybugStatement BuildNodesDeleteByGroupIdStatement<TNode>(string groupId)
+        where TNode : Node =>
+        BuildSingleNodeDeleteStatement<TNode>(
             NodeGroupDeleteMatch<TNode>(),
             Parameters(("group_id", groupId)));
 
@@ -144,6 +154,15 @@ internal static class LadybugStatementBuilder
     {
         ArgumentNullException.ThrowIfNull(uuids);
         return BuildNodeDeleteStatements<TNode>(
+            NodeUuidsDeleteMatch<TNode>(),
+            Parameters(("uuids", SnapshotList(uuids))));
+    }
+
+    internal static LadybugStatement BuildNodesDeleteByUuidsStatement<TNode>(IEnumerable<string> uuids)
+        where TNode : Node
+    {
+        ArgumentNullException.ThrowIfNull(uuids);
+        return BuildSingleNodeDeleteStatement<TNode>(
             NodeUuidsDeleteMatch<TNode>(),
             Parameters(("uuids", SnapshotList(uuids))));
     }
@@ -695,12 +714,7 @@ internal static class LadybugStatementBuilder
         {
             return new[]
             {
-                new LadybugStatement(
-                    $"""
-                    {deleteMatch}
-                    DETACH DELETE n
-                    """,
-                    parameters)
+                BuildSingleNodeDeleteStatement<TNode>(deleteMatch, parameters)
             };
         }
 
@@ -719,6 +733,24 @@ internal static class LadybugStatementBuilder
                 """,
                 parameters)
         };
+    }
+
+    private static LadybugStatement BuildSingleNodeDeleteStatement<TNode>(
+        string deleteMatch,
+        Dictionary<string, object?> parameters)
+        where TNode : Node
+    {
+        if (typeof(TNode) == typeof(EntityNode))
+        {
+            throw new ArgumentOutOfRangeException(typeof(TNode).Name);
+        }
+
+        return new LadybugStatement(
+            $"""
+            {deleteMatch}
+            DETACH DELETE n
+            """,
+            parameters);
     }
 
     private static string EntityRelatesToCleanupMatch(string entityMatch) =>

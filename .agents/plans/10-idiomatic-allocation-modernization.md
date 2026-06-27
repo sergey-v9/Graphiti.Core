@@ -119,7 +119,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
 - [x] **Ladybug `Parameters(...)` → `params ReadOnlySpan<(string,object?)>`** (`LadybugStatementBuilder.cs`
   ~872 and `LadybugSearchStatementBuilder.cs` ~528) — stack-allocate the arg list per statement build.
   *parity none; bench.*
-- [ ] **Ladybug one-element-array `[0]` throwaways in deletes** (`LadybugGraphDriver.cs` delete paths) —
+- [x] **Ladybug one-element-array `[0]` throwaways in deletes** (`LadybugGraphDriver.cs` delete paths) —
   add single-statement overloads for non-Entity node types. *parity none.*
 - [ ] **AddEpisodeBulkAsync `CopyDictionaryValues` per iteration** (`Graphiti.Ingestion.cs` ~365) —
   O(E·N) snapshot of the growing canonical-edge dict each episode; widen the callee param to
