@@ -413,6 +413,46 @@ public class SearchUtilitiesTests
     }
 
     [Fact]
+    public void MaximalMarginalRelevanceWithScores_RejectsQueryDimensionMismatch()
+    {
+        var candidates = new[]
+        {
+            new VectorCandidate("valid", new[] { 1f, 0f, 0f })
+        };
+
+        var exception = Assert.Throws<ArgumentException>(() =>
+            SearchUtilities.MaximalMarginalRelevanceWithScores(
+                candidates,
+                new[] { 1f, 0f },
+                candidate => candidate.Vector,
+                limit: 10));
+
+        Assert.Contains("dimension 2", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("dimension 3", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MaximalMarginalRelevanceWithScores_AllowsEmptyVectorsAsZeroSimilarity()
+    {
+        var candidates = new[]
+        {
+            new VectorCandidate("empty", Array.Empty<float>()),
+            new VectorCandidate("aligned", new[] { 1f, 0f })
+        };
+
+        var ranked = SearchUtilities.MaximalMarginalRelevanceWithScores(
+            candidates,
+            new[] { 1f, 0f },
+            candidate => candidate.Vector,
+            limit: 10,
+            lambda: 0.5f);
+
+        Assert.Equal(new[] { "aligned", "empty" }, ranked.Select(item => item.Item.Name));
+        Assert.Equal(0.5f, ranked[0].Score, precision: 6);
+        Assert.Equal(0f, ranked[1].Score, precision: 6);
+    }
+
+    [Fact]
     public void MaximalMarginalRelevanceWithScores_BoundedTopKMatchesStableFullSortOracleForLargeInputs()
     {
         const int limit = 17;

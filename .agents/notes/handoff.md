@@ -331,6 +331,14 @@ single-vector materialization from 265.7 ns to 186.9 ns at 256 dimensions and 1,
 dimensions and 46.48 us to 33.59 us at 1024 dimensions. See
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-embedding-materialization-win-x64.md`.
 
+Plan 10 MMR dimension-check slice is complete (2026-06-27): `SearchUtilities` now validates non-empty
+candidate/query vector dimensions once before MMR scoring, then uses zero-or-known-same-dimension dot
+products inside the pairwise and relevance loops. Focused tests pin candidate mismatch, query
+mismatch, and empty-vector zero-similarity behavior. Local ShortRun for `SearchBenchmarks.Mmr_Rerank`
+dropped from 386.6 us to 379.0 us at 200 candidates and 2,282.1 us to 2,222.8 us at 500 candidates,
+with allocations unchanged. See
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-search-mmr-dimension-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
@@ -371,7 +379,7 @@ added. This section holds the single authoritative live count and the standing v
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
 **Current verifier checkpoint (2026-06-27):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1041` passed, `4` skipped, `1045` total. The verifier
+Packages credentials for the Ladybug feed — `1043` passed, `4` skipped, `1047` total. The verifier
 covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
 shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
 LadybugDB through the packed package. The skips are the env-gated

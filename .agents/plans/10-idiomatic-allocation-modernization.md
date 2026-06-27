@@ -136,7 +136,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   and **MicrosoftExtensionsAIEmbedderClient.CreateBatchAsync** (~121) — fill a pre-sized backing span via
   `CollectionsMarshal.SetCount`/return the pre-built array instead of element-by-element `Add`/re-copy.
   *parity low; bench.*
-- [ ] **MMR pairwise dimension re-validation** (`Search/SearchUtilities.cs` ~636) — hoist the invariant
+- [x] **MMR pairwise dimension re-validation** (`Search/SearchUtilities.cs` ~636) — hoist the invariant
   dimension check out of the O(n²) loop; `TensorPrimitives.Dot` directly. *parity low; bench.*
 - [ ] **Pre-size build-once lookups** — `SearchFallbackGraph` adjacency dicts (~277/296);
   `MaintenanceUtilities.BuildEpisodicEdges` result list (~32). *parity none.*

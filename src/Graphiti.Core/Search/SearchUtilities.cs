@@ -632,13 +632,14 @@ internal static partial class SearchUtilities
         float lambda,
         float minScore)
     {
+        ValidateMmrVectorDimensions(records, queryVector.Count);
         var maxSimilarities = new float[records.Length];
         for (var i = 0; i < records.Length; i++)
         {
             var left = records[i].Vector;
             for (var j = 0; j < i; j++)
             {
-                var similarity = DotSameDimension(left, records[j].Vector);
+                var similarity = DotKnownSameDimension(left, records[j].Vector);
                 if (similarity > maxSimilarities[i])
                 {
                     maxSimilarities[i] = similarity;
@@ -658,7 +659,7 @@ internal static partial class SearchUtilities
             for (var i = 0; i < records.Length; i++)
             {
                 var record = records[i];
-                var relevance = DotSameDimension(query, record.Vector);
+                var relevance = DotKnownSameDimension(query, record.Vector);
                 var score = lambda * relevance + (lambda - 1) * maxSimilarities[i];
                 if (score >= minScore)
                 {
@@ -681,6 +682,34 @@ internal static partial class SearchUtilities
             {
                 ArrayPool<float>.Shared.Return(queryRented);
             }
+        }
+    }
+
+    private static void ValidateMmrVectorDimensions<T>(
+        MmrCandidate<T>[] records,
+        int queryDimension)
+    {
+        var candidateDimension = 0;
+        for (var i = 0; i < records.Length; i++)
+        {
+            var dimension = records[i].Vector.Length;
+            if (dimension == 0)
+            {
+                continue;
+            }
+
+            if (candidateDimension == 0)
+            {
+                candidateDimension = dimension;
+                continue;
+            }
+
+            EnsureSameVectorDimension(dimension, candidateDimension);
+        }
+
+        if (candidateDimension > 0 && queryDimension > 0)
+        {
+            EnsureSameVectorDimension(queryDimension, candidateDimension);
         }
     }
 
@@ -863,6 +892,16 @@ internal static partial class SearchUtilities
         }
 
         EnsureSameVectorDimension(left.Length, right.Length);
+        return TensorPrimitives.Dot(left, right);
+    }
+
+    private static float DotKnownSameDimension(ReadOnlySpan<float> left, ReadOnlySpan<float> right)
+    {
+        if (left.Length == 0 || right.Length == 0)
+        {
+            return 0;
+        }
+
         return TensorPrimitives.Dot(left, right);
     }
 
