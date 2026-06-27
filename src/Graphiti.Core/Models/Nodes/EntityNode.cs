@@ -39,7 +39,7 @@ public sealed class EntityNode : Node
         if (driver is IEmbeddingLoadGraphDriver embeddingDriver)
         {
             var embeddings = await embeddingDriver
-                .LoadEntityNodeEmbeddingsByUuidAsync(new[] { Uuid }, cancellationToken)
+                .LoadEntityNodeEmbeddingsByUuidAsync([Uuid], cancellationToken)
                 .ConfigureAwait(false);
             if (embeddings.TryGetValue(Uuid, out var embedding))
             {

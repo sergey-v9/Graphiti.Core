@@ -334,7 +334,7 @@ public abstract class LlmClient : ILlmClient, IDisposable
     {
         if (messages.Count == 0)
         {
-            return Array.Empty<Message>();
+            return [];
         }
 
         var prepared = new List<Message>(messages.Count);

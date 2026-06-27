@@ -36,13 +36,13 @@ internal static class EvalPrompts
                 </QUESTION>
             """ + TrailingIndent;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are an expert at rephrasing questions into queries used in a database retrieval system"),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     /// <summary>
@@ -67,13 +67,13 @@ internal static class EvalPrompts
                 </QUESTION>
             """ + TrailingIndent;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are Alice and should respond to all questions from the first person perspective of Alice"),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     /// <summary>
@@ -99,13 +99,13 @@ internal static class EvalPrompts
                 </RESPONSE>
             """ + TrailingIndent;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are a judge that determines if answers to questions match a gold standard answer"),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     /// <summary>
@@ -144,12 +144,12 @@ internal static class EvalPrompts
                 </CANDIDATE>
             """ + TrailingIndent;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are a judge that determines whether a baseline graph building result from a list of messages is better\n        than a candidate graph building result based on the same messages."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 }

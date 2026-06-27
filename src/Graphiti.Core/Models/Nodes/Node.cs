@@ -8,7 +8,7 @@ namespace Graphiti.Core.Models.Nodes;
 /// </summary>
 public abstract class Node : IEquatable<Node>
 {
-    private List<string> _labels = new();
+    private List<string> _labels = [];
 
     /// <summary>Unique identifier for the node. Defaults to a new UUID.</summary>
     public string Uuid { get; set; } = GraphitiHelpers.NewUuid();
@@ -29,7 +29,7 @@ public abstract class Node : IEquatable<Node>
         set
         {
             GraphitiHelpers.ValidateNodeLabels(value);
-            _labels = value ?? new List<string>();
+            _labels = value ?? [];
         }
     }
 

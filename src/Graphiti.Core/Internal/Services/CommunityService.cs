@@ -106,7 +106,7 @@ internal sealed class CommunityService(
         {
             Name = name,
             GroupId = cluster[0].GroupId,
-            Labels = new List<string> { "Community" },
+            Labels = ["Community"],
             CreatedAt = now,
             Summary = summary
         };

@@ -26,13 +26,13 @@ internal static class SummarizeNodesPrompts
                     {{PromptJson.Serialize(BuildSummaryPairContext(leftSummary, rightSummary))}}
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are a helpful assistant that combines summaries into a single dense factual summary."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     internal static Message[] BuildSummaryDescription(string summary)
@@ -46,13 +46,13 @@ internal static class SummarizeNodesPrompts
                     {{PromptJson.Serialize(JsonValue.Create(summary))}}
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are a helpful assistant that describes provided contents in a single sentence."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     private static JsonArray BuildSummaryPairContext(string leftSummary, string rightSummary) =>

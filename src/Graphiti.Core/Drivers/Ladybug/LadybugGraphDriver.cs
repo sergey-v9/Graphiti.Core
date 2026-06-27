@@ -423,8 +423,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         }
 
         await ExecuteAllAsync(
-            new[]
-            {
+            [
                 new LadybugStatement(
                     """
                     MATCH (n:Entity)-[:RELATES_TO]->(r:RelatesToNode_)
@@ -455,7 +454,7 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
                     DETACH DELETE n
                     """,
                     new Dictionary<string, object?>(StringComparer.Ordinal))
-            },
+            ],
             cancellationToken).ConfigureAwait(false);
     }
 

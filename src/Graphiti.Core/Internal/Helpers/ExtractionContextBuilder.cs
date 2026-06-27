@@ -5,7 +5,7 @@ namespace Graphiti.Core.Internal.Helpers;
 internal static class ExtractionContextBuilder
 {
     internal static readonly IReadOnlyList<string> DefaultEntityLabels =
-        Array.AsReadOnly(new[] { "Entity" });
+        Array.AsReadOnly<string>(["Entity"]);
 
     internal static JsonObject BuildAttributeSchema(EntityTypeDefinition typeDefinition)
     {

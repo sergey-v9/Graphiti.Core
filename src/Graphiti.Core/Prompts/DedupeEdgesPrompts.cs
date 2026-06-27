@@ -77,14 +77,14 @@ internal static class DedupeEdgesPrompts
 
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are a fact deduplication assistant. " +
                 "NEVER mark facts with key differences as duplicates."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     private static JsonArray BuildExistingEdgesContext(IReadOnlyList<EntityEdge> relatedEdges)

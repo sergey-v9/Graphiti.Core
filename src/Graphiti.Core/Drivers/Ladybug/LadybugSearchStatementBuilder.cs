@@ -5,13 +5,12 @@ namespace Graphiti.Core.Drivers.Ladybug;
 internal static class LadybugSearchStatementBuilder
 {
     internal static IReadOnlyList<LadybugStatement> BuildFulltextIndexStatements() =>
-        new[]
-        {
+        [
             Statement("CALL CREATE_FTS_INDEX('Episodic', 'episode_content', ['content', 'source', 'source_description']);"),
             Statement("CALL CREATE_FTS_INDEX('Entity', 'node_name_and_summary', ['name', 'summary']);"),
             Statement("CALL CREATE_FTS_INDEX('Community', 'community_name', ['name']);"),
             Statement("CALL CREATE_FTS_INDEX('RelatesToNode_', 'edge_name_and_fact', ['name', 'fact']);")
-        };
+        ];
 
     internal static LadybugStatement BuildEntityNodeFulltextSearchStatement(
         string fulltextQuery,

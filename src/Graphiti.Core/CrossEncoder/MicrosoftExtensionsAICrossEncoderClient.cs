@@ -179,8 +179,7 @@ public sealed class MicrosoftExtensionsAICrossEncoderClient : CrossEncoderClient
     }
 
     private static Microsoft.Extensions.AI.ChatMessage[] BuildMessages(string query, string passage) =>
-        new[]
-        {
+        [
             new Microsoft.Extensions.AI.ChatMessage(
                 ChatRole.System,
                 "You are an expert tasked with determining whether the passage is relevant to the query"),
@@ -196,7 +195,7 @@ public sealed class MicrosoftExtensionsAICrossEncoderClient : CrossEncoderClient
                 {query}
                 </QUERY>
                 """)
-        };
+        ];
 
     private static JsonObject ParseJsonResponse(string? text)
     {

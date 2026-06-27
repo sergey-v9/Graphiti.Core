@@ -712,14 +712,14 @@ internal static class LadybugStatementBuilder
     {
         if (typeof(TNode) != typeof(EntityNode))
         {
-            return new[]
-            {
+            return
+            [
                 BuildSingleNodeDeleteStatement<TNode>(deleteMatch, parameters)
-            };
+            ];
         }
 
-        return new[]
-        {
+        return
+        [
             new LadybugStatement(
                 $"""
                 {EntityRelatesToCleanupMatch(deleteMatch)}
@@ -732,7 +732,7 @@ internal static class LadybugStatementBuilder
                 DETACH DELETE n
                 """,
                 parameters)
-        };
+        ];
     }
 
     private static LadybugStatement BuildSingleNodeDeleteStatement<TNode>(

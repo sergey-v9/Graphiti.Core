@@ -61,7 +61,7 @@ public sealed partial class Graphiti
         return results;
     }
 
-    private static IReadOnlyList<string> BuildEntityTypeNamesById(
+    private static string[] BuildEntityTypeNamesById(
         IReadOnlyDictionary<string, EntityTypeDefinition>? entityTypes)
     {
         if (entityTypes is null || entityTypes.Count == 0)
@@ -69,13 +69,7 @@ public sealed partial class Graphiti
             return DefaultEntityTypeNamesById;
         }
 
-        var names = new List<string>(entityTypes.Count + 1) { "Entity" };
-        foreach (var pair in entityTypes)
-        {
-            names.Add(pair.Key);
-        }
-
-        return names;
+        return ["Entity", .. entityTypes.Keys];
     }
 
     private static string? ReadEntityTypeById(

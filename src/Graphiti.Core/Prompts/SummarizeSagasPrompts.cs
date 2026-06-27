@@ -63,13 +63,13 @@ BAD: "Sam and Dana discussed their work preferences. They talked about morning p
 </EXAMPLES>
 """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 $"You extract durable knowledge from message threads. Output a factual knowledge brief - facts, decisions, preferences, plans, entities, and relationships - that stands alone without reference to the original messages. Stay under {TextUtilities.MaxSummaryChars} characters."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     private static string JoinEpisodeContents(

@@ -120,8 +120,8 @@ internal static class ExtractEdgesPrompts
 
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are an expert fact extractor that extracts fact triples from text. " +
@@ -130,7 +130,7 @@ internal static class ExtractEdgesPrompts
                 "Use each episode's timestamp to resolve temporal references within that episode. " +
                 "REFERENCE_TIME is a fallback for when no per-episode timestamp is available."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     internal static Message[] BuildExtractTimestamps(string fact, DateTime referenceTime)
@@ -158,13 +158,13 @@ internal static class ExtractEdgesPrompts
 
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You extract temporal bounds from facts. NEVER hallucinate dates."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     internal static Message[] BuildExtractTimestampsBatch(IReadOnlyList<Graphiti.ExtractedEdge> edges)
@@ -201,13 +201,13 @@ internal static class ExtractEdgesPrompts
 
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You extract temporal bounds from facts. NEVER hallucinate dates."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     internal static Message[] BuildExtractAttributes(
@@ -261,8 +261,8 @@ internal static class ExtractEdgesPrompts
 
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are a fact attribute extraction specialist. " +
@@ -270,7 +270,7 @@ internal static class ExtractEdgesPrompts
                 "already present in EXISTING ATTRIBUTES. You output strictly the JSON specified " +
                 "by the response schema - no reasoning, no explanation, no commentary in any field."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     internal static JsonArray BuildNodesContext(IReadOnlyList<EntityNode> nodes)

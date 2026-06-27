@@ -364,6 +364,12 @@ uses the shared `EmbeddingVectorValidation.CopyNullableVector` helper for loaded
 embeddings instead of carrying a duplicate local copy loop. This is behavior-neutral; focused
 namespace/fallback tests and the full verifier were green.
 
+Plan 10 collection-expression sweep is complete (2026-06-27): the listed copy/array targets now use
+collection expressions, including graph list copies, dedupe bucket snapshots, Ladybug schema/statement
+arrays, singleton embedding-load inputs, node-label empty/singleton lists, and prompt/cross-encoder
+message arrays. Prompt text was not changed. Focused prompt/extraction/Ladybug/namespace/model tests
+and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

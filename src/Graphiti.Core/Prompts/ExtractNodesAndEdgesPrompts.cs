@@ -23,7 +23,7 @@ internal static class ExtractNodesAndEdgesPrompts
         IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap,
         string? customExtractionInstructions) =>
         BuildContext(
-            new[] { episode },
+            [episode],
             previousEpisodes,
             entityTypes,
             edgeTypes,
@@ -257,8 +257,8 @@ internal static class ExtractNodesAndEdgesPrompts
 
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are an expert knowledge graph extraction specialist for an AI agent memory system. " +
@@ -267,7 +267,7 @@ internal static class ExtractNodesAndEdgesPrompts
                 "responses, and maintain long-term memory. The original conversation will NOT be available " +
                 "at retrieval time - only the entities and facts you extract will survive."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     private static string BuildEdgeTypesSection(string edgeTypesJson)

@@ -90,14 +90,14 @@ internal static class DedupeNodesPrompts
             </EXAMPLE>
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are an entity deduplication assistant. " +
                 "NEVER fabricate entity names or mark distinct entities as duplicates."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     private static JsonArray BuildExtractedNodesContext(

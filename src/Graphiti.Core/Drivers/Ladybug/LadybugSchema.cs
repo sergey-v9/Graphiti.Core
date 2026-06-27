@@ -6,23 +6,23 @@ namespace Graphiti.Core.Drivers.Ladybug;
 /// </summary>
 internal static class LadybugSchema
 {
-    internal static readonly IReadOnlyList<string> NodeTables = Array.AsReadOnly(new[]
-    {
+    internal static readonly IReadOnlyList<string> NodeTables = Array.AsReadOnly<string>(
+    [
         "Episodic",
         "Entity",
         "Community",
         "RelatesToNode_",
         "Saga"
-    });
+    ]);
 
-    internal static readonly IReadOnlyList<string> RelationshipTables = Array.AsReadOnly(new[]
-    {
+    internal static readonly IReadOnlyList<string> RelationshipTables = Array.AsReadOnly<string>(
+    [
         "RELATES_TO",
         "MENTIONS",
         "HAS_MEMBER",
         "HAS_EPISODE",
         "NEXT_EPISODE"
-    });
+    ]);
 
     internal const string SchemaQueries = """
         CREATE NODE TABLE IF NOT EXISTS Episodic (

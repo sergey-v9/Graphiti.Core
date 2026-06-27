@@ -247,26 +247,10 @@ internal static class NamespaceDriverHelpers
     }
 
     private static List<string> BuildNodeUuidList(List<EntityNode> nodes)
-    {
-        var uuids = new List<string>(nodes.Count);
-        for (var i = 0; i < nodes.Count; i++)
-        {
-            uuids.Add(nodes[i].Uuid);
-        }
-
-        return uuids;
-    }
+        => [.. nodes.Select(static node => node.Uuid)];
 
     private static List<string> BuildEdgeUuidList(List<EntityEdge> edges)
-    {
-        var uuids = new List<string>(edges.Count);
-        for (var i = 0; i < edges.Count; i++)
-        {
-            uuids.Add(edges[i].Uuid);
-        }
-
-        return uuids;
-    }
+        => [.. edges.Select(static edge => edge.Uuid)];
 
     private static Dictionary<string, EntityNode> BuildNodeLookup(IReadOnlyList<EntityNode> nodes)
     {

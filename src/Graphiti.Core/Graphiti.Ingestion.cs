@@ -1039,7 +1039,7 @@ public sealed partial class Graphiti
             Uuid = uuid ?? GraphitiHelpers.NewUuid(),
             Name = name,
             GroupId = groupId,
-            Labels = new List<string>(),
+            Labels = [],
             Source = source,
             Content = episodeBody,
             SourceDescription = sourceDescription,
@@ -1094,15 +1094,7 @@ public sealed partial class Graphiti
         Dictionary<string, string> UuidMap);
 
     private static List<T> CopyList<T>(IReadOnlyList<T> source)
-    {
-        var copy = new List<T>(source.Count);
-        for (var i = 0; i < source.Count; i++)
-        {
-            copy.Add(source[i]);
-        }
-
-        return copy;
-    }
+        => [.. source];
 
     private static List<string> BuildEntityEdgeUuidList(List<EntityEdge> edges)
     {

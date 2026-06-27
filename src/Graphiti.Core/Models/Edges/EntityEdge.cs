@@ -61,7 +61,7 @@ public sealed class EntityEdge : Edge
         if (driver is IEmbeddingLoadGraphDriver embeddingDriver)
         {
             var embeddings = await embeddingDriver
-                .LoadEntityEdgeEmbeddingsByUuidAsync(new[] { Uuid }, cancellationToken)
+                .LoadEntityEdgeEmbeddingsByUuidAsync([Uuid], cancellationToken)
                 .ConfigureAwait(false);
             if (embeddings.TryGetValue(Uuid, out var embedding))
             {

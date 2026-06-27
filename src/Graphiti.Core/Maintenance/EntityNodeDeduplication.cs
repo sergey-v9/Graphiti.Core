@@ -448,29 +448,15 @@ internal static partial class EntityNodeDeduplicator
         {
             if (bucket.Count == 0)
             {
-                return Array.Empty<T>();
+                return [];
             }
 
-            var snapshot = new T[bucket.Count];
-            for (var i = 0; i < bucket.Count; i++)
-            {
-                snapshot[i] = bucket[i];
-            }
-
-            return snapshot;
+            return [.. bucket];
         }
     }
 
     private static List<EntityNode> ToNodeList(Dictionary<string, EntityNode> nodesByUuid)
-    {
-        var nodes = new List<EntityNode>(nodesByUuid.Count);
-        foreach (var node in nodesByUuid.Values)
-        {
-            nodes.Add(node);
-        }
-
-        return nodes;
-    }
+        => [.. nodesByUuid.Values];
 
     private static List<EntityNameProfile> BuildCanonicalProfiles(
         List<string> orderedKeys,

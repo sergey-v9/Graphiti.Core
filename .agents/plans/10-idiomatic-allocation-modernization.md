@@ -151,7 +151,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
 
 ### Tier 3 — readability/consistency sweeps (free, `parity none`, batch as one commit each)
 
-- [ ] **Collection-expression sweep.** Convert hand-rolled copies/array literals to `[.. x]` / `[x]`:
+- [x] **Collection-expression sweep.** Convert hand-rolled copies/array literals to `[.. x]` / `[x]`:
   `Graphiti.Ingestion.CopyList`→`[.. source]`; `EntityNodeDeduplication.ToNodeList`/`CopyBucket`;
   `NamespaceDriverHelpers.Build*UuidList`; `BuildEntityTypeNamesById`→`["Entity", .. keys]`;
   Ladybug `LadybugSchema`/statement `new[]{…}`; `EpisodeAttribution`/`ExtractionContextBuilder`

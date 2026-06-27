@@ -2,7 +2,7 @@ namespace Graphiti.Core.Internal.Helpers;
 
 internal static class EpisodeAttribution
 {
-    internal static readonly IReadOnlyList<int> FirstEpisodeIndex = Array.AsReadOnly(new[] { 0 });
+    internal static readonly IReadOnlyList<int> FirstEpisodeIndex = Array.AsReadOnly<int>([0]);
 
     internal static IReadOnlyList<int> NormalizeIndices(
         IReadOnlyList<int>? episodeIndices,

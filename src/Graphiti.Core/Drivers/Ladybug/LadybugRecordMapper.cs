@@ -26,7 +26,7 @@ internal static class LadybugRecordMapper
             Uuid = Get<string>(record, "uuid") ?? string.Empty,
             Name = Get<string>(record, "name") ?? string.Empty,
             GroupId = Get<string>(record, "group_id") ?? string.Empty,
-            Labels = GetList<string>(record, "labels") ?? new List<string> { "Entity" },
+            Labels = GetList<string>(record, "labels") ?? ["Entity"],
             CreatedAt = GetDate(record, "created_at") ?? GraphitiHelpers.DefaultTimestamp,
             Summary = Get<string>(record, "summary") ?? string.Empty,
             NameEmbedding = GetList<float>(record, "name_embedding"),

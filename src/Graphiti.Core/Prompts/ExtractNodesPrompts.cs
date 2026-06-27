@@ -254,14 +254,14 @@ internal static class ExtractNodesPrompts
 
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are an entity extraction specialist for conversational messages. " +
                 "NEVER extract abstract concepts, feelings, or generic words."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     internal static Message[] BuildExtractJson(in NodeExtractionContext context)
@@ -322,14 +322,14 @@ internal static class ExtractNodesPrompts
 
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are an entity extraction specialist for JSON data. " +
                 "NEVER extract abstract concepts, dates, or generic field values."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     internal static Message[] BuildExtractText(in NodeExtractionContext context)
@@ -394,14 +394,14 @@ internal static class ExtractNodesPrompts
 
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are an entity extraction specialist for unstructured text. " +
                 "NEVER extract abstract concepts, feelings, or generic words."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     internal static NodeAttributeExtractionContext BuildExtractAttributesContext(
@@ -485,8 +485,8 @@ internal static class ExtractNodesPrompts
             </ENTITY>
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are an entity attribute extraction specialist. " +
@@ -494,7 +494,7 @@ internal static class ExtractNodesPrompts
                 "already present on the ENTITY. You output strictly the JSON specified by the " +
                 "response schema - no reasoning, no explanation, no commentary in any field."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     internal static EntitySummariesExtractionContext BuildExtractSummariesContext(
@@ -534,13 +534,13 @@ internal static class ExtractNodesPrompts
 
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message(
                 "system",
                 "You are a helpful assistant that generates concise entity summaries from provided context."),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     internal static Message[] BuildExtractEntitySummariesFromEpisodes(in EntitySummariesExtractionContext context)
@@ -565,11 +565,11 @@ internal static class ExtractNodesPrompts
 
             """;
 
-        return new[]
-        {
+        return
+        [
             new Message("system", EntityEpisodeSummarySystemPrompt),
             new Message("user", userPrompt)
-        };
+        ];
     }
 
     internal static JsonArray BuildEntityTypesContext(
