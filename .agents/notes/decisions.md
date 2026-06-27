@@ -5,6 +5,37 @@ divergences from Python lives in `evolution.md`. Python `graphiti_core/` remains
 source of truth, but the C# port should be idiomatic .NET where that does not break Graphiti
 semantics, wire compatibility, or performance/allocation discipline.
 
+## What this project is (paradigm — Sergey, 2026-06-27)
+
+This decision frames everything else; read it first.
+
+- **It is our own embeddable library, not a release-bound package and not a contribution back to
+  upstream.** This is a C# system whose *behavior* is derived from Python `graphiti_core`, but it is
+  **not** offered as "a second way to use Graphiti", is **not** going into the `getzep/graphiti` repo,
+  and will most likely be **renamed**. It is a component **we** own and maintain, consumed **in-process
+  as an embeddable library** — an internal subsystem of a larger system. There is no MCP server, no REST
+  host, and no public distribution requirement.
+- **Therefore: de-emphasize release/publishing.** Versioning, nuget.org publication, alpha→beta cadence,
+  and metapackage shape are **not** current goals and must not drive work selection. (The work already
+  done toward a clean, stable surface is still worth keeping — a tidy public API helps *our* consumers —
+  but "ship it" is no longer the organizing principle.) Release publishing stays **user-gated** and is
+  effectively parked.
+- **Behavioral / feature parity with Python stays the functional contract**, and it is essentially
+  complete (`parity.md`; upstream re-checked clean). We keep tracking upstream cheaply
+  (`upstream-sync-procedure.md`) so we stay current, and we still match new Python functionality when it
+  lands. Parity is the floor, not the forward agenda.
+- **The forward agenda is the code itself: idiomatic modern C# + allocation/GC discipline.** Use the
+  current language and runtime to their strengths (C# 14 / .NET 10 today, toward .NET 11 / C# next) where
+  it genuinely improves the code, and drive down unnecessary allocations so we put less pressure on the
+  GC — this is now a **first-class** goal, not an incidental nicety. Rules of engagement: behavior, wire
+  values, structured-schema / cache identity, and public surface stay unchanged; idiomatic/readability
+  changes must be warning-clean under `TreatWarningsAsErrors`; hot-path allocation changes stay
+  **benchmark-first** (BenchmarkDotNet before/after, recorded baselines). See the modernization work
+  order in `.agents/plans/` and the long-term framing in `roadmap.md`.
+
+This supersedes the release-centric framing of the 2026-06-19 roadmap (G6) and re-prioritizes the
+robustness stream (plan 09) below the modernization stream.
+
 ## Porting Direction
 
 - The C# port aims for functional parity with Python, not line-by-line translation.

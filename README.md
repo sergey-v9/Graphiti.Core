@@ -1,24 +1,29 @@
 # Graphiti Core for .NET
 
-A faithful C# port of [Graphiti](https://github.com/getzep/graphiti)'s Python `graphiti_core` — a
-framework for building **temporally-aware knowledge graphs** for AI agents. Graphiti ingests
-episodes (chat messages, JSON, free text), extracts entities and facts with an LLM, deduplicates them
-against what it already knows, and answers questions with hybrid search over the resulting graph.
+An **embeddable C# library** for building **temporally-aware knowledge graphs** for AI agents, with
+behavior derived from [Graphiti](https://github.com/getzep/graphiti)'s Python `graphiti_core`. It
+ingests episodes (chat messages, JSON, free text), extracts entities and facts with an LLM,
+deduplicates them against what it already knows, and answers questions with hybrid search over the
+resulting graph.
 
-The Python library is the behavioral source of truth for this port. The C# wire shape (snake_case
-JSON), prompt identity, ranking semantics, and cache keys all mirror Python so the two stay
-compatible.
+This is **our own** library, maintained by us and consumed **in-process** as a subsystem of a larger
+system — not a native binding and not a redistribution of the Python project. The Python library is the
+**functional contract**: the C# wire shape (snake_case JSON), prompt identity, ranking semantics, and
+cache keys mirror Python's behavior, and that parity is enforced by tests. Beyond that, the code is
+idiomatic modern C#.
 
-> **Status:** `2.0.0-alpha.1`. The library is functionally complete and validated against a real
-> OpenAI provider, but it is **not yet published to NuGet**. `Graphiti.Core` includes the deterministic
-> InMemory reference driver and the first-class LadybugDB driver. Restores require the
-> `sergey-v9/ladybug-dotnet` GitHub Packages feed because the LadybugDB package family is private
-> today. See [Install / reference](#install--reference).
+> **Status:** functionally complete and validated end to end against a real OpenAI provider. It is used
+> as an embedded library (referenced from source / consumed in-process), **not** distributed on NuGet —
+> that is a deliberate choice, not a gap, and the assembly name may change. `Graphiti.Core` includes the
+> deterministic InMemory reference driver and the first-class LadybugDB driver; restores that include
+> LadybugDB use the `sergey-v9/ladybug-dotnet` GitHub Packages feed. See
+> [Reference / consume](#reference--consume). The active development focus is idiomatic-C# and
+> allocation/GC modernization of the code, not release packaging.
 
 ## Contents
 
 - [Why Graphiti](#why-graphiti)
-- [Install / reference](#install--reference)
+- [Reference / consume](#reference--consume)
 - [Quickstart](#quickstart)
 - [Using a real provider (OpenAI)](#using-a-real-provider-openai)
 - [Dependency injection](#dependency-injection)
@@ -48,9 +53,10 @@ compatible.
   (ordered chains of episodes) on top of the base graph.
 - **Incremental.** Each `AddEpisodeAsync` integrates new data without recomputing the whole graph.
 
-## Install / reference
+## Reference / consume
 
-Graphiti Core is **not on NuGet yet**. Reference it from source today by adding a project reference to
+This is an embedded library, consumed in-process — not distributed on NuGet (a deliberate choice for an
+internal subsystem). Reference it from source by adding a project reference to
 `src/Graphiti.Core/Graphiti.Core.csproj`, exactly as the samples do:
 
 ```xml
@@ -633,13 +639,15 @@ consumers: add the sub-namespace `using` directives for the types you reference 
 
 ## Relationship to Python Graphiti
 
-This is a managed C# port of Python [`graphiti_core`](https://github.com/getzep/graphiti), not a native
-binding. Python remains the **behavioral source of truth**: the C# port keeps the JSON/wire shape
-(snake_case properties, enum wire values such as `fact_triple`), prompt and response-format identity,
-ranking/search semantics (RRF, MMR, cross-encoder, node-distance, episode-mentions), and LLM cache-key
-inputs compatible with Python, while staying idiomatic C# elsewhere. The C# port currently targets
-LadybugDB as the first-class backend and InMemory as the reference/test backend, while
-FalkorDB/Neptune are compatibility surfaces only.
+This library's behavior is derived from Python [`graphiti_core`](https://github.com/getzep/graphiti),
+but it is **our own** code — not a native binding, not a redistribution, and not a contribution back to
+the upstream repo. It is maintained independently and is likely to be renamed. Python is the
+**functional contract**: the C# keeps the JSON/wire shape (snake_case properties, enum wire values such
+as `fact_triple`), prompt and response-format identity, ranking/search semantics (RRF, MMR,
+cross-encoder, node-distance, episode-mentions), and LLM cache-key inputs behavior-compatible with
+Python, and that parity is enforced by tests. Everything else is idiomatic modern C#, which is where the
+active development effort goes. The library targets LadybugDB as the first-class backend and InMemory as
+the reference/test backend, while FalkorDB/Neptune are compatibility surfaces only.
 
 ## License
 

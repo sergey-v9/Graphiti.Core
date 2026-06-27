@@ -1,8 +1,12 @@
 # Graphiti Core C# port - agent guide
 
-This folder is a managed C# port of Python `graphiti_core/`, not a native binding layer. Python is
-the behavioral source of truth; C# should be idiomatic where behavior, JSON/wire shape, prompt/schema
-identity, cache semantics, and performance/allocation discipline stay compatible.
+This folder is **our own** embeddable C# library whose behavior is derived from Python `graphiti_core/`
+— not a native binding, not a release-bound package, and not a contribution back to upstream. It is
+consumed in-process as an internal subsystem, will most likely be renamed, and is maintained by us.
+Python is the **functional contract** (behavior, JSON/wire shape, prompt/schema identity, cache
+semantics) and parity is essentially complete; the forward agenda is the code itself — **idiomatic
+modern C# (C# 14 / .NET 10, toward .NET 11) + allocation/GC discipline**, done parity-safely. Read
+`decisions.md` → "What this project is (paradigm)" first.
 
 **Working notes - read first, keep current.** The main living docs under `.agents/notes/` carry
 context across agent sessions: `roadmap.md` (phased long-term plan), `parity.md` (row-by-row Python
@@ -16,18 +20,17 @@ commit rules, read `.agents/notes/commit-policy.md`.
 **Current priority - how to pick work.** Concrete work orders live in `.agents/plans/`; the
 roadmap orders them. Pick the lowest-numbered plan with unchecked actionable items, do exactly one
 item as a slice (implement → verify → commit → check it off and update `parity.md` when parity state
-changes), then stop or pick the next. Phases 1–3 are complete, plan-05 A–E are complete, and plan 06
-has merged the LadybugDB driver back into `Graphiti.Core`, plan 07 has completed the linux-x64
-LadybugDB proof, G2 has added the fail-loud live-provider/eval workflow, plan 08 has completed the
-non-gated G6 release-surface finalization, and the G3 perf program is complete — the 2026-06-19 forward
-agenda is done and the library is release-ready. **The current actionable plan is plan 09 —
-robustness/resilience hardening: first close the two roadmap residuals (Step 0 — settle the HNSW gate
-with the new vector baseline; land G5 as a committed check-script + doc), then fuzz/property-test the
-LLM-output parse/coercion and provider-failure boundary. Release versioning/publishing remains
-user-gated; do not stamp a version or publish until Sergey initiates it.**
-remaining release-infrastructure work is decision-gated or external-feed-gated (version cadence,
-publish path, metapackage shape, and future Ladybug package publication/replacement). When the open
-plan items are blocked on those decisions,
+changes), then stop or pick the next. Phases 1–3 are complete, plans 05–08 are complete, and the whole
+2026-06-19 G1–G6 agenda is done (parity, Ladybug→Core merge, observability, linux-x64 proof,
+live-provider canary, the G3 perf program, and the non-gated release-surface finalization). Per the
+2026-06-27 paradigm shift this is an embeddable internal library, **not** a release product, so
+release-versioning/publishing is parked (user-gated). **The current actionable plan is plan 10 —
+idiomatic + allocation modernization: a parity-safe sweep that makes the code itself more idiomatic
+modern C# (C# 14 / .NET 10) and lowers allocations / GC pressure.** Idiomatic/readability changes stay
+behavior- and wire-preserving and warning-clean; hot-path allocation changes stay benchmark-first. Plan
+09 (robustness) is deferred below plan 10. Parked release-infrastructure work is decision-gated or
+external-feed-gated (version cadence, publish path, metapackage shape, and future Ladybug package
+publication/replacement). When the open plan items are blocked on those decisions,
 choose work from `roadmap.md`/`handoff.md` that directly strengthens parity, packaging verification,
 upstream sync, or documented current state. Performance work is allowed only when it is
 benchmark-first and parity-safe.

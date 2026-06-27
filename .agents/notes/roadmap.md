@@ -160,20 +160,46 @@ or have agents build-only and run the consolidated test centrally.
 
 ## Long-term goals — active development (set 2026-06-19 from the full-project review)
 
-> **Status 2026-06-27: this forward agenda is complete and the library is release-ready.** G1 (plan 07
-> linux-x64 proof), G2 (live-provider/eval canary), G4 (observability/DX), the G3 perf/allocation
-> program (10 measured slices; all named hot paths profiled), and the non-gated part of G6 (plan 08
-> release-surface finalization) are all done; the suite is green (`1032/4/1036`) with a green pack +
-> fresh-consumer dry run. Remaining: the **user-gated** release publish (G6 final step), the G5 recurring
-> reminder (blocked on in-session scheduling tooling — to be landed as a committed check-script under
-> plan 09 Step 0b), and the now-data-backed **HNSW gate decision** (plan 09 Step 0a). The next stream is
-> `.agents/plans/09-robustness-hardening.md` (fuzz/property + provider-resilience hardening of the
-> LLM-output parse boundary) — a new in-scope direction chosen after the original agenda was exhausted.
+> **Status 2026-06-27 — this productionization agenda is COMPLETE, and the project paradigm has
+> shifted.** G1–G4 and the non-gated part of G6 all landed (suite green `1032/4/1036`; pack +
+> fresh-consumer dry run green). Sergey then re-set the project's purpose: this is **our own embeddable
+> internal library** (likely to be renamed), **not** a release-bound product — see `decisions.md` →
+> "What this project is (paradigm)". So **release/publishing is parked** (it was never the point), and
+> the **forward agenda is now the code itself: idiomatic modern C# (C# 14 / .NET 10, toward .NET 11) +
+> allocation/GC discipline**, parity-safe. The G1–G6 list below is kept as completed history. The
+> **active stream is `.agents/plans/10-idiomatic-allocation-modernization.md`**. Plan 09 (robustness +
+> the residual HNSW-gate decision and G5 check-script) is still worthwhile but **deferred** below
+> plan 10. Behavioral/feature parity with Python stays the functional floor and is essentially complete;
+> we keep tracking upstream cheaply via `upstream-sync-procedure.md`.
 
 Phases 1–3 (parity) are done and the deterministic suite is green; the port is faithful and mature.
-The forward agenda is **productionization and confidence**, not more parity micro-slices. Ordered by
-value. Each is a stream, not a one-slice; verify centrally, keep docs lean, don't drift into the
-user-gated items.
+The 2026-06-19 forward agenda below was **productionization and confidence**; it is now complete and
+retained as history. The live forward direction is the modernization stream (plan 10) framed above.
+
+### Forward direction — idiomatic + allocation modernization (active, 2026-06-27)
+
+The library is functionally complete and faithful; the work now is to make the **code** the best modern
+C# it can be and to keep **GC pressure** low. This is two interlocking tracks, run together file-by-file
+through `.agents/plans/10-idiomatic-allocation-modernization.md`:
+
+- **Track I — idiomatic modern C#.** Bring the code up to current language/runtime idiom where it
+  genuinely improves clarity and is correct: collection expressions, primary constructors, the C# 14
+  `field` keyword, `params ReadOnlySpan<T>`, `System.Threading.Lock`, `SearchValues<T>`, UTF-8 string
+  literals, switch/list/property patterns, frozen collections for build-once/read-many, `ThrowIfNull`
+  guards, static lambdas, `ValueTask`/`IAsyncEnumerable` where they fit, explicit `CancellationToken`
+  plumbing. Behavior, wire values, schema/cache identity, and the public surface stay unchanged; every
+  change is warning-clean under `TreatWarningsAsErrors`.
+- **Track A — allocation / GC discipline.** Drive down unnecessary allocations in the hot paths
+  (ingestion, search, extraction parsing, serialization, embedding/vector, provider plumbing): remove
+  redundant materialization, hoist closures to statics, avoid boxing, reuse buffers (`Span`/`stackalloc`/
+  `ArrayPool`), pre-size collections, prefer struct enumerators. Hot-path changes are **benchmark-first**
+  (BenchmarkDotNet before/after, recorded baselines under `benchmarks/.../baselines/`); obvious
+  zero-risk reductions can land without a benchmark but never at the cost of clarity or parity.
+
+Discipline: small, reviewable slices; never trade behavior or parity for cleverness; if a "modern" form
+is less clear or less correct, don't do it. As the language moves (C# next / .NET 11), revisit. The
+deferred opt-in HNSW vector tier still belongs to this program — only pursue it if a benchmark shows
+full-scan cosine is the bottleneck at the target graph size, and keep exact cosine the default.
 
 - **G1 — Cross-platform proof (HIGH): DONE 2026-06-26.** The linux-x64 failure was reproduced as an
   FTS extension undefined-symbol error under `~/.lbdb/extension`, classified as a `ladybug-dotnet`

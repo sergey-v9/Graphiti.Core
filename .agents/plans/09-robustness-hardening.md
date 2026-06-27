@@ -9,12 +9,16 @@ user-gated.
 
 ## Status
 
-**Current priority (2026-06-27).** With the roadmap's productionization goals done, the highest
-remaining *real-world* risk is the layer the deterministic golden tests (which use fake LLMs) cannot
-fully stress: parsing and coercing **actual** LLM output into typed graph results, and surviving
-**provider failure modes**. This is exactly where upstream Python has repeatedly had to add guards
-(validation-failure re-prompting, attribute-hallucination guards, combined-extraction precision). Harden
-it now while the surface is fresh. This plan does **not** touch the user-gated publish line.
+**DEFERRED (2026-06-27) — below plan 10.** Still worthwhile, but the 2026-06-27 paradigm shift made the
+**idiomatic + allocation modernization** sweep (`.agents/plans/10-idiomatic-allocation-modernization.md`)
+the current priority. Pick this up after plan 10, or earlier if a parse/coercion robustness gap is
+actually hit. Step 0 here (the HNSW-gate decision and the G5 committed check-script) remains a small,
+high-value housekeeping bundle that can be done independently at any time.
+
+The substance still stands: the highest remaining *real-world* risk is the layer the deterministic
+golden tests (which use fake LLMs) cannot fully stress — parsing and coercing **actual** LLM output into
+typed graph results, and surviving **provider failure modes** (exactly where upstream Python has
+repeatedly added guards). This plan does **not** touch the parked publish line.
 
 ## Step 0 — close the two roadmap residuals first (housekeeping)
 
