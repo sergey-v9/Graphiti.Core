@@ -39,7 +39,7 @@ repeatedly added guards). This plan does **not** touch the parked publish line.
   / markdown-fence handling, enum + entity/edge type resolution, attribute extraction, and the
   dedup/edge/invalidation response shapes. Produce a short risk map (trusted vs adversarial inputs, and
   the current guard at each site). Record it in a note; no code change required for this slice.
-- [ ] **B. Property-based / fuzz coverage of the parsers.** Add generator-driven tests (FsCheck or a
+- [x] **B. Property-based / fuzz coverage of the parsers.** Add generator-driven tests (FsCheck or a
   hand-rolled generator — no new default dependency in `src/`) that throw malformed-but-plausible LLM
   responses at the coercion layer: truncated JSON, prose wrapped around JSON, wrong-cased enums,
   missing/extra fields, null-vs-empty, duplicate keys, wrong types, oversized strings, unicode edge cases,

@@ -397,13 +397,18 @@ opt-in approximate tier should only be reopened if future larger-target benchmar
 Plan 09 Step 0b is complete (2026-06-27): `eng/Invoke-UpstreamDeltaReminder.ps1` is the committed G5
 artifact. It wraps `Check-PythonUpstreamDelta`, fetches by default, warns on `graphiti_core` deltas, and
 exits `0` for both no-delta and delta cases so Sergey can wire it through a scheduled task, cron, or
-manual dispatch without adding a CI lane. The next unchecked plan item is the robustness risk map.
+manual dispatch without adding a CI lane.
 
 Plan 09 A is complete (2026-06-27): `.agents/notes/llm-boundary-risk-map.md` inventories every current
 real-provider output boundary from raw chat text through schema validation, typed DTO materialization,
 extraction/domain coercion, attribute merging, node/edge resolution decisions, timestamp extraction,
-summaries, and the optional cross-encoder reranker. The next unchecked plan item is B: deterministic
-fuzz/property-style coverage for those parser/coercion targets.
+summaries, and the optional cross-encoder reranker.
+
+Plan 09 B is complete (2026-06-27): `LlmBoundaryFuzzTests` adds deterministic fuzz-style coverage for
+malformed provider payload retry/rejection, runtime attribute schemas, extraction row skipping without
+fabrication, invalid entity type IDs, index-array coercion, lenient typed materialization for custom
+`ILlmClient` implementations, and the stricter cross-encoder JSON path. The next unchecked plan item is
+C: provider-resilience tests.
 
 ## LadybugDB / Kuzu
 
@@ -445,7 +450,7 @@ added. This section holds the single authoritative live count and the standing v
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
 **Current verifier checkpoint (2026-06-27):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1043` passed, `4` skipped, `1047` total. The verifier
+Packages credentials for the Ladybug feed — `1064` passed, `4` skipped, `1068` total. The verifier
 covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
 shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
 LadybugDB through the packed package. The skips are the env-gated
