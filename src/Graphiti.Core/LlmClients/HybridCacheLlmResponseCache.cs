@@ -25,7 +25,7 @@ public sealed class HybridCacheLlmResponseCache : ILlmResponseCache
     {
         _cache = cache;
         _entryOptions = entryOptions;
-        _tags = tags ?? new[] { "graphiti", "llm" };
+        _tags = tags ?? GraphitiCacheOptions.DefaultLlmResponseTags;
     }
 
     /// <inheritdoc />

@@ -5,6 +5,8 @@ namespace Graphiti.Core.Configuration;
 /// <summary>Options for Graphiti's built-in cache adapters.</summary>
 public sealed class GraphitiCacheOptions
 {
+    internal static readonly string[] DefaultLlmResponseTags = ["graphiti", "llm"];
+
     /// <summary>Overall expiration for cached LLM responses. Null uses the HybridCache default.</summary>
     public TimeSpan? LlmResponseExpiration { get; set; }
 
@@ -31,9 +33,13 @@ internal sealed class GraphitiCacheOptionsValidator : IValidateOptions<GraphitiC
             failures.Add("GraphitiCacheOptions.LlmResponseLocalCacheExpiration must be non-negative when set.");
         }
 
-        if (options.LlmResponseTags.Any(string.IsNullOrWhiteSpace))
+        foreach (var tag in options.LlmResponseTags)
         {
-            failures.Add("GraphitiCacheOptions.LlmResponseTags must not contain blank values.");
+            if (string.IsNullOrWhiteSpace(tag))
+            {
+                failures.Add("GraphitiCacheOptions.LlmResponseTags must not contain blank values.");
+                break;
+            }
         }
 
         return failures.Count == 0

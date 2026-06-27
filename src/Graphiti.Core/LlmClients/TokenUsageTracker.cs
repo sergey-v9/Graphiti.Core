@@ -41,12 +41,22 @@ public sealed class TokenUsageTracker
     }
 
     /// <summary>Returns the combined usage across all tracked prompts.</summary>
-    public TokenUsage GetTotalUsage() =>
-        new()
+    public TokenUsage GetTotalUsage()
+    {
+        long inputTokens = 0;
+        long outputTokens = 0;
+        foreach (var usage in _usage.Values)
         {
-            InputTokens = _usage.Values.Sum(usage => usage.InputTokens),
-            OutputTokens = _usage.Values.Sum(usage => usage.OutputTokens)
+            inputTokens = checked(inputTokens + usage.InputTokens);
+            outputTokens = checked(outputTokens + usage.OutputTokens);
+        }
+
+        return new TokenUsage
+        {
+            InputTokens = inputTokens,
+            OutputTokens = outputTokens
         };
+    }
 
     /// <summary>Clears all accumulated usage.</summary>
     public void Reset() => _usage.Clear();

@@ -7,6 +7,7 @@ namespace Graphiti.Core.Drivers;
 public abstract class GraphDriverBase : IGraphDriver
 {
     private const int DefaultBulkSaveConcurrency = 8;
+    private readonly IReadOnlyList<string> _defaultGroupIds;
 
     /// <summary>Initializes base state and resolves the default group id for the provider.</summary>
     protected GraphDriverBase(GraphProvider provider, string database = "")
@@ -14,6 +15,7 @@ public abstract class GraphDriverBase : IGraphDriver
         Provider = provider;
         Database = database;
         DefaultGroupId = GraphitiHelpers.GetDefaultGroupId(provider);
+        _defaultGroupIds = [DefaultGroupId];
     }
 
     /// <inheritdoc />
@@ -37,11 +39,11 @@ public abstract class GraphDriverBase : IGraphDriver
 
     /// <summary>Returns the group partitions that contain entity nodes. Defaults to the default group.</summary>
     public virtual Task<IReadOnlyList<string>> GetEntityGroupIdsAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<string>>(new[] { DefaultGroupId });
+        Task.FromResult(_defaultGroupIds);
 
     /// <summary>Returns the group partitions that contain communities. Defaults to the default group.</summary>
     public virtual Task<IReadOnlyList<string>> GetCommunityGroupIdsAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<string>>(new[] { DefaultGroupId });
+        Task.FromResult(_defaultGroupIds);
 
     /// <inheritdoc />
     public abstract Task BuildIndicesAndConstraintsAsync(bool deleteExisting = false, CancellationToken cancellationToken = default);

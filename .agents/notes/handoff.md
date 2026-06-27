@@ -370,6 +370,12 @@ arrays, singleton embedding-load inputs, node-label empty/singleton lists, and p
 message arrays. Prompt text was not changed. Focused prompt/extraction/Ladybug/namespace/model tests
 and the full verifier were green.
 
+Plan 10 static defaults / single-pass aggregation slice is complete (2026-06-27): default LLM cache
+tags are shared through `GraphitiCacheOptions.DefaultLlmResponseTags`; cache-tag validation now uses a
+single loop; `TokenUsageTracker.GetTotalUsage` totals input/output tokens in one checked pass; and
+`GraphDriverBase` reuses the default-group singleton list. Focused config/cache/token/group-id tests
+and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

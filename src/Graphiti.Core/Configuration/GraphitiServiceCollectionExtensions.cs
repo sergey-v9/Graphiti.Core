@@ -153,7 +153,7 @@ public static class GraphitiServiceCollectionExtensions
     {
         var options = services.GetRequiredService<IOptions<GraphitiCacheOptions>>().Value;
         IReadOnlyList<string> tags = options.LlmResponseTags.Length == 0
-            ? new[] { "graphiti", "llm" }
+            ? GraphitiCacheOptions.DefaultLlmResponseTags
             : options.LlmResponseTags;
         return new HybridCacheLlmResponseCache(
             services.GetRequiredService<HybridCache>(),

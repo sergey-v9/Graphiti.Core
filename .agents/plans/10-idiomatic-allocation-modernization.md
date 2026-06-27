@@ -158,7 +158,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   singletons; `Models` `Load*EmbeddingAsync(new[]{Uuid})`→`[Uuid]`; `Node.Labels` `[]`. **Prompt array
   literals** in `Prompts/*` and `CrossEncoder`/`LlmClient` message arrays: convert the **array
   construction only** — the prompt **text is golden-pinned and must stay byte-identical.**
-- [ ] **Static-readonly default arrays / single-pass aggregation.** Hoist default cache tags to a shared
+- [x] **Static-readonly default arrays / single-pass aggregation.** Hoist default cache tags to a shared
   `static readonly`/`[…]` (`HybridCacheLlmResponseCache` ~28, `GraphitiServiceCollectionExtensions` ~156);
   `TokenUsageTracker.GetTotalUsage` two `.Sum()`→one `foreach`; `GraphitiCacheOptionsValidator` `.Any(…)`→
   `foreach`; `GraphDriverBase` cache the default-group single-element array.
