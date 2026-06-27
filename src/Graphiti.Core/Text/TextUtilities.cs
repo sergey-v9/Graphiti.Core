@@ -45,31 +45,27 @@ public static partial class TextUtilities
     public static string ConcatenateEpisodes(IReadOnlyList<SagaEpisodeContent> episodes)
     {
         ArgumentNullException.ThrowIfNull(episodes);
-
-        if (episodes.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        if (episodes.Count == 1)
-        {
-            return episodes[0].Content;
-        }
-
-        var builder = new StringBuilder(EstimateConcatenateCapacity(episodes));
-        for (var i = 0; i < episodes.Count; i++)
-        {
-            AppendEpisode(builder, i, episodes[i].Content, episodes[i].ValidAt);
-        }
-
-        return builder.ToString();
+        return ConcatenateEpisodesCore(
+            episodes,
+            static episode => episode.Content,
+            static episode => episode.ValidAt);
     }
 
     /// <summary>Tuple-based overload of <see cref="ConcatenateEpisodes(IReadOnlyList{SagaEpisodeContent})"/>.</summary>
     public static string ConcatenateEpisodes(IReadOnlyList<(string Content, DateTime? ValidAt)> episodes)
     {
         ArgumentNullException.ThrowIfNull(episodes);
+        return ConcatenateEpisodesCore(
+            episodes,
+            static episode => episode.Content,
+            static episode => episode.ValidAt);
+    }
 
+    private static string ConcatenateEpisodesCore<TEpisode>(
+        IReadOnlyList<TEpisode> episodes,
+        Func<TEpisode, string?> getContent,
+        Func<TEpisode, DateTime?> getValidAt)
+    {
         if (episodes.Count == 0)
         {
             return string.Empty;
@@ -77,13 +73,14 @@ public static partial class TextUtilities
 
         if (episodes.Count == 1)
         {
-            return episodes[0].Content;
+            return getContent(episodes[0])!;
         }
 
-        var builder = new StringBuilder(EstimateConcatenateCapacity(episodes));
+        var builder = new StringBuilder(EstimateConcatenateCapacity(episodes, getContent, getValidAt));
         for (var i = 0; i < episodes.Count; i++)
         {
-            AppendEpisode(builder, i, episodes[i].Content, episodes[i].ValidAt);
+            var episode = episodes[i];
+            AppendEpisode(builder, i, getContent(episode), getValidAt(episode));
         }
 
         return builder.ToString();
@@ -108,23 +105,16 @@ public static partial class TextUtilities
         builder.Append(content);
     }
 
-    private static int EstimateConcatenateCapacity(IReadOnlyList<SagaEpisodeContent> episodes)
+    private static int EstimateConcatenateCapacity<TEpisode>(
+        IReadOnlyList<TEpisode> episodes,
+        Func<TEpisode, string?> getContent,
+        Func<TEpisode, DateTime?> getValidAt)
     {
         var capacity = Math.Max(episodes.Count - 1, 0) * 2;
         for (var i = 0; i < episodes.Count; i++)
         {
-            capacity += EstimateEpisodeCapacity(i, episodes[i].Content, episodes[i].ValidAt);
-        }
-
-        return capacity;
-    }
-
-    private static int EstimateConcatenateCapacity(IReadOnlyList<(string Content, DateTime? ValidAt)> episodes)
-    {
-        var capacity = Math.Max(episodes.Count - 1, 0) * 2;
-        for (var i = 0; i < episodes.Count; i++)
-        {
-            capacity += EstimateEpisodeCapacity(i, episodes[i].Content, episodes[i].ValidAt);
+            var episode = episodes[i];
+            capacity += EstimateEpisodeCapacity(i, getContent(episode), getValidAt(episode));
         }
 
         return capacity;

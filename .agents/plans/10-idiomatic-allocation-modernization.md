@@ -168,7 +168,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
 - [x] **InMemoryGraphDriver 18-parameter clone ctor → a single `SharedStore` object** (mirroring
   `LadybugGraphDriver.SharedState`); collapses the clone call and removes the positional-arg hazard.
   *internal refactor; parity low — keep shared-mutable-store semantics exactly.*
-- [ ] **TextUtilities.ConcatenateEpisodes** — factor the two near-identical overloads into one generic
+- [x] **TextUtilities.ConcatenateEpisodes** — factor the two near-identical overloads into one generic
   helper with static-lambda projections (verify the pre-size math is unchanged).
 
 ### Out of scope for plan 10 (route elsewhere)

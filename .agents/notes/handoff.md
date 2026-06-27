@@ -387,6 +387,12 @@ flows through one nested `SharedStore` object instead of a long private construc
 while preserving the existing shared mutable dictionaries/lock semantics between clones. Focused
 in-memory/clone/routing tests and the full verifier were green.
 
+Plan 10 TextUtilities concatenate-overload slice is complete (2026-06-27): both
+`TextUtilities.ConcatenateEpisodes` overloads now share one generic helper with static-lambda
+projections while preserving the single-episode fast path, timestamp formatting, blank-line separators,
+and capacity estimate. Focused text/prompt tests and the full verifier were green. This completes the
+Plan 10 checklist; roadmap now points next work back to the outstanding non-release robustness stream.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
