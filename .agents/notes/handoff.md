@@ -359,6 +359,11 @@ merges attribution indices via list sort plus existing `DistinctSorted` instead 
 `NodeResolutionService` reuses one single-entry group-id array while awaiting each node candidate
 search. Focused summary/extractor/node-dedup tests plus the full verifier were green.
 
+Plan 10 namespace vector-copy de-dup slice is complete (2026-06-27): `NamespaceDriverHelpers` now
+uses the shared `EmbeddingVectorValidation.CopyNullableVector` helper for loaded node/edge
+embeddings instead of carrying a duplicate local copy loop. This is behavior-neutral; focused
+namespace/fallback tests and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

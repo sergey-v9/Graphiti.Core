@@ -1,3 +1,5 @@
+using Graphiti.Core.Embedding;
+
 namespace Graphiti.Core.Namespaces;
 
 internal static class NamespaceDriverHelpers
@@ -164,7 +166,7 @@ internal static class NamespaceDriverHelpers
             {
                 if (embeddings.TryGetValue(node.Uuid, out var embedding))
                 {
-                    node.NameEmbedding = CopyFloatList(embedding);
+                    node.NameEmbedding = EmbeddingVectorValidation.CopyNullableVector(embedding);
                 }
             }
 
@@ -179,7 +181,7 @@ internal static class NamespaceDriverHelpers
         {
             if (storedByUuid.TryGetValue(node.Uuid, out var stored))
             {
-                node.NameEmbedding = CopyFloatList(stored.NameEmbedding);
+                node.NameEmbedding = EmbeddingVectorValidation.CopyNullableVector(stored.NameEmbedding);
             }
         }
     }
@@ -207,7 +209,7 @@ internal static class NamespaceDriverHelpers
             {
                 if (embeddings.TryGetValue(edge.Uuid, out var embedding))
                 {
-                    edge.FactEmbedding = CopyFloatList(embedding);
+                    edge.FactEmbedding = EmbeddingVectorValidation.CopyNullableVector(embedding);
                 }
             }
 
@@ -222,7 +224,7 @@ internal static class NamespaceDriverHelpers
         {
             if (storedByUuid.TryGetValue(edge.Uuid, out var stored))
             {
-                edge.FactEmbedding = CopyFloatList(stored.FactEmbedding);
+                edge.FactEmbedding = EmbeddingVectorValidation.CopyNullableVector(stored.FactEmbedding);
             }
         }
     }
@@ -288,19 +290,4 @@ internal static class NamespaceDriverHelpers
         return lookup;
     }
 
-    private static List<float>? CopyFloatList(List<float>? source)
-    {
-        if (source is null)
-        {
-            return null;
-        }
-
-        var copy = new List<float>(source.Count);
-        for (var i = 0; i < source.Count; i++)
-        {
-            copy.Add(source[i]);
-        }
-
-        return copy;
-    }
 }

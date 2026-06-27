@@ -146,7 +146,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
 - [x] **EntitySummaryService.ApplySummaries early-out** (~184); **EpisodeGraphExtractor.
   MergeAttributionIndices** `SortedSet`→ existing `DistinctSorted` (~331); **NodeResolutionService** hoist
   single-element group-id array (~261). *parity low/none; bench where marked.*
-- [ ] **De-dup `NamespaceDriverHelpers.CopyFloatList`** → call existing
+- [x] **De-dup `NamespaceDriverHelpers.CopyFloatList`** → call existing
   `EmbeddingVectorValidation.CopyNullableVector`. *parity none.*
 
 ### Tier 3 — readability/consistency sweeps (free, `parity none`, batch as one commit each)
