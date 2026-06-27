@@ -228,6 +228,10 @@ implementation change was kept: an endpoint-pair bucketing trial did not show a 
 same workflow (16-pair case 10.016 ms to 9.972 ms, allocations unchanged). See
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-bulk-edge-dedupe-win-x64.md`.
 
+Plan 10's first Tier 1 slice is complete (2026-06-27): community summary/name deterministic fallback
+text is now computed only in the NoOp fallback branch, with no prompt/schema/cache/public API change.
+The focused community suite and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

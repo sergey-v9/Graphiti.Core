@@ -312,7 +312,6 @@ internal sealed class CommunityService(
         string right,
         CancellationToken cancellationToken)
     {
-        var deterministicSummary = DeterministicCommunityText.BuildCommunitySummary(new[] { left, right });
         var response = await llmClient.GenerateTypedResponseAsync<Graphiti.CommunitySummaryResponse>(
             SummarizeNodesPrompts.BuildSummarizePair(left, right),
             promptName: "summarize_nodes.summarize_pair",
@@ -323,9 +322,12 @@ internal sealed class CommunityService(
             return TextUtilities.TruncateAtSentence(summary, TextUtilities.MaxSummaryChars) ?? summary;
         }
 
-        return ShouldUseDeterministicLlmFallback()
-            ? deterministicSummary
-            : throw new InvalidOperationException("LLM did not return a community summary.");
+        if (ShouldUseDeterministicLlmFallback())
+        {
+            return DeterministicCommunityText.BuildCommunitySummary([left, right]);
+        }
+
+        throw new InvalidOperationException("LLM did not return a community summary.");
     }
 
     private async Task<string> GenerateCommunityNameAsync(
@@ -334,9 +336,6 @@ internal sealed class CommunityService(
         CancellationToken cancellationToken,
         string? fallbackName = null)
     {
-        var deterministicName = string.IsNullOrWhiteSpace(fallbackName)
-            ? DeterministicCommunityText.BuildCommunityName(cluster)
-            : fallbackName;
         var response = await llmClient.GenerateTypedResponseAsync<Graphiti.CommunityNameResponse>(
             SummarizeNodesPrompts.BuildSummaryDescription(summary),
             promptName: "summarize_nodes.summary_description",
@@ -347,9 +346,14 @@ internal sealed class CommunityService(
             return name;
         }
 
-        return ShouldUseDeterministicLlmFallback()
-            ? deterministicName
-            : throw new InvalidOperationException("LLM did not return a community name.");
+        if (ShouldUseDeterministicLlmFallback())
+        {
+            return string.IsNullOrWhiteSpace(fallbackName)
+                ? DeterministicCommunityText.BuildCommunityName(cluster)
+                : fallbackName;
+        }
+
+        throw new InvalidOperationException("LLM did not return a community name.");
     }
 
     private bool ShouldUseDeterministicLlmFallback() => llmClient is NoOpLlmClient;

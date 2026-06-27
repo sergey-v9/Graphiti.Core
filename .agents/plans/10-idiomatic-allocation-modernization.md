@@ -77,7 +77,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
 
 ### Tier 1 — high value, high confidence, parity-safe (do first)
 
-- [ ] **CommunityService.GeneratePairSummaryAsync / GenerateCommunityNameAsync** (`Internal/Services/
+- [x] **CommunityService.GeneratePairSummaryAsync / GenerateCommunityNameAsync** (`Internal/Services/
   CommunityService.cs` ~315/337) — the deterministic fallback summary/name (StringBuilder + array +
   truncation) is computed **eagerly on every pairwise LLM reduction** but only used in the NoOp fallback.
   Make it lazy (compute only in the fallback branch). *parity none.*
