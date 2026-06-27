@@ -310,6 +310,7 @@ public class LadybugFoundationTests
         var embeddingGet = LadybugStatementBuilder.BuildNodeGetByUuid<EntityNode>("entity-1", withEmbeddings: true);
         var loadOne = LadybugStatementBuilder.BuildNodeLoadEmbedding<EntityNode>("entity-1");
         var loadMany = LadybugStatementBuilder.BuildNodesLoadEmbeddings<EntityNode>(["entity-1", "entity-2"]);
+        var groupIds = LadybugStatementBuilder.BuildNodeGroupIdsGet<EntityNode>();
 
         Assert.Contains("MATCH (n:Entity {uuid: $uuid})", defaultGet.Query, StringComparison.Ordinal);
         Assert.DoesNotContain("name_embedding AS name_embedding", defaultGet.Query, StringComparison.Ordinal);
@@ -318,6 +319,8 @@ public class LadybugFoundationTests
         Assert.Contains("RETURN n.name_embedding AS name_embedding", loadOne.Query, StringComparison.Ordinal);
         Assert.Contains("RETURN DISTINCT n.uuid AS uuid, n.name_embedding AS name_embedding", loadMany.Query, StringComparison.Ordinal);
         Assert.Equal(new[] { "entity-1", "entity-2" }, Assert.IsType<List<string>>(loadMany.Parameters["uuids"]));
+        Assert.Empty(groupIds.Parameters);
+        Assert.Equal(StringComparer.Ordinal, groupIds.Parameters.Comparer);
     }
 
     [Fact]

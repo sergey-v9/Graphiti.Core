@@ -284,6 +284,13 @@ Plan 10 AppendEpisode slice is complete (2026-06-27): episode concatenation now 
 non-negative loop index directly to the `StringBuilder` instead of allocating an invariant string.
 Exact-header text tests, a non-invariant culture probe, and the full verifier were green.
 
+Plan 10 Ladybug parameter-map slice is complete (2026-06-27): the two local Ladybug
+`Parameters(...)` helpers now use `params ReadOnlySpan<(string, object?)>` while preserving fresh
+mutable `StringComparer.Ordinal` dictionaries. Local ShortRun allocations dropped by 40 B for
+one-parameter maps, 72 B for three-parameter/vector maps, and 616 B for repeated rank maps; BFS was
+unchanged because it uses `SearchParameters`. See
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-ladybug-statement-builder-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

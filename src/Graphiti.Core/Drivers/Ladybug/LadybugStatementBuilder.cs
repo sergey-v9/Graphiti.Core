@@ -869,7 +869,8 @@ internal static class LadybugStatementBuilder
         where TEdge : Edge =>
         typeof(TEdge) == typeof(EntityEdge) ? "DETACH DELETE" : "DELETE";
 
-    private static Dictionary<string, object?> Parameters(params (string Name, object? Value)[] parameters)
+    private static Dictionary<string, object?> Parameters(
+        params ReadOnlySpan<(string Name, object? Value)> parameters)
     {
         var dictionary = new Dictionary<string, object?>(StringComparer.Ordinal);
         foreach (var (name, value) in parameters)
