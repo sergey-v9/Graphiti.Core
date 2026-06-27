@@ -321,6 +321,9 @@ internal static class SearchResultComposer
             lambda,
             minScore);
 
+    // The episode-mentions ranker preserves the pre-sort positional score stream. Scores do not
+    // travel with reordered edges, so the output scores stay monotonically descending with rank.
+    // Changing this pairing is a behavior change, not a cleanup.
     internal static List<(EntityEdge Item, float Score)> SortByEpisodeMentions(
         IReadOnlyList<(EntityEdge Item, float Score)> ranked)
     {
@@ -341,6 +344,8 @@ internal static class SearchResultComposer
         var results = new List<(EntityEdge Item, float Score)>(ordered.Count);
         for (var i = 0; i < ordered.Count; i++)
         {
+            // Pair the episode-sorted edge with the score at the same rank position, not the score
+            // that traveled with the edge.
             results.Add((ordered[i].Item, ranked[i].Score));
         }
 
