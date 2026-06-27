@@ -69,7 +69,7 @@ internal sealed class GraphitiOptionsValidator : IValidateOptions<GraphitiOption
 #pragma warning restore GRPH0001
                 break;
             default:
-                failures.Add($"{options.Provider} is not supported by the C# port yet.");
+                failures.Add($"{options.Provider} is not supported by Graphiti.Core's built-in driver factory.");
                 break;
         }
 

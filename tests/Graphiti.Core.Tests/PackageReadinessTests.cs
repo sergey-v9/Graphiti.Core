@@ -196,6 +196,30 @@ public class PackageReadinessTests
     }
 
     [Fact]
+    public void LadybugRidClaims_StayLimitedToValidatedRids()
+    {
+        var csharpRoot = FindCSharpRoot();
+        var readme = File.ReadAllText(Path.Combine(csharpRoot, "README.md"));
+        var linuxSmoke = File.ReadAllText(Path.Combine(
+            csharpRoot,
+            "tests",
+            "Graphiti.Core.Tests",
+            "Drivers",
+            "Ladybug",
+            "LadybugPackageRuntimeTests.cs"));
+
+        Assert.Contains("win-x64 through the full verifier", readme, StringComparison.Ordinal);
+        Assert.Contains("linux-x64", readme, StringComparison.Ordinal);
+        Assert.Contains("gated `fts` + `vector` extension smoke", readme, StringComparison.Ordinal);
+        Assert.Contains("linux-arm64 and macOS assets", readme, StringComparison.Ordinal);
+        Assert.Contains("not Graphiti-validated yet", readme, StringComparison.Ordinal);
+        Assert.DoesNotContain("validated on linux-arm64", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("validated on macOS", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("RuntimeInformation.ProcessArchitecture != Architecture.X64", linuxSmoke, StringComparison.Ordinal);
+        Assert.Contains("linux-x64-only LadybugDB extension smoke", linuxSmoke, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LiveProviderWorkflow_RunsFailLoudPeriodicProviderAndEvalChecks()
     {
         var csharpRoot = FindCSharpRoot();

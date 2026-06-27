@@ -243,7 +243,8 @@ public static class GraphitiServiceCollectionExtensions
             GraphProvider.LadybugDb or GraphProvider.Kuzu => LadybugDbGraphDriverFactory.Create(
                 services.GetRequiredService<IOptions<LadybugDbOptions>>().Value.DatabasePath),
 #pragma warning restore GRPH0001
-            _ => throw new NotSupportedException($"{options.Provider} is not supported by the C# port yet.")
+            _ => throw new NotSupportedException(
+                $"{options.Provider} is not supported by Graphiti.Core's built-in driver factory.")
         };
     }
 

@@ -13,22 +13,21 @@ public enum GraphProvider
     /// <summary>FalkorDB graph database.</summary>
     FalkorDb = 1,
 
-    // PORTING STATUS: LadybugDB is the primary provider target, backed by the LadybugDB package.
+    // Provider status: LadybugDB is the primary provider target, backed by the LadybugDB package.
     // GraphProvider.LadybugDb is the driver-facing name. GraphProvider.Kuzu is retained as a still-
     // functional obsolete compatibility alias (it resolves to the same LadybugDB-backed driver) and
-    // keeps its original ordinal (2) for value/wire compatibility. Neptune is not implemented in the
-    // C# port and remains present for enum/wire compatibility unless that decision changes.
+    // keeps its original ordinal (2) for value/wire compatibility. Neptune remains present for
+    // enum/wire compatibility unless that decision changes.
 
     /// <summary>
-    /// Kuzu compatibility provider backed by LadybugDB in the C# port. Obsolete: use
+    /// Kuzu compatibility provider backed by LadybugDB. Obsolete: use
     /// <see cref="LadybugDb"/>. Still functional — resolves to the same LadybugDB-backed driver.
     /// </summary>
     [Obsolete("Use GraphProvider.LadybugDb", DiagnosticId = "GRPH0001")]
     Kuzu = 2,
 
     /// <summary>
-    /// Amazon Neptune graph database. Not implemented in the C# port.
-    /// Present for enum/wire compatibility only.
+    /// Amazon Neptune graph database compatibility value. No built-in driver is registered for it.
     /// </summary>
     Neptune = 3,
 

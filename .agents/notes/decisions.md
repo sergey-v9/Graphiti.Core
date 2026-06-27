@@ -444,6 +444,16 @@ gate so future releases are not forced into avoidable breaking changes:
   over-cap value is retained rather than dropped. The default `Required = false` preserves the existing
   C# over-cap drop/restore behavior for current callers; callers can set `required: true` for fields
   that must survive the cap so subsequent validation can decide whether to reject them.
+- **Plan 08 public-API freeze cleanup:** `EntityTypeDefinition.Attributes` exposes
+  `IReadOnlyDictionary<string, EntityAttributeDefinition>` rather than the concrete `FrozenDictionary`
+  backing store, and `GraphitiHelpers.SemaphoreGatherAsync` is internal helper surface. The obsolete
+  `GraphProvider.Kuzu` and `AddGraphitiCore` aliases keep their GRPH0001/GRPH0002 diagnostics. Public
+  XML docs describe product behavior and provider support, not porting status.
+- **Package/RID truth:** package metadata remains on `2.0.0-alpha.1` with Apache-2.0, README packing,
+  symbols, XML docs, and the built-in LadybugDB dependencies. The validated LadybugDB RID claim is
+  exactly win-x64 via the full verifier and linux-x64 via the gated extension smoke; other native RID
+  assets shipped by the Ladybug package family are not Graphiti-validated yet. The Linux smoke asserts
+  x64 before exercising FTS/vector extension loading.
 
 ## Deliberate divergences from the 2026-06-14 upstream sync
 

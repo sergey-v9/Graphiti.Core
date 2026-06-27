@@ -18,11 +18,10 @@ roadmap orders them. Pick the lowest-numbered plan with unchecked actionable ite
 item as a slice (implement → verify → commit → check it off and update `parity.md` when parity state
 changes), then stop or pick the next. Phases 1–3 are complete, plan-05 A–E are complete, and plan 06
 has merged the LadybugDB driver back into `Graphiti.Core`, plan 07 has completed the linux-x64
-LadybugDB proof, and G2 has added the fail-loud live-provider/eval workflow. **The current actionable
-plan is plan 08 — release-surface finalization (the non-gated part of G6): settle the open
-public-surface decisions while still `2.0.0-alpha.1`, freeze the public API, and run a pack dry run, but
-do NOT stamp a version or publish.** The remaining G3 benchmark-first performance/allocation work and G5
-upstream cadence are lower-priority follow-ups. Only release versioning/publishing remains user-gated;
+LadybugDB proof, G2 has added the fail-loud live-provider/eval workflow, and plan 08 has completed the
+non-gated G6 release-surface finalization. **Release versioning/publishing remains user-gated; do not
+stamp a version or publish until Sergey initiates it.** Current non-gated follow-ups are G3
+benchmark-first performance/allocation and G5 upstream cadence;
 remaining release-infrastructure work is decision-gated or external-feed-gated (version cadence,
 publish path, metapackage shape, and future Ladybug package publication/replacement). When the open
 plan items are blocked on those decisions,

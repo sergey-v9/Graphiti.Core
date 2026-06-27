@@ -1,4 +1,3 @@
-using System.Collections.Frozen;
 using System.Text.Json.Nodes;
 using Graphiti.Core;
 using Graphiti.Core.Embedding;
@@ -21,7 +20,7 @@ public class GraphitiWorkflowTests
         var typeDefinition = new EntityTypeDefinition("Person", attributes: attributes);
         attributes["location"] = new("Current location");
 
-        Assert.IsAssignableFrom<FrozenDictionary<string, EntityAttributeDefinition>>(typeDefinition.Attributes);
+        Assert.IsAssignableFrom<IReadOnlyDictionary<string, EntityAttributeDefinition>>(typeDefinition.Attributes);
         Assert.True(typeDefinition.Attributes.ContainsKey("Role"));
         Assert.True(typeDefinition.Attributes.ContainsKey("active"));
         Assert.False(typeDefinition.Attributes.ContainsKey("role"));

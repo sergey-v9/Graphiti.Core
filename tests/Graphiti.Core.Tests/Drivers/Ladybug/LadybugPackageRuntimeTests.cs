@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.InteropServices;
 using Graphiti.Core.Drivers.Ladybug;
 using LadybugDB;
 using GraphitiSagaNode = Graphiti.Core.Models.Nodes.SagaNode;
@@ -2005,6 +2006,11 @@ public class LadybugPackageRuntimeTests
         if (!OperatingSystem.IsLinux())
         {
             Assert.Skip("Linux-only LadybugDB extension smoke.");
+        }
+
+        if (RuntimeInformation.ProcessArchitecture != Architecture.X64)
+        {
+            Assert.Skip("linux-x64-only LadybugDB extension smoke.");
         }
 
         if (Environment.GetEnvironmentVariable(LinuxSmokeEnvironmentVariable) != "1")

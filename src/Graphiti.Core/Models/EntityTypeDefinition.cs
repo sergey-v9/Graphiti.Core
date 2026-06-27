@@ -8,7 +8,7 @@ namespace Graphiti.Core.Models;
 /// </summary>
 public sealed class EntityTypeDefinition
 {
-    private static readonly FrozenDictionary<string, EntityAttributeDefinition> EmptyAttributes =
+    private static readonly IReadOnlyDictionary<string, EntityAttributeDefinition> EmptyAttributes =
         Array.Empty<KeyValuePair<string, EntityAttributeDefinition>>()
             .ToFrozenDictionary(StringComparer.Ordinal);
 
@@ -35,5 +35,5 @@ public sealed class EntityTypeDefinition
     public string Description { get; }
 
     /// <summary>Attributes the type declares, keyed by exact attribute name.</summary>
-    public FrozenDictionary<string, EntityAttributeDefinition> Attributes { get; }
+    public IReadOnlyDictionary<string, EntityAttributeDefinition> Attributes { get; }
 }

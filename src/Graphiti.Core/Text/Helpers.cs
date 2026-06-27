@@ -868,7 +868,7 @@ public static partial class GraphitiHelpers
     /// <paramref name="maxConcurrency"/> is null or zero, the default cap of
     /// 20 is used; otherwise concurrency is capped at the supplied positive value.
     /// </summary>
-    public static async Task<IReadOnlyList<T>> SemaphoreGatherAsync<T>(
+    internal static async Task<IReadOnlyList<T>> SemaphoreGatherAsync<T>(
         IEnumerable<Func<CancellationToken, Task<T>>> operations,
         int? maxConcurrency = null,
         CancellationToken cancellationToken = default)

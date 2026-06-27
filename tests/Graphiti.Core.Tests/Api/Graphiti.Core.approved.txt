@@ -635,7 +635,7 @@ namespace Graphiti.Core.Models
     public sealed class EntityTypeDefinition
     {
         public EntityTypeDefinition(string name, string? description = null, System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityAttributeDefinition>? attributes = null) { }
-        public System.Collections.Frozen.FrozenDictionary<string, Graphiti.Core.Models.EntityAttributeDefinition> Attributes { get; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityAttributeDefinition> Attributes { get; }
         public string Description { get; }
         public string Name { get; }
     }
@@ -1232,7 +1232,6 @@ namespace Graphiti.Core.Text
         public static string NormalizeEntityKey(string text) { }
         public static float[] NormalizeL2(System.Collections.Generic.IEnumerable<float> embedding) { }
         public static System.DateTime? ParseDbDate(object? input) { }
-        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>> SemaphoreGatherAsync<T>(System.Collections.Generic.IEnumerable<System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>>> operations, int? maxConcurrency = default, System.Threading.CancellationToken cancellationToken = default) { }
         public static void ValidateEntityTypes(System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityTypeDefinition>? entityTypes) { }
         public static void ValidateExcludedEntityTypes(System.Collections.Generic.IEnumerable<string>? excludedEntityTypes, System.Collections.Generic.IReadOnlyDictionary<string, Graphiti.Core.Models.EntityTypeDefinition>? entityTypes) { }
         public static void ValidateGroupId(string? groupId) { }

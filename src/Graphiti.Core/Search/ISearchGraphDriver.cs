@@ -1,9 +1,9 @@
 namespace Graphiti.Core.Search;
 
 /// <summary>
-/// Driver-side search surface used by the <see cref="SearchEngine"/>. Graph drivers implement these
-/// primitive retrieval and ranking operations (fulltext, embedding similarity, breadth-first traversal,
-/// and reranking) so the engine can compose hybrid searches uniformly across backends.
+/// Driver-side search surface used by Graphiti's hybrid retrieval pipeline. Graph drivers implement
+/// these primitive retrieval and ranking operations (fulltext, embedding similarity, breadth-first
+/// traversal, and reranking) so searches can be composed uniformly across backends.
 /// </summary>
 public interface ISearchGraphDriver
 {

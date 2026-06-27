@@ -233,9 +233,8 @@ public sealed partial class Graphiti
 
     /// <summary>
     /// Ingests many episodes in one pass with batched extraction and deduplication. Faster than
-    /// repeated <c>AddEpisodeAsync</c> calls, and in the C# port resolved facts from earlier
-    /// episodes in the same batch can participate in later episodes' dedupe and temporal
-    /// invalidation.
+    /// repeated <c>AddEpisodeAsync</c> calls; resolved facts from earlier episodes in the same batch
+    /// can participate in later episodes' dedupe and temporal invalidation.
     /// </summary>
     /// <param name="bulkEpisodes">The episodes to ingest.</param>
     /// <param name="groupId">Graph partition to write to; the default group is used when omitted.</param>
