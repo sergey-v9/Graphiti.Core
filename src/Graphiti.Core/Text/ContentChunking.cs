@@ -944,10 +944,11 @@ public static partial class ContentChunking
                 break;
             }
 
-            overlap.Insert(0, messages[i]);
+            overlap.Add(messages[i]);
             currentSize += messageSize;
         }
 
+        overlap.Reverse();
         return overlap;
     }
 

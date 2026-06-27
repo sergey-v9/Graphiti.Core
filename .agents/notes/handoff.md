@@ -268,6 +268,10 @@ Plan 10 attribute extraction slice is complete (2026-06-27): `AttributeMerger` n
 attribute names directly from the response `JsonObject` instead of copying all response attributes into
 a temporary dictionary; focused AttributeMerger tests and the full verifier were green.
 
+Plan 10 content overlap slice is complete (2026-06-27): speaker-message overlap collection now uses
+append plus one reverse instead of repeated front insertion, matching the sibling JSON overlap helpers;
+focused content-chunking tests and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

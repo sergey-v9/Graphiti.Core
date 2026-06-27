@@ -103,7 +103,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
 - [x] **AttributeMerger.ExtractDeclaredAttributes** (`Internal/Helpers/AttributeMerger.cs` ~45) — drop the
   full copy of the response `attributes` object into a `Dictionary`; call `source.TryGetPropertyValue`
   directly per declared name. *parity low.*
-- [ ] **ContentChunking.GetOverlapMessages** (`Text/ContentChunking.cs` ~936) — O(n²) `Insert(0, …)`;
+- [x] **ContentChunking.GetOverlapMessages** (`Text/ContentChunking.cs` ~936) — O(n²) `Insert(0, …)`;
   switch to `Add` + one `Reverse()` like its two sibling helpers. *parity none.*
 - [ ] **Collapse duplicate snapshot copy helpers** (`Text/Helpers.cs` ~785/910) — `SnapshotEmbedding` /
   `SnapshotOperations` keep byte-identical `CopyReadOnlyList`/`CopyList`/`CopyOperationList` loops and a
