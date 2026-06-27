@@ -190,8 +190,8 @@ user-gated items.
   baseline landed 2026-06-27, covering the reference driver's O(n) cosine path with
   `[MemoryDiagnoser]`. Remaining work:
   use the vector baseline to decide whether full-scan cosine needs optimization at target graph size,
-  profile MMR merge and bulk edge dedupe, and land only measured, parity-safe wins (BenchmarkDotNet
-  before/after). This program also
+  profile bulk edge dedupe, and land only measured, parity-safe wins (BenchmarkDotNet before/after).
+  This program also
   *gates* the deferred
   opt-in HNSW vector tier (G-future) — only pursue HNSW if the bench shows full-scan cosine is the
   bottleneck at the target graph size, and keep exact cosine the default.

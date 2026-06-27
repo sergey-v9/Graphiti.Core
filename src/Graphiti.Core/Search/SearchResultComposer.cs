@@ -204,14 +204,14 @@ internal static class SearchResultComposer
         ArgumentNullException.ThrowIfNull(third);
         ArgumentNullException.ThrowIfNull(keySelector);
 
-        var merged = new Dictionary<string, (T Item, float Score, int Index)>(
+        var indexByKey = new Dictionary<string, int>(
             first.Count + second.Count + third.Count,
             StringComparer.Ordinal);
-        var index = 0;
-        AddMergedCandidates(first, keySelector, merged, ref index);
-        AddMergedCandidates(second, keySelector, merged, ref index);
-        AddMergedCandidates(third, keySelector, merged, ref index);
-        return ProjectMergedCandidatesByIndex(merged);
+        var results = new List<(T Item, float Score)>(first.Count);
+        AddMergedCandidatesInFirstSeenOrder(first, keySelector, indexByKey, results);
+        AddMergedCandidatesInFirstSeenOrder(second, keySelector, indexByKey, results);
+        AddMergedCandidatesInFirstSeenOrder(third, keySelector, indexByKey, results);
+        return results;
     }
 
     private static void AddMergedCandidates<T>(
@@ -234,6 +234,28 @@ internal static class SearchResultComposer
         }
     }
 
+    private static void AddMergedCandidatesInFirstSeenOrder<T>(
+        IReadOnlyList<(T Item, float Score)> rankedList,
+        Func<T, string> keySelector,
+        Dictionary<string, int> indexByKey,
+        List<(T Item, float Score)> results)
+    {
+        for (var i = 0; i < rankedList.Count; i++)
+        {
+            var item = rankedList[i];
+            var key = keySelector(item.Item);
+            if (indexByKey.TryGetValue(key, out var resultIndex))
+            {
+                var existing = results[resultIndex];
+                results[resultIndex] = (existing.Item, Math.Max(existing.Score, item.Score));
+                continue;
+            }
+
+            indexByKey[key] = results.Count;
+            results.Add(item);
+        }
+    }
+
     private static List<(T Item, float Score)> ProjectMergedCandidates<T>(
         Dictionary<string, (T Item, float Score, int Index)> merged)
     {
@@ -245,21 +267,6 @@ internal static class SearchResultComposer
                 ? scoreComparison
                 : left.Index.CompareTo(right.Index);
         });
-
-        var results = new List<(T Item, float Score)>(ordered.Count);
-        foreach (var item in ordered)
-        {
-            results.Add((item.Item, item.Score));
-        }
-
-        return results;
-    }
-
-    private static List<(T Item, float Score)> ProjectMergedCandidatesByIndex<T>(
-        Dictionary<string, (T Item, float Score, int Index)> merged)
-    {
-        var ordered = new List<(T Item, float Score, int Index)>(merged.Values);
-        ordered.Sort(static (left, right) => left.Index.CompareTo(right.Index));
 
         var results = new List<(T Item, float Score)>(ordered.Count);
         foreach (var item in ordered)

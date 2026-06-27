@@ -205,6 +205,13 @@ embedding search, including filter checks, top-k selection, and final-hit clonin
 `[MemoryDiagnoser]`. No implementation change was made in this slice; see
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-inmemory-vector-win-x64.md`.
 
+G3 MMR merge allocation slice is complete (2026-06-27): `SearchBenchmarks` now covers
+`Mmr_MergeCandidatesInFirstSeenOrder`, and `MergeCandidatesInFirstSeenOrder` keeps first-seen results
+directly while updating duplicate scores through a key-to-result-index dictionary. Local ShortRun
+before/after dropped allocations from 28.7 KB to 20.56 KB at 200 candidates and from 72.03 KB to
+51.66 KB at 500 candidates; see
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-search-mmr-merge-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

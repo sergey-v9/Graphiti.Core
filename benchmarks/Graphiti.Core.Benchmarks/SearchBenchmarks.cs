@@ -101,6 +101,17 @@ public class SearchBenchmarks
     }
 
     [Benchmark]
+    public int Mmr_MergeCandidatesInFirstSeenOrder()
+    {
+        var merged = SearchResultComposer.MergeCandidatesInFirstSeenOrder(
+            _edgesA,
+            _edgesB,
+            _edgesC,
+            static edge => edge.Uuid);
+        return merged.Count;
+    }
+
+    [Benchmark]
     public int Bm25_Rank()
     {
         var ranked = Bm25TextScorer.Rank(
