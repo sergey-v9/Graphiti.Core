@@ -272,6 +272,10 @@ Plan 10 content overlap slice is complete (2026-06-27): speaker-message overlap 
 append plus one reverse instead of repeated front insertion, matching the sibling JSON overlap helpers;
 focused content-chunking tests and the full verifier were green.
 
+Plan 10 snapshot-helper slice is complete (2026-06-27): `GraphitiHelpers` now uses collection
+expressions for non-`ICollection` embedding/operation snapshots and the duplicate copy helpers are
+gone; focused helper/concurrency tests and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

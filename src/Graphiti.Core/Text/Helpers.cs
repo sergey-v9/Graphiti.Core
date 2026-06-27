@@ -800,48 +800,10 @@ public static partial class GraphitiHelpers
 
         if (embedding is IReadOnlyList<float> list)
         {
-            return CopyReadOnlyList(list);
+            return [.. list];
         }
 
-        var values = new List<float>();
-        foreach (var value in embedding)
-        {
-            values.Add(value);
-        }
-
-        return CopyList(values);
-    }
-
-    private static float[] CopyReadOnlyList(IReadOnlyList<float> values)
-    {
-        if (values.Count == 0)
-        {
-            return Array.Empty<float>();
-        }
-
-        var snapshot = new float[values.Count];
-        for (var i = 0; i < values.Count; i++)
-        {
-            snapshot[i] = values[i];
-        }
-
-        return snapshot;
-    }
-
-    private static float[] CopyList(List<float> values)
-    {
-        if (values.Count == 0)
-        {
-            return Array.Empty<float>();
-        }
-
-        var snapshot = new float[values.Count];
-        for (var i = 0; i < values.Count; i++)
-        {
-            snapshot[i] = values[i];
-        }
-
-        return snapshot;
+        return [.. embedding];
     }
 
     private static string EscapeLuceneCharacters(string source, int firstEscaped)
@@ -922,31 +884,9 @@ public static partial class GraphitiHelpers
             return snapshot;
         }
 
-        var list = new List<Func<CancellationToken, Task<T>>>();
-        foreach (var operation in operations)
-        {
-            list.Add(operation);
-        }
-
-        return CopyOperationList(list);
+        return [.. operations];
     }
 
-    private static Func<CancellationToken, Task<T>>[] CopyOperationList<T>(
-        List<Func<CancellationToken, Task<T>>> operations)
-    {
-        if (operations.Count == 0)
-        {
-            return Array.Empty<Func<CancellationToken, Task<T>>>();
-        }
-
-        var snapshot = new Func<CancellationToken, Task<T>>[operations.Count];
-        for (var i = 0; i < operations.Count; i++)
-        {
-            snapshot[i] = operations[i];
-        }
-
-        return snapshot;
-    }
     /// <summary>Normalizes text into a comparison key: trimmed, lowercased, whitespace collapsed.</summary>
     public static string NormalizeEntityKey(string text)
     {

@@ -105,7 +105,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   directly per declared name. *parity low.*
 - [x] **ContentChunking.GetOverlapMessages** (`Text/ContentChunking.cs` ~936) — O(n²) `Insert(0, …)`;
   switch to `Add` + one `Reverse()` like its two sibling helpers. *parity none.*
-- [ ] **Collapse duplicate snapshot copy helpers** (`Text/Helpers.cs` ~785/910) — `SnapshotEmbedding` /
+- [x] **Collapse duplicate snapshot copy helpers** (`Text/Helpers.cs` ~785/910) — `SnapshotEmbedding` /
   `SnapshotOperations` keep byte-identical `CopyReadOnlyList`/`CopyList`/`CopyOperationList` loops and a
   List-then-array fallback; collapse the non-`ICollection` paths to `[.. x]` and delete the dead helpers.
   *parity none.*
