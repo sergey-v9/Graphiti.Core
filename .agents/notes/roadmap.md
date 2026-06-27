@@ -160,6 +160,16 @@ or have agents build-only and run the consolidated test centrally.
 
 ## Long-term goals — active development (set 2026-06-19 from the full-project review)
 
+> **Status 2026-06-27: this forward agenda is complete and the library is release-ready.** G1 (plan 07
+> linux-x64 proof), G2 (live-provider/eval canary), G4 (observability/DX), the G3 perf/allocation
+> program (10 measured slices; all named hot paths profiled), and the non-gated part of G6 (plan 08
+> release-surface finalization) are all done; the suite is green (`1032/4/1036`) with a green pack +
+> fresh-consumer dry run. Remaining: the **user-gated** release publish (G6 final step), the G5 recurring
+> reminder (blocked on in-session scheduling tooling — to be landed as a committed check-script under
+> plan 09 Step 0b), and the now-data-backed **HNSW gate decision** (plan 09 Step 0a). The next stream is
+> `.agents/plans/09-robustness-hardening.md` (fuzz/property + provider-resilience hardening of the
+> LLM-output parse boundary) — a new in-scope direction chosen after the original agenda was exhausted.
+
 Phases 1–3 (parity) are done and the deterministic suite is green; the port is faithful and mature.
 The forward agenda is **productionization and confidence**, not more parity micro-slices. Ordered by
 value. Each is a stream, not a one-slice; verify centrally, keep docs lean, don't drift into the

@@ -102,11 +102,15 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
 - **Phases 1–3 are DONE.** The performance/allocation moratorium is LIFTED; further performance work
   is evidence-driven (benchmark-first) only (`roadmap.md`).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
-  1–3 are complete, plan 06 is complete, G4 is complete, the first wave of G3 perf/allocation slices
-  landed 2026-06-26, plan 07/G1 linux-x64 proof is complete, G2 fail-loud live-provider/eval CI is
-  wired, and plan 08/G6 non-gated release-surface finalization is complete. **Do not stamp a release
-  version or publish until Sergey initiates it.** Current non-gated follow-ups are G3
-  benchmark-first performance/allocation and G5 upstream cadence.
+  1–3 are complete, plan 06 is complete, G4 is complete, the G3 perf/allocation program is complete
+  (10 measured slices; all named hot paths profiled), plan 07/G1 linux-x64 proof is complete, G2
+  fail-loud live-provider/eval CI is wired, and plan 08/G6 non-gated release-surface finalization is
+  complete — i.e. the whole 2026-06-19 forward agenda is done and the library is release-ready. **Do not
+  stamp a release version or publish until Sergey initiates it.** The current actionable plan is
+  `.agents/plans/09-robustness-hardening.md`: close the two roadmap residuals (Step 0 — formally settle
+  the HNSW gate with the new InMemory vector baseline; land G5 as a committed check-script + doc, not a
+  faked CI lane), then harden the LLM-output parse/coercion and provider-resilience boundary with
+  property-based/fuzz and failure-mode tests.
   Full restore/test/pack requires GitHub Packages credentials for source `github_ladybug`. Performance
   work is benchmark-first and no longer on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
