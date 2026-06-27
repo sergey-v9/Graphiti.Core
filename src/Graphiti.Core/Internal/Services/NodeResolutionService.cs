@@ -250,15 +250,17 @@ internal sealed class NodeResolutionService(
                         BuildNodeDedupEmbeddingQueries(extractedNodes),
                         cancellationToken)
                     .ConfigureAwait(false);
+                var candidateGroupIds = new string[1];
                 for (var i = 0; i < extractedNodes.Count; i++)
                 {
                     var candidateGroupId = string.IsNullOrWhiteSpace(extractedNodes[i].GroupId)
                         ? groupId
                         : extractedNodes[i].GroupId;
+                    candidateGroupIds[0] = candidateGroupId;
                     var hits = await searchDriver.SearchEntityNodesByEmbeddingAsync(
                         queryVectors[i],
                         new SearchFilters(),
-                        new[] { candidateGroupId },
+                        candidateGroupIds,
                         NodeDedupCandidateLimit,
                         NodeDedupCosineMinScore,
                         cancellationToken).ConfigureAwait(false);

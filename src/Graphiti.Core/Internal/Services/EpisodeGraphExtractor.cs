@@ -328,18 +328,19 @@ internal sealed class EpisodeGraphExtractor(
             return first;
         }
 
-        var seen = new SortedSet<int>();
+        var merged = new List<int>(first.Count + second.Count);
         for (var i = 0; i < first.Count; i++)
         {
-            seen.Add(first[i]);
+            merged.Add(first[i]);
         }
 
         for (var i = 0; i < second.Count; i++)
         {
-            seen.Add(second[i]);
+            merged.Add(second[i]);
         }
 
-        return seen.ToArray();
+        merged.Sort();
+        return DistinctSorted(merged);
     }
 
     private static bool IsMoreSpecific(EntityNode candidate, EntityNode existing)

@@ -353,6 +353,12 @@ Focused entity-deduplication tests and the fuzzy AddEpisode workflow were green.
 18.856 ms at 192 nodes with allocations unchanged. See
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-entity-dedupe-minhash-win-x64.md`.
 
+Plan 10 small allocation-hoist slice is complete (2026-06-27): `EntitySummaryService.ApplySummaries`
+returns before building the name lookup when there are no nodes or summaries; `EpisodeGraphExtractor`
+merges attribution indices via list sort plus existing `DistinctSorted` instead of `SortedSet`; and
+`NodeResolutionService` reuses one single-entry group-id array while awaiting each node candidate
+search. Focused summary/extractor/node-dedup tests plus the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

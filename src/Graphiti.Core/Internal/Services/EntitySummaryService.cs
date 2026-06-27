@@ -181,6 +181,11 @@ internal sealed class EntitySummaryService(
         List<EntityNode> nodes,
         Graphiti.SummarizedEntitiesResponse response)
     {
+        if (nodes.Count == 0 || response.Summaries.Count == 0)
+        {
+            return;
+        }
+
         var nameToNodes = new Dictionary<string, List<EntityNode>>(StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < nodes.Count; i++)
         {

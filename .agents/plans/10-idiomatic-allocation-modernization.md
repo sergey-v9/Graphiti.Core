@@ -143,7 +143,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
 - [x] **MinHash redundant UTF-8 encoding (32×)** (`Maintenance/EntityNodeDeduplication.cs` ~284) — encode
   each shingle once per signature while preserving the existing `"{seed}:{shingle}"` hash payload and
   LSH bucket values. *parity low; bench.*
-- [ ] **EntitySummaryService.ApplySummaries early-out** (~184); **EpisodeGraphExtractor.
+- [x] **EntitySummaryService.ApplySummaries early-out** (~184); **EpisodeGraphExtractor.
   MergeAttributionIndices** `SortedSet`→ existing `DistinctSorted` (~331); **NodeResolutionService** hoist
   single-element group-id array (~261). *parity low/none; bench where marked.*
 - [ ] **De-dup `NamespaceDriverHelpers.CopyFloatList`** → call existing
