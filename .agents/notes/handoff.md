@@ -199,6 +199,12 @@ committed win-x64 ShortRun baseline covering cache-key serialize/hash/hex and Gr
 serialize/parse/deep-clone paths. No implementation change was made in this slice; see
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-26-serialization-win-x64.md`.
 
+G3 InMemory vector-search baseline slice is complete (2026-06-27):
+`InMemoryVectorSearchBenchmarks` now covers the deterministic reference driver's full-scan node
+embedding search, including filter checks, top-k selection, and final-hit cloning, with
+`[MemoryDiagnoser]`. No implementation change was made in this slice; see
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-inmemory-vector-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
