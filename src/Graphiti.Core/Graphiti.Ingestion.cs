@@ -362,7 +362,7 @@ public sealed partial class Graphiti
                     groupId,
                     now,
                     cancellationToken,
-                    CopyDictionaryValues(allEdgesByUuid),
+                    allEdgesByUuid.Values,
                     finalNodeBatch.AllNodes,
                     edgeTypes,
                     edgeTypeMap,

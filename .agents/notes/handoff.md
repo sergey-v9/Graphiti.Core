@@ -296,6 +296,14 @@ delete paths now use single-statement builders instead of allocating one-element
 and indexing `[0]`; Entity deletes still use the two-statement RelatesTo cleanup path. Focused
 Ladybug builder/driver tests and the full verifier were green.
 
+Plan 10 bulk edge override slice is complete (2026-06-27): bulk final edge resolution now passes
+`allEdgesByUuid.Values` as the existing-edge override collection instead of copying dictionary values
+for every episode. This is safe while the per-episode final resolution loop remains sequential; if
+that loop is parallelized, reassess the live `Dictionary.ValueCollection` handoff. Local ShortRun
+allocations for `BulkEdgeDedupeBenchmarks` dropped from 10.41 MB to 10.38 MB at 16 endpoint pairs
+(8-pair case rounded unchanged at 4.52 MB). See
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-bulk-edge-override-values-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

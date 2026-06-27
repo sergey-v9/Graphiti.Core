@@ -41,7 +41,7 @@ internal sealed class EdgeResolutionService(
         CancellationToken cancellationToken,
         IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes = null,
         IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap = null,
-        IReadOnlyList<EntityEdge>? existingEdgesOverride = null,
+        IReadOnlyCollection<EntityEdge>? existingEdgesOverride = null,
         HashSet<string>? newlyCreatedEdgeUuids = null)
     {
         var candidates = BuildExtractedEdgeCandidates(
@@ -72,7 +72,7 @@ internal sealed class EdgeResolutionService(
         string groupId,
         DateTime now,
         CancellationToken cancellationToken,
-        IReadOnlyList<EntityEdge>? existingEdgesOverride = null,
+        IReadOnlyCollection<EntityEdge>? existingEdgesOverride = null,
         IReadOnlyList<EntityNode>? nodes = null,
         IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes = null,
         IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap = null,
@@ -217,7 +217,7 @@ internal sealed class EdgeResolutionService(
         EpisodicNode episode,
         string groupId,
         object sharedEdgeMutationLock,
-        IReadOnlyList<EntityEdge>? existingEdgesOverride,
+        IReadOnlyCollection<EntityEdge>? existingEdgesOverride,
         IReadOnlyDictionary<string, EntityTypeDefinition>? edgeTypes,
         IReadOnlyDictionary<(string SourceType, string TargetType), IReadOnlyList<string>>? edgeTypeMap,
         IReadOnlyDictionary<string, EntityNode> nodesByUuid,
@@ -401,7 +401,7 @@ internal sealed class EdgeResolutionService(
         EntityEdge extractedEdge,
         string groupId,
         IReadOnlyList<EntityEdge> betweenNodesEdges,
-        IReadOnlyList<EntityEdge>? existingEdgesOverride,
+        IReadOnlyCollection<EntityEdge>? existingEdgesOverride,
         CancellationToken cancellationToken)
     {
         // Build the duplicate-candidate list by re-searching the valid_edges (between-nodes edges
@@ -464,7 +464,7 @@ internal sealed class EdgeResolutionService(
         EntityEdge extractedEdge,
         string groupId,
         IReadOnlyList<EntityEdge> relatedEdges,
-        IReadOnlyList<EntityEdge>? existingEdgesOverride,
+        IReadOnlyCollection<EntityEdge>? existingEdgesOverride,
         bool excludeRelatedEdges,
         CancellationToken cancellationToken)
     {

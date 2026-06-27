@@ -73,6 +73,54 @@ public class EdgeMergeHelpersTests
     }
 
     [Fact]
+    public void MergeEdgeOverrides_AcceptsDictionaryValueCollectionOverrides()
+    {
+        var stale = new EntityEdge
+        {
+            Uuid = "same",
+            SourceNodeUuid = "source",
+            TargetNodeUuid = "target",
+            Fact = "stale copy"
+        };
+        var unrelated = new EntityEdge
+        {
+            Uuid = "unrelated",
+            SourceNodeUuid = "source",
+            TargetNodeUuid = "other",
+            Fact = "unrelated"
+        };
+        var snapshot = new EntityEdge
+        {
+            Uuid = "same",
+            SourceNodeUuid = "source",
+            TargetNodeUuid = "target",
+            Fact = "snapshot copy"
+        };
+        var appended = new EntityEdge
+        {
+            Uuid = "appended",
+            SourceNodeUuid = "source",
+            TargetNodeUuid = "target",
+            Fact = "snapshot only"
+        };
+        var overrides = new Dictionary<string, EntityEdge>(StringComparer.Ordinal)
+        {
+            [snapshot.Uuid] = snapshot,
+            [appended.Uuid] = appended
+        };
+
+        var merged = EdgeMergeHelpers.MergeEdgeOverrides(
+            new[] { stale, unrelated },
+            overrides.Values,
+            edge => edge.SourceNodeUuid == "source" && edge.TargetNodeUuid == "target");
+
+        Assert.Equal(3, merged.Count);
+        Assert.Same(snapshot, merged[0]);
+        Assert.Same(unrelated, merged[1]);
+        Assert.Same(appended, merged[2]);
+    }
+
+    [Fact]
     public void MergeEdgeOverrides_WithoutOverridesCopiesSourceOrderAndDuplicates()
     {
         var first = new EntityEdge { Uuid = "first", Fact = "first" };

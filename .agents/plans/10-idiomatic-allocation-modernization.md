@@ -121,7 +121,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   *parity none; bench.*
 - [x] **Ladybug one-element-array `[0]` throwaways in deletes** (`LadybugGraphDriver.cs` delete paths) —
   add single-statement overloads for non-Entity node types. *parity none.*
-- [ ] **AddEpisodeBulkAsync `CopyDictionaryValues` per iteration** (`Graphiti.Ingestion.cs` ~365) —
+- [x] **AddEpisodeBulkAsync `CopyDictionaryValues` per iteration** (`Graphiti.Ingestion.cs` ~365) —
   O(E·N) snapshot of the growing canonical-edge dict each episode; widen the callee param to
   `IReadOnlyCollection` and pass `.Values`, or reuse one buffer (cross-file: `EdgeResolutionService`).
   *parity low; bench.*

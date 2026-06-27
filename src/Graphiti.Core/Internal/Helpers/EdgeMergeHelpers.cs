@@ -6,7 +6,7 @@ namespace Graphiti.Core.Internal.Helpers;
 internal static class EdgeMergeHelpers
 {
     internal static Dictionary<string, EntityEdge> BuildOverrideLookup(
-        IReadOnlyList<EntityEdge>? overrides,
+        IReadOnlyCollection<EntityEdge>? overrides,
         HashSet<string> excludedUuids)
     {
         var lookup = new Dictionary<string, EntityEdge>(StringComparer.Ordinal);
@@ -15,9 +15,8 @@ internal static class EdgeMergeHelpers
             return lookup;
         }
 
-        for (var i = 0; i < overrides.Count; i++)
+        foreach (var edge in overrides)
         {
-            var edge = overrides[i];
             if (!excludedUuids.Contains(edge.Uuid))
             {
                 lookup.TryAdd(edge.Uuid, edge);
@@ -108,7 +107,7 @@ internal static class EdgeMergeHelpers
 
     internal static List<EntityEdge> MergeEdgeOverrides(
         IEnumerable<EntityEdge> source,
-        IReadOnlyList<EntityEdge>? overrides,
+        IReadOnlyCollection<EntityEdge>? overrides,
         Func<EntityEdge, bool> predicate)
     {
         if (overrides is null || overrides.Count == 0)
@@ -117,9 +116,8 @@ internal static class EdgeMergeHelpers
         }
 
         var overridesByUuid = new Dictionary<string, EntityEdge>(StringComparer.Ordinal);
-        for (var i = 0; i < overrides.Count; i++)
+        foreach (var edge in overrides)
         {
-            var edge = overrides[i];
             if (predicate(edge))
             {
                 overridesByUuid.TryAdd(edge.Uuid, edge);
@@ -141,9 +139,8 @@ internal static class EdgeMergeHelpers
                 : edge);
         }
 
-        for (var i = 0; i < overrides.Count; i++)
+        foreach (var edge in overrides)
         {
-            var edge = overrides[i];
             if (predicate(edge) && seen.Add(edge.Uuid))
             {
                 merged.Add(edge);
