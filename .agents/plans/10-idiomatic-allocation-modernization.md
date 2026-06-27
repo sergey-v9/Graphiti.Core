@@ -85,7 +85,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   check runs a per-char `Rune.DecodeFromUtf16` loop over every prepared message of every LLM call.
   Replace with `!input.AsSpan().ContainsAny(RemovableChars)` (all removable scalars are single UTF-16
   units); keep the rune path for the rare dirty case. *parity low; bench.*
-- [ ] **LlmClient.PrepareMessages** (`LlmClients/LlmClient.cs` ~334) — drop the eager
+- [x] **LlmClient.PrepareMessages** (`LlmClients/LlmClient.cs` ~334) — drop the eager
   `new Message(...)` clone of every message; `Message` is an immutable record and all mutations already
   use `with`, so alias the originals. *parity none; bench.*
 - [ ] **FactsHaveWordOverlap in bulk edge dedupe** (`Graphiti.Ingestion.cs` ~1208) — invoked O(edges²);

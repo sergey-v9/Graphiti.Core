@@ -238,6 +238,12 @@ clean prompt-message checks from 3.967 us to 228.5 ns (ASCII) and 3.414 us to 30
 dirty cleanup allocation unchanged. See
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-llm-cleaninput-win-x64.md`.
 
+Plan 10 LLM prepare-messages slice is complete (2026-06-27): `PrepareMessages` now keeps a new
+prepared list but aliases unchanged immutable `Message` records until a `with` replacement is needed.
+Local ShortRun before/after for clean no-schema preparation dropped from 628.8 ns / 800 B to
+498.6 ns / 672 B. See
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-llm-preparemessages-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

@@ -322,7 +322,7 @@ public abstract class LlmClient : ILlmClient, IDisposable
     }
 
     /// <summary>
-    /// Clones and augments the messages with attribute-extraction, schema, and language instructions and
+    /// Copies and augments the messages with attribute-extraction, schema, and language instructions and
     /// cleans control characters from their content.
     /// </summary>
     protected static IReadOnlyList<Message> PrepareMessages(
@@ -340,8 +340,7 @@ public abstract class LlmClient : ILlmClient, IDisposable
         var prepared = new List<Message>(messages.Count);
         for (var i = 0; i < messages.Count; i++)
         {
-            var message = messages[i];
-            prepared.Add(new Message(message.Role, message.Content));
+            prepared.Add(messages[i]);
         }
         if (attributeExtraction)
         {
