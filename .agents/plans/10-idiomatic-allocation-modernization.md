@@ -129,7 +129,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   `FindCanonicalNodeByNormalizedName` ~1094) — per-node full-dict copy + repeated `NormalizeEntityKey`;
   index canonical nodes by a precomputed normalized (Ordinal) key for O(1) lookup; reuse scratch buffers.
   *parity? ; bench.*
-- [ ] **EdgeResolutionService.TryGetNodeByExactExtractedName** (`Internal/Services/EdgeResolutionService.cs`
+- [x] **EdgeResolutionService.TryGetNodeByExactExtractedName** (`Internal/Services/EdgeResolutionService.cs`
   ~348) — O(edges×nodes) full-dict scan because the map is `OrdinalIgnoreCase`; build a one-time
   `Ordinal` lookup for O(1) endpoint resolution (mind the first-winner nuance). *parity? ; bench.*
 - [ ] **EmbeddingVectorValidation.MaterializeVector** (`Embedding/EmbeddingVectorValidation.cs` ~80/113)

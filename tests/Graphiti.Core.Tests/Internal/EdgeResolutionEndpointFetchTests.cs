@@ -85,6 +85,121 @@ public class EdgeResolutionEndpointFetchTests
     }
 
     [Fact]
+    public void BuildExtractedEdgeCandidates_RequiresExactEndpointNamesWithCaseInsensitiveMap()
+    {
+        var now = new DateTime(2026, 1, 3, 12, 0, 0, DateTimeKind.Utc);
+        var episodes = new[]
+        {
+            new EpisodicNode { Uuid = "episode-0", ValidAt = now }
+        };
+        var nodesByExtractedName = new Dictionary<string, EntityNode>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Alice"] = new EntityNode { Uuid = "alice-uuid", Name = "Alice", GroupId = "group" },
+            ["Acme"] = new EntityNode { Uuid = "acme-uuid", Name = "Acme", GroupId = "group" }
+        };
+
+        var candidates = EdgeResolutionService.BuildExtractedEdgeCandidates(
+            new[]
+            {
+                new Graphiti.ExtractedEdge(
+                    "alice",
+                    "Acme",
+                    "WORKS_AT",
+                    "Alice works at Acme.",
+                    validAt: null,
+                    invalidAt: null,
+                    episodeIndices: new[] { 0 })
+            },
+            nodesByExtractedName,
+            episodes,
+            "group",
+            now,
+            out var skippedEdges);
+
+        Assert.Empty(candidates);
+        Assert.Equal(1, skippedEdges);
+    }
+
+    [Fact]
+    public void BuildExtractedEdgeCandidates_ExactEndpointLookupPreservesEnumeratedKeyAndCurrentValue()
+    {
+        var now = new DateTime(2026, 1, 3, 12, 0, 0, DateTimeKind.Utc);
+        var episodes = new[]
+        {
+            new EpisodicNode { Uuid = "episode-0", ValidAt = now }
+        };
+        var nodesByExtractedName = new Dictionary<string, EntityNode>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Alice"] = new EntityNode { Uuid = "original-alice-uuid", Name = "Alice", GroupId = "group" },
+            ["Acme"] = new EntityNode { Uuid = "acme-uuid", Name = "Acme", GroupId = "group" }
+        };
+
+        nodesByExtractedName["ALICE"] = new EntityNode
+        {
+            Uuid = "updated-alice-uuid",
+            Name = "ALICE",
+            GroupId = "group"
+        };
+
+        var candidates = EdgeResolutionService.BuildExtractedEdgeCandidates(
+            new[]
+            {
+                new Graphiti.ExtractedEdge(
+                    "Alice",
+                    "Acme",
+                    "WORKS_AT",
+                    "Alice works at Acme.",
+                    validAt: null,
+                    invalidAt: null,
+                    episodeIndices: new[] { 0 }),
+                new Graphiti.ExtractedEdge(
+                    "ALICE",
+                    "Acme",
+                    "WORKS_AT",
+                    "ALICE works at Acme.",
+                    validAt: null,
+                    invalidAt: null,
+                    episodeIndices: new[] { 0 })
+            },
+            nodesByExtractedName,
+            episodes,
+            "group",
+            now,
+            out var skippedEdges);
+
+        var edge = Assert.Single(candidates);
+        Assert.Equal(1, skippedEdges);
+        Assert.Equal("updated-alice-uuid", edge.SourceNodeUuid);
+    }
+
+    [Fact]
+    public void BuildExtractedEdgeCandidates_EmptyEpisodesDoesNotEnumerateNodeMap()
+    {
+        var now = new DateTime(2026, 1, 3, 12, 0, 0, DateTimeKind.Utc);
+
+        var candidates = EdgeResolutionService.BuildExtractedEdgeCandidates(
+            new[]
+            {
+                new Graphiti.ExtractedEdge(
+                    "Alice",
+                    "Acme",
+                    "WORKS_AT",
+                    "Alice works at Acme.",
+                    validAt: null,
+                    invalidAt: null,
+                    episodeIndices: new[] { 0 })
+            },
+            new ThrowingNodeMap(),
+            Array.Empty<EpisodicNode>(),
+            "group",
+            now,
+            out var skippedEdges);
+
+        Assert.Empty(candidates);
+        Assert.Equal(1, skippedEdges);
+    }
+
+    [Fact]
     public async Task ResolveEntityEdges_FetchesMissingEndpointNode_PreservingCustomEdgeType()
     {
         var driver = new InMemoryGraphDriver();
@@ -885,5 +1000,30 @@ public class EdgeResolutionEndpointFetchTests
                     ? (JsonObject)response.DeepClone()
                     : new JsonObject());
         }
+    }
+
+    private sealed class ThrowingNodeMap : IReadOnlyDictionary<string, EntityNode>
+    {
+        public int Count => throw new InvalidOperationException("Node map should not be inspected.");
+
+        public IEnumerable<string> Keys =>
+            throw new InvalidOperationException("Node map should not be inspected.");
+
+        public IEnumerable<EntityNode> Values =>
+            throw new InvalidOperationException("Node map should not be inspected.");
+
+        public EntityNode this[string key] =>
+            throw new InvalidOperationException("Node map should not be inspected.");
+
+        public bool ContainsKey(string key) =>
+            throw new InvalidOperationException("Node map should not be inspected.");
+
+        public bool TryGetValue(string key, out EntityNode value) =>
+            throw new InvalidOperationException("Node map should not be inspected.");
+
+        public IEnumerator<KeyValuePair<string, EntityNode>> GetEnumerator() =>
+            throw new InvalidOperationException("Node map should not be inspected.");
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

@@ -297,11 +297,12 @@ internal sealed class EdgeResolutionService(
             return candidates;
         }
 
+        var nodesByExactExtractedName = BuildExactExtractedNameLookup(nodesByExtractedName);
         var fallbackEpisode = episodes[0];
         foreach (var extracted in extractedEdges)
         {
-            if (!TryGetNodeByExactExtractedName(nodesByExtractedName, extracted.SourceName, out var sourceNode)
-                || !TryGetNodeByExactExtractedName(nodesByExtractedName, extracted.TargetName, out var targetNode)
+            if (!nodesByExactExtractedName.TryGetValue(extracted.SourceName, out var sourceNode)
+                || !nodesByExactExtractedName.TryGetValue(extracted.TargetName, out var targetNode)
                 || (!extracted.AllowSelfEdge && sourceNode.Uuid == targetNode.Uuid)
                 || string.IsNullOrWhiteSpace(extracted.Fact))
             {
@@ -345,26 +346,20 @@ internal sealed class EdgeResolutionService(
         return candidates;
     }
 
-    private static bool TryGetNodeByExactExtractedName(
-        IReadOnlyDictionary<string, EntityNode> nodesByExtractedName,
-        string extractedName,
-        out EntityNode node)
+    private static Dictionary<string, EntityNode> BuildExactExtractedNameLookup(
+        IReadOnlyDictionary<string, EntityNode> nodesByExtractedName)
     {
         // Edge endpoints are validated through exact, case-sensitive string membership against the
-        // by-name map before resolving UUIDs. Some node-resolution maps are case-insensitive for
-        // other dedupe paths, so enumerate keys here to preserve the separate edge-extraction
-        // validation contract.
+        // by-name map before resolving UUIDs. Some node-resolution maps are case-insensitive for other
+        // dedupe paths, so enumerate keys into an Ordinal lookup to preserve the separate
+        // edge-extraction validation contract while avoiding an O(edges x nodes) scan.
+        var lookup = new Dictionary<string, EntityNode>(nodesByExtractedName.Count, StringComparer.Ordinal);
         foreach (var pair in nodesByExtractedName)
         {
-            if (string.Equals(pair.Key, extractedName, StringComparison.Ordinal))
-            {
-                node = pair.Value;
-                return true;
-            }
+            lookup.TryAdd(pair.Key, pair.Value);
         }
 
-        node = null!;
-        return false;
+        return lookup;
     }
 
     internal static EntityEdge? FindDuplicateFact(

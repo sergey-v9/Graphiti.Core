@@ -312,6 +312,15 @@ coverage pins out-of-order extraction completion. Local ShortRun allocations for
 10.05 MB at 16 endpoint pairs. See
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-bulk-node-dedupe-win-x64.md`.
 
+Plan 10 edge endpoint lookup slice is complete (2026-06-27): extracted-edge candidate preparation
+now builds one `StringComparer.Ordinal` lookup from the node map's enumerated keys/current values
+instead of scanning the case-insensitive map for every source/target endpoint. This preserves exact
+case-sensitive endpoint membership, the `OrdinalIgnoreCase` dictionary update nuance, and the
+empty-episode fast return. Local ShortRun for `EdgeResolutionBenchmarks` dropped from 584.1 us to
+187.7 us at 64 nodes / 512 edges and from 1,640.8 us to 188.9 us at 256 nodes / 512 edges, with
+allocations down about 48-54 KB. See
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-edge-resolution-endpoint-lookup-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
@@ -352,7 +361,7 @@ added. This section holds the single authoritative live count and the standing v
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
 **Current verifier checkpoint (2026-06-27):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1032` passed, `4` skipped, `1036` total. The verifier
+Packages credentials for the Ladybug feed — `1038` passed, `4` skipped, `1042` total. The verifier
 covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
 shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
 LadybugDB through the packed package. The skips are the env-gated
