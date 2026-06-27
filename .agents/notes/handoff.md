@@ -280,6 +280,10 @@ Plan 10 dead-code slice is complete (2026-06-27): removed unused `Text.Helpers` 
 generation and unused in-memory saga/group helper methods after reference checks; focused
 Graphiti helper / in-memory saga / routing tests and the full verifier were green.
 
+Plan 10 AppendEpisode slice is complete (2026-06-27): episode concatenation now appends the
+non-negative loop index directly to the `StringBuilder` instead of allocating an invariant string.
+Exact-header text tests, a non-invariant culture probe, and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

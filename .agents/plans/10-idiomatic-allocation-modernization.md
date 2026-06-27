@@ -111,7 +111,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   *parity none.*
 - [x] **Dead-code removal** — unused `WhitespaceRegex()` (`Text/Helpers.cs` ~987); verify-then-remove
   `FindFirstStoredSagaByName` / `GroupMatches` (`Drivers/InMemoryGraphDriver.cs`). *parity none.*
-- [ ] **TextUtilities.AppendEpisode** (`Text/TextUtilities.cs` ~104) — `builder.Append(index)` instead of
+- [x] **TextUtilities.AppendEpisode** (`Text/TextUtilities.cs` ~104) — `builder.Append(index)` instead of
   `builder.Append(index.ToString(...))`. *parity none.*
 
 ### Tier 2 — real wins, benchmark- or parity-gated (medium confidence)

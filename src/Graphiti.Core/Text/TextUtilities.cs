@@ -101,7 +101,7 @@ public static partial class TextUtilities
         }
 
         builder.Append("[Episode ");
-        builder.Append(index.ToString(CultureInfo.InvariantCulture));
+        builder.Append(index);
         builder.Append("] (timestamp: ");
         builder.Append(validAt is null ? "unknown" : FormatTimestamp(validAt.Value));
         builder.Append(")\n");
