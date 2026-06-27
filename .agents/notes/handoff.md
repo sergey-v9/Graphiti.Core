@@ -399,6 +399,12 @@ artifact. It wraps `Check-PythonUpstreamDelta`, fetches by default, warns on `gr
 exits `0` for both no-delta and delta cases so Sergey can wire it through a scheduled task, cron, or
 manual dispatch without adding a CI lane. The next unchecked plan item is the robustness risk map.
 
+Plan 09 A is complete (2026-06-27): `.agents/notes/llm-boundary-risk-map.md` inventories every current
+real-provider output boundary from raw chat text through schema validation, typed DTO materialization,
+extraction/domain coercion, attribute merging, node/edge resolution decisions, timestamp extraction,
+summaries, and the optional cross-encoder reranker. The next unchecked plan item is B: deterministic
+fuzz/property-style coverage for those parser/coercion targets.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

@@ -34,7 +34,7 @@ repeatedly added guards). This plan does **not** touch the parked publish line.
 
 ## Robustness stream (one slice each — implement → verify → commit → check off)
 
-- [ ] **A. Map the fragile boundary.** Inventory every site where real LLM output is parsed/coerced into
+- [x] **A. Map the fragile boundary.** Inventory every site where real LLM output is parsed/coerced into
   typed results: episode-graph extraction parsing partials, structured-response coercion, JSON extraction
   / markdown-fence handling, enum + entity/edge type resolution, attribute extraction, and the
   dedup/edge/invalidation response shapes. Produce a short risk map (trusted vs adversarial inputs, and
