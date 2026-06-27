@@ -207,9 +207,8 @@ public sealed partial class Graphiti
         {
             var driver = Driver;
             var episodes = await EpisodicNode.GetByUuidsAsync(driver, episodeUuids, cancellationToken).ConfigureAwait(false);
-            var episodeList = CopyList(episodes);
             var edgeBatches = await SelectThrottledAsync(
-                episodeList,
+                episodes,
                 async (episode, token) => await EntityEdge.GetByUuidsAsync(
                     driver,
                     episode.EntityEdges,

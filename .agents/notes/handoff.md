@@ -250,6 +250,10 @@ semantics. Local ShortRun allocations dropped from 4.95 MB to 4.52 MB at 8 endpo
 11.18 MB to 10.39 MB at 16 endpoint pairs, while wall-clock timings remained noisy. See
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-bulk-edge-wordoverlap-win-x64.md`.
 
+Plan 10 episode-attribution search copy slice is complete (2026-06-27): `GetNodesAndEdgesByEpisodeAsync`
+now passes the fetched episode list directly into throttled edge lookup instead of materializing a
+second list; focused episode-attribution tests and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

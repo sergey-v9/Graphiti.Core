@@ -91,7 +91,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
 - [x] **FactsHaveWordOverlap in bulk edge dedupe** (`Graphiti.Ingestion.cs` ~1208) — invoked O(edges²);
   hoist the left-fact word `HashSet` out of the inner candidate loop and span-tokenize the right side
   (keep `RemoveEmptyEntries|TrimEntries` semantics). *parity low; bench.*
-- [ ] **Drop redundant `CopyList(episodes)`** (`Graphiti.Search.cs` ~209) — `episodes` is already
+- [x] **Drop redundant `CopyList(episodes)`** (`Graphiti.Search.cs` ~209) — `episodes` is already
   `IReadOnlyList`; pass it straight into `SelectThrottledAsync`. *parity none.*
 - [ ] **SearchAsync group-id sentinel** (`Search/SearchEngine.cs` ~61) — replace
   `!groupIds.SequenceEqual(new[]{ string.Empty })` (array + LINQ per search) with a direct
