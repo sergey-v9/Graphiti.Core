@@ -165,7 +165,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
 - [x] **`System.Threading.Lock` + loop-invariant hoists.** `EdgeResolutionService` shared mutation gate
   `object`→`Lock` (~165); `EdgeMergeHelpers.ResolveEdgeContradictions` hoist `resolvedValidAt/InvalidAt`
   out of the loop (~41). (Note: Ladybug `SchemaLock` is an **async** `SemaphoreSlim` — do **not** convert.)
-- [ ] **InMemoryGraphDriver 18-parameter clone ctor → a single `SharedStore` object** (mirroring
+- [x] **InMemoryGraphDriver 18-parameter clone ctor → a single `SharedStore` object** (mirroring
   `LadybugGraphDriver.SharedState`); collapses the clone call and removes the positional-arg hazard.
   *internal refactor; parity low — keep shared-mutable-store semantics exactly.*
 - [ ] **TextUtilities.ConcatenateEpisodes** — factor the two near-identical overloads into one generic

@@ -15,70 +15,53 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
     ITypedEdgeDeleteGraphDriver,
     IEmbeddingLoadGraphDriver
 {
+    private readonly SharedStore _store;
     private readonly Lock _gate;
-    private readonly Dictionary<(Type Type, string Uuid), Node> _nodes = new();
-    private readonly Dictionary<(Type Type, string Uuid), Edge> _edges = new();
-    private readonly Dictionary<string, HashSet<(Type Type, string Uuid)>> _nodeKeysByGroup = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, HashSet<string>> _entityNodeUuidsByGroup = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, HashSet<string>> _episodicNodeUuidsByGroup = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, HashSet<string>> _communityNodeUuidsByGroup = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, HashSet<string>> _sagaNodeUuidsByGroup = new(StringComparer.Ordinal);
-    private readonly Dictionary<(string GroupId, string Name), HashSet<string>> _sagaNodeUuidsByGroupAndName = new();
-    private readonly Dictionary<string, HashSet<(Type Type, string Uuid)>> _edgeKeysByGroup = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, HashSet<(Type Type, string Uuid)>> _incidentEdgeKeysByNodeUuid = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, HashSet<string>> _entityEdgeUuidsByNodeUuid = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, HashSet<string>> _entityEdgeUuidsBySourceNodeUuid = new(StringComparer.Ordinal);
-    private readonly Dictionary<(string SourceNodeUuid, string TargetNodeUuid), HashSet<string>> _entityEdgeUuidsByEndpoints = new();
-    private readonly Dictionary<string, HashSet<string>> _episodicEdgeUuidsBySourceNodeUuid = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, HashSet<string>> _episodicEdgeUuidsByTargetNodeUuid = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, HashSet<string>> _communityEdgeUuidsByTargetNodeUuid = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, HashSet<string>> _hasEpisodeEdgeUuidsBySagaUuid = new(StringComparer.Ordinal);
+    private readonly Dictionary<(Type Type, string Uuid), Node> _nodes;
+    private readonly Dictionary<(Type Type, string Uuid), Edge> _edges;
+    private readonly Dictionary<string, HashSet<(Type Type, string Uuid)>> _nodeKeysByGroup;
+    private readonly Dictionary<string, HashSet<string>> _entityNodeUuidsByGroup;
+    private readonly Dictionary<string, HashSet<string>> _episodicNodeUuidsByGroup;
+    private readonly Dictionary<string, HashSet<string>> _communityNodeUuidsByGroup;
+    private readonly Dictionary<string, HashSet<string>> _sagaNodeUuidsByGroup;
+    private readonly Dictionary<(string GroupId, string Name), HashSet<string>> _sagaNodeUuidsByGroupAndName;
+    private readonly Dictionary<string, HashSet<(Type Type, string Uuid)>> _edgeKeysByGroup;
+    private readonly Dictionary<string, HashSet<(Type Type, string Uuid)>> _incidentEdgeKeysByNodeUuid;
+    private readonly Dictionary<string, HashSet<string>> _entityEdgeUuidsByNodeUuid;
+    private readonly Dictionary<string, HashSet<string>> _entityEdgeUuidsBySourceNodeUuid;
+    private readonly Dictionary<(string SourceNodeUuid, string TargetNodeUuid), HashSet<string>> _entityEdgeUuidsByEndpoints;
+    private readonly Dictionary<string, HashSet<string>> _episodicEdgeUuidsBySourceNodeUuid;
+    private readonly Dictionary<string, HashSet<string>> _episodicEdgeUuidsByTargetNodeUuid;
+    private readonly Dictionary<string, HashSet<string>> _communityEdgeUuidsByTargetNodeUuid;
+    private readonly Dictionary<string, HashSet<string>> _hasEpisodeEdgeUuidsBySagaUuid;
 
     /// <summary>Creates an empty in-memory driver for the optional named database.</summary>
-    public InMemoryGraphDriver(string database = "") : base(GraphProvider.InMemory, database)
+    public InMemoryGraphDriver(string database = "") : this(database, new SharedStore())
     {
-        _gate = new Lock();
     }
 
-    private InMemoryGraphDriver(
-        string database,
-        Dictionary<(Type Type, string Uuid), Node> nodes,
-        Dictionary<(Type Type, string Uuid), Edge> edges,
-        Lock gate,
-        Dictionary<string, HashSet<(Type Type, string Uuid)>> nodeKeysByGroup,
-        Dictionary<string, HashSet<string>> entityNodeUuidsByGroup,
-        Dictionary<string, HashSet<string>> episodicNodeUuidsByGroup,
-        Dictionary<string, HashSet<string>> communityNodeUuidsByGroup,
-        Dictionary<string, HashSet<string>> sagaNodeUuidsByGroup,
-        Dictionary<(string GroupId, string Name), HashSet<string>> sagaNodeUuidsByGroupAndName,
-        Dictionary<string, HashSet<(Type Type, string Uuid)>> edgeKeysByGroup,
-        Dictionary<string, HashSet<(Type Type, string Uuid)>> incidentEdgeKeysByNodeUuid,
-        Dictionary<string, HashSet<string>> entityEdgeUuidsByNodeUuid,
-        Dictionary<string, HashSet<string>> entityEdgeUuidsBySourceNodeUuid,
-        Dictionary<(string SourceNodeUuid, string TargetNodeUuid), HashSet<string>> entityEdgeUuidsByEndpoints,
-        Dictionary<string, HashSet<string>> episodicEdgeUuidsBySourceNodeUuid,
-        Dictionary<string, HashSet<string>> episodicEdgeUuidsByTargetNodeUuid,
-        Dictionary<string, HashSet<string>> communityEdgeUuidsByTargetNodeUuid,
-        Dictionary<string, HashSet<string>> hasEpisodeEdgeUuidsBySagaUuid) : base(GraphProvider.InMemory, database)
+    private InMemoryGraphDriver(string database, SharedStore store) : base(GraphProvider.InMemory, database)
     {
-        _nodes = nodes;
-        _edges = edges;
-        _gate = gate;
-        _nodeKeysByGroup = nodeKeysByGroup;
-        _entityNodeUuidsByGroup = entityNodeUuidsByGroup;
-        _episodicNodeUuidsByGroup = episodicNodeUuidsByGroup;
-        _communityNodeUuidsByGroup = communityNodeUuidsByGroup;
-        _sagaNodeUuidsByGroup = sagaNodeUuidsByGroup;
-        _sagaNodeUuidsByGroupAndName = sagaNodeUuidsByGroupAndName;
-        _edgeKeysByGroup = edgeKeysByGroup;
-        _incidentEdgeKeysByNodeUuid = incidentEdgeKeysByNodeUuid;
-        _entityEdgeUuidsByNodeUuid = entityEdgeUuidsByNodeUuid;
-        _entityEdgeUuidsBySourceNodeUuid = entityEdgeUuidsBySourceNodeUuid;
-        _entityEdgeUuidsByEndpoints = entityEdgeUuidsByEndpoints;
-        _episodicEdgeUuidsBySourceNodeUuid = episodicEdgeUuidsBySourceNodeUuid;
-        _episodicEdgeUuidsByTargetNodeUuid = episodicEdgeUuidsByTargetNodeUuid;
-        _communityEdgeUuidsByTargetNodeUuid = communityEdgeUuidsByTargetNodeUuid;
-        _hasEpisodeEdgeUuidsBySagaUuid = hasEpisodeEdgeUuidsBySagaUuid;
+        ArgumentNullException.ThrowIfNull(store);
+        _store = store;
+        _gate = store.Gate;
+        _nodes = store.Nodes;
+        _edges = store.Edges;
+        _nodeKeysByGroup = store.NodeKeysByGroup;
+        _entityNodeUuidsByGroup = store.EntityNodeUuidsByGroup;
+        _episodicNodeUuidsByGroup = store.EpisodicNodeUuidsByGroup;
+        _communityNodeUuidsByGroup = store.CommunityNodeUuidsByGroup;
+        _sagaNodeUuidsByGroup = store.SagaNodeUuidsByGroup;
+        _sagaNodeUuidsByGroupAndName = store.SagaNodeUuidsByGroupAndName;
+        _edgeKeysByGroup = store.EdgeKeysByGroup;
+        _incidentEdgeKeysByNodeUuid = store.IncidentEdgeKeysByNodeUuid;
+        _entityEdgeUuidsByNodeUuid = store.EntityEdgeUuidsByNodeUuid;
+        _entityEdgeUuidsBySourceNodeUuid = store.EntityEdgeUuidsBySourceNodeUuid;
+        _entityEdgeUuidsByEndpoints = store.EntityEdgeUuidsByEndpoints;
+        _episodicEdgeUuidsBySourceNodeUuid = store.EpisodicEdgeUuidsBySourceNodeUuid;
+        _episodicEdgeUuidsByTargetNodeUuid = store.EpisodicEdgeUuidsByTargetNodeUuid;
+        _communityEdgeUuidsByTargetNodeUuid = store.CommunityEdgeUuidsByTargetNodeUuid;
+        _hasEpisodeEdgeUuidsBySagaUuid = store.HasEpisodeEdgeUuidsBySagaUuid;
     }
 
     /// <inheritdoc />
@@ -96,26 +79,29 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
     }
 
     /// <inheritdoc />
-    public override IGraphDriver Clone(string database) => new InMemoryGraphDriver(
-        database,
-        _nodes,
-        _edges,
-        _gate,
-        _nodeKeysByGroup,
-        _entityNodeUuidsByGroup,
-        _episodicNodeUuidsByGroup,
-        _communityNodeUuidsByGroup,
-        _sagaNodeUuidsByGroup,
-        _sagaNodeUuidsByGroupAndName,
-        _edgeKeysByGroup,
-        _incidentEdgeKeysByNodeUuid,
-        _entityEdgeUuidsByNodeUuid,
-        _entityEdgeUuidsBySourceNodeUuid,
-        _entityEdgeUuidsByEndpoints,
-        _episodicEdgeUuidsBySourceNodeUuid,
-        _episodicEdgeUuidsByTargetNodeUuid,
-        _communityEdgeUuidsByTargetNodeUuid,
-        _hasEpisodeEdgeUuidsBySagaUuid);
+    public override IGraphDriver Clone(string database) => new InMemoryGraphDriver(database, _store);
+
+    private sealed class SharedStore
+    {
+        internal Lock Gate { get; } = new();
+        internal Dictionary<(Type Type, string Uuid), Node> Nodes { get; } = new();
+        internal Dictionary<(Type Type, string Uuid), Edge> Edges { get; } = new();
+        internal Dictionary<string, HashSet<(Type Type, string Uuid)>> NodeKeysByGroup { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, HashSet<string>> EntityNodeUuidsByGroup { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, HashSet<string>> EpisodicNodeUuidsByGroup { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, HashSet<string>> CommunityNodeUuidsByGroup { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, HashSet<string>> SagaNodeUuidsByGroup { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<(string GroupId, string Name), HashSet<string>> SagaNodeUuidsByGroupAndName { get; } = new();
+        internal Dictionary<string, HashSet<(Type Type, string Uuid)>> EdgeKeysByGroup { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, HashSet<(Type Type, string Uuid)>> IncidentEdgeKeysByNodeUuid { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, HashSet<string>> EntityEdgeUuidsByNodeUuid { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, HashSet<string>> EntityEdgeUuidsBySourceNodeUuid { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<(string SourceNodeUuid, string TargetNodeUuid), HashSet<string>> EntityEdgeUuidsByEndpoints { get; } = new();
+        internal Dictionary<string, HashSet<string>> EpisodicEdgeUuidsBySourceNodeUuid { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, HashSet<string>> EpisodicEdgeUuidsByTargetNodeUuid { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, HashSet<string>> CommunityEdgeUuidsByTargetNodeUuid { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, HashSet<string>> HasEpisodeEdgeUuidsBySagaUuid { get; } = new(StringComparer.Ordinal);
+    }
 
     /// <inheritdoc />
     public override Task<IReadOnlyList<string>> GetEntityGroupIdsAsync(CancellationToken cancellationToken = default)

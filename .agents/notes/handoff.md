@@ -382,6 +382,11 @@ Plan 10 Lock / loop-invariant slice is complete (2026-06-27): `EdgeResolutionSer
 once per call instead of once per candidate. Focused edge-resolution/merge tests and the full verifier
 were green.
 
+Plan 10 InMemory shared-store slice is complete (2026-06-27): `InMemoryGraphDriver` clone state now
+flows through one nested `SharedStore` object instead of a long private constructor argument list,
+while preserving the existing shared mutable dictionaries/lock semantics between clones. Focused
+in-memory/clone/routing tests and the full verifier were green.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
