@@ -345,6 +345,14 @@ capacity 1; `MaintenanceUtilities.BuildEpisodicEdges` now estimates result-list 
 or default episode links. This is a behavior-neutral capacity hint slice; focused maintenance and
 search fallback/traversal tests plus the full verifier were green.
 
+Plan 10 MinHash UTF-8 slice is complete (2026-06-27): entity-node fuzzy dedupe now encodes each
+shingle once per MinHash signature and reuses those bytes across the 32 seed hashes, while preserving
+the exact existing `"{seed}:{shingleUtf8Bytes}"` hash payload and therefore LSH bucket values.
+Focused entity-deduplication tests and the fuzzy AddEpisode workflow were green. Local ShortRun for
+`EntityDeduplicationBenchmarks` dropped from 4.308 ms to 4.044 ms at 64 nodes and 19.822 ms to
+18.856 ms at 192 nodes with allocations unchanged. See
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-entity-dedupe-minhash-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

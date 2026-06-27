@@ -289,15 +289,10 @@ internal static partial class EntityNodeDeduplicator
         }
 
         var signature = new ulong[MinHashPermutations];
-        for (var seed = 0; seed < MinHashPermutations; seed++)
+        Array.Fill(signature, ulong.MaxValue);
+        foreach (var shingle in shingles)
         {
-            var minHash = ulong.MaxValue;
-            foreach (var shingle in shingles)
-            {
-                minHash = Math.Min(minHash, HashShingle(shingle, seed));
-            }
-
-            signature[seed] = minHash;
+            UpdateSignatureWithShingle(signature, shingle);
         }
 
         return signature;
@@ -341,17 +336,30 @@ internal static partial class EntityNodeDeduplicator
         return union == 0 ? 0 : intersection / (double)union;
     }
 
-    private static ulong HashShingle(string shingle, int seed)
+    private static void UpdateSignatureWithShingle(ulong[] signature, string shingle)
     {
-        var maxByteCount = Encoding.UTF8.GetMaxByteCount(shingle.Length) + 12;
-        Span<byte> buffer = maxByteCount <= 256 ? stackalloc byte[maxByteCount] : new byte[maxByteCount];
+        var maxByteCount = Encoding.UTF8.GetMaxByteCount(shingle.Length);
+        Span<byte> shingleBuffer = maxByteCount <= 256 ? stackalloc byte[maxByteCount] : new byte[maxByteCount];
+        var byteCount = Encoding.UTF8.GetBytes(shingle, shingleBuffer);
+        var shingleBytes = shingleBuffer[..byteCount];
+        for (var seed = 0; seed < MinHashPermutations; seed++)
+        {
+            signature[seed] = Math.Min(signature[seed], HashShingle(shingleBytes, seed));
+        }
+    }
+
+    private static ulong HashShingle(ReadOnlySpan<byte> shingle, int seed)
+    {
+        var bufferLength = shingle.Length + 12;
+        Span<byte> buffer = bufferLength <= 256 ? stackalloc byte[bufferLength] : new byte[bufferLength];
         if (!Utf8Formatter.TryFormat(seed, buffer, out var written))
         {
             throw new InvalidOperationException("Could not format MinHash seed.");
         }
 
         buffer[written++] = (byte)':';
-        written += Encoding.UTF8.GetBytes(shingle, buffer[written..]);
+        shingle.CopyTo(buffer[written..]);
+        written += shingle.Length;
         return XxHash64.HashToUInt64(buffer[..written]);
     }
 

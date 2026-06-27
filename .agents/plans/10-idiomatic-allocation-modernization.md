@@ -140,9 +140,9 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   dimension check out of the O(n²) loop; `TensorPrimitives.Dot` directly. *parity low; bench.*
 - [x] **Pre-size build-once lookups** — `SearchFallbackGraph` adjacency dicts (~277/296);
   `MaintenanceUtilities.BuildEpisodicEdges` result list (~32). *parity none.*
-- [ ] **MinHash redundant UTF-8 encoding (32×)** (`Maintenance/EntityNodeDeduplication.cs` ~284) — encode
-  each shingle once, vary only the cheap seed mix. **Changes hash/LSH bucket values** — adopt only if
-  dedup tests + Python parity hold. *parity? ; bench.*
+- [x] **MinHash redundant UTF-8 encoding (32×)** (`Maintenance/EntityNodeDeduplication.cs` ~284) — encode
+  each shingle once per signature while preserving the existing `"{seed}:{shingle}"` hash payload and
+  LSH bucket values. *parity low; bench.*
 - [ ] **EntitySummaryService.ApplySummaries early-out** (~184); **EpisodeGraphExtractor.
   MergeAttributionIndices** `SortedSet`→ existing `DistinctSorted` (~331); **NodeResolutionService** hoist
   single-element group-id array (~261). *parity low/none; bench where marked.*
