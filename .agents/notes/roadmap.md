@@ -188,9 +188,11 @@ user-gated items.
   short-query allocation win using `SearchBenchmarks.TextScorer_ScoreAll`. A serialization baseline
   for cache-key/payload JSON paths was also committed. An InMemory full-scan node-vector-search
   baseline landed 2026-06-27, covering the reference driver's O(n) cosine path with
-  `[MemoryDiagnoser]`. Remaining work:
+  `[MemoryDiagnoser]`. A bulk edge-dedupe public-workflow baseline also landed 2026-06-27; endpoint
+  bucketing was measured there but not kept because the same workflow showed no material win.
+  Remaining work:
   use the vector baseline to decide whether full-scan cosine needs optimization at target graph size,
-  profile bulk edge dedupe, and land only measured, parity-safe wins (BenchmarkDotNet before/after).
+  and land only measured, parity-safe wins (BenchmarkDotNet before/after).
   This program also
   *gates* the deferred
   opt-in HNSW vector tier (G-future) — only pursue HNSW if the bench shows full-scan cosine is the

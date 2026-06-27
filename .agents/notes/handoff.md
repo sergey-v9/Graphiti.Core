@@ -212,6 +212,12 @@ before/after dropped allocations from 28.7 KB to 20.56 KB at 200 candidates and 
 51.66 KB at 500 candidates; see
 `benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-search-mmr-merge-win-x64.md`.
 
+G3 bulk edge-dedupe baseline slice is complete (2026-06-27): `BulkEdgeDedupeBenchmarks` now covers a
+public bulk-ingestion workflow with many extracted facts spread across endpoint pairs. No
+implementation change was kept: an endpoint-pair bucketing trial did not show a material win in the
+same workflow (16-pair case 10.016 ms to 9.972 ms, allocations unchanged). See
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-bulk-edge-dedupe-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility
