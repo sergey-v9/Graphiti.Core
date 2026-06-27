@@ -17,6 +17,12 @@ public abstract class LlmClient : ILlmClient, IDisposable
 {
     private const string AttributeExtractionSentinel = "<<graphiti.attr_extraction.preamble.v1>>";
     private const int MaxValidationRetries = 2;
+    private const string RemovableCharacters =
+        "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\u000B\u000C\u000E\u000F" +
+        "\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001A\u001B\u001C\u001D\u001E\u001F" +
+        "\u200B\u200C\u200D\uFEFF\u2060";
+
+    private static readonly SearchValues<char> RemovableChars = SearchValues.Create(RemovableCharacters);
     private static readonly JsonTypeInfo<LlmCacheKeyPayload> CacheKeyPayloadJsonTypeInfo =
         (JsonTypeInfo<LlmCacheKeyPayload>)GraphitiJsonSerializer.Options.GetTypeInfo(typeof(LlmCacheKeyPayload));
 
@@ -379,19 +385,30 @@ public abstract class LlmClient : ILlmClient, IDisposable
 
     private static bool IsCleanInput(string input)
     {
-        var remaining = input.AsSpan();
-        while (!remaining.IsEmpty)
+        var span = input.AsSpan();
+        return !span.ContainsAny(RemovableChars) && HasValidSurrogates(span);
+    }
+
+    private static bool HasValidSurrogates(ReadOnlySpan<char> input)
+    {
+        var remaining = input;
+        while (true)
         {
-            var status = Rune.DecodeFromUtf16(remaining, out var rune, out var charsConsumed);
-            if (status != OperationStatus.Done || ShouldRemoveRune(rune.Value))
+            var index = remaining.IndexOfAnyInRange('\uD800', '\uDFFF');
+            if (index < 0)
+            {
+                return true;
+            }
+
+            if (char.IsLowSurrogate(remaining[index]) ||
+                index + 1 >= remaining.Length ||
+                !char.IsLowSurrogate(remaining[index + 1]))
             {
                 return false;
             }
 
-            remaining = remaining[charsConsumed..];
+            remaining = remaining[(index + 2)..];
         }
-
-        return true;
     }
 
     private static string CleanInputSlow(string input)

@@ -232,6 +232,12 @@ Plan 10's first Tier 1 slice is complete (2026-06-27): community summary/name de
 text is now computed only in the NoOp fallback branch, with no prompt/schema/cache/public API change.
 The focused community suite and the full verifier were green.
 
+Plan 10 LLM clean-input slice is complete (2026-06-27): `LlmClient.CleanInput` now uses a
+`SearchValues<char>` clean-path check with surrogate validation; local ShortRun before/after dropped
+clean prompt-message checks from 3.967 us to 228.5 ns (ASCII) and 3.414 us to 309.9 ns (Unicode), with
+dirty cleanup allocation unchanged. See
+`benchmarks/Graphiti.Core.Benchmarks/baselines/2026-06-27-llm-cleaninput-win-x64.md`.
+
 ## LadybugDB / Kuzu
 
 LadybugDB is the main provider target while Kuzu remains the Python parity lineage and compatibility

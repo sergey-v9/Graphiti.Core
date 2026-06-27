@@ -81,7 +81,7 @@ sites. Worked in priority order; check off as slices land. `bench` = attach Benc
   CommunityService.cs` ~315/337) — the deterministic fallback summary/name (StringBuilder + array +
   truncation) is computed **eagerly on every pairwise LLM reduction** but only used in the NoOp fallback.
   Make it lazy (compute only in the fallback branch). *parity none.*
-- [ ] **LlmClient.IsCleanInput → `SearchValues<char>`** (`LlmClients/LlmClient.cs` ~380) — the clean-path
+- [x] **LlmClient.IsCleanInput → `SearchValues<char>`** (`LlmClients/LlmClient.cs` ~380) — the clean-path
   check runs a per-char `Rune.DecodeFromUtf16` loop over every prepared message of every LLM call.
   Replace with `!input.AsSpan().ContainsAny(RemovableChars)` (all removable scalars are single UTF-16
   units); keep the rune path for the rare dirty case. *parity low; bench.*
