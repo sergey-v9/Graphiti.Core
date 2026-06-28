@@ -175,7 +175,16 @@ or have agents build-only and run the consolidated test centrally.
 
 Phases 1–3 (parity) are done and the deterministic suite is green; the port is faithful and mature.
 The 2026-06-19 forward agenda below was **productionization and confidence**; it is now complete and
-retained as history. The modernization stream (plan 10) framed above is also complete.
+retained as history. The modernization stream (plan 10) and the robustness stream (plan 09) are also
+complete — the whole backlog (plans 05–10) is done.
+
+**Active stream (2026-06-28): `.agents/plans/11-measured-performance-at-scale.md`** — a measure-first
+performance pass: large-N in-process profiling (Track 1) and LLM/embedding concurrency/batching/caching
+effectiveness via the G4 metrics (Track 2). Honest two-way outcome — land measured structural/throughput
+wins, or record "within budget at scale N". This is the diminishing-returns frontier (the code is
+already well-optimized); the value is closing the performance question with data at scales never
+measured. Beyond it, the realistic posture is **maintenance** (upstream-cadence tracking) plus
+opportunistic modernization as the language moves — unless Sergey opens a new direction.
 
 ### Forward direction — idiomatic + allocation modernization (complete, 2026-06-27)
 

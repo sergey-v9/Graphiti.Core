@@ -24,11 +24,13 @@ changes), then stop or pick the next. Phases 1–3 are complete, plans 05–08 a
 2026-06-19 G1–G6 agenda is done (parity, Ladybug→Core merge, observability, linux-x64 proof,
 live-provider canary, the G3 perf program, and the non-gated release-surface finalization). Per the
 2026-06-27 paradigm shift this is an embeddable internal library, **not** a release product, so
-release-versioning/publishing is parked (user-gated). **The current actionable plan is plan 10 —
-idiomatic + allocation modernization: a parity-safe sweep that makes the code itself more idiomatic
-modern C# (C# 14 / .NET 10) and lowers allocations / GC pressure.** Idiomatic/readability changes stay
-behavior- and wire-preserving and warning-clean; hot-path allocation changes stay benchmark-first. Plan
-09 (robustness) is deferred below plan 10. Parked release-infrastructure work is decision-gated or
+release-versioning/publishing is parked (user-gated). Plans 09 (robustness) and 10 (idiomatic +
+allocation modernization) are now complete too — the whole backlog (plans 05–10) is done and the library
+is mature. **The current actionable plan is plan 11 — measured performance & throughput at scale: a
+measure-first pass (large-N in-process profiling + LLM/embedding concurrency/batching/caching via the G4
+metrics) that lands only benchmarked wins or records "within budget at scale N".** All changes stay
+behavior-, wire-, and schema/cache-preserving; defaults move only when the measurement justifies it.
+Parked release-infrastructure work is decision-gated or
 external-feed-gated (version cadence, publish path, metapackage shape, and future Ladybug package
 publication/replacement). When the open plan items are blocked on those decisions,
 choose work from `roadmap.md`/`handoff.md` that directly strengthens parity, packaging verification,
