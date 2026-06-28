@@ -56,55 +56,20 @@ lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 
 ## Current State
 
-Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the full matrix):
+Verified against the Python baseline (anchor in `parity.md`); the suite is green at the verification
+checkpoint below. The library is **complete and mature** — `parity.md` holds the row-by-row parity
+truth and `decisions.md` the documented divergences; this is the current-state digest only.
 
-- **Solid and verified:** project/infrastructure shape (net10.0, analyzers, packaging), drivers
-  (InMemory reference/test, LadybugDB runtime proof), search ranking/fusion/reranking,
-  community label propagation, text utilities, serialization/cache identity, DI/options. The
-  deterministic suite is green in the latest verification checkpoint below.
-- **Phase 2 complete:** the LLM-facing semantic layer has moved from scaffold prompts to ported
-  Python prompt text for live call sites. Node/edge extraction prompts and edge timestamp
-  extraction prompts, node dedupe prompts, edge dedupe prompts, node/edge attribute extraction
-  prompts, community summary/name prompts, and saga summary prompts were ported 2026-06-11
-  (`Prompts/`). Entity summary generation was ported 2026-06-11:
-  `EntitySummaryService` appends short new edge facts, batches 30-node LLM summary flights, supports
-  the internal filter/episode-prompt hooks, and is wired into single and bulk ingestion before save.
-  Invented extractor fallbacks were removed/constrained 2026-06-11: empty structured extraction no
-  longer fabricates nodes or `RELATES_TO` edges, and community deterministic fallback is limited to
-  no-op/NotImplemented paths. Broad edge-invalidation candidate search is now regression-tested for
-  cross-node-pair contradictions. Multi-episode attribution was ported 2026-06-11: structured node
-  and edge `episode_indices` now flow into episodic edge creation and fact episode/reference-time
-  metadata. Combined extraction internals were ported 2026-06-11: the
-  `extract_nodes_and_edges.extract_message` prompt, `extract_edges.extract_timestamps_batch`,
-  orphan dropping, node attribution from facts, and self-fact preservation are covered behind
-  `EpisodeGraphExtractor.ExtractCombinedEpisodeGraphAsync`. Public ingestion intentionally does not
-  call it because the current Python baseline exposes `use_combined_extraction` only as an internal
-  bulk helper flag defaulting to `False`, not on the `Graphiti` public surface; tests pin separate
-  extraction as the default for both `add_episode` and `add_episode_bulk`. Bulk
-  ingestion true-batch semantics were ported 2026-06-11: C# now stages extraction, first-pass node
-  resolution, cross-batch node/edge dedupe, pointer remapping, final node/edge resolution, and
-  per-episode provenance rather than running each episode through the whole maintenance chain.
-  Validation-failure re-prompting was ported 2026-06-11 in base `LlmClient`: malformed JSON or
-  schema-validation `JsonException`s get Python's two repair attempts with a validation-error user
-  message, while retry feedback and prompt labels stay out of the cache key and only final
-  validated responses are cached. Edge attribute extraction was aligned 2026-06-11: C# no longer runs a separate
-  ingestion-stage edge attribute pass, and custom edge attributes are extracted inside edge
-  resolution. Exact duplicate edge reuse skips the edge-attribute prompt and preserves existing
-  structured attributes like Python.
-- **Phase 3 real-provider validation: PASSED (2026-06-13).** Real LLM/embedding/reranker providers
-  have been exercised end to end. With `OPENAI_API_KEY` supplied locally via gitignored `.env`, both
-  `OpenAIProviderIntegrationTests` passed against the real OpenAI API (all structured schemas
-  accepted; real resolved temporal graph) and the 6-episode `Graphiti.Sample.OpenAI` produced a sane
-  graph (rich summaries, correct bi-temporal invalidation, relevant reranked search).
-  `samples/Graphiti.Sample.OpenAI` is the runnable OpenAI host; `OpenAIProviderIntegrationTests` are
-  the env-gated provider tests (skip cleanly without the key); the sample uses
-  `MicrosoftExtensionsAICrossEncoderClient` for real reranking. Re-run with
-  `.\eng\Run-OpenAIProviderValidation.ps1` (auto-loads `.env`). See the Verification section below.
-- **Eval harness: BUILT and run live (2026-06-14).** The harness shipped as `samples/Graphiti.Eval`
-  with a graph-building regression design and was run live (6/6 no-regression on identical code; QA
-  mode 3/7 honest, distractor correctly fails).
-- **Phases 1–3 are DONE.** The performance/allocation moratorium is LIFTED; further performance work
-  is evidence-driven (benchmark-first) only (`roadmap.md`).
+- **Parity (Phases 1–3) complete:** prompts ported with golden tests; the full ingestion pipeline
+  (entity summaries, constrained LLM-failure fallbacks, broad invalidation, multi-episode attribution,
+  true-batch bulk, validation-failure re-prompting, edge-attribute extraction inside edge resolution)
+  is ported; real-provider (OpenAI) validation passed and `samples/Graphiti.Eval` ran live. A notable
+  documented divergence: public ingestion stays on separate extraction because Python exposes
+  `use_combined_extraction` only as an internal default-`False` flag (see `decisions.md`).
+- **Productionized & modernized:** InMemory reference + LadybugDB runtime proof (win-x64 + gated
+  linux-x64), search ranking/fusion/reranking, observability (`Meter`/OTLP sample), the
+  idiomatic+allocation modernization (plan 10), robustness hardening (plan 09), and the measured
+  scale-perf pass (plan 11) are all complete. Performance work is benchmark-first (moratorium lifted).
 - Work selection rule: follow `.agents/plans/` in order (see AGENTS.md "Current priority"). Phases
   1–3 are complete, plans 05–08 are complete, and the whole 2026-06-19 G1–G6 agenda is done (parity,
   merge, observability, linux-x64 proof, live-provider canary, the G3 perf program, sustained upstream
