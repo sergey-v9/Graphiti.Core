@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Graphiti.Core.Drivers;
 
 /// <summary>
@@ -281,7 +283,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         where TNode : Node =>
         (typeof(TNode), uuid);
 
-    private bool TryGetNode<TNode>(string uuid, out TNode node)
+    private bool TryGetNode<TNode>(string uuid, [MaybeNullWhen(false)] out TNode node)
         where TNode : Node
     {
         if (_nodes.TryGetValue(GetNodeKey<TNode>(uuid), out var stored) && stored is TNode typed)
@@ -290,7 +292,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
             return true;
         }
 
-        node = null!;
+        node = default;
         return false;
     }
 
@@ -300,7 +302,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         where TEdge : Edge =>
         (typeof(TEdge), uuid);
 
-    private bool TryGetEdge<TEdge>(string uuid, out TEdge edge)
+    private bool TryGetEdge<TEdge>(string uuid, [MaybeNullWhen(false)] out TEdge edge)
         where TEdge : Edge
     {
         if (_edges.TryGetValue(GetEdgeKey<TEdge>(uuid), out var stored) && stored is TEdge typed)
@@ -309,7 +311,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
             return true;
         }
 
-        edge = null!;
+        edge = default;
         return false;
     }
 
