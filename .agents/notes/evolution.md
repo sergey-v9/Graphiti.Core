@@ -96,6 +96,7 @@ longer true, mark it `Superseded` and explain the successor direction.
 | M2 | Active | LadybugDB-first provider strategy | The C# port's provider investment target is a core LadybugDB-backed driver, unlike the Python provider priorities. |
 | M3 | Landed | First real-provider validation | The port ran end-to-end against the real OpenAI API for the first time (2026-06-13): structured schemas accepted, sane temporally-correct graph, relevant reranked search. The LLM-facing layer is now empirically validated, not just unit-tested against fakes. |
 | M4 | Landed | Neo4j retirement | The temporary legacy Neo4j path was removed from the C# product surface (2026-06-17): the driver, the `GraphProvider.Neo4j` member, the `uri`/`user`/`password` ctor params, `GraphitiOptions.Uri`/`User`/`Password`, the `Neo4j.Driver` package ref, and all Neo4j tests are gone. Supported providers are now LadybugDB, InMemory, and FalkorDB/Neptune (enum/wire-compat only). |
+| M5 | Landed | Maturity & paradigm shift | All planned work (parity Phases 1–3, plans 05–11, goals G1–G6) is complete; Sergey reframed the project (2026-06-27) as our own embeddable internal library — not a release-bound product — with release parked and the forward posture set to maintenance. |
 
 ## M1: Deep C# Modernization
 
@@ -301,14 +302,17 @@ and FalkorDB/Neptune (enum/wire-compat only, no real driver).
 
 - Do not reintroduce a Neo4j provider without an explicit ask.
 
-## Candidate Future Milestones
+## M5: Maturity, Paradigm Shift, and Backlog Completion
 
-Use this list as a prompt, not as committed direction:
+**Landed 2026-06-28.** The C# port reached completion for its stated purpose. The full planned agenda is
+done: parity Phases 1–3; work-order plans 05–11 (release-readiness surface, Ladybug→Core merge, linux-x64
+proof, release-surface finalization, robustness hardening, idiomatic+allocation modernization, measured
+performance at scale); and long-term goals G1–G6. The earlier "candidate future milestones" — provider
+surface freeze, a stable public-API surface, and a C#-native operations posture (telemetry, verification
+scripts, package build, runtime checks) — all landed within that work.
 
-- **Provider surface freeze:** final naming, DI, package, and support policy for LadybugDB.
-- **Neo4j retirement:** COMPLETED 2026-06-17 (landed as M4) — the temporary legacy Neo4j path was
-  removed from the C# product surface.
-- **Stable public API release:** API, namespace, docs, migration notes, and packaging expectations
-  are stable enough for external consumers.
-- **C#-native operations posture:** telemetry, verification scripts, package build, and provider
-  runtime checks become part of the normal release process.
+On 2026-06-27 Sergey reframed the project: it is **our own embeddable internal library** (likely to be
+renamed), consumed in-process, **not** a release-bound product. Release versioning/publishing is parked
+(user-gated); behavioral parity with Python stays the functional floor. The forward posture is
+**maintenance** — track the Python upstream for parity, and apply opportunistic parity-safe modernization
+as the language/runtime move. See `decisions.md` → "What this project is (paradigm)" and `roadmap.md`.
