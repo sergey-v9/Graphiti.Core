@@ -202,6 +202,33 @@ no wire/prompt/cache/temporal behavior changed):
   `GraphitiOptions.Uri`/`User`/`Password`, the `Neo4j.Driver` package reference, and all Neo4j tests
   are gone. Do not reintroduce a Neo4j provider without an explicit ask.
 
+## NativeAOT / trimming stance (host-grounded, 2026-06-28)
+
+The intended consumer is **Nestor** (`W:\Convermax\SiteSearch-n\Nestor`) — a .NET 10 ASP.NET Core +
+Aspire system, containerized and long-running (YARP reverse proxy + Google OAuth in `Nestor.Proxy`; the
+core `Nestor.Memory` API is the service that will embed this library **in-process**, replacing today's
+HTTP call to a Python graphiti service behind its `IGraphitiClient`). The decision, grounded in that host:
+
+- **Full NativeAOT is OUT OF SCOPE — not because of this library, because of the host.** YARP and Google
+  OAuth are reflection-heavy and AOT-hostile, the host's own `Dictionary<string,object?>` frontmatter
+  metadata defeats AOT/trim analysis regardless, and the deployment is containerized + long-running so
+  AOT's cold-start win is negligible (the host team scopes full AOT at multiple weeks for minimal gain).
+  Making this library NativeAOT-clean (the `RequiresDynamicCode` / IL3050 half of an analyzer run) would
+  serve a capability the host will never use. **Do not pursue it.**
+- **Trim-compatibility IS the target.** The host's realistic win is `PublishTrimmed` (smaller images,
+  lower memory, no architecture change). Because this library is embedded **in-process**, it should be a
+  clean trimming citizen so it does not break or silently mis-trim inside the host's trimmed build. In
+  scope: the **trim** half — IL2026 / `RequiresUnreferencedCode`. Annotate the reflection-based public
+  paths (`[RequiresUnreferencedCode]` / `[DynamicallyAccessedMembers]`), push serialization toward
+  source-gen where feasible, and decide + document the open-attribute `Dictionary<string,object?>`
+  serialization stance (it mirrors Python and is load-bearing). Enable the trim analyzer as a **warning**
+  for a baseline; do **not** flip `IsTrimmable` / break `TreatWarningsAsErrors` mid-flight.
+- **Scope split:** of the ~84 IL warnings a full analyzer run surfaces, only the ~41 IL2026 (trim) are in
+  scope; the ~41 IL3050 (AOT) are explicitly not. This is a focused trim-readiness pass, not the full AOT
+  sweep. Timing (a scoped pass now vs. alongside the actual Nestor integration, so it can be tested
+  against the real trimmed host build) is the one open question; the no-AOT / yes-trim stance holds
+  either way.
+
 ## Provider And Infrastructure Choices
 
 - Use `Microsoft.Extensions.AI` as the primary adapter boundary for chat and embeddings.
