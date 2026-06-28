@@ -63,14 +63,19 @@ internal sealed class MaterializingSearchGraphDriver(
             groupIds,
             materializeEmbeddingsForFulltext,
             cancellationToken).ConfigureAwait(false);
-        var nodesByUuid = await SearchFallbackGraph.LoadEdgeEndpointNodeLookupAsync(
-            driver,
-            candidates,
-            compiledFilter,
-            cancellationToken).ConfigureAwait(false);
+        var requiresEndpointLookup = compiledFilter.RequiresEndpointNodeLookup;
+        var nodesByUuid = requiresEndpointLookup
+            ? await SearchFallbackGraph.LoadEdgeEndpointNodeLookupAsync(
+                driver,
+                candidates,
+                compiledFilter,
+                cancellationToken).ConfigureAwait(false)
+            : null;
         return ToSearchHits(Bm25TextScorer.Rank(
             candidates,
-            edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid),
+            requiresEndpointLookup
+                ? edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid!)
+                : edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter),
             EntityEdgeFulltextText,
             query,
             limit));
@@ -100,15 +105,20 @@ internal sealed class MaterializingSearchGraphDriver(
                 targetNodeUuid);
         }
 
-        var nodesByUuid = await SearchFallbackGraph.LoadEdgeEndpointNodeLookupAsync(
-            driver,
-            candidates,
-            compiledFilter,
-            cancellationToken).ConfigureAwait(false);
+        var requiresEndpointLookup = compiledFilter.RequiresEndpointNodeLookup;
+        var nodesByUuid = requiresEndpointLookup
+            ? await SearchFallbackGraph.LoadEdgeEndpointNodeLookupAsync(
+                driver,
+                candidates,
+                compiledFilter,
+                cancellationToken).ConfigureAwait(false)
+            : null;
         var scorer = SearchUtilities.CreateCosineSimilarityScorer(searchVector);
         return ToSearchHits(SearchUtilities.TopByScore(
             candidates,
-            edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid),
+            requiresEndpointLookup
+                ? edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid!)
+                : edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter),
             edge => scorer.Score(edge.FactEmbedding),
             limit,
             minScore,
@@ -158,12 +168,17 @@ internal sealed class MaterializingSearchGraphDriver(
             groupIds,
             withEmbeddings: false,
             cancellationToken).ConfigureAwait(false);
-        var nodesByUuid = await SearchFallbackGraph.LoadEdgeEndpointNodeLookupAsync(
-            driver,
-            candidates,
-            compiledFilter,
-            cancellationToken).ConfigureAwait(false);
-        var candidateByUuid = BuildEdgeCandidateLookup(candidates, compiledFilter, nodesByUuid);
+        var requiresEndpointLookup = compiledFilter.RequiresEndpointNodeLookup;
+        var nodesByUuid = requiresEndpointLookup
+            ? await SearchFallbackGraph.LoadEdgeEndpointNodeLookupAsync(
+                driver,
+                candidates,
+                compiledFilter,
+                cancellationToken).ConfigureAwait(false)
+            : null;
+        var candidateByUuid = requiresEndpointLookup
+            ? BuildEdgeCandidateLookup(candidates, compiledFilter, nodesByUuid!)
+            : BuildEdgeCandidateLookup(candidates, compiledFilter);
         var graph = await SearchFallbackGraph.LoadTraversalGraphAsync(driver, groupIds, cancellationToken).ConfigureAwait(false);
         return BuildEdgeBfsHits(originNodeUuids, maxDepth, limit, graph, candidateByUuid);
     }
@@ -355,6 +370,23 @@ internal sealed class MaterializingSearchGraphDriver(
         {
             var edge = candidates[i];
             if (SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid))
+            {
+                candidateByUuid.Add(edge.Uuid, edge);
+            }
+        }
+
+        return candidateByUuid;
+    }
+
+    private static Dictionary<string, EntityEdge> BuildEdgeCandidateLookup(
+        IReadOnlyList<EntityEdge> candidates,
+        CompiledSearchFilter compiledFilter)
+    {
+        var candidateByUuid = new Dictionary<string, EntityEdge>(candidates.Count, StringComparer.Ordinal);
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            var edge = candidates[i];
+            if (SearchFilterMatcher.EdgeMatches(edge, compiledFilter))
             {
                 candidateByUuid.Add(edge.Uuid, edge);
             }

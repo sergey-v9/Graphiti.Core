@@ -113,10 +113,9 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
   library is **not** release-bound, so release-versioning/publishing is parked. Plan 10
   (idiomatic + allocation modernization) and plan 09 (robustness; Step D fixed a real bulk-ingestion
   partial-persistence defect by prevalidating missing entity embeddings before driver bulk save) are
-  both **complete** — the whole backlog (plans 05–10) is done and the library is mature. **The current
-  actionable plan is `.agents/plans/11-measured-performance-at-scale.md`: a measure-first performance pass
-  — large-N in-process profiling (Track 1) and LLM/embedding concurrency/batching/caching effectiveness
-  via the G4 metrics (Track 2) — that lands only measured wins or records "within budget at scale N".**
+  both **complete**. Plan 11 is also **complete**: the large-N InMemory and fake-provider throughput
+  pass landed one measured edge-search win and recorded the current HNSW/provider-defaults budget
+  decisions. The whole backlog (plans 05–11) is done and the library is mature.
   Full restore/test/pack requires GitHub Packages credentials for source `github_ladybug`. Performance
   work is benchmark-first and no longer on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
@@ -170,8 +169,8 @@ has no OpenTelemetry exporter dependency. Consumer DX additions are `docs/observ
 `samples/Graphiti.Sample.Observability`, `samples/Graphiti.Sample.Quickstart`, and
 `samples/Graphiti.Sample.GenericProvider`.
 
-The benchmark-first performance program (G3) and the modernization + robustness streams (plans 10 and
-09) are complete; the slice-by-slice detail lives in git history and the committed BenchmarkDotNet
+The benchmark-first performance program (G3) and the modernization + robustness/performance streams
+(plans 09, 10, and 11) are complete; the slice-by-slice detail lives in git history and the committed BenchmarkDotNet
 baselines under `benchmarks/Graphiti.Core.Benchmarks/baselines/` (do not re-expand it here). Headlines:
 
 - **G3 perf program (2026-06-26/27):** `IngestionBenchmarks` / `SearchBenchmarks` /
@@ -192,6 +191,13 @@ baselines under `benchmarks/Graphiti.Core.Benchmarks/baselines/` (do not re-expa
   covering the fake-provider failure modes. Step D fixed a real defect: `Graphiti` now materializes and
   validates missing entity node/edge embeddings **before** driver bulk save, so a malformed provider
   embedding cannot leave an episode persisted with dangling entity-edge UUIDs.
+- **Plan 11 measured scale pass (2026-06-28):** `InMemoryScaleBenchmarks` added a 10000-node /
+  30000-edge large-N fixture plus bulk-ingestion/search workflows; `ProviderThroughputBenchmarks`
+  added latency-injecting fake M.E.AI chat/embedding providers with G4 metric assertions. The retained
+  structural win skips endpoint-node dictionaries for edge filters that do not request node labels
+  (edge hybrid RRF 75.275 ms -> 45.198 ms; edge vector 16.334 ms -> 8.591 ms; edge hybrid MMR 79.466 ms
+  -> 45.000 ms on win-x64 ShortRun). HNSW stays closed at this size, and provider/cache/embedding
+  defaults stay unchanged.
 
 ## LadybugDB / Kuzu
 

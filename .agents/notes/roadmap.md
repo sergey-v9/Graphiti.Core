@@ -175,15 +175,14 @@ or have agents build-only and run the consolidated test centrally.
 
 Phases 1–3 (parity) are done and the deterministic suite is green; the port is faithful and mature.
 The 2026-06-19 forward agenda below was **productionization and confidence**; it is now complete and
-retained as history. The modernization stream (plan 10) and the robustness stream (plan 09) are also
-complete — the whole backlog (plans 05–10) is done.
+retained as history. The modernization stream (plan 10), robustness stream (plan 09), and measured
+scale pass (plan 11) are also complete — the whole backlog (plans 05–11) is done.
 
-**Active stream (2026-06-28): `.agents/plans/11-measured-performance-at-scale.md`** — a measure-first
-performance pass: large-N in-process profiling (Track 1) and LLM/embedding concurrency/batching/caching
-effectiveness via the G4 metrics (Track 2). Honest two-way outcome — land measured structural/throughput
-wins, or record "within budget at scale N". This is the diminishing-returns frontier (the code is
-already well-optimized); the value is closing the performance question with data at scales never
-measured. Beyond it, the realistic posture is **maintenance** (upstream-cadence tracking) plus
+**Plan 11 is complete (2026-06-28):** the measure-first large-scale pass added 10000-node/30000-edge
+InMemory benchmarks and fake-provider throughput benchmarks with G4 metric assertions. One structural
+InMemory win landed (skip endpoint-node dictionaries for edge filters that do not request node labels);
+HNSW stayed closed at the larger target size; provider concurrency, cache, and embedding batch defaults
+stayed unchanged. Beyond it, the realistic posture is **maintenance** (upstream-cadence tracking) plus
 opportunistic modernization as the language moves — unless Sergey opens a new direction.
 
 ### Forward direction — idiomatic + allocation modernization (complete, 2026-06-27)
@@ -210,8 +209,10 @@ Discipline: small, reviewable slices; never trade behavior or parity for clevern
 is less clear or less correct, don't do it. As the language moves (C# next / .NET 11), revisit.
 The HNSW gate is closed for the current InMemory reference/test backend target: exact full-scan cosine
 stays the default, with a 2026-06-27 win-x64 ShortRun baseline of 104.5 us at 500 candidates and
-387.4 us at 2,000 candidates. Reopen an opt-in approximate tier only if future same-machine benchmarks
-at a materially larger target graph size show full-scan cosine is the bottleneck.
+387.4 us at 2,000 candidates, and a 2026-06-28 Plan 11 large-N run at 10000 nodes / 30000 edges that
+still did not show full-scan cosine as the dominant cost. Reopen an opt-in approximate tier only if
+future same-machine benchmarks at a materially larger target graph size show full-scan cosine is the
+bottleneck.
 
 - **G1 — Cross-platform proof (HIGH): DONE 2026-06-26.** The linux-x64 failure was reproduced as an
   FTS extension undefined-symbol error under `~/.lbdb/extension`, classified as a `ladybug-dotnet`
@@ -238,10 +239,10 @@ at a materially larger target graph size show full-scan cosine is the bottleneck
   baseline landed 2026-06-27, covering the reference driver's O(n) cosine path with
   `[MemoryDiagnoser]`. A bulk edge-dedupe public-workflow baseline also landed 2026-06-27; endpoint
   bucketing was measured there but not kept because the same workflow showed no material win.
-  The vector baseline closed the HNSW gate for the current InMemory reference/test backend target:
-  exact full-scan cosine remains the default, and an opt-in approximate tier should only be reopened if
-  future same-machine benchmarks at a materially larger target graph size show full-scan cosine is the
-  bottleneck. Remaining work is limited to measured, parity-safe wins (BenchmarkDotNet before/after)
+  Plan 11 then added large-N InMemory and fake-provider throughput baselines on 2026-06-28:
+  unnecessary endpoint-node lookup was removed from ordinary edge search after before/after data, HNSW
+  remained closed at 10000 nodes / 30000 edges, and provider/cache/embedding defaults were measured as
+  within budget. Remaining work is limited to measured, parity-safe wins (BenchmarkDotNet before/after)
   when new bottlenecks are demonstrated.
 - **G4 — Observability + consumer DX (DONE 2026-06-26).** `GraphitiTelemetry` exposes a public `Meter`
   next to the existing `ActivitySource`; metrics cover episodes ingested, ingestion/search duration,

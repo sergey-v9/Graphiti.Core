@@ -248,8 +248,18 @@ no wire/prompt/cache/temporal behavior changed):
 - HNSW is **not needed** for the current InMemory reference/test backend target. The 2026-06-27
   win-x64 ShortRun baseline for exact full-scan node-vector search was 104.5 us at 500 candidates and
   387.4 us at 2,000 candidates, including filter checks, top-k selection, and result cloning. Keep
-  exact cosine the default; only reopen an opt-in approximate tier if future same-machine benchmarks at
-  a materially larger target graph size show full-scan cosine is the bottleneck.
+  exact cosine the default. The 2026-06-28 Plan 11 large-N run extended this to 10000 nodes / 30000
+  edges: exact node-vector search was within budget, edge-vector search was not the dominant
+  end-to-end cost after skipping unnecessary endpoint-node lookup, and the retained structural win was
+  the lookup skip rather than approximate indexing. Only reopen an opt-in approximate tier if future
+  same-machine benchmarks at a materially larger target graph size show full-scan cosine is the
+  bottleneck.
+- Provider concurrency, embedding batch size, and LLM response-cache defaults stay unchanged after the
+  2026-06-28 Plan 11 fake-provider throughput run. With 25 ms injected latency, 16 LLM misses at
+  provider concurrency 4 completed in 121.6 ms and emitted the expected G4 token metrics; warmed cache
+  lookups asserted 16/16 hits and zero live provider calls. For 96 embedding inputs, batch size 8 took
+  92.98 ms while batch sizes 32 and 128 both fit in one latency wave (30.52 ms and 30.47 ms). No cache
+  key, TTL, schema identity, wire shape, or default changed.
 - Provider-backed C# embedders also require exact provider output counts and exact configured vector
   dimensions before persistence/ranking. Python provider clients generally slice or forward returned
   vectors, but the C# port treats malformed provider output as an adapter boundary error so downstream

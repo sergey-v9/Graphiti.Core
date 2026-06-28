@@ -1185,18 +1185,24 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
     {
         cancellationToken.ThrowIfCancellationRequested();
         var compiledFilter = CompiledSearchFilter.Compile(searchFilter);
+        var requiresEndpointLookup = compiledFilter.RequiresEndpointNodeLookup;
         List<EntityEdge> candidates;
-        Dictionary<string, EntityNode> nodesByUuid;
+        Dictionary<string, EntityNode>? nodesByUuid = null;
         lock (_gate)
         {
             candidates = GetEdgesFromIndex<EntityEdge>(groupIds, allWhenNoGroups: true);
-            nodesByUuid = EntityNodeLookup();
+            if (requiresEndpointLookup)
+            {
+                nodesByUuid = EntityNodeLookup();
+            }
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         var ranked = Bm25TextScorer.Rank(
             candidates,
-            edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid),
+            requiresEndpointLookup
+                ? edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid!)
+                : edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter),
             EntityEdgeFulltextText,
             query,
             limit);
@@ -1216,8 +1222,9 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
     {
         cancellationToken.ThrowIfCancellationRequested();
         var compiledFilter = CompiledSearchFilter.Compile(searchFilter);
+        var requiresEndpointLookup = compiledFilter.RequiresEndpointNodeLookup;
         List<EntityEdge> candidates;
-        Dictionary<string, EntityNode> nodesByUuid;
+        Dictionary<string, EntityNode>? nodesByUuid = null;
         lock (_gate)
         {
             candidates = GetEdgesFromIndex<EntityEdge>(groupIds, allWhenNoGroups: true);
@@ -1229,14 +1236,19 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                     targetNodeUuid);
             }
 
-            nodesByUuid = EntityNodeLookup();
+            if (requiresEndpointLookup)
+            {
+                nodesByUuid = EntityNodeLookup();
+            }
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         var scorer = SearchUtilities.CreateCosineSimilarityScorer(searchVector);
         var ranked = SearchUtilities.TopByScore(
             candidates,
-            edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid),
+            requiresEndpointLookup
+                ? edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid!)
+                : edge => SearchFilterMatcher.EdgeMatches(edge, compiledFilter),
             edge => scorer.Score(edge.FactEmbedding),
             limit,
             minScore,
@@ -1291,18 +1303,24 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         }
 
         var compiledFilter = CompiledSearchFilter.Compile(searchFilter);
+        var requiresEndpointLookup = compiledFilter.RequiresEndpointNodeLookup;
         List<EntityEdge> candidates;
         TraversalGraph graph;
-        Dictionary<string, EntityNode> nodesByUuid;
+        Dictionary<string, EntityNode>? nodesByUuid = null;
         lock (_gate)
         {
             candidates = GetEdgesFromIndex<EntityEdge>(groupIds, allWhenNoGroups: true);
             graph = BuildTraversalGraph(groupIds);
-            nodesByUuid = EntityNodeLookup();
+            if (requiresEndpointLookup)
+            {
+                nodesByUuid = EntityNodeLookup();
+            }
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var candidateByUuid = BuildEdgeCandidateLookup(candidates, compiledFilter, nodesByUuid);
+        var candidateByUuid = requiresEndpointLookup
+            ? BuildEdgeCandidateLookup(candidates, compiledFilter, nodesByUuid!)
+            : BuildEdgeCandidateLookup(candidates, compiledFilter);
         IReadOnlyList<SearchHit<EntityEdge>> results =
             BuildEdgeBfsHits(originNodeUuids, maxDepth, limit, graph, candidateByUuid);
         return Task.FromResult(results);
@@ -2247,6 +2265,23 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         {
             var edge = candidates[i];
             if (SearchFilterMatcher.EdgeMatches(edge, compiledFilter, nodesByUuid))
+            {
+                candidateByUuid.Add(edge.Uuid, edge);
+            }
+        }
+
+        return candidateByUuid;
+    }
+
+    private static Dictionary<string, EntityEdge> BuildEdgeCandidateLookup(
+        List<EntityEdge> candidates,
+        CompiledSearchFilter compiledFilter)
+    {
+        var candidateByUuid = new Dictionary<string, EntityEdge>(candidates.Count, StringComparer.Ordinal);
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            var edge = candidates[i];
+            if (SearchFilterMatcher.EdgeMatches(edge, compiledFilter))
             {
                 candidateByUuid.Add(edge.Uuid, edge);
             }
