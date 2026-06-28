@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace Graphiti.Core.Serialization;
@@ -17,6 +19,14 @@ namespace Graphiti.Core.Serialization;
 [JsonSerializable(typeof(CommunitySearchConfig))]
 [JsonSerializable(typeof(DateFilter))]
 [JsonSerializable(typeof(Dictionary<string, object?>))]
+[JsonSerializable(typeof(Dictionary<string, JsonElement>))]
+[JsonSerializable(typeof(JsonElement))]
+[JsonSerializable(typeof(JsonNode))]
+[JsonSerializable(typeof(JsonObject))]
+[JsonSerializable(typeof(float))]
+[JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(List<float>))]
+[JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(EdgeSearchConfig))]
 [JsonSerializable(typeof(EntityEdge))]
 [JsonSerializable(typeof(EntityNode))]

@@ -160,9 +160,15 @@ namespace Graphiti.Core.Configuration
     public static class GraphitiServiceCollectionExtensions
     {
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddGraphiti(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Graphiti.Core.Configuration.GraphitiOptions>? configure = null) { }
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("Binds option types from configuration via reflection; their members may be trimme" +
+            "d. Use the Action<GraphitiOptions> overload, or preserve the bound option types," +
+            " in a trimmed host.")]
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddGraphiti(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration, System.Action<Graphiti.Core.Configuration.GraphitiOptions>? configure = null) { }
         [System.Obsolete("Use AddGraphiti", DiagnosticId="GRPH0002")]
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddGraphitiCore(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Graphiti.Core.Configuration.GraphitiOptions>? configure = null) { }
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("Binds option types from configuration via reflection; their members may be trimme" +
+            "d. Use the Action<GraphitiOptions> overload, or preserve the bound option types," +
+            " in a trimmed host.")]
         [System.Obsolete("Use AddGraphiti", DiagnosticId="GRPH0002")]
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddGraphitiCore(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration, System.Action<Graphiti.Core.Configuration.GraphitiOptions>? configure = null) { }
     }
@@ -174,6 +180,9 @@ namespace Graphiti.Core.Configuration
     public static class LadybugDbServiceCollectionExtensions
     {
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddLadybugDbGraphDriver(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Graphiti.Core.Configuration.LadybugDbOptions>? configure = null) { }
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("Binds LadybugDbOptions from configuration via reflection; its members may be trim" +
+            "med. Use the Action<LadybugDbOptions> overload, or preserve LadybugDbOptions, in" +
+            " a trimmed host.")]
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddLadybugDbGraphDriver(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration, System.Action<Graphiti.Core.Configuration.LadybugDbOptions>? configure = null) { }
     }
 }

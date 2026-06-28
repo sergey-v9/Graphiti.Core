@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Graphiti.Core.Prompts;
@@ -108,7 +107,7 @@ internal static class DedupeNodesPrompts
         for (var i = 0; i < extractedNodes.Count; i++)
         {
             var node = extractedNodes[i];
-            context.Add(new JsonObject
+            context.Add((JsonNode)new JsonObject
             {
                 ["id"] = i,
                 ["name"] = node.Name,
@@ -125,7 +124,7 @@ internal static class DedupeNodesPrompts
         var context = new JsonArray();
         for (var i = 0; i < candidates.Count; i++)
         {
-            context.Add(BuildExistingNodeContext(candidates[i], i));
+            context.Add((JsonNode)BuildExistingNodeContext(candidates[i], i));
         }
 
         return context;
@@ -133,7 +132,7 @@ internal static class DedupeNodesPrompts
 
     private static JsonObject BuildExistingNodeContext(EntityNode candidate, int candidateId)
     {
-        var context = JsonSerializer.SerializeToNode(candidate.Attributes, GraphitiJsonSerializer.Options) as JsonObject
+        var context = GraphitiJsonSerializer.SerializeToNode(candidate.Attributes) as JsonObject
                       ?? new JsonObject();
         context["candidate_id"] = candidateId;
         context["name"] = candidate.Name;

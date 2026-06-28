@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.RateLimiting;
 using Graphiti.Core.Drivers.Ladybug;
 using Microsoft.Extensions.AI;
@@ -46,6 +47,9 @@ public static class GraphitiServiceCollectionExtensions
     /// <param name="services">The service collection to add registrations to.</param>
     /// <param name="configuration">Configuration root the options are bound from.</param>
     /// <param name="configure">Optional delegate to override options after binding.</param>
+    [RequiresUnreferencedCode(
+        "Binds option types from configuration via reflection; their members may be trimmed. Use the "
+        + "Action<GraphitiOptions> overload, or preserve the bound option types, in a trimmed host.")]
     public static IServiceCollection AddGraphiti(
         this IServiceCollection services,
         IConfiguration configuration,
@@ -87,6 +91,9 @@ public static class GraphitiServiceCollectionExtensions
     /// <param name="configuration">Configuration root the options are bound from.</param>
     /// <param name="configure">Optional delegate to override options after binding.</param>
     [Obsolete("Use AddGraphiti", DiagnosticId = "GRPH0002")]
+    [RequiresUnreferencedCode(
+        "Binds option types from configuration via reflection; their members may be trimmed. Use the "
+        + "Action<GraphitiOptions> overload, or preserve the bound option types, in a trimmed host.")]
     public static IServiceCollection AddGraphitiCore(
         this IServiceCollection services,
         IConfiguration configuration,
@@ -171,6 +178,16 @@ public static class GraphitiServiceCollectionExtensions
         IServiceProvider services) =>
         CreateAiProviderResiliencePipeline<GeneratedEmbeddings<Embedding<float>>>(services);
 
+    // Polly's AddRetry<TResult> requires DynamicallyAccessedMemberTypes.All on TResult. This helper is
+    // only ever instantiated with the two fixed provider response types (ChatResponse and
+    // GeneratedEmbeddings<Embedding<float>>), which are public Microsoft.Extensions.AI types already used
+    // in full elsewhere, so the retry pipeline preserves nothing that trimming would otherwise remove.
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2091:DynamicallyAccessedMembers",
+        Justification =
+            "Instantiated only with the fixed ChatResponse and GeneratedEmbeddings<Embedding<float>> "
+            + "provider response types, which are fully used elsewhere.")]
     private static ResiliencePipeline<T> CreateAiProviderResiliencePipeline<T>(IServiceProvider services)
     {
         var options = services.GetRequiredService<IOptions<GraphitiResilienceOptions>>().Value;

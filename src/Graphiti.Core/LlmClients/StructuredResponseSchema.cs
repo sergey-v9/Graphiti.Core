@@ -51,6 +51,6 @@ public sealed class StructuredResponseSchema
     {
         ArgumentNullException.ThrowIfNull(schema);
 
-        return JsonSerializer.SerializeToElement(schema, GraphitiJsonSerializer.Options);
+        return GraphitiJsonSerializer.SerializeToElement(schema);
     }
 }

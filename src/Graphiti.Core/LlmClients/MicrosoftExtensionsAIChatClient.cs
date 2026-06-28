@@ -238,7 +238,7 @@ public sealed class MicrosoftExtensionsAIChatClient : LlmClient
     {
         try
         {
-            parsed = JsonSerializer.Deserialize<JsonNode>(text, GraphitiJsonSerializer.Options);
+            parsed = JsonSerializer.Deserialize(text, GraphitiJsonSerializer.TypeInfo<JsonNode>());
             return true;
         }
         catch (JsonException)

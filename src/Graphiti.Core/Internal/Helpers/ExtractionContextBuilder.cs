@@ -29,7 +29,7 @@ internal static class ExtractionContextBuilder
         var result = new JsonArray();
         for (var i = 0; i < values.Count; i++)
         {
-            result.Add(JsonValue.Create(values[i]));
+            result.Add((JsonNode?)JsonValue.Create(values[i]));
         }
 
         return result;
@@ -61,7 +61,7 @@ internal static class ExtractionContextBuilder
             attributeProperties[pair.Key] = attributeSchema;
             if (pair.Value.Required)
             {
-                requiredAttributes.Add(JsonValue.Create(pair.Key));
+                requiredAttributes.Add((JsonNode?)JsonValue.Create(pair.Key));
             }
         }
 

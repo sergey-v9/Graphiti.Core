@@ -108,9 +108,7 @@ internal static class LadybugRecordMapper
 
             try
             {
-                var parsed = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
-                    text,
-                    GraphitiJsonSerializer.Options);
+                var parsed = GraphitiJsonSerializer.Deserialize<Dictionary<string, JsonElement>>(text);
                 if (parsed is null)
                 {
                     return new Dictionary<string, object?>(StringComparer.Ordinal);
@@ -223,7 +221,7 @@ internal static class LadybugRecordMapper
                     continue;
                 }
 
-                var converted = item.Deserialize<T>(GraphitiJsonSerializer.Options);
+                var converted = GraphitiJsonSerializer.Deserialize<T>(item);
                 if (converted is not null)
                 {
                     values.Add(converted);
@@ -235,7 +233,7 @@ internal static class LadybugRecordMapper
 
         if (value is JsonElement { ValueKind: JsonValueKind.Array } element)
         {
-            return element.Deserialize<List<T>>(GraphitiJsonSerializer.Options);
+            return GraphitiJsonSerializer.Deserialize<List<T>>(element);
         }
 
         if (value is not string && value is IEnumerable<object> objects)

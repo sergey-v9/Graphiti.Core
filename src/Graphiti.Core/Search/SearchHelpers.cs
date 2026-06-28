@@ -30,7 +30,7 @@ public static class SearchHelpers
         var factJson = new JsonArray();
         foreach (var edge in searchResults.Edges)
         {
-            factJson.Add(new JsonObject
+            factJson.Add((JsonNode)new JsonObject
             {
                 ["fact"] = edge.Fact,
                 ["valid_at"] = FormatDateTime(edge.ValidAt, "None"),
@@ -41,7 +41,7 @@ public static class SearchHelpers
         var entityJson = new JsonArray();
         foreach (var node in searchResults.Nodes)
         {
-            entityJson.Add(new JsonObject
+            entityJson.Add((JsonNode)new JsonObject
             {
                 ["entity_name"] = node.Name,
                 ["summary"] = node.Summary
@@ -51,7 +51,7 @@ public static class SearchHelpers
         var episodeJson = new JsonArray();
         foreach (var episode in searchResults.Episodes)
         {
-            episodeJson.Add(new JsonObject
+            episodeJson.Add((JsonNode)new JsonObject
             {
                 ["source_description"] = episode.SourceDescription,
                 ["content"] = episode.Content
@@ -61,7 +61,7 @@ public static class SearchHelpers
         var communityJson = new JsonArray();
         foreach (var community in searchResults.Communities)
         {
-            communityJson.Add(new JsonObject
+            communityJson.Add((JsonNode)new JsonObject
             {
                 ["community_name"] = community.Name,
                 ["summary"] = community.Summary

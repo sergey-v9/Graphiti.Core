@@ -92,7 +92,7 @@ internal static class DedupeEdgesPrompts
         var context = new JsonArray();
         for (var i = 0; i < relatedEdges.Count; i++)
         {
-            context.Add(new JsonObject
+            context.Add((JsonNode)new JsonObject
             {
                 ["idx"] = i,
                 ["fact"] = relatedEdges[i].Fact
@@ -109,7 +109,7 @@ internal static class DedupeEdgesPrompts
         var context = new JsonArray();
         for (var i = 0; i < existingEdges.Count; i++)
         {
-            context.Add(new JsonObject
+            context.Add((JsonNode)new JsonObject
             {
                 ["idx"] = offset + i,
                 ["fact"] = existingEdges[i].Fact

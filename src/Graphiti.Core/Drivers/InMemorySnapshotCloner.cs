@@ -158,7 +158,7 @@ internal static class InMemorySnapshotCloner
 
     private static object? CloneJsonCompatibleValue(object value)
     {
-        var node = JsonSerializer.SerializeToNode(value, GraphitiJsonSerializer.Options);
+        var node = GraphitiJsonSerializer.SerializeToNode(value);
         return ConvertJsonNode(node);
     }
 

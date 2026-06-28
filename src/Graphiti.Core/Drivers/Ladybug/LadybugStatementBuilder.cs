@@ -1,4 +1,3 @@
-using System.Text.Json;
 
 namespace Graphiti.Core.Drivers.Ladybug;
 
@@ -970,5 +969,5 @@ internal static class LadybugStatementBuilder
     private static string SerializeAttributes(Dictionary<string, object?> attributes) =>
         attributes.Count == 0
             ? EmptyAttributesJson
-            : JsonSerializer.Serialize(attributes, GraphitiJsonSerializer.Options);
+            : GraphitiJsonSerializer.Serialize(attributes);
 }

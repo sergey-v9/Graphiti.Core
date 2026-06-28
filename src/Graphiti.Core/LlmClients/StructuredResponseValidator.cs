@@ -104,7 +104,7 @@ internal static class StructuredResponseValidator
         Contracts.GetOrAdd(responseModel, BuildContract);
 
     private static JsonElement ToJsonElement(JsonObject response) =>
-        JsonSerializer.SerializeToElement(response, GraphitiJsonSerializer.Options);
+        GraphitiJsonSerializer.SerializeToElement(response);
 
     private static bool TryGetCoercedResponseElement(
         JsonObject response,

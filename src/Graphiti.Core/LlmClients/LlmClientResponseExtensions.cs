@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -7,7 +8,8 @@ namespace Graphiti.Core.LlmClients;
 
 internal static class LlmClientResponseExtensions
 {
-    internal static async Task<TResponse> GenerateTypedResponseAsync<TResponse>(
+    internal static async Task<TResponse> GenerateTypedResponseAsync<
+        [DynamicallyAccessedMembers(ResponseMembers)] TResponse>(
         this ILlmClient client,
         IReadOnlyList<Message> messages,
         int? maxTokens = null,
@@ -31,12 +33,19 @@ internal static class LlmClientResponseExtensions
         return ToTypedResponse<TResponse>(response);
     }
 
-    internal static TResponse ToTypedResponse<TResponse>(JsonObject response)
+    // The structured-output response DTOs (PublicProperties + a parameterless constructor) are preserved
+    // by this annotation, so the reflection-based lenient materializer below stays trim-safe.
+    private const DynamicallyAccessedMemberTypes ResponseMembers =
+        DynamicallyAccessedMemberTypes.PublicProperties
+        | DynamicallyAccessedMemberTypes.PublicParameterlessConstructor;
+
+    internal static TResponse ToTypedResponse<
+        [DynamicallyAccessedMembers(ResponseMembers)] TResponse>(JsonObject response)
         where TResponse : class, new()
     {
         try
         {
-            return response.Deserialize<TResponse>(GraphitiJsonSerializer.Options) ?? new TResponse();
+            return GraphitiJsonSerializer.Deserialize<TResponse>(response) ?? new TResponse();
         }
         catch (JsonException)
         {
@@ -48,7 +57,19 @@ internal static class LlmClientResponseExtensions
         }
     }
 
-    private static TResponse MaterializeLeniently<TResponse>(JsonObject response)
+    // Best-effort fallback that copies whatever fields parse from a partially-malformed structured
+    // response onto a fresh DTO. TResponse is a known structured-output DTO whose PublicProperties are
+    // preserved by ResponseMembers, so reflecting over them is trim-safe. The residual IL2026 on the
+    // per-property Type-based Deserialize is suppressed below: the property types belong to the
+    // DAM-preserved TResponse and serialization for them is exercised by the structured-output tests.
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:RequiresUnreferencedCode",
+        Justification =
+            "Per-property deserialize targets properties of the DAM-preserved TResponse DTO; this is a "
+            + "best-effort fallback over an already-validated structured-output type.")]
+    private static TResponse MaterializeLeniently<
+        [DynamicallyAccessedMembers(ResponseMembers)] TResponse>(JsonObject response)
         where TResponse : class, new()
     {
         var materialized = new TResponse();

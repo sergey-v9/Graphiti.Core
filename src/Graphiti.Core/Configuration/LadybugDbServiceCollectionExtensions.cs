@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Graphiti.Core.Drivers.Ladybug;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,6 +37,9 @@ public static class LadybugDbServiceCollectionExtensions
     /// <param name="services">The service collection to configure.</param>
     /// <param name="configuration">Configuration section containing <see cref="LadybugDbOptions"/>.</param>
     /// <param name="configure">Optional delegate that runs after configuration binding.</param>
+    [RequiresUnreferencedCode(
+        "Binds LadybugDbOptions from configuration via reflection; its members may be trimmed. Use the "
+        + "Action<LadybugDbOptions> overload, or preserve LadybugDbOptions, in a trimmed host.")]
     public static IServiceCollection AddLadybugDbGraphDriver(
         this IServiceCollection services,
         IConfiguration configuration,

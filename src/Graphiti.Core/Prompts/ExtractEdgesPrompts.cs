@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Graphiti.Core.Prompts;
@@ -173,7 +172,7 @@ internal static class ExtractEdgesPrompts
         for (var i = 0; i < edges.Count; i++)
         {
             var edge = edges[i];
-            facts.Add(new JsonObject
+            facts.Add((JsonNode)new JsonObject
             {
                 ["fact"] = edge.Fact,
                 ["reference_time"] = FormatReferenceTime(edge.ReferenceTime)
@@ -256,7 +255,7 @@ internal static class ExtractEdgesPrompts
             </REFERENCE TIME>
 
             <EXISTING ATTRIBUTES>
-            {{PromptJson.Serialize(JsonSerializer.SerializeToNode(existingAttributes, GraphitiJsonSerializer.Options))}}
+            {{PromptJson.Serialize(GraphitiJsonSerializer.SerializeToNode(existingAttributes))}}
             </EXISTING ATTRIBUTES>
 
             """;
@@ -279,7 +278,7 @@ internal static class ExtractEdgesPrompts
         for (var i = 0; i < nodes.Count; i++)
         {
             var node = nodes[i];
-            context.Add(new JsonObject
+            context.Add((JsonNode)new JsonObject
             {
                 ["name"] = node.Name,
                 ["entity_types"] = ExtractionContextBuilder.BuildStringArray(node.Labels)
@@ -313,7 +312,7 @@ internal static class ExtractEdgesPrompts
         for (var i = 0; i < sortedEdgeTypes.Count; i++)
         {
             var pair = sortedEdgeTypes[i];
-            context.Add(new JsonObject
+            context.Add((JsonNode)new JsonObject
             {
                 ["fact_type_name"] = pair.Key,
                 ["fact_type_signatures"] = BuildSignaturesContext(pair.Key, edgeTypeMap),
@@ -356,7 +355,7 @@ internal static class ExtractEdgesPrompts
         var context = new JsonArray();
         for (var i = 0; i < signatures.Count; i++)
         {
-            context.Add(new JsonArray(
+            context.Add((JsonNode)new JsonArray(
                 JsonValue.Create(signatures[i].Source),
                 JsonValue.Create(signatures[i].Target)));
         }

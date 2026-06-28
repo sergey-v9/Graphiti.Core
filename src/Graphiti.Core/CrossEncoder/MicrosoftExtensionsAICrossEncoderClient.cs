@@ -141,7 +141,7 @@ public sealed class MicrosoftExtensionsAICrossEncoderClient : CrossEncoderClient
                 cancellationToken).ConfigureAwait(false);
         var responseObject = ParseJsonResponse(response.Text);
         StructuredResponseValidator.Validate(responseObject, typeof(RerankerRelevanceResponse));
-        var relevance = responseObject.Deserialize<RerankerRelevanceResponse>(GraphitiJsonSerializer.Options)
+        var relevance = GraphitiJsonSerializer.Deserialize<RerankerRelevanceResponse>(responseObject)
                         ?? new RerankerRelevanceResponse();
         return RelevanceProbability(relevance);
 

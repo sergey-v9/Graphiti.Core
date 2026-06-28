@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Graphiti.Core.Prompts;
@@ -576,7 +575,7 @@ internal static class ExtractNodesPrompts
     {
         var context = new JsonArray
         {
-            new JsonObject
+            (JsonNode)new JsonObject
             {
                 ["entity_type_id"] = 0,
                 ["entity_type_name"] = "Entity",
@@ -591,7 +590,7 @@ internal static class ExtractNodesPrompts
         var index = 1;
         foreach (var pair in entityTypes)
         {
-            context.Add(new JsonObject
+            context.Add((JsonNode)new JsonObject
             {
                 ["entity_type_id"] = index++,
                 ["entity_type_name"] = pair.Key,
@@ -608,7 +607,7 @@ internal static class ExtractNodesPrompts
         for (var i = 0; i < previousEpisodes.Count; i++)
         {
             var episode = previousEpisodes[i];
-            context.Add(new JsonObject
+            context.Add((JsonNode)new JsonObject
             {
                 ["content"] = episode.Content,
                 ["timestamp"] = GraphitiHelpers.EnsureUtc(episode.ValidAt).ToString("O")
@@ -624,7 +623,7 @@ internal static class ExtractNodesPrompts
         {
             ["name"] = node.Name,
             ["entity_types"] = ExtractionContextBuilder.BuildStringArray(node.Labels),
-            ["attributes"] = JsonSerializer.SerializeToNode(node.Attributes, GraphitiJsonSerializer.Options)
+            ["attributes"] = GraphitiJsonSerializer.SerializeToNode(node.Attributes)
         };
     }
 
@@ -634,12 +633,12 @@ internal static class ExtractNodesPrompts
         for (var i = 0; i < nodes.Count; i++)
         {
             var node = nodes[i];
-            context.Add(new JsonObject
+            context.Add((JsonNode)new JsonObject
             {
                 ["name"] = node.Name,
                 ["summary"] = node.Summary,
                 ["entity_types"] = ExtractionContextBuilder.BuildStringArray(node.Labels),
-                ["attributes"] = JsonSerializer.SerializeToNode(node.Attributes, GraphitiJsonSerializer.Options)
+                ["attributes"] = GraphitiJsonSerializer.SerializeToNode(node.Attributes)
             });
         }
 
