@@ -41,7 +41,6 @@ internal sealed class AttributeExtractionService(
             var extractionTargets = BuildNodeExtractionTargets(nodes, entityTypes);
             activity?.SetTag("graphiti.extraction.targets", extractionTargets.Count);
             activity?.SetTag("graphiti.extraction.skipped", extractionTargets.Count == 0);
-            ApplyNodeAttributeSchemas(extractionTargets);
 
             await ThrottledWork.ForEachAsync(
                 extractionTargets,
@@ -78,6 +77,7 @@ internal sealed class AttributeExtractionService(
         IReadOnlyDictionary<string, EntityTypeDefinition> entityTypes)
     {
         var extractionTargets = new List<NodeAttributeExtractionTarget>(nodes.Count);
+        var schemas = new Dictionary<EntityTypeDefinition, StructuredResponseSchema>();
         for (var i = 0; i < nodes.Count; i++)
         {
             var node = nodes[i];
@@ -88,10 +88,15 @@ internal sealed class AttributeExtractionService(
                 continue;
             }
 
-            extractionTargets.Add(new NodeAttributeExtractionTarget(
-                node,
-                entityType,
-                AttributeSchema: null!));
+            if (!schemas.TryGetValue(entityType, out var schema))
+            {
+                schema = ExtractionContextBuilder.BuildAttributeResponseSchema(
+                    entityType,
+                    "NodeAttributeResponse");
+                schemas[entityType] = schema;
+            }
+
+            extractionTargets.Add(new NodeAttributeExtractionTarget(node, entityType, schema));
         }
 
         return extractionTargets;
@@ -108,24 +113,6 @@ internal sealed class AttributeExtractionService(
     private static void ClearNodeAttributes(EntityNode node)
     {
         node.Attributes = new Dictionary<string, object?>(StringComparer.Ordinal);
-    }
-
-    private static void ApplyNodeAttributeSchemas(List<NodeAttributeExtractionTarget> targets)
-    {
-        var schemas = new Dictionary<EntityTypeDefinition, StructuredResponseSchema>();
-        for (var i = 0; i < targets.Count; i++)
-        {
-            var target = targets[i];
-            if (!schemas.TryGetValue(target.EntityType, out var schema))
-            {
-                schema = ExtractionContextBuilder.BuildAttributeResponseSchema(
-                    target.EntityType,
-                    "NodeAttributeResponse");
-                schemas[target.EntityType] = schema;
-            }
-
-            targets[i] = target with { AttributeSchema = schema };
-        }
     }
 
     private sealed record NodeAttributeExtractionTarget(
