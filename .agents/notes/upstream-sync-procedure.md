@@ -5,6 +5,13 @@ whenever we want to pull newer upstream work. The last execution (2026-06-14, an
 `origin/main` `0ed90b7`) is the worked example; its dispositions live in `parity.md`
 ("upstream sync") and `decisions.md` ("Deliberate divergences from the … upstream sync").
 
+> **Parent-repo context.** This C# port is a git submodule of a local-only checkout of upstream
+> `getzep/graphiti`. The parent keeps `main` as a pristine mirror of `origin/main` and carries our
+> submodule hookup as a single commit on a local `csharp-port` branch (never pushed). This sync
+> procedure is the **inner loop** of refreshing that branch onto a newer upstream: see the parent repo's
+> `FORK_MAINTENANCE.md` for the outer wrapper (fetch → spot a `graphiti_core` delta → run this → move the
+> branch forward). The current sync anchor is recorded in `parity.md`.
+
 ## Standing policy (decided 2026-06-14 with Sergey)
 
 - **We track `origin/main` HEAD, not release tags.** Move straight to the latest commit on
