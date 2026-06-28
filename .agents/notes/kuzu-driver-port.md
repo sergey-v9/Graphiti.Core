@@ -1,258 +1,119 @@
 # LadybugDB Provider / Kuzu Parity
 
 LadybugDB is the C# port's main graph-provider target. Kuzu remains the Python parity lineage and
-compatibility vocabulary.
+compatibility vocabulary. The driver lives in `src/Graphiti.Core/Drivers/Ladybug/` inside the Core
+assembly (plan 06 folded it back in): `Graphiti.Core` owns the `LadybugDB` / `LadybugDB.Native` package
+refs, `AddLadybugDbGraphDriver`, `LadybugDbOptions`, the factory, full-text query construction, and
+Ladybug label-filter syntax. The driver-facing provider value is `GraphProvider.LadybugDb`;
+`GraphProvider.Kuzu` is an `[Obsolete]` compatibility alias resolving through core DI/options.
 
-**Update 2026-06-26 (plan 06):** the LadybugDB driver is folded back into `Graphiti.Core` under
-`src/Graphiti.Core/Drivers/Ladybug/`. `Graphiti.Core` owns the `LadybugDB` / `LadybugDB.Native`
-package refs, `AddLadybugDbGraphDriver`, `LadybugDbOptions`, the factory, full-text query
-construction, and Ladybug label-filter syntax. The driver-facing provider value is
-`GraphProvider.LadybugDb`; `GraphProvider.Kuzu` is an `[Obsolete]` compatibility alias that resolves
-through core DI/options. Graphiti pins the fork-published package family
-`0.17.1-dev.2.1.g53e5ab5` from `https://nuget.pkg.github.com/sergey-v9/index.json`; restores require a
-NuGet credential for source `github_ladybug` with `read:packages`.
+## Package pin & feed
 
-## Native search adoption (deep-dive 2026-06-14)
-
-Question posed: "what else can we take from the Ladybug provider — maybe vector search and text
-search — if it aligns with the Python authors' intent." Verified answer: **already taken, and already
-faithful.** Python's design intent is *search pushed down into the DB, rank in-app*
-(`graphiti_core/graph_queries.py`: every backend computes cosine inline via
-`get_vector_cosine_func_query` and runs native fulltext via `get_nodes_query`; RRF/MMR/cross-encoder
-are the only in-app steps). The C# Ladybug driver already does exactly this — native
-`array_cosine_similarity` over `FLOAT[]` columns and native `QUERY_FTS_INDEX` (BM25), a near-verbatim
-port of Python's Kuzu branch (`LadybugSearchStatementBuilder.cs`, `LadybugFulltextQuery.cs`). Only the
-**InMemory reference driver** computes cosine/BM25 in managed code (`TensorPrimitives` +
-`Bm25TextScorer`), by design.
-
-Net-new lever, NOT adopted: LadybugDB's **HNSW vector index** (`CREATE_VECTOR_INDEX` /
-`QUERY_VECTOR_INDEX`, `vector` extension). Python uses **no** ANN index on any backend
-(`get_range_indices` is `[]` for KUZU; cosine is always inline/full-scan), so adopting HNSW would be a
-C#-only enhancement *beyond* Python. It trades exact→approximate (ANN recall/determinism cost) and
-only pays off at large scale. Decision: **do not adopt now.** If ever taken, gate it behind an opt-in
-flag with exact full-scan cosine as the default, justified by a BenchmarkDotNet before/after (perf
-tier, post-moratorium, evidence-driven). FTS tuning (BM25 k/b, tokenizer/stemmer/stopwords) is
-deliberately left at engine defaults — tuning would DIVERGE from Python parity.
-
-Bindings feedback left for the binding agent at
-`W:\code\ladybug\tools\csharp_api\GRAPHITI_SEARCH_EXTENSIONS_FEEDBACK.md` (uncommitted; their repo):
-(1) their P0/WS-F Linux extension-symbol-visibility fix is on Graphiti's critical path — please verify
-a full `fts` (and ideally `vector`) `CREATE/QUERY` round-trip on linux-x64, since Graphiti is only
-validated on win-x64 today; (2) optional WS-C first-class `FLOAT[N]` array binding would let us drop
-the inline `CAST($search_vector AS FLOAT[dim])`. The local binding has since advanced to `0.17.1` with
-a `LadybugDB.Extensions` package and the P0–P3 `feature/parity-extensions-2026-06` initiative;
-Graphiti now pins the fork-published `0.17.1-dev.2.1.g53e5ab5` package family (C API unchanged
-0.17.0→0.17.2).
-
-## WS-1 binding and cross-platform audit (2026-06-14)
-
-Read-only audit result: the newer nearby `W:\code\ladybug\tools\csharp_api` checkout is on
-`feature/parity-extensions-2026-06` at `0e709a095ad9d767a096cb8eb2a207b0091914f3`, clean, and has
-local package artifacts for `LadybugDB` / `LadybugDB.Native` version `0.17.1` plus RID native packages
-for Windows, Linux, and macOS. The earlier Graphiti parameter-binding repair is still present: commit
-`d13d2e9` is an ancestor of that checkout, `PreparedStatement.Bind` routes nulls, lists, arrays, and
-typed empty lists through native `lbug_value` handles, and the package tests cover `List<string>`,
-`float[]`, `Array.Empty<string>()`, and null parameters. Search-extension tests in the binding repo
-mirror Graphiti's `QUERY_FTS_INDEX(... $query, TOP := $limit)` and inline
-`array_cosine_similarity(... CAST($search_vector AS FLOAT[3]))` paths; loader code now uses
-`dlopen(RTLD_NOW | RTLD_GLOBAL)` on Unix-like systems and rethrows undefined-symbol failures.
-
-Graphiti cross-platform audit result: Graphiti itself does not hard-code a `win-x64` package or runtime
-identifier; the Ladybug driver references the cross-platform meta packages. Plan 06 now has
-`Verify-GraphitiCore.ps1` pack one `Graphiti.Core` package and run a strict fresh temp consumer against
-both InMemory and LadybugDB paths from that package, with the Ladybug GitHub Packages feed and isolated
-`NUGET_PACKAGES`. The remaining Linux risk is runtime validation on a Linux runner, not an
-obvious source-level Windows dependency or a missing Windows package-consumer proof. Follow-up on
-2026-06-14 made persisted Ladybug setup idempotent across reopen: duplicate errors for the four exact
-Graphiti FTS indexes are ignored because LadybugDB's `CREATE_FTS_INDEX` has no `IF NOT EXISTS`/skip flag,
-and `LadybugRuntimeDriverTests.FileBackedDriverCanRebuildIndicesAfterReopenAndSearch` proves
-build-write-close-reopen-build-search on a file-backed database.
-
-## Plan 07 linux-x64 loader repair (2026-06-26)
-
-WSL2 Ubuntu-24.04 reproduced the Graphiti package-consumer failure against
-`0.17.1-dev.1.1.g6f3dbed`: `LOAD EXTENSION FTS` failed loading
-`~/.lbdb/extension/0.17.0/linux_amd64/fts/libfts.lbug_extension` with undefined symbol
-`_ZTIN4lbug7catalog12IndexAuxInfoE`. `nm -D` showed the symbol was exported by the package-copied
-`runtimes/linux-x64/native/liblbug.so`, and `LD_PRELOAD` of that exact file made the same Graphiti
-tests pass. Classification: a `ladybug-dotnet` loader gap, not a Graphiti query/RID bug and not a
-missing extension binary.
-
-Fix landed in `W:\code\ladybug\tools\csharp_api` commit `53e5ab5`: the native resolver now probes
-NuGet package runtime assets under `runtimes/<rid>/native` and loads them with
-`RTLD_NOW | RTLD_GLOBAL` before the fallback `NativeLibrary.TryLoad`. The fork workflow published
-`0.17.1-dev.2.1.g53e5ab5`, and Graphiti re-pinned both `LadybugDB` and `LadybugDB.Native` to that
-version. Local WSL verification restored the fixed package from an isolated cache and passed the three
-previously failing tests without `LD_PRELOAD`.
-
-Graphiti now has an additive gated linux-x64 smoke,
-`PackageRuntime_LinuxFtsAndVectorExtensionsCreateAndQuery`, tagged `Category=LinuxLadybugSmoke`.
-It is wired in `.github/workflows/full.yml` behind repo variable
-`GRAPHITI_ENABLE_LINUX_LADYBUG_SMOKE=1` and runtime env `GRAPHITI_RUN_LINUX_LADYBUG_SMOKE=1`; the
-normal win-x64 full verifier remains unconditional.
-
-Current package pin: Graphiti consumes the fork-published dev package family
-`0.17.1-dev.2.1.g53e5ab5` for both `LadybugDB` and `LadybugDB.Native` from the
-`sergey-v9/ladybug-dotnet` GitHub Packages feed (via `NuGet.config`), matching
-`Directory.Packages.props`. The root `NuGet.config` has no active local/offline package source — old
-`0.17.0-alpha.2-graphiti.1` mentions are historical recovery notes, not an active restore path.
+Graphiti pins the fork-published dev package family **`0.17.1-dev.2.1.g53e5ab5`** for both `LadybugDB`
+and `LadybugDB.Native`, from the `sergey-v9/ladybug-dotnet` GitHub Packages feed
+(`https://nuget.pkg.github.com/sergey-v9/index.json`, via `NuGet.config` + `Directory.Packages.props`).
 Restores require a `read:packages` credential for source `github_ladybug` (passed as
-`NuGetPackageSourceCredentials_github_ladybug`). `LadybugDB.Extensions` is **not** adopted by default
-in Graphiti Core: the Graphiti package already owns its DI helper, options, factory, and driver
-boundary, so the Extensions package would add host-level abstractions without a demonstrated Core need.
-Bump the pin only when the binding repo publishes a newer dev version (see "Self-service bindings"
-below); the binding checkout at `W:\code\ladybug\tools\csharp_api` was last confirmed clean on
-`feature/parity-extensions-2026-06`.
+`NuGetPackageSourceCredentials_github_ladybug`); there is no local/offline fallback (intentional). The C
+API was unchanged 0.17.0→0.17.2. `LadybugDB.Extensions` is **not** adopted — Core already owns its DI
+helper, options, factory, and driver boundary, so it would add host-level abstraction without a
+demonstrated need. Bump the pin only when the binding repo publishes a newer dev version (see Self-service
+bindings).
 
-## Self-service bindings (2026-06-17)
+## Native search — already taken, already faithful
 
-`sergey-v9/ladybug-dotnet` is **our fork** — we own it and publish from it. The LadybugDB *engine*
-already supports far more than the C# bindings currently wrap. So when the Ladybug driver needs a
-capability that exists in the engine but is **missing from the C# bindings** (we just haven't wrapped
-it yet), we don't have to wait on anyone: implement the wrapper in `W:\code\ladybug\tools\csharp_api`,
-commit, and **push to `sergey-v9/ladybug-dotnet`**. Its dev-packages GitHub Actions workflow builds a
-new normalized dev package version (e.g. `0.17.1-dev.N.g<sha>`), which Graphiti consumes by bumping the
-pin in `Directory.Packages.props` and restoring from the `github_ladybug` feed. This **supersedes** the
-earlier "patch locally, do not push remotely, keep a local-only package" rule. (Binding changes belong
-in the binding repo, not in Graphiti; first verify the capability really exists in the LadybugDB
-engine — bindings gap, not an engine gap — and prefer wrapping the existing engine feature over
-inventing new surface.)
+Python's design intent is *search pushed down into the DB, rank in-app* (`graphiti_core/graph_queries.py`:
+every backend computes cosine inline and runs native fulltext; RRF/MMR/cross-encoder are the only in-app
+steps). The C# Ladybug driver does exactly this — native `array_cosine_similarity` over `FLOAT[]` columns
+and native `QUERY_FTS_INDEX` (BM25), a near-verbatim port of Python's Kuzu branch
+(`LadybugSearchStatementBuilder.cs`, `LadybugFulltextQuery.cs`). Only the **InMemory** reference driver
+computes cosine/BM25 in managed code (`TensorPrimitives` + `Bm25TextScorer`), by design. FTS tuning (BM25
+k/b, tokenizer/stemmer/stopwords) stays at engine defaults — tuning would diverge from parity. The
+**HNSW** vector index is deliberately not adopted (Python uses no ANN on any backend); that gate is
+closed — see `roadmap.md` "HNSW vector tier — closed".
 
-## DONE: merge the Ladybug driver back into Graphiti.Core (2026-06-26)
+## Cross-platform: win-x64 + gated linux-x64
 
-Plan 06 reversed the plan-05 E package split. The driver now lives in
-`src/Graphiti.Core/Drivers/Ladybug/` inside the Core assembly. The public-API snapshot is back to one
-assembly, `GraphitiCoreOnlyTests` / `eng\Verify-GraphitiCoreOnly.ps1` / `.github/workflows/core-only.yml`
-are retired, and the package-consumer smoke exercises both InMemory and LadybugDB through the packed
-`Graphiti.Core` package. Consequence accepted: every restore needs the `github_ladybug` credential
-until LadybugDB is public on nuget.org.
+Graphiti hard-codes no RID; the driver references the cross-platform meta packages. The linux-x64 loader
+gap (plan 07) was reproduced in WSL2 (`LOAD EXTENSION FTS` undefined symbol
+`_ZTIN4lbug7catalog12IndexAuxInfoE`), root-caused to a `ladybug-dotnet` native-resolver gap, and fixed in
+the fork (commit `53e5ab5`: the resolver now probes `runtimes/<rid>/native` and loads with
+`RTLD_NOW | RTLD_GLOBAL`), shipped in `0.17.1-dev.2.1.g53e5ab5`. Graphiti has an additive gated smoke
+`PackageRuntime_LinuxFtsAndVectorExtensionsCreateAndQuery` (`Category=LinuxLadybugSmoke`) wired in
+`.github/workflows/full.yml` behind `GRAPHITI_ENABLE_LINUX_LADYBUG_SMOKE=1` / env
+`GRAPHITI_RUN_LINUX_LADYBUG_SMOKE=1`; the win-x64 full verifier stays unconditional.
 
-## Current Status
+## Self-service bindings
 
-- The LadybugDB package and native references are owned by `Graphiti.Core`.
-- `src/Graphiti.Core/Drivers/Ladybug/` owns schema, statement construction, record mapping,
-  full-text query construction, Ladybug label-filter fragments, the concrete package executor, and
-  executor-backed graph/search behavior.
-- `LadybugGraphDriver` is internal, implements the graph-driver surface, and delegates search through
-  `LadybugSearchExecutor`.
-- `LadybugDbGraphDriverFactory` creates LadybugDB-backed drivers directly from core.
-- `LadybugDbOptions` and `AddLadybugDbGraphDriver` provide host-facing `DatabasePath`
-  configuration.
-- `GraphProvider.Kuzu` is an obsolete but supported core options/DI alias that resolves to the
-  LadybugDB-backed driver; the concrete driver reports `GraphProvider.LadybugDb`.
-- Runtime proof covers the main ingest/search/removal/triplet/bulk/saga/community workflows,
-  direct driver bulk-save embedding/relationship persistence, namespace/model embedding reloads by
-  UUID, saga-scoped episode retrieval, saga content filtering/order/limit behavior, saga predecessor
-  lookup, paged node/edge group reads, directed endpoint-pair edge reads, incident entity-edge reads,
-  group-id enumeration, public namespace community/saga reads and typed deletes, file-backed
-  `DatabasePath` persistence for both `GraphProvider.LadybugDb` and the obsolete
-  `GraphProvider.Kuzu` alias, file-backed index rebuild/search after reopening, and Python Kuzu
-  `':memory:'` sentinel compatibility. Treat tests as the detailed proof source.
-- `LadybugPackageRuntimeTests` exercise the actual LadybugDB package/native path in normal
-  verification, including schema creation, direct list/array/empty-list/null parameter binding, FTS loading/search, vector
-  search, filters, direct driver bulk-save embedding/relationship persistence, saga-scoped episode
-  retrieval, saga content filtering/order/limit behavior, namespace/model embedding reloads by UUID,
-  paged node/edge group reads, directed endpoint-pair edge reads, incident edge reads, group-id
-  enumeration, public namespace community/saga group reads and typed-delete isolation, BFS/rankers,
-  and delete/clear flows, including Python-compatible empty group-list clear no-op versus null
-  clear-all and scoped clear preserving Saga nodes. Do not add a separate native-gated smoke suite
-  unless it covers a new runtime requirement or CI/platform constraint the current package runtime
-  tests do not cover.
-- The LadybugDB package has a nearby source checkout at `W:\code\ladybug`; this is background
-  provenance for the NuGet/API surface. Graphiti work operates against package-facing behavior and
-  Graphiti tests. When package or binding behavior looks suspect, mark the symptom separately from
-  Graphiti port gaps. The user has authorized repair work in that checkout when it unblocks the C#
-  driver: patch and commit LadybugDB changes there, push the fork's `dev` branch when a fresh package
-  is needed, let the fork workflow publish a new GitHub Packages dev version, then bump Graphiti to
-  that published version.
-- As of 2026-06-11, the nearby Ladybug checkout may show a locally advanced `extension` submodule and
-  an untracked `tools/csharp_api/` checkout with reference material. Treat that as preserved
-  recovery/provenance state; do not clean or overwrite it while working on Graphiti.
+`sergey-v9/ladybug-dotnet` is **our fork** — we own it and publish from it. When the driver needs a
+capability the LadybugDB *engine* supports but the C# bindings don't yet wrap, implement the wrapper in
+`W:\code\ladybug\tools\csharp_api`, commit, and push to `sergey-v9/ladybug-dotnet`; its dev-packages
+workflow builds `0.17.1-dev.N.g<sha>`, which Graphiti consumes by bumping `Directory.Packages.props`.
+First confirm it's a *bindings* gap (the engine already supports it), and prefer wrapping the existing
+engine feature over inventing new surface. Binding changes belong in the binding repo, not in Graphiti.
+(Supersedes the earlier "patch locally, don't push" rule.) The nearby `W:\code\ladybug` checkout is
+preserved provenance — do not clean or overwrite it while working on Graphiti.
 
-## Provider Policy
+## Current status
 
-- LadybugDB is the provider investment target.
-- Implement against Python Kuzu behavior for parity, but prefer LadybugDB naming for the final
-  driver-facing product surface.
-- Use `GraphProvider.LadybugDb` as the driver-facing provider value. Keep `GraphProvider.Kuzu` only as
-  the `[Obsolete]` compatibility alias for callers that have not renamed yet.
-- Keep FalkorDB, InMemory, and Neptune policy in `decisions.md`; do not repeat it here. (Neo4j was
-  removed 2026-06-17 and is no longer a provider.)
-- If runtime proof exposes behavior that looks like a LadybugDB package or binding bug, mark it
-  separately from Graphiti port gaps. Work around proven backend limitations deliberately when useful,
-  but keep them visible.
+- `Graphiti.Core` owns the LadybugDB package/native refs. `src/Graphiti.Core/Drivers/Ladybug/` owns
+  schema, statement construction, record mapping, full-text query construction, label-filter fragments,
+  the concrete package executor, and executor-backed graph/search behavior. `LadybugGraphDriver` is
+  internal and delegates search through `LadybugSearchExecutor`. `LadybugDbGraphDriverFactory` creates
+  drivers directly from core; `LadybugDbOptions` / `AddLadybugDbGraphDriver` give host-facing
+  `DatabasePath` config. The concrete driver reports `GraphProvider.LadybugDb`; `GraphProvider.Kuzu` is
+  the obsolete alias.
+- `LadybugPackageRuntimeTests` exercise the real package/native path in normal verification: schema
+  creation, list/array/empty-list/null parameter binding, FTS load/search, vector search, filters, direct
+  bulk-save embedding/relationship persistence, saga-scoped retrieval + content filter/order/limit,
+  namespace/model embedding reloads by UUID, paged group reads, directed endpoint-pair + incident edge
+  reads, group-id enumeration, public namespace community/saga reads + typed-delete isolation, BFS/rankers,
+  delete/clear flows (incl. Python-compatible empty-list no-op vs null clear-all and Saga-preserving scoped
+  clear), file-backed `DatabasePath` persistence + index rebuild after reopen, and Python Kuzu `':memory:'`
+  sentinel compatibility (normalized to the empty-string path at the Graphiti boundary). Treat the tests
+  as the detailed proof source; don't add a separate native-gated smoke suite unless it covers a genuinely
+  new runtime/CI/platform requirement.
 
-## Confirmed Package/API Facts
+## Provider policy
 
-- Package id: `LadybugDB`; version comes from central package management. Graphiti currently uses
-  the fork-published dev package family `0.17.1-dev.2.1.g53e5ab5` from the
-  `sergey-v9/ladybug-dotnet` GitHub Packages feed via `NuGet.config`. Restores require credentials
-  for source `github_ladybug` with `read:packages`.
-- Native assets are packaged separately, for example `LadybugDB.Native` and RID-specific native
-  packages.
-- Exposed API includes `Database`, `Connection`, `Query`, `Prepare`, `Execute`,
-  `PreparedStatement.Bind`, `QueryResult.Rows`, `Node`, and `Rel`.
-- The API appears synchronous. A single `Connection` serializes operations internally according to
-  package docs.
-- `Database(string databasePath, SystemConfig)` uses an empty string for in-memory databases; Python
-  Kuzu uses `':memory:'`. `LadybugDbGraphDriverFactory` normalizes the Kuzu sentinel to the
-  LadybugDB empty-string path at the Graphiti boundary.
-- FTS calls require explicit `INSTALL FTS; LOAD EXTENSION FTS;` before `CREATE_FTS_INDEX` /
-  `QUERY_FTS_INDEX`.
-- LadybugDB can reject post-projection ordering by node variables such as `ORDER BY n.uuid`; use
-  projected aliases such as `uuid`, `valid_at`, and `created_at` after `RETURN`.
+- LadybugDB is the provider investment target. Implement against Python Kuzu behavior for parity, but use
+  LadybugDB naming for the driver-facing surface. Keep `GraphProvider.Kuzu` only as the `[Obsolete]`
+  alias. FalkorDB/InMemory/Neptune policy lives in `decisions.md`; Neo4j was removed 2026-06-17.
+- C# intentionally diverges from current Python Kuzu provider-specific inconsistencies: it uses the full
+  `SagaNode` shape, saves/returns entity-edge `reference_time`, and keeps `GetEntityEdgesByNodeUuidAsync`
+  incident to either endpoint (per the public graph-driver contract).
+- If runtime proof exposes behavior that looks like a LadybugDB package/binding bug, mark it separately
+  from Graphiti port gaps; work around proven backend limits deliberately but keep them visible.
 
-## Package Bug Recovery
+## Confirmed package/API facts
 
-- A LadybugDB .NET binding gap blocked Graphiti's Kuzu-style statements: package
-  `PreparedStatement.Bind(object?)` rejected `List<string>`, arrays, empty lists, and null values.
-  The `sergey-v9/ladybug-dotnet` fork's published `0.17.1-dev.1.1.g6f3dbed` package family includes
-  the C# binding repair that wraps native `lbug_value` creation and
-  `lbug_prepared_statement_bind_value`. Graphiti consumes that package family and executes statements
-  with bound parameters directly.
-- `LadybugStatementNormalizer` was removed from Graphiti after the package repair. If the GitHub
-  Packages feed cannot be authenticated, restore will fail instead of silently falling back to
-  literal rewriting.
-- The current Python Kuzu code has provider-specific inconsistencies around Saga schema/query fields,
-  entity-edge `reference_time`, and source-only `EntityEdge.get_by_node_uuid` reads. The C#
-  foundation intentionally uses the full `SagaNode` shape, saves/returns entity-edge
-  `reference_time`, and keeps `GetEntityEdgesByNodeUuidAsync` incident to either endpoint like the
-  public graph-driver contract.
+- Package id `LadybugDB`; native assets in `LadybugDB.Native` + RID-specific packages. Exposed API:
+  `Database`, `Connection`, `Query`, `Prepare`, `Execute`, `PreparedStatement.Bind`, `QueryResult.Rows`,
+  `Node`, `Rel`. The API is synchronous; a single `Connection` serializes operations internally.
+- `Database(databasePath, SystemConfig)` uses an empty string for in-memory (Python Kuzu uses
+  `':memory:'`; the factory normalizes the sentinel).
+- FTS requires explicit `INSTALL FTS; LOAD EXTENSION FTS;` before `CREATE_FTS_INDEX` / `QUERY_FTS_INDEX`.
+  Persisted setup is idempotent across reopen: duplicate-index errors for the four Graphiti FTS indexes
+  are ignored because `CREATE_FTS_INDEX` has no `IF NOT EXISTS`.
+- LadybugDB can reject post-projection ordering by node variables (`ORDER BY n.uuid`); use projected
+  aliases (`uuid`, `valid_at`, `created_at`) after `RETURN`.
+- The binding once rejected `List<string>`/arrays/empty-lists/null in `PreparedStatement.Bind`; the fork
+  package family wraps native `lbug_value` creation and binds parameters directly, so Graphiti executes
+  Kuzu-style statements with bound parameters (the old `LadybugStatementNormalizer` workaround was
+  removed — an unauthenticated feed now fails the restore rather than silently rewriting literals).
 
-## Existing Touchpoints
+## Touchpoints
 
-- `Drivers/GraphProvider.cs`: keeps `GraphProvider.Kuzu` as compatibility vocabulary.
-- `src/Graphiti.Core/Drivers/Ladybug/`: schema, statement, record mapper, driver,
-  concrete executor, search full-text query helper, search-filter adapter, statements, search
-  executor, and driver factory.
-- `src/Graphiti.Core/Configuration/LadybugDbOptions.cs`: host-facing LadybugDB driver options.
-- `src/Graphiti.Core/Configuration/LadybugDbServiceCollectionExtensions.cs`: LadybugDB DI helper.
-- `Configuration/GraphitiServiceCollectionExtensions.cs`: core constructs LadybugDb/Kuzu directly
-  unless an explicit `GraphDriverFactory` override is configured.
-- `Search/CompiledSearchFilter.cs`: uses the shared Cypher-style colon-label syntax for generic callers;
-  active Ladybug search owns Ladybug/Kuzu label-filter fragments in
-  `Drivers/Ladybug/LadybugSearchFilter`.
-- `Search/SearchUtilities.cs`: no longer has a `GraphProvider.Kuzu` full-text branch because active
-  Ladybug full-text construction lives in `Drivers/Ladybug/LadybugFulltextQuery`.
-- `tests/Graphiti.Core.Tests/Drivers/Ladybug/`: foundation, internal driver, runtime, search
-  statement, search executor, and core DI coverage.
+`Drivers/GraphProvider.cs` (Kuzu alias); `src/Graphiti.Core/Drivers/Ladybug/` (schema, statement, record
+mapper, driver, executor, full-text helper, search-filter adapter, search executor, factory);
+`Configuration/LadybugDbOptions.cs` + `LadybugDbServiceCollectionExtensions.cs`;
+`Configuration/GraphitiServiceCollectionExtensions.cs` (constructs LadybugDb/Kuzu unless a
+`GraphDriverFactory` override is set); `Search/CompiledSearchFilter.cs` (shared colon-label syntax for
+generic callers; Ladybug owns its label-filter fragments in `Drivers/Ladybug/LadybugSearchFilter`);
+`Search/SearchUtilities.cs` (no Kuzu full-text branch — that lives in `Drivers/Ladybug/LadybugFulltextQuery`);
+`tests/Graphiti.Core.Tests/Drivers/Ladybug/`.
 
-## Remaining Work
+## Remaining work (only when a real need appears)
 
-1. Broaden workflow coverage only where it exercises behavior not already covered by the current
-   ingest/search/removal/triplet/bulk/saga/community tests.
-2. Add host-facing options only when real runtime requirements appear. `DatabasePath` exists; avoid
-   speculative options.
-3. Add native-gated integration smoke tests only if they provide coverage beyond the current package
-   runtime tests or solve a CI/platform constraint.
-4. DONE (plan-05 B): the final driver-facing naming is `GraphProvider.LadybugDb`, with
-   `GraphProvider.Kuzu` retained as an `[Obsolete]` compatibility alias.
-5. DONE (plan-05 B2): shared Kuzu compatibility helpers were retired from `SearchUtilities` and
-   `CompiledSearchFilter`; active Ladybug full-text and label-filter behavior lives in the
-   Ladybug driver.
-6. DONE (plan-05 B2): the Kuzu-to-LadybugDB terminology transition is complete for the C# provider
-   surface. `GraphProvider.Kuzu` remains only as an obsolete compatibility alias.
-7. Update `decisions.md`, `evolution.md`, `handoff.md`, and `roadmap.md` when provider status or
-   support level changes.
-
-This note supersedes older comments that described Kuzu as intentionally out of scope for the C# port.
+Broaden workflow coverage, add host-facing options, or add native-gated smokes **only** where they
+exercise behavior the current package-runtime tests don't already cover. Update `decisions.md` /
+`evolution.md` / `handoff.md` / `roadmap.md` when provider status or support level changes.
