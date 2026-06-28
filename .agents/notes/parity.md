@@ -4,20 +4,20 @@ This is the single source of truth for "what is actually ported". Update the aff
 same change that closes or reopens a gap. Do not claim parity from memory — verify against the
 Python file before flipping a status.
 
-**Python baseline:** `graphiti_core/` synced to upstream `origin/main` HEAD `0ed90b7` (we track HEAD,
-not tagged releases). The local parent-repo mirror was advanced to match in parent commit `e36c387`
-(`git checkout origin/main -- graphiti_core`), so the local `graphiti_core/` tree now equals
-`origin/main`. The library tree at `0ed90b7` is identical to `ff7e29c` — every commit after `ff7e29c`
-in the range touches only `mcp_server/`/`server/`/CI/deps, not the library. The five library commits
-since the previous anchor (`34f56e6`) were reviewed + adversarially verified in the 2026-06-14
-upstream sync below (none touched prompts/search/pipeline). **To pull the next batch, follow
+**Python baseline:** `graphiti_core/` synced to upstream `origin/main` HEAD
+`b59d4ba01118a91708fd6a6892200016168eeb5d` (we track HEAD, not tagged releases). The local
+parent-repo mirror still equals `origin/main` for `graphiti_core/`; no parent checkout commit was
+needed for the 2026-06-28 sweep because the library tree is unchanged since the prior mirror commit
+`e36c387` (`0ed90b7`). The five library commits since the previous content-changing anchor
+(`34f56e6`) were reviewed + adversarially verified in the 2026-06-14 upstream sync below (none touched
+prompts/search/pipeline). **To pull the next batch, follow
 `upstream-sync-procedure.md`**: diff `graphiti_core/` against this anchor, disposition each change,
 verify, then move the anchor to the new `origin/main` HEAD.
 
-**Latest upstream check:** 2026-06-26 `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch -FailOnDelta`
-found `origin/main` at `413b9b2e140e22f4a6d155b30ddc9779a3d47fe2`; `git log`, `git diff --stat`, and
+**Latest upstream check:** 2026-06-28 `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch` found
+`origin/main` at `b59d4ba01118a91708fd6a6892200016168eeb5d`; `git log`, `git diff --stat`, and
 `git diff --name-status` over `0ed90b7..origin/main -- graphiti_core` were empty. No new Python
-library work needs porting.
+library work needed porting, so this anchor was advanced.
 
 **Statuses**
 - `OK` — behavior and (for prompts) instruction text faithfully ported; divergences documented.
@@ -43,6 +43,19 @@ matrix tables below, and the list of deliberate/accepted divergences and the tra
 items live in `decisions.md` ("Deliberate divergences accepted…", "Tracked-but-unfixed divergences",
 and the per-area decision entries). For why a specific row diverges, read `decisions.md`; for what is
 ported, read the tables below.
+
+## 2026-06-28 upstream no-delta sweep (anchor `0ed90b7` → `origin/main` `b59d4ba`)
+
+Fetched `getzep/graphiti` `origin/main` and ran the authoritative library-only checks:
+`git log --oneline 0ed90b7..origin/main -- graphiti_core`,
+`git diff --stat 0ed90b7..origin/main -- graphiti_core`, and
+`git diff --name-status 0ed90b7..origin/main -- graphiti_core`. All three were empty, and
+`.\eng\Check-PythonUpstreamDelta.ps1 -Fetch` reported no `graphiti_core` delta.
+
+Classification: no prompt/search/pipeline changes; no Kuzu/Ladybug-adaptable provider changes; no
+other-provider changes; no library infra changes. No C# behavior, prompt, schema/cache, driver, or
+test changes were required. The local parent `graphiti_core/` tree is already identical to
+`origin/main` for this path, so only the parity anchor moved.
 
 ## 2026-06-14 upstream sync (anchor `34f56e6` → `origin/main` `0ed90b7`)
 

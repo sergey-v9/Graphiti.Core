@@ -132,9 +132,10 @@ Plan 06 merge then moved the Ladybug driver into `Graphiti.Core`, folded the opt
 and Ladybug package refs into Core, collapsed the public API snapshot to one assembly, retired
 `GraphitiCoreOnlyTests` / `eng\Verify-GraphitiCoreOnly.ps1` / `.github/workflows/core-only.yml`, and
 changed the package smoke to exercise both InMemory and LadybugDB from the packed `Graphiti.Core`
-package. Latest 2026-06-26 upstream audit: `Check-PythonUpstreamDelta.ps1 -Fetch -FailOnDelta`
-reported no `graphiti_core/` upstream delta from anchor `0ed90b7` to target
-`413b9b2e140e22f4a6d155b30ddc9779a3d47fe2`. The current concrete search-filter drift is now closed:
+package. Latest 2026-06-28 upstream audit: `Check-PythonUpstreamDelta.ps1 -Fetch` reported no
+`graphiti_core/` upstream delta from anchor `0ed90b7` to target
+`b59d4ba01118a91708fd6a6892200016168eeb5d`; `parity.md` now uses that target as the next anchor. The
+current concrete search-filter drift is now closed:
 the reference/materialized matcher requires every requested non-empty node label like the Ladybug/Kuzu
 `list_has_all` provider predicate, including on both edge endpoints. The empty-node-label hardening
 divergence remains unchanged. The follow-up edge-resolution block-order drift is also closed:
