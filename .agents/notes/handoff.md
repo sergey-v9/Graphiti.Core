@@ -21,16 +21,15 @@ Provider work is focused on LadybugDB. InMemory is the deterministic reference/t
 removed 2026-06-17 and is no longer a provider. The focused provider state
 lives in `kuzu-driver-port.md`; do not duplicate its proof matrix here.
 
-> ⚠ **Supervisor review (paradigm shift, 2026-06-27):** Sergey re-set the project's purpose — this is an
-> embeddable internal library we maintain ourselves, likely to be renamed, **not** a product we are
-> shipping. So release/publishing is parked and the active work is idiomatic-modernization +
-> allocation-reduction in the code (`decisions.md` "What this project is"; current work order
-> `.agents/plans/10-idiomatic-allocation-modernization.md`). Standing constraints unchanged: CI stays
-> as-is (do not expand); LadybugDB feed is GitHub-Packages-only (credential required); the code stays
-> textually de-coupled from Python (`decisions.md` "Parity without Python coupling in the code");
-> behavioral parity is enforced by tests + `parity.md`. The whole 2026-06-19 G1–G6 agenda and plans
-> 05–08 are complete and the suite is green; plan 09 (robustness) is deferred below the modernization
-> stream.
+> ⚠ **Supervisor review (2026-06-28):** Sergey's 2026-06-27 paradigm holds — this is an embeddable
+> internal library we maintain ourselves, likely to be renamed, **not** a product we are shipping;
+> release/publishing is parked (`decisions.md` "What this project is"). **The backlog is now exhausted:
+> the whole 2026-06-19 G1–G6 agenda and work-order plans 05–11 are complete and the suite is green.** The
+> realistic forward posture is **maintenance** — track the Python upstream for parity
+> (`upstream-sync-procedure.md`) and apply opportunistic parity-safe modernization as the language moves;
+> a new direction comes from Sergey. Standing constraints unchanged: CI stays as-is (do not expand);
+> LadybugDB feed is GitHub-Packages-only (credential required); the code stays textually de-coupled from
+> Python; behavioral parity is enforced by tests + `parity.md`.
 
 ## Current Layout
 
@@ -115,7 +114,9 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
   partial-persistence defect by prevalidating missing entity embeddings before driver bulk save) are
   both **complete**. Plan 11 is also **complete**: the large-N InMemory and fake-provider throughput
   pass landed one measured edge-search win and recorded the current HNSW/provider-defaults budget
-  decisions. The whole backlog (plans 05–11) is done and the library is mature.
+  decisions. **The whole backlog (plans 05–11) is done — there is no open plan.** The forward posture is
+  **maintenance**: run the upstream-parity sweep (`upstream-sync-procedure.md`) to keep current, and
+  apply opportunistic parity-safe modernization as the language moves; a new direction comes from Sergey.
   Full restore/test/pack requires GitHub Packages credentials for source `github_ladybug`. Performance
   work is benchmark-first and no longer on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
