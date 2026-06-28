@@ -500,6 +500,34 @@ gate so future releases are not forced into avoidable breaking changes:
   assets shipped by the Ladybug package family are not Graphiti-validated yet. The Linux smoke asserts
   x64 before exercising FTS/vector extension loading.
 
+## Deliberate idiomatic-shape trade-offs that look "cleanable" but are not (2026-06-28)
+
+These shapes read like things a future reviewer would "modernize," but each is a deliberate
+parity-safe choice. Leave them as-is unless the parity contract itself changes.
+
+- **`object?`-typed saga argument on `AddEpisodeAsync` / `AddEpisodeBulkAsync`.** The saga parameter is
+  intentionally weakly typed (with the `SagaName` helper resolving it) to mirror Python's accept-a-name-
+  or-a-saga-object call shape and keep the wire/option surface stable. Do not tighten it to a concrete
+  saga type — that would change the public signature pinned in the API snapshot and diverge from the
+  Python option shape.
+- **`EntityNode.GetByUuidsAsync`'s `groupId` parameter is accepted-but-ignored.** It exists only so the
+  entity-node overload signature stays uniform with the other typed `GetByUuidsAsync` members; the
+  in-memory and Ladybug paths do not filter on it. Removing the parameter would be a public-surface
+  break; "wiring it up" would change lookup behavior away from parity. Keep it inert.
+- **Mutable `List<T>` / `Dictionary<string, object?>` in the result and model layer.** The result DTOs
+  and node/edge models expose concrete mutable collections on purpose: they mirror Python's Pydantic
+  models and the exact JSON wire shape, and downstream code mutates them in place during the ingestion
+  pipeline. This is why CA2227/CA1002 are silenced project-wide. Do not swap them for read-only
+  interfaces or immutable collections.
+- **No use of `required` members.** The models deliberately avoid `required` so they remain
+  constructible the way the port and its tests build them (object-initializer and deserialization paths
+  that set members progressively), matching Python's optional-by-default field construction. Adding
+  `required` would break those construction paths and is not a parity improvement.
+- **`public GraphitiHelpers.ParseDbDate(object?)` stays a weakly-typed public helper.** It accepts
+  `object?` because graph backends hand back dates as `DateTime`, `DateTimeOffset`, or ISO-8601 strings
+  interchangeably; the single `object?` entry point is the parity-faithful seam and is pinned in the API
+  snapshot. It now forwards to the internal `IsoDateParser`, but the public signature must not change.
+
 ## Deliberate divergences from the 2026-06-14 upstream sync
 
 The 5 `graphiti_core` commits added upstream between anchor `34f56e6` and `origin/main` `ff7e29c`
