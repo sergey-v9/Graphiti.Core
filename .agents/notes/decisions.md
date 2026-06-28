@@ -229,6 +229,48 @@ HTTP call to a Python graphiti service behind its `IGraphitiClient`). The decisi
   against the real trimmed host build) is the one open question; the no-AOT / yes-trim stance holds
   either way.
 
+### Trim-readiness landed (plan 12, 2026-06-28)
+
+`src/Graphiti.Core/Graphiti.Core.csproj` now carries `<IsTrimmable>true</IsTrimmable>`, so the trim
+analyzer runs in the normal build and a 0-warning build is the gate (no new CI lane). The 43 unique
+trim warnings (IL2026 / IL2090 / IL2091) were burned down by root cause:
+
+- **Known-DTO serialization → source-gen, no reflection.** Typed `GraphitiJsonSerializer.Serialize/
+  Deserialize/SerializeToNode/SerializeToElement<T>` helpers resolve `JsonTypeInfo<T>` from the shared
+  `Options` (source-gen context first), so the call sites are trim-safe and the **wire shape is
+  identical** (same naming policy + wire-value enum converters). The source-gen context was extended with
+  the built-in/known types those helpers use (`JsonObject`/`JsonNode`/`JsonElement`,
+  `Dictionary<string,JsonElement>`, `List<string>`/`List<float>`, `string`/`float`).
+- **`JsonArray.Add(...)` of `JsonObject`/`JsonValue`/`JsonArray` → non-generic overload.** Casting the
+  argument to `JsonNode?` selects the trim-safe `Add(JsonNode?)` instead of the reflection-capable
+  generic `Add<T>(T)`; behavior is unchanged (the values were always `JsonNode`s).
+- **Config binding (`Configure<TOptions>(IConfiguration)`) → annotated.** The source-gen configuration
+  binder is *not* usable here: `GraphitiOptions` exposes non-bindable `TimeProvider?` /
+  `Func<IServiceProvider,IGraphDriver>?` members that the reflection binder silently skips but the
+  generator rejects (SYSLIB1100/1101). The reflection binder is kept and the public `IConfiguration`
+  registration overloads (`AddGraphiti`, the obsolete `AddGraphitiCore`, `AddLadybugDbGraphDriver`) are
+  marked `[RequiresUnreferencedCode]` — honest, and consistent with the host, which binds config the
+  same way. The code-based `Action<TOptions>` overloads stay trim-clean.
+
+#### Open-attribute serialization stance (the documented trim boundary)
+
+The `Dictionary<string, object?>` node/edge **attribute** values are reflection-serialized on purpose:
+their runtime value types are **arbitrary and consumer-defined** (this mirrors the Python model shape and
+is load-bearing for ingestion, persistence, and prompt context). They cannot be statically described to a
+source-gen context. The single documented trim boundary is the reflection-fallback resolver in
+`GraphitiJsonSerializer` (`DefaultJsonTypeInfoResolver`, combined *after* the source-gen context): the
+known DTOs never reach it, only open-attribute value types do. That one site carries a justified
+`[UnconditionalSuppressMessage("Trimming","IL2026")]`. A trimmed host that feeds exotic attribute value
+types into ingestion is responsible for preserving those types. Two further leaf sites are handled in the
+same spirit: `LlmClientResponseExtensions.MaterializeLeniently<TResponse>` (the lenient structured-output
+fallback) annotates `TResponse` with `[DynamicallyAccessedMembers]` so reflecting over its properties is
+trim-safe, with one justified suppression for the residual per-property `Deserialize(Type)`; and the
+Polly `AddRetry<TResult>` IL2091 is a justified suppression because the helper is only ever instantiated
+with the fixed `ChatResponse` / `GeneratedEmbeddings<Embedding<float>>` provider types.
+
+No behavior, wire value, structured-output schema identity, or response-cache key identity changed. The
+only public-API snapshot change is the three `[RequiresUnreferencedCode]` attribute additions above.
+
 ## Provider And Infrastructure Choices
 
 - Use `Microsoft.Extensions.AI` as the primary adapter boundary for chat and embeddings.

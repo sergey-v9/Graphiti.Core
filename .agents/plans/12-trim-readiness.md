@@ -11,22 +11,33 @@ host can't use AOT, so do **not** enable `IsAotCompatible` or chase IL3050.
 
 ## Status
 
-**Current priority (2026-06-28).** Behavioral parity, wire values, and cache/schema identity stay
-unchanged. Note: unlike the other recent passes, this one **does** legitimately change the public-API
-snapshot — adding `[RequiresUnreferencedCode]` / `[DynamicallyAccessedMembers]` attributes to public
-members is part of the trim *contract* and appears in the PublicApiGenerator output. That snapshot change
-is **expected and correct** here (attribute additions only); regenerate + review the baseline.
+**DONE (2026-06-28).** `IsTrimmable=true` is committed and the build is 0-warning under
+`TreatWarningsAsErrors`. 43 unique trim warnings (IL2026 / IL2090 / IL2091) were resolved by root cause:
+known-DTO serialization routed through source-gen typed helpers; `JsonArray.Add` calls cast to `JsonNode?`
+to pick the non-generic overload; the public `IConfiguration` registration overloads annotated
+`[RequiresUnreferencedCode]` (the config-binding source generator was rejected by `GraphitiOptions`'
+non-bindable `TimeProvider` / driver-factory members — SYSLIB1100/1101); the lenient response materializer
+made trim-safe with `[DynamicallyAccessedMembers]` + one justified suppression; the open-attribute
+reflection fallback and the Polly `AddRetry<TResult>` generic each carry a justified
+`[UnconditionalSuppressMessage]`. The open-attribute stance is recorded in `decisions.md`. The public-API
+snapshot changed by exactly three `[RequiresUnreferencedCode]` attribute additions (no
+member/signature changes). Behavior, wire values, schema identity, and cache-key identity unchanged.
+
+Note: unlike the other recent passes, this one **does** legitimately change the public-API snapshot —
+adding `[RequiresUnreferencedCode]` / `[DynamicallyAccessedMembers]` attributes to public members is part
+of the trim *contract* and appears in the PublicApiGenerator output. That snapshot change is **expected
+and correct** here (attribute additions only).
 
 ## Steps
 
-- [ ] **A. Turn the trim analyzer on (trim only).** Add `<IsTrimmable>true</IsTrimmable>` to
+- [x] **A. Turn the trim analyzer on (trim only).** Add `<IsTrimmable>true</IsTrimmable>` to
   `src/Graphiti.Core/Graphiti.Core.csproj` (this enables the trim analyzer **and** stamps the assembly so
   a consuming trimmer trims into it). Do **not** set `IsAotCompatible` / `EnableAotAnalyzer`. Because
   `TreatWarningsAsErrors=true` will turn the IL warnings into errors, first capture a baseline by adding
   the surfaced IL codes to `<WarningsNotAsErrors>` (or build one project to list them), then burn them
   down and remove the exemption so the end state is `IsTrimmable=true` + **0 warnings**.
 
-- [ ] **B. Burn down each trim warning by root cause** (per-site decision framework):
+- [x] **B. Burn down each trim warning by root cause** (per-site decision framework):
   1. **Genuinely trim-unsafe public API** (reflection over arbitrary/consumer types) → annotate the
      public entry point with `[RequiresUnreferencedCode("…why…")]`. This is the *honest* declaration and
      propagates the warning to the host. Expected sites: the open-attribute `Dictionary<string,object?>`
@@ -46,12 +57,12 @@ is **expected and correct** here (attribute additions only); regenerate + review
      `[UnconditionalSuppressMessage("Trimming","ILxxxx", Justification="…")]` with a documented reason,
      used **sparingly**.
 
-- [ ] **C. Document the open-attribute serialization stance** in `decisions.md`: `Dictionary<string,object?>`
+- [x] **C. Document the open-attribute serialization stance** in `decisions.md`: `Dictionary<string,object?>`
   attribute values are reflection-serialized because the value types are arbitrary/consumer-defined
   (mirrors the Python shape); the entry points are `[RequiresUnreferencedCode]`-annotated as the
   documented trim boundary, and the host (which has the same pattern) accepts it. Record it.
 
-- [ ] **D. Regenerate + review the public-API snapshot.** The trim attributes will change
+- [x] **D. Regenerate + review the public-API snapshot.** The trim attributes will change
   `tests/Graphiti.Core.Tests/Api/Graphiti.Core.approved.txt`. Regenerate, and **review the diff**: it must
   contain *only* trim-attribute additions on public members — no type/member/signature additions or
   removals. If anything other than attributes changed, something behavioral leaked in — stop and fix.
