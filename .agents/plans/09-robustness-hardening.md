@@ -51,6 +51,16 @@ repeatedly added guards). This plan does **not** touch the parked publish line.
   responses, schema-validation failures past the two repair attempts, embedding dimension mismatch, and
   cross-encoder failure. Assert the documented behavior holds — no partial-graph corruption, correct error
   surfaced, cache only stores validated responses.
+  > ⚠ **IN PROGRESS — drafted, uncommitted, does NOT yet compile.** A starting draft lives in the working
+  > tree at `tests/Graphiti.Core.Tests/ProviderResilienceWorkflowTests.cs` (uncommitted, 234 lines:
+  > schema-validation-failure + embedding-dimension-failure cases with in-file fake clients
+  > `InvalidNodeExtractionLlmClient`/`ValidExtractionLlmClient`/`WrongDimensionBatchEmbedder`). It fails to
+  > build with **CS0121 at line ~107**: `InvalidNodeExtractionLlmClient : LlmClient` makes an ambiguous
+  > `base(...)` call between `LlmClient(LlmConfig?, ILlmResponseCache?)` and `LlmClient(LlmConfig?, bool,
+  > string)` — disambiguate the base ctor (e.g. cast the null, or pick the intended overload). Then finish
+  > the remaining failure-mode cases above, verify, and commit. **Run in-tree** (not a worktree) so this
+  > draft is visible; if you do start from a worktree the draft is recoverable by re-deriving it from this
+  > step.
 - [ ] **D. Fix what the pass surfaces.** Any real defect → minimal, parity-safe fix + regression test
   (verify against Python behavior where one exists; if C# intentionally differs, record it in
   `decisions.md` rather than "fixing" toward Python). Any intentional limit → document, don't silently

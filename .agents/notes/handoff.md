@@ -110,9 +110,14 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
   1–3 are complete, plans 05–08 are complete, and the whole 2026-06-19 G1–G6 agenda is done (parity,
   merge, observability, linux-x64 proof, live-provider canary, the G3 perf program, sustained upstream
   reminder, and the non-gated release-surface finalization). Per the 2026-06-27 paradigm shift, the
-  library is **not** release-bound, so release-versioning/publishing is parked. Plan 10 is complete.
-  **The current actionable plan is `.agents/plans/09-robustness-hardening.md`, starting with item A:
-  map the fragile real-LLM parsing/coercion boundary.**
+  library is **not** release-bound, so release-versioning/publishing is parked. Plan 10
+  (idiomatic + allocation modernization) is **complete** — all inventory items landed, hot-path changes
+  benchmarked. **The current actionable plan is `.agents/plans/09-robustness-hardening.md`: Step 0 (HNSW
+  gate, G5 reminder), A (risk map), and B (fuzz coverage) are done; the next slice is finishing
+  Step C — provider-resilience tests. A draft `tests/Graphiti.Core.Tests/ProviderResilienceWorkflowTests.cs`
+  exists in the working tree but is UNCOMMITTED and does NOT compile (CS0121 ambiguous `LlmClient` base
+  ctor ~line 107); fix it, finish the remaining failure-mode cases, then do Step D. Run in-tree so the
+  draft is visible.**
   Full restore/test/pack requires GitHub Packages credentials for source `github_ladybug`. Performance
   work is benchmark-first and no longer on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
