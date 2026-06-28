@@ -35,7 +35,7 @@ public sealed class HashEmbedder : EmbedderClient
                 vector[index] += 1;
             }
 
-            GraphitiHelpers.NormalizeL2InPlace(vector);
+            EmbeddingNormalization.NormalizeL2InPlace(vector);
             activity?.SetTag("graphiti.embedding.output_count", 1);
             GraphitiTelemetry.SetOk(activity);
             return Task.FromResult<IReadOnlyList<float>>(vector);

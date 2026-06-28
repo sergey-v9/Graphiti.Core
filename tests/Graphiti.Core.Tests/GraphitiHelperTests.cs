@@ -341,7 +341,7 @@ public class GraphitiHelperTests
     {
         var input = new[] { 3f, 4f };
 
-        GraphitiHelpers.NormalizeL2InPlace(input);
+        EmbeddingNormalization.NormalizeL2InPlace(input);
 
         Assert.Equal(0.6f, input[0], precision: 6);
         Assert.Equal(0.8f, input[1], precision: 6);
@@ -354,9 +354,9 @@ public class GraphitiHelperTests
         var nan = new[] { float.NaN, 1f };
         var infinity = new[] { float.PositiveInfinity, 1f };
 
-        GraphitiHelpers.NormalizeL2InPlace(zero);
-        GraphitiHelpers.NormalizeL2InPlace(nan);
-        GraphitiHelpers.NormalizeL2InPlace(infinity);
+        EmbeddingNormalization.NormalizeL2InPlace(zero);
+        EmbeddingNormalization.NormalizeL2InPlace(nan);
+        EmbeddingNormalization.NormalizeL2InPlace(infinity);
 
         Assert.Equal(new[] { 0f, 0f }, zero);
         Assert.All(nan, value => Assert.True(float.IsNaN(value)));
