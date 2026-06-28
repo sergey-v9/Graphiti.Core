@@ -125,14 +125,17 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
                 return;
             }
 
-            await using var connection = await OpenConnectionCoreAsync(cancellationToken).ConfigureAwait(false);
-            await using (var pragma = connection.CreateCommand())
+            var connection = await OpenConnectionCoreAsync(cancellationToken).ConfigureAwait(false);
+            await using var connectionScope = connection.ConfigureAwait(false);
+            var pragma = connection.CreateCommand();
+            await using (pragma.ConfigureAwait(false))
             {
                 pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;";
                 await pragma.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            await using var command = connection.CreateCommand();
+            var command = connection.CreateCommand();
+            await using var commandScope = command.ConfigureAwait(false);
             command.CommandText = "CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, value TEXT NOT NULL)";
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             Volatile.Write(ref _initialized, 1);
@@ -152,7 +155,8 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
 
     private async Task<string?> GetPayloadAsync(string key, CancellationToken cancellationToken)
     {
-        await using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connectionScope = connection.ConfigureAwait(false);
         return await GetPayloadAsync(key, connection, cancellationToken).ConfigureAwait(false);
     }
 
@@ -161,7 +165,8 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
         SqliteConnection connection,
         CancellationToken cancellationToken)
     {
-        await using var command = connection.CreateCommand();
+        var command = connection.CreateCommand();
+        await using var commandScope = command.ConfigureAwait(false);
         command.CommandText = "SELECT value FROM cache WHERE key = $key";
         command.Parameters.AddWithValue("$key", key);
         return await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
@@ -186,8 +191,10 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
     private async Task SetPayloadAsync(string key, string payload, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        await using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = connection.CreateCommand();
+        var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connectionScope = connection.ConfigureAwait(false);
+        var command = connection.CreateCommand();
+        await using var commandScope = command.ConfigureAwait(false);
         command.CommandText = UpsertSql;
         command.Parameters.AddWithValue("$key", key);
         command.Parameters.AddWithValue("$value", payload);
@@ -197,8 +204,10 @@ public sealed class SqliteLlmResponseCache : ILlmResponseCache, IDisposable
     private async Task RemoveAsync(string key, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        await using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = connection.CreateCommand();
+        var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connectionScope = connection.ConfigureAwait(false);
+        var command = connection.CreateCommand();
+        await using var commandScope = command.ConfigureAwait(false);
         command.CommandText = "DELETE FROM cache WHERE key = $key";
         command.Parameters.AddWithValue("$key", key);
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);

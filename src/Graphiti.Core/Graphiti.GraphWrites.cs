@@ -1,5 +1,3 @@
-using Graphiti.Core.Embedding;
-
 namespace Graphiti.Core;
 
 public sealed partial class Graphiti

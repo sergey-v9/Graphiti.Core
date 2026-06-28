@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Retry;
-using Polly.Timeout;
 
 namespace Graphiti.Core.Configuration;
 

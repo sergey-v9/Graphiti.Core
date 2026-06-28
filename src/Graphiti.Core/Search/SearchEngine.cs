@@ -252,7 +252,7 @@ internal static class SearchEngine
                 .ConfigureAwait(false);
             if (completed.IsFaulted)
             {
-                cancellationSource.Cancel();
+                await cancellationSource.CancelAsync().ConfigureAwait(false);
                 try
                 {
                     await AwaitAllSearchScopesAsync(
@@ -575,7 +575,7 @@ internal static class SearchEngine
         var completed = await Task.WhenAny(firstTask, secondTask).ConfigureAwait(false);
         if (completed.IsFaulted)
         {
-            cancellationSource.Cancel();
+            await cancellationSource.CancelAsync().ConfigureAwait(false);
             try
             {
                 await WhenAll(firstTask, secondTask).ConfigureAwait(false);

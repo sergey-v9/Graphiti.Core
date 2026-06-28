@@ -1,5 +1,3 @@
-using Graphiti.Core.Embedding;
-
 namespace Graphiti.Core.Namespaces;
 
 internal static class NamespaceDriverHelpers

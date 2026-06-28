@@ -1,5 +1,3 @@
-using Graphiti.Core.Internal;
-
 namespace Graphiti.Core.Embedding;
 
 /// <summary>

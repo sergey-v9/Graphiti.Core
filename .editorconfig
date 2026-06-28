@@ -1,0 +1,36 @@
+root = true
+
+[*.cs]
+
+# Build-rigor analyzers promoted to warnings (TreatWarningsAsErrors makes these errors).
+# IDE0005: remove unnecessary using directives.
+dotnet_diagnostic.IDE0005.severity = warning
+# CA1849: call the async overload when inside an async method (e.g. CancelAsync over Cancel).
+dotnet_diagnostic.CA1849.severity = warning
+# CA2007: do not await a Task without ConfigureAwait. Enforced in src/ only (see test/sample section).
+dotnet_diagnostic.CA2007.severity = warning
+
+# Public-API-design rules that fight Graphiti's deliberate Python-parity wire/result shape.
+# Silenced project-wide; they describe idiomatic-library guidance the port intentionally declines.
+dotnet_diagnostic.CA1062.severity = none
+dotnet_diagnostic.CA2227.severity = none
+dotnet_diagnostic.CA1002.severity = none
+dotnet_diagnostic.CA1032.severity = none
+dotnet_diagnostic.CA1056.severity = none
+dotnet_diagnostic.CA1819.severity = none
+dotnet_diagnostic.CA1724.severity = none
+dotnet_diagnostic.CA1024.severity = none
+
+# Known false positives that must not be "fixed" (fixing breaks correctness/parity).
+# CA2213: InMemoryGraphDriver disposes a driver it does not own; the analyzer cannot see the ownership boundary.
+dotnet_diagnostic.CA2213.severity = none
+# CA1308: NormalizeJsonSchemaType uses ToLowerInvariant for JSON-schema wire parity; ToUpperInvariant would break the wire shape.
+dotnet_diagnostic.CA1308.severity = none
+
+# These build-rigor rules target shippable library code in src/ only. In tests, benchmarks, and
+# samples synchronous Console/Cancel calls and bare usings are deliberate, and those projects do not
+# emit a documentation file (which IDE0005-on-build requires), so enforce none of them there.
+[{tests,benchmarks,samples}/**.cs]
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.CA1849.severity = none
+dotnet_diagnostic.IDE0005.severity = none

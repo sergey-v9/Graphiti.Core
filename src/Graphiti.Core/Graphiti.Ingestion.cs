@@ -53,7 +53,8 @@ public sealed partial class Graphiti
         try
         {
             var now = UtcNow();
-            await using var driverScope = UseGroupDriver(groupId, out groupId);
+            var driverScope = UseGroupDriver(groupId, out groupId);
+            await using var driverScopeAwaiter = driverScope.ConfigureAwait(false);
             GraphitiHelpers.ValidateEntityTypes(entityTypes);
             GraphitiHelpers.ValidateExcludedEntityTypes(excludedEntityTypes, entityTypes);
             activity?.SetTag("graphiti.group_id", groupId);
@@ -263,7 +264,8 @@ public sealed partial class Graphiti
         try
         {
             var now = UtcNow();
-            await using var driverScope = UseGroupDriver(groupId, out groupId);
+            var driverScope = UseGroupDriver(groupId, out groupId);
+            await using var driverScopeAwaiter = driverScope.ConfigureAwait(false);
             activity?.SetTag("graphiti.group_id", groupId);
             GraphitiLog.AddingEpisodeBulk(_logger, groupId, bulkEpisodes.Count);
             var episodes = new List<EpisodicNode>(bulkEpisodes.Count);
