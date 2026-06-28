@@ -83,13 +83,10 @@ Where Python provenance legitimately lives:
 - A deliberate difference from Python is a documented **DIVERGENT** decision in this file, referenced
   generically; the code comment states the C# behavior, the rationale lives in the decision.
 
-Feature parity ≠ naming parity. **The code was fully de-coupled on 2026-06-18** (commit `508abf3`):
-the ~6 `*Python*` production helpers and ~96 `*Python*` test methods were renamed to describe what
-they do/assert, and every `.py:line` citation and "Python"-citing comment was scrubbed — rename/reword
-only, behavior and golden expected-strings unchanged, suite green. The only remaining tokens are 3
-deliberate string literals in `UpstreamSyncProcedureTests` (asserting the `Check-PythonUpstreamDelta.ps1`
-upstream-tracking script). **Do not re-introduce** "Python" (or a `.py` file) into any identifier or
-comment.
+Feature parity ≠ naming parity. The code was fully de-coupled on 2026-06-18 (rename/reword only; behavior
+and golden strings unchanged). The only intentionally-remaining tokens are the string literals in
+`UpstreamSyncProcedureTests` asserting the `Check-PythonUpstreamDelta.ps1` tracking script. **Do not
+re-introduce** "Python" (or a `.py` file) into any identifier or comment.
 
 ## Prompt Parity Contract (added 2026-06-11)
 
@@ -271,10 +268,10 @@ no wire/prompt/cache/temporal behavior changed):
 
 ## Performance And Allocation Direction
 
-- **Status 2026-06-11: paused.** Allocation/performance rework is on moratorium until roadmap
-  Phases 1–3 (prompt parity, pipeline parity, real-provider validation) are complete; it resumes
-  benchmark-first in Phase 5. The guidance below applies to writing new code and to that future
-  phase — it is not a license to refactor existing code now.
+- **Status: active, benchmark-first.** The early moratorium is lifted and the modernization +
+  allocation program (plans 10–11) is complete. Further performance work is evidence-driven only:
+  hot-path changes need a BenchmarkDotNet before/after and a recorded baseline; readability/idiom
+  changes stay behavior- and wire-preserving and warning-clean. The guidance below is the standing bar.
 - Treat avoidable allocations as design feedback in shared or repeated paths. This includes hidden
   allocations from LINQ chains, iterator/async state machines, closure captures, interface
   enumeration over value types, regex/split-array helpers, exception-driven control flow, and
