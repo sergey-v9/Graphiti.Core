@@ -523,6 +523,28 @@ The other three: the FalkorDB default-`group_id` fix (#1549) was adopted (one-ch
 sole adapter) with its empty-response-is-retryable bit already matched by C#; the FalkorDB nul-byte
 strip (#1531) is N/A (no FalkorDB driver).
 
+## Adopting upstream features that arrive on the FalkorDB driver (2026-06-28)
+
+Upstream has deprecated Kuzu and made FalkorDB its primary backend, so new `graphiti_core` *capabilities*
+will increasingly land FalkorDB-flavored, sometimes with **no Kuzu path to mirror**. Standing stance:
+
+- **We want the features — by meaning, not by implementation.** When upstream adds a real library
+  capability (a behavior a consumer observes), we realize the *same semantic behavior* on the LadybugDB
+  driver (and the InMemory reference), regardless of which provider upstream used to deliver it and
+  regardless of whether Python still has a Kuzu path. Equivalence is judged by **observable behavior /
+  wire shape, not code shape**; the LadybugDB realization may differ — sometimes more exotically — because
+  the engines differ. Record it in `parity.md`, and here if the mechanism diverges.
+- **We do NOT port engine-protocol quirks.** Provider plumbing that exists only because of one engine's
+  wire protocol (RediSearch token escaping, Redis NUL-byte stripping, FalkorDB-specific query syntax)
+  carries no feature meaning for LadybugDB and is correctly skipped (record N/A). Narrow exception: a fix
+  for a bug that *also provably* affects LadybugDB.
+- **The classification test is feature vs. mechanism**, applied per change during the upstream sync
+  (`upstream-sync-procedure.md` step 4): a *capability* the library now offers → adopt the meaning; a
+  *workaround for one engine's protocol* → skip. As Kuzu fades upstream, "does Python apply it to Kuzu?"
+  stops being a useful gate for features — use "is this a capability we want?". The 2026-06-14
+  dispositions above are consistent: the `group_id` *validity* fix was a real bug we adopted; the
+  RediSearch escaping and NUL-strip were engine quirks we skipped.
+
 ## Provider Status
 
 - LadybugDB is the primary graph provider target for the C# port. It is the package/backend we will
