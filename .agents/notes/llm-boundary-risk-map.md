@@ -49,6 +49,9 @@ change behavior.
   and no-fabrication edge behavior.
 - `MicrosoftExtensionsAICrossEncoderClientTests` covers the reranker response schema and invalid
   structured responses.
+- `ProviderResilienceWorkflowTests` covers public ingestion/search behavior under transient chat retry,
+  rejected rate-limit permits, empty provider responses, schema failures after repair retries, partial
+  bulk failure, embedding dimension mismatch, and cross-encoder failure.
 
 ## Fuzz / Property-Test Targets For Plan 09 B
 
@@ -72,6 +75,10 @@ change behavior.
    or out-of-range confidence, and provider failures under optional retry.
 
 ## Provider-Resilience Targets For Plan 09 C
+
+Status 2026-06-28: complete. The workflow tests above cover these targets, and the pass surfaced one
+fix now recorded in `decisions.md`: missing entity embeddings are prevalidated before driver bulk save
+so malformed vectors cannot partially persist episode/entity-edge graph content.
 
 - Confirm transient chat failures retry only through configured Polly pipelines and do not store cache
   entries until a validated response exists.

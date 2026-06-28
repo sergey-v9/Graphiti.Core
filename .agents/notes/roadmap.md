@@ -168,8 +168,9 @@ or have agents build-only and run the consolidated test centrally.
 > the **forward agenda is now the code itself: idiomatic modern C# (C# 14 / .NET 10, toward .NET 11) +
 > allocation/GC discipline**, parity-safe. The G1–G6 list below is kept as completed history, and
 > `.agents/plans/10-idiomatic-allocation-modernization.md` is now **complete** (2026-06-27). Plan 09
-> Step 0 is complete too (HNSW settled; G5 reminder wrapper committed), so the robustness risk map is
-> the next outstanding non-release workstream. Behavioral/feature parity with Python stays the functional floor and is
+> is **complete** too (2026-06-28): robustness risk mapping, fuzz coverage, provider-resilience
+> workflow tests, and the surfaced embedding prevalidation fix all landed. Behavioral/feature parity
+> with Python stays the functional floor and is
 > essentially complete; we keep tracking upstream cheaply via `upstream-sync-procedure.md`.
 
 Phases 1–3 (parity) are done and the deterministic suite is green; the port is faithful and mature.

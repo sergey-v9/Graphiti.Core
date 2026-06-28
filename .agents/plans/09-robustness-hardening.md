@@ -9,9 +9,10 @@ user-gated.
 
 ## Status
 
-**ACTIVE (2026-06-27) — plan 10 is complete.** Step 0's housekeeping residuals are now complete:
-the HNSW gate is settled and G5 has a committed non-blocking reminder wrapper. The next slice is the
-robustness risk map in item A.
+**COMPLETE (2026-06-28).** Step 0's housekeeping residuals are complete, the boundary map and fuzz
+coverage landed, provider-resilience workflow tests now cover the listed failure modes, and Step D's
+only surfaced defect was fixed: Graphiti prevalidates missing entity embeddings before driver bulk
+save so a provider embedding failure cannot leave a partially persisted episode/entity-edge graph.
 
 The substance still stands: the highest remaining *real-world* risk is the layer the deterministic
 golden tests (which use fake LLMs) cannot fully stress — parsing and coercing **actual** LLM output into
@@ -46,25 +47,19 @@ repeatedly added guards). This plan does **not** touch the parked publish line.
   deep nesting. Assert the library degrades gracefully — re-prompt path, documented fallback, or a clean
   typed exception — and **never fabricates graph content** or throws unhandled. Pin every surprising input
   as a regression test.
-- [ ] **C. Provider-resilience tests.** Exercise ingestion/search under provider failure modes via the
+- [x] **C. Provider-resilience tests.** Exercise ingestion/search under provider failure modes via the
   fake clients: transient errors (Polly retry), 429 / rate-limit, partial batch failures, empty
   responses, schema-validation failures past the two repair attempts, embedding dimension mismatch, and
   cross-encoder failure. Assert the documented behavior holds — no partial-graph corruption, correct error
   surfaced, cache only stores validated responses.
-  > ⚠ **IN PROGRESS — drafted, uncommitted, does NOT yet compile.** A starting draft lives in the working
-  > tree at `tests/Graphiti.Core.Tests/ProviderResilienceWorkflowTests.cs` (uncommitted, 234 lines:
-  > schema-validation-failure + embedding-dimension-failure cases with in-file fake clients
-  > `InvalidNodeExtractionLlmClient`/`ValidExtractionLlmClient`/`WrongDimensionBatchEmbedder`). It fails to
-  > build with **CS0121 at line ~107**: `InvalidNodeExtractionLlmClient : LlmClient` makes an ambiguous
-  > `base(...)` call between `LlmClient(LlmConfig?, ILlmResponseCache?)` and `LlmClient(LlmConfig?, bool,
-  > string)` — disambiguate the base ctor (e.g. cast the null, or pick the intended overload). Then finish
-  > the remaining failure-mode cases above, verify, and commit. **Run in-tree** (not a worktree) so this
-  > draft is visible; if you do start from a worktree the draft is recoverable by re-deriving it from this
-  > step.
-- [ ] **D. Fix what the pass surfaces.** Any real defect → minimal, parity-safe fix + regression test
+- [x] **D. Fix what the pass surfaces.** Any real defect → minimal, parity-safe fix + regression test
   (verify against Python behavior where one exists; if C# intentionally differs, record it in
   `decisions.md` rather than "fixing" toward Python). Any intentional limit → document, don't silently
   leave it.
+  > Step C surfaced one real workflow defect: missing entity-edge embeddings could be validated inside
+  > driver bulk save after the episode was already persisted with the new edge UUID. `Graphiti` now
+  > materializes and validates missing entity node/edge embeddings before invoking driver bulk save; the
+  > embedding-dimension workflow test pins the no-write failure behavior.
 
 ## Explicit non-goals (user-gated / out of scope)
 

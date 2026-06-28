@@ -253,7 +253,9 @@ no wire/prompt/cache/temporal behavior changed):
 - Provider-backed C# embedders also require exact provider output counts and exact configured vector
   dimensions before persistence/ranking. Python provider clients generally slice or forward returned
   vectors, but the C# port treats malformed provider output as an adapter boundary error so downstream
-  graph state stays dimension-consistent.
+  graph state stays dimension-consistent. Graphiti-owned ingestion writes prevalidate and assign any
+  missing entity node/edge embeddings before calling the graph driver's bulk-save path, so malformed
+  provider vectors fail before episode/entity-edge graph content can be partially persisted.
 - Use an internal BM25 scorer for in-memory/materialized fallback full-text search. Do not add
   Lucene.NET as a default core dependency for this path.
 

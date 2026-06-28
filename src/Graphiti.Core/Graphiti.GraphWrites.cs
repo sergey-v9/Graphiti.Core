@@ -1,3 +1,5 @@
+using Graphiti.Core.Embedding;
+
 namespace Graphiti.Core;
 
 public sealed partial class Graphiti
@@ -31,6 +33,10 @@ public sealed partial class Graphiti
 
         try
         {
+            await EnsureEntityEmbeddingsBeforeWriteAsync(
+                entityNodeList,
+                entityEdgeList,
+                cancellationToken).ConfigureAwait(false);
             await driver.SaveBulkAsync(
                 episodicNodeList,
                 episodicEdgeList,
@@ -44,6 +50,89 @@ public sealed partial class Graphiti
         {
             GraphitiTelemetry.RecordException(activity, exception);
             throw;
+        }
+    }
+
+    private async Task EnsureEntityEmbeddingsBeforeWriteAsync(
+        IReadOnlyList<EntityNode> entityNodes,
+        IReadOnlyList<EntityEdge> entityEdges,
+        CancellationToken cancellationToken)
+    {
+        await EnsureEntityNodeEmbeddingsBeforeWriteAsync(entityNodes, cancellationToken).ConfigureAwait(false);
+        await EnsureEntityEdgeEmbeddingsBeforeWriteAsync(entityEdges, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task EnsureEntityNodeEmbeddingsBeforeWriteAsync(
+        IReadOnlyList<EntityNode> entityNodes,
+        CancellationToken cancellationToken)
+    {
+        var nodesMissingEmbeddings = new List<EntityNode>(entityNodes.Count);
+        var inputs = new List<string>(entityNodes.Count);
+        for (var i = 0; i < entityNodes.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var node = entityNodes[i];
+            if (node.NameEmbedding is not null)
+            {
+                continue;
+            }
+
+            nodesMissingEmbeddings.Add(node);
+            inputs.Add((node.Name ?? string.Empty).Replace('\n', ' '));
+        }
+
+        if (nodesMissingEmbeddings.Count == 0)
+        {
+            return;
+        }
+
+        var embeddings = EmbeddingVectorValidation.MaterializeBatch(
+            await Embedder.CreateBatchAsync(inputs, cancellationToken).ConfigureAwait(false),
+            nodesMissingEmbeddings.Count,
+            Embedder.EmbeddingDimension,
+            "entity node name embeddings",
+            index => $"entity node '{nodesMissingEmbeddings[index].Name}' at index {index}");
+        for (var i = 0; i < nodesMissingEmbeddings.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            nodesMissingEmbeddings[i].NameEmbedding = embeddings[i];
+        }
+    }
+
+    private async Task EnsureEntityEdgeEmbeddingsBeforeWriteAsync(
+        IReadOnlyList<EntityEdge> entityEdges,
+        CancellationToken cancellationToken)
+    {
+        var edgesMissingEmbeddings = new List<EntityEdge>(entityEdges.Count);
+        var inputs = new List<string>(entityEdges.Count);
+        for (var i = 0; i < entityEdges.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var edge = entityEdges[i];
+            if (edge.FactEmbedding is not null)
+            {
+                continue;
+            }
+
+            edgesMissingEmbeddings.Add(edge);
+            inputs.Add((edge.Fact ?? string.Empty).Replace('\n', ' '));
+        }
+
+        if (edgesMissingEmbeddings.Count == 0)
+        {
+            return;
+        }
+
+        var embeddings = EmbeddingVectorValidation.MaterializeBatch(
+            await Embedder.CreateBatchAsync(inputs, cancellationToken).ConfigureAwait(false),
+            edgesMissingEmbeddings.Count,
+            Embedder.EmbeddingDimension,
+            "entity edge fact embeddings",
+            index => $"entity edge '{edgesMissingEmbeddings[index].Uuid}' at index {index}");
+        for (var i = 0; i < edgesMissingEmbeddings.Count; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            edgesMissingEmbeddings[i].FactEmbedding = embeddings[i];
         }
     }
 

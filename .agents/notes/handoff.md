@@ -112,12 +112,9 @@ Reassessed 2026-06-11 against Python baseline `0ed90b7` (see `parity.md` for the
   reminder, and the non-gated release-surface finalization). Per the 2026-06-27 paradigm shift, the
   library is **not** release-bound, so release-versioning/publishing is parked. Plan 10
   (idiomatic + allocation modernization) is **complete** — all inventory items landed, hot-path changes
-  benchmarked. **The current actionable plan is `.agents/plans/09-robustness-hardening.md`: Step 0 (HNSW
-  gate, G5 reminder), A (risk map), and B (fuzz coverage) are done; the next slice is finishing
-  Step C — provider-resilience tests. A draft `tests/Graphiti.Core.Tests/ProviderResilienceWorkflowTests.cs`
-  exists in the working tree but is UNCOMMITTED and does NOT compile (CS0121 ambiguous `LlmClient` base
-  ctor ~line 107); fix it, finish the remaining failure-mode cases, then do Step D. Run in-tree so the
-  draft is visible.**
+  benchmarked. **Plan 09 is complete (2026-06-28): provider-resilience workflow tests cover the listed
+  fake-provider failure modes, and Step D fixed the only surfaced defect by prevalidating missing entity
+  embeddings before driver bulk save.**
   Full restore/test/pack requires GitHub Packages credentials for source `github_ladybug`. Performance
   work is benchmark-first and no longer on moratorium (`roadmap.md`).
 - Decomposition context: `Graphiti` is the public orchestrator; behavior lives in partials plus
@@ -412,8 +409,14 @@ summaries, and the optional cross-encoder reranker.
 Plan 09 B is complete (2026-06-27): `LlmBoundaryFuzzTests` adds deterministic fuzz-style coverage for
 malformed provider payload retry/rejection, runtime attribute schemas, extraction row skipping without
 fabrication, invalid entity type IDs, index-array coercion, lenient typed materialization for custom
-`ILlmClient` implementations, and the stricter cross-encoder JSON path. The next unchecked plan item is
-C: provider-resilience tests.
+`ILlmClient` implementations, and the stricter cross-encoder JSON path.
+
+Plan 09 C/D are complete (2026-06-28): `ProviderResilienceWorkflowTests` covers transient chat retry
+through Polly, rejected rate-limit permits, empty provider responses, schema-validation failure past the
+two repair attempts, partial bulk extraction failure, embedding dimension mismatch, and cross-encoder
+failure. Step D found and fixed one real defect: Graphiti now materializes and validates missing entity
+node/edge embeddings before invoking driver bulk save, preventing malformed provider embeddings from
+leaving an episode persisted with dangling entity-edge UUIDs.
 
 ## LadybugDB / Kuzu
 
@@ -454,8 +457,8 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added. This section holds the single authoritative live count and the standing verify commands — do
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
-**Current verifier checkpoint (2026-06-27):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1064` passed, `4` skipped, `1068` total. The verifier
+**Current verifier checkpoint (2026-06-28):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
+Packages credentials for the Ladybug feed — `1071` passed, `4` skipped, `1075` total. The verifier
 covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
 shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
 LadybugDB through the packed package. The skips are the env-gated
