@@ -1,76 +1,13 @@
 # Plan 09 — Robustness & resilience hardening of the LLM / parse boundary
 
-Created 2026-06-27. This opens a **new in-scope stream** now that the entire 2026-06-19 forward agenda
-is complete: parity (Phases 1–3), plan 06 (Ladybug→Core merge), G4 (observability/DX), G1/plan 07
-(linux-x64 proof), G2 (live-provider + eval canary), the G3 perf/allocation program (10 measured
-slices; all named hot paths profiled), and plan 08/G6 non-gated release-surface finalization. The
-library is release-ready (`1032/4/1036` green; pack + fresh-consumer dry run green). Publishing stays
-user-gated.
+**DONE 2026-06-28.** Step 0: the HNSW gate was closed (exact cosine stays the default at current scale),
+and G5 landed as `eng/Invoke-UpstreamDeltaReminder.ps1` (a committed, non-blocking upstream-delta
+reminder). Then: an LLM-boundary risk map (`.agents/notes/llm-boundary-risk-map.md`), `LlmBoundaryFuzzTests`
+(malformed-LLM-output fuzz coverage of the coercion layer), and `ProviderResilienceWorkflowTests`
+(transient/429/empty/schema-fail-past-two-repairs/partial-batch/embedding-dimension/cross-encoder failure
+modes). Step D fixed one real defect: `Graphiti` now materializes and validates missing entity node/edge
+embeddings **before** driver bulk save, so a malformed provider embedding can't leave an episode
+persisted with dangling entity-edge UUIDs.
 
-## Status
-
-**COMPLETE (2026-06-28).** Step 0's housekeeping residuals are complete, the boundary map and fuzz
-coverage landed, provider-resilience workflow tests now cover the listed failure modes, and Step D's
-only surfaced defect was fixed: Graphiti prevalidates missing entity embeddings before driver bulk
-save so a provider embedding failure cannot leave a partially persisted episode/entity-edge graph.
-
-The substance still stands: the highest remaining *real-world* risk is the layer the deterministic
-golden tests (which use fake LLMs) cannot fully stress — parsing and coercing **actual** LLM output into
-typed graph results, and surviving **provider failure modes** (exactly where upstream Python has
-repeatedly added guards). This plan does **not** touch the parked publish line.
-
-## Step 0 — close the two roadmap residuals first (housekeeping)
-
-- [x] **0a. Settle the HNSW gate with the new baseline data.** `2026-06-27-inmemory-vector-win-x64.md`
-  now measures the InMemory full-scan vector search. Read it and **decide**: if full-scan cosine is
-  comfortably within budget at the target graph size, formally close HNSW as *not needed — exact cosine
-  stays the default* in `decisions.md`/`roadmap.md` (record the numbers). If the baseline shows a cliff
-  at realistic N, scope an opt-in HNSW tier as its own plan (do **not** implement it by default). Either
-  way, convert the open "G-future HNSW gate" into a decided item, not a standing maybe.
-- [x] **0b. Land G5 as a committed artifact, not a faked CI lane.** The in-session scheduler tool isn't
-  available and the notes constrain CI expansion, so don't invent a workflow. Instead commit a small
-  `eng/` wrapper around `Check-PythonUpstreamDelta` plus a short doc note in `upstream-sync-procedure.md`
-  describing how Sergey wires the recurring, **non-blocking** reminder (OS scheduled task / cron / manual
-  dispatch). Goal: the reminder is one setup step away, with zero code work pending.
-
-## Robustness stream (one slice each — implement → verify → commit → check off)
-
-- [x] **A. Map the fragile boundary.** Inventory every site where real LLM output is parsed/coerced into
-  typed results: episode-graph extraction parsing partials, structured-response coercion, JSON extraction
-  / markdown-fence handling, enum + entity/edge type resolution, attribute extraction, and the
-  dedup/edge/invalidation response shapes. Produce a short risk map (trusted vs adversarial inputs, and
-  the current guard at each site). Record it in a note; no code change required for this slice.
-- [x] **B. Property-based / fuzz coverage of the parsers.** Add generator-driven tests (FsCheck or a
-  hand-rolled generator — no new default dependency in `src/`) that throw malformed-but-plausible LLM
-  responses at the coercion layer: truncated JSON, prose wrapped around JSON, wrong-cased enums,
-  missing/extra fields, null-vs-empty, duplicate keys, wrong types, oversized strings, unicode edge cases,
-  deep nesting. Assert the library degrades gracefully — re-prompt path, documented fallback, or a clean
-  typed exception — and **never fabricates graph content** or throws unhandled. Pin every surprising input
-  as a regression test.
-- [x] **C. Provider-resilience tests.** Exercise ingestion/search under provider failure modes via the
-  fake clients: transient errors (Polly retry), 429 / rate-limit, partial batch failures, empty
-  responses, schema-validation failures past the two repair attempts, embedding dimension mismatch, and
-  cross-encoder failure. Assert the documented behavior holds — no partial-graph corruption, correct error
-  surfaced, cache only stores validated responses.
-- [x] **D. Fix what the pass surfaces.** Any real defect → minimal, parity-safe fix + regression test
-  (verify against Python behavior where one exists; if C# intentionally differs, record it in
-  `decisions.md` rather than "fixing" toward Python). Any intentional limit → document, don't silently
-  leave it.
-  > Step C surfaced one real workflow defect: missing entity-edge embeddings could be validated inside
-  > driver bulk save after the episode was already persisted with the new edge UUID. `Graphiti` now
-  > materializes and validates missing entity node/edge embeddings before invoking driver bulk save; the
-  > embedding-dimension workflow test pins the no-write failure behavior.
-
-## Explicit non-goals (user-gated / out of scope)
-
-- No `<Version>` stamp, no tag, no publish — those wait for Sergey (`roadmap.md` G6).
-- No expansion of the **required** CI lanes; the linux-x64 and live-provider lanes stay additive/gated.
-- No new default runtime dependency in `src/` (test-only fuzzing deps are fine).
-- Keep exact-cosine the default vector path unless **0a**'s data explicitly justifies otherwise.
-
-## Verification
-
-`.\eng\Verify-GraphitiCore.ps1` green on win-x64 after each slice. All new tests are **deterministic**
-and run in the standard suite (crafted inputs / fakes — no live provider key needed). Slices that change
-structured-schema or coercion behavior must regenerate the API snapshot / golden schema in the same
-commit and reconcile `parity.md` if parity state moves.
+Durable record: the HNSW decision in `decisions.md`, `llm-boundary-risk-map.md`, git history.
+(Stub per `doc-hygiene.md`, 2026-06-28.)

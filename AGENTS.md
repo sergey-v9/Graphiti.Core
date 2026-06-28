@@ -17,6 +17,12 @@ reading the relevant note and update it in the same change when a standing fact 
 LadybugDB/Kuzu has its own focused handoff in `.agents/notes/kuzu-driver-port.md`. For C# submodule
 commit rules, read `.agents/notes/commit-policy.md`.
 
+These notes are loaded into context every session, so keep them **lean**: summarize and prune, don't
+just append. Replace stale guidance in place; when a stream/plan completes, collapse its per-slice
+detail to a headline (git history holds the detail). Follow `.agents/notes/doc-hygiene.md` — the file
+roles, soft size budgets, and the compaction procedure live there; run its hygiene checkpoint at the
+start of each new stream.
+
 **Current priority - how to pick work.** Concrete work orders live in `.agents/plans/`; the
 roadmap orders them. Pick the lowest-numbered plan with unchecked actionable items, do exactly one
 item as a slice (implement → verify → commit → check it off and update `parity.md` when parity state

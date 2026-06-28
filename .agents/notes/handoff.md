@@ -329,3 +329,6 @@ allocation-sensitive coverage and should not be casually rewritten without targe
 - If the newest user instruction conflicts with the notes, follow the user and update the notes so
   future agents do not inherit stale direction.
 - Prefer replacing stale guidance over preserving contradictory history.
+- Keep the notes lean: summarize and prune rather than only appending. On stream/plan completion,
+  collapse per-slice detail to a headline and stub the finished plan; run the hygiene checkpoint at the
+  start of a new stream. The roles, soft budgets, and compaction steps are in `doc-hygiene.md`.
