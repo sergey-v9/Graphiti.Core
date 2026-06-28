@@ -1,6 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
-
 namespace Graphiti.Core.Drivers;
 
 /// <summary>
@@ -129,7 +126,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            var clone = CloneNode(node);
+            var clone = InMemorySnapshotCloner.CloneNode(node);
             var key = GetNodeKey(clone);
             if (_nodes.TryGetValue(key, out var existing))
             {
@@ -149,7 +146,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         cancellationToken.ThrowIfCancellationRequested();
         lock (_gate)
         {
-            var clone = CloneEdge(edge);
+            var clone = InMemorySnapshotCloner.CloneEdge(edge);
             if (!EdgeEndpointsExist(clone))
             {
                 return Task.CompletedTask;
@@ -603,7 +600,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         {
             if (TryGetNode<TNode>(uuid, out var typed))
             {
-                return Task.FromResult(ProjectNodeEmbedding((TNode)CloneNode(typed), withEmbeddings: false));
+                return Task.FromResult(ProjectNodeEmbedding((TNode)InMemorySnapshotCloner.CloneNode(typed), withEmbeddings: false));
             }
         }
 
@@ -632,7 +629,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                 if (TryGetNode<TNode>(uuid, out var typed)
                     && (groupId is null || string.Equals(typed.GroupId, groupId, StringComparison.Ordinal)))
                 {
-                    nodes.Add(ProjectNodeEmbedding((TNode)CloneNode(typed), withEmbeddings: false));
+                    nodes.Add(ProjectNodeEmbedding((TNode)InMemorySnapshotCloner.CloneNode(typed), withEmbeddings: false));
                 }
             }
 
@@ -668,7 +665,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         {
             if (TryGetEdge<T>(uuid, out var typed))
             {
-                return Task.FromResult(ProjectEdgeEmbedding((T)CloneEdge(typed), withEmbeddings: false));
+                return Task.FromResult(ProjectEdgeEmbedding((T)InMemorySnapshotCloner.CloneEdge(typed), withEmbeddings: false));
             }
         }
 
@@ -693,7 +690,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
             {
                 if (TryGetEdge<T>(uuid, out var typed))
                 {
-                    edges.Add(ProjectEdgeEmbedding((T)CloneEdge(typed), withEmbeddings: false));
+                    edges.Add(ProjectEdgeEmbedding((T)InMemorySnapshotCloner.CloneEdge(typed), withEmbeddings: false));
                 }
             }
 
@@ -735,7 +732,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                 cancellationToken.ThrowIfCancellationRequested();
                 if (TryGetNode<EntityNode>(uuid, out var node))
                 {
-                    embeddings[uuid] = CopyNullableList(node.NameEmbedding);
+                    embeddings[uuid] = InMemorySnapshotCloner.CopyNullableList(node.NameEmbedding);
                 }
             }
         }
@@ -757,7 +754,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                 cancellationToken.ThrowIfCancellationRequested();
                 if (TryGetEdge<EntityEdge>(uuid, out var edge))
                 {
-                    embeddings[uuid] = CopyNullableList(edge.FactEmbedding);
+                    embeddings[uuid] = InMemorySnapshotCloner.CopyNullableList(edge.FactEmbedding);
                 }
             }
         }
@@ -782,7 +779,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
             {
                 if (TryGetEdge<EntityEdge>(uuid, out var entityEdge))
                 {
-                    edges.Add((EntityEdge)CloneEdge(entityEdge));
+                    edges.Add((EntityEdge)InMemorySnapshotCloner.CloneEdge(entityEdge));
                 }
             }
 
@@ -804,7 +801,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
             {
                 if (TryGetEdge<EntityEdge>(uuid, out var entityEdge))
                 {
-                    edges.Add((EntityEdge)CloneEdge(entityEdge));
+                    edges.Add((EntityEdge)InMemorySnapshotCloner.CloneEdge(entityEdge));
                 }
             }
 
@@ -834,7 +831,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                     continue;
                 }
 
-                episodes.Add((EpisodicNode)CloneNode(episode));
+                episodes.Add((EpisodicNode)InMemorySnapshotCloner.CloneNode(episode));
             }
 
             return Task.FromResult<IReadOnlyList<EpisodicNode>>(episodes);
@@ -912,7 +909,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
             var results = new List<EpisodicNode>(take);
             for (var i = take - 1; i >= 0; i--)
             {
-                results.Add((EpisodicNode)CloneNode(episodes[i].Episode));
+                results.Add((EpisodicNode)InMemorySnapshotCloner.CloneNode(episodes[i].Episode));
             }
 
             return Task.FromResult<IReadOnlyList<EpisodicNode>>(results);
@@ -953,7 +950,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                         continue;
                     }
 
-                    nodes.Add((EntityNode)CloneNode(entityNode));
+                    nodes.Add((EntityNode)InMemorySnapshotCloner.CloneNode(entityNode));
                 }
             }
 
@@ -995,7 +992,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                         continue;
                     }
 
-                    communities.Add((CommunityNode)CloneNode(communityNode));
+                    communities.Add((CommunityNode)InMemorySnapshotCloner.CloneNode(communityNode));
                 }
             }
 
@@ -1010,7 +1007,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         lock (_gate)
         {
             var saga = FindStoredSagaByName(groupId, name);
-            return Task.FromResult(saga is null ? null : (SagaNode)CloneNode(saga));
+            return Task.FromResult(saga is null ? null : (SagaNode)InMemorySnapshotCloner.CloneNode(saga));
         }
     }
 
@@ -1448,7 +1445,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
             var nodes = new List<Node>(_nodes.Count);
             foreach (var node in _nodes.Values)
             {
-                nodes.Add(CloneNode(node));
+                nodes.Add(InMemorySnapshotCloner.CloneNode(node));
             }
 
             return nodes;
@@ -1462,7 +1459,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
             var edges = new List<Edge>(_edges.Count);
             foreach (var edge in _edges.Values)
             {
-                edges.Add(CloneEdge(edge));
+                edges.Add(InMemorySnapshotCloner.CloneEdge(edge));
             }
 
             return edges;
@@ -1648,7 +1645,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         var results = new List<SearchHit<TNode>>(ranked.Count);
         for (var i = 0; i < ranked.Count; i++)
         {
-            results.Add(new SearchHit<TNode>((TNode)CloneNode(ranked[i].Item), ranked[i].Score));
+            results.Add(new SearchHit<TNode>((TNode)InMemorySnapshotCloner.CloneNode(ranked[i].Item), ranked[i].Score));
         }
 
         return results;
@@ -1661,7 +1658,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         var results = new List<SearchHit<TEdge>>(ranked.Count);
         for (var i = 0; i < ranked.Count; i++)
         {
-            results.Add(new SearchHit<TEdge>((TEdge)CloneEdge(ranked[i].Item), ranked[i].Score));
+            results.Add(new SearchHit<TEdge>((TEdge)InMemorySnapshotCloner.CloneEdge(ranked[i].Item), ranked[i].Score));
         }
 
         return results;
@@ -1918,7 +1915,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                 continue;
             }
 
-            nodes.Add(ProjectNodeEmbedding((TNode)CloneNode(candidate), withEmbeddings));
+            nodes.Add(ProjectNodeEmbedding((TNode)InMemorySnapshotCloner.CloneNode(candidate), withEmbeddings));
             if (limit is not null && nodes.Count == limit.Value)
             {
                 break;
@@ -1949,7 +1946,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                 continue;
             }
 
-            edges.Add(ProjectEdgeEmbedding((TEdge)CloneEdge(candidate), withEmbeddings));
+            edges.Add(ProjectEdgeEmbedding((TEdge)InMemorySnapshotCloner.CloneEdge(candidate), withEmbeddings));
             if (limit is not null && edges.Count == limit.Value)
             {
                 break;
@@ -2314,7 +2311,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                 continue;
             }
 
-            results.Add(new SearchHit<EntityNode>((EntityNode)CloneNode(node), 1f / step.Depth));
+            results.Add(new SearchHit<EntityNode>((EntityNode)InMemorySnapshotCloner.CloneNode(node), 1f / step.Depth));
             if (results.Count >= limit)
             {
                 break;
@@ -2347,7 +2344,7 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
                 continue;
             }
 
-            results.Add(new SearchHit<EntityEdge>((EntityEdge)CloneEdge(edge), 1f / step.Depth));
+            results.Add(new SearchHit<EntityEdge>((EntityEdge)InMemorySnapshotCloner.CloneEdge(edge), 1f / step.Depth));
             if (results.Count >= limit)
             {
                 break;
@@ -2565,59 +2562,6 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         }
     }
 
-    private static Node CloneNode(Node node) =>
-        node switch
-        {
-            EntityNode entity => new EntityNode
-            {
-                Uuid = entity.Uuid,
-                Name = entity.Name,
-                GroupId = entity.GroupId,
-                Labels = CopyList(entity.Labels),
-                CreatedAt = entity.CreatedAt,
-                NameEmbedding = CopyNullableList(entity.NameEmbedding),
-                Summary = entity.Summary,
-                Attributes = CloneDictionary(entity.Attributes)
-            },
-            EpisodicNode episode => new EpisodicNode
-            {
-                Uuid = episode.Uuid,
-                Name = episode.Name,
-                GroupId = episode.GroupId,
-                Labels = CopyList(episode.Labels),
-                CreatedAt = episode.CreatedAt,
-                Source = episode.Source,
-                SourceDescription = episode.SourceDescription,
-                Content = episode.Content,
-                ValidAt = episode.ValidAt,
-                EntityEdges = CopyList(episode.EntityEdges)
-            },
-            CommunityNode community => new CommunityNode
-            {
-                Uuid = community.Uuid,
-                Name = community.Name,
-                GroupId = community.GroupId,
-                Labels = CopyList(community.Labels),
-                CreatedAt = community.CreatedAt,
-                NameEmbedding = CopyNullableList(community.NameEmbedding),
-                Summary = community.Summary
-            },
-            SagaNode saga => new SagaNode
-            {
-                Uuid = saga.Uuid,
-                Name = saga.Name,
-                GroupId = saga.GroupId,
-                Labels = CopyList(saga.Labels),
-                CreatedAt = saga.CreatedAt,
-                Summary = saga.Summary,
-                FirstEpisodeUuid = saga.FirstEpisodeUuid,
-                LastEpisodeUuid = saga.LastEpisodeUuid,
-                LastSummarizedAt = saga.LastSummarizedAt,
-                LastSummarizedEpisodeValidAt = saga.LastSummarizedEpisodeValidAt
-            },
-            _ => throw new ArgumentOutOfRangeException(nameof(node), node.GetType().Name)
-        };
-
     private static TNode ProjectNodeEmbedding<TNode>(TNode node, bool withEmbeddings)
         where TNode : Node
     {
@@ -2634,33 +2578,6 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         return node;
     }
 
-    private static Edge CloneEdge(Edge edge) =>
-        edge switch
-        {
-            EntityEdge entity => new EntityEdge
-            {
-                Uuid = entity.Uuid,
-                GroupId = entity.GroupId,
-                SourceNodeUuid = entity.SourceNodeUuid,
-                TargetNodeUuid = entity.TargetNodeUuid,
-                CreatedAt = entity.CreatedAt,
-                Name = entity.Name,
-                Fact = entity.Fact,
-                FactEmbedding = CopyNullableList(entity.FactEmbedding),
-                Episodes = CopyList(entity.Episodes),
-                ExpiredAt = entity.ExpiredAt,
-                ValidAt = entity.ValidAt,
-                InvalidAt = entity.InvalidAt,
-                ReferenceTime = entity.ReferenceTime,
-                Attributes = CloneDictionary(entity.Attributes)
-            },
-            EpisodicEdge episodic => CopyBase(new EpisodicEdge(), episodic),
-            CommunityEdge community => CopyBase(new CommunityEdge(), community),
-            HasEpisodeEdge hasEpisode => CopyBase(new HasEpisodeEdge(), hasEpisode),
-            NextEpisodeEdge nextEpisode => CopyBase(new NextEpisodeEdge(), nextEpisode),
-            _ => throw new ArgumentOutOfRangeException(nameof(edge), edge.GetType().Name)
-        };
-
     private static TEdge ProjectEdgeEmbedding<TEdge>(TEdge edge, bool withEmbeddings)
         where TEdge : Edge
     {
@@ -2675,164 +2592,6 @@ public sealed class InMemoryGraphDriver : GraphDriverBase,
         }
 
         return edge;
-    }
-
-    private static T CopyBase<T>(T target, Edge source) where T : Edge
-    {
-        target.Uuid = source.Uuid;
-        target.GroupId = source.GroupId;
-        target.SourceNodeUuid = source.SourceNodeUuid;
-        target.TargetNodeUuid = source.TargetNodeUuid;
-        target.CreatedAt = source.CreatedAt;
-        return target;
-    }
-
-    private static List<T> CopyList<T>(IReadOnlyList<T> source)
-    {
-        var copy = new List<T>(source.Count);
-        for (var i = 0; i < source.Count; i++)
-        {
-            copy.Add(source[i]);
-        }
-
-        return copy;
-    }
-
-    private static List<T>? CopyNullableList<T>(IReadOnlyList<T>? source) =>
-        source is null ? null : CopyList(source);
-
-    private static Dictionary<string, object?> CloneDictionary(IDictionary<string, object?> source)
-    {
-        var clone = new Dictionary<string, object?>(source.Count, StringComparer.Ordinal);
-        foreach (var pair in source)
-        {
-            clone[pair.Key] = CloneMetadataValue(pair.Value);
-        }
-
-        return clone;
-    }
-
-    private static object? CloneMetadataValue(object? value)
-    {
-        if (value is null || IsImmutableScalar(value))
-        {
-            return value;
-        }
-
-        return value switch
-        {
-            JsonNode node => node.DeepClone(),
-            JsonElement element => element.Clone(),
-            IDictionary<string, object?> dictionary => CloneDictionary(dictionary),
-            IEnumerable<object?> values => CloneMetadataValues(values),
-            _ => CloneJsonCompatibleValue(value)
-        };
-    }
-
-    private static List<object?> CloneMetadataValues(IEnumerable<object?> values)
-    {
-        var clone = values is ICollection<object?> collection
-            ? new List<object?>(collection.Count)
-            : [];
-
-        foreach (var value in values)
-        {
-            clone.Add(CloneMetadataValue(value));
-        }
-
-        return clone;
-    }
-
-    private static object? CloneJsonCompatibleValue(object value)
-    {
-        var node = JsonSerializer.SerializeToNode(value, GraphitiJsonSerializer.Options);
-        return ConvertJsonNode(node);
-    }
-
-    private static object? ConvertJsonNode(JsonNode? node) =>
-        node switch
-        {
-            null => null,
-            JsonObject jsonObject => ConvertJsonObject(jsonObject),
-            JsonArray jsonArray => ConvertJsonArray(jsonArray),
-            JsonValue jsonValue => ConvertJsonValue(jsonValue),
-            _ => node.ToJsonString(GraphitiJsonSerializer.Options)
-        };
-
-    private static Dictionary<string, object?> ConvertJsonObject(JsonObject jsonObject)
-    {
-        var dictionary = new Dictionary<string, object?>(jsonObject.Count, StringComparer.Ordinal);
-        foreach (var pair in jsonObject)
-        {
-            dictionary[pair.Key] = ConvertJsonNode(pair.Value);
-        }
-
-        return dictionary;
-    }
-
-    private static List<object?> ConvertJsonArray(JsonArray jsonArray)
-    {
-        var values = new List<object?>(jsonArray.Count);
-        foreach (var item in jsonArray)
-        {
-            values.Add(ConvertJsonNode(item));
-        }
-
-        return values;
-    }
-
-    private static object? ConvertJsonValue(JsonValue value)
-    {
-        if (value.TryGetValue<string>(out var text))
-        {
-            return text;
-        }
-
-        if (value.TryGetValue<long>(out var integer))
-        {
-            return integer;
-        }
-
-        if (value.TryGetValue<decimal>(out var decimalValue))
-        {
-            return decimalValue;
-        }
-
-        if (value.TryGetValue<double>(out var doubleValue))
-        {
-            return doubleValue;
-        }
-
-        if (value.TryGetValue<bool>(out var boolean))
-        {
-            return boolean;
-        }
-
-        return value.DeepClone();
-    }
-
-    private static bool IsImmutableScalar(object value)
-    {
-        var type = value.GetType();
-        return type.IsEnum
-            || value is string
-                or bool
-                or char
-                or byte
-                or sbyte
-                or short
-                or ushort
-                or int
-                or uint
-                or long
-                or ulong
-                or float
-                or double
-                or decimal
-                or DateTime
-                or DateTimeOffset
-                or Guid
-                or TimeSpan;
     }
 
     private sealed record TraversalGraph(
