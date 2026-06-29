@@ -2125,6 +2125,30 @@ public class LadybugPackageRuntimeTests
             return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>(records);
         }
 
+        public Task ExecuteManyAsync(
+            string cypher,
+            IReadOnlyList<IReadOnlyDictionary<string, object?>> parameterSets,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(cypher);
+            ArgumentNullException.ThrowIfNull(parameterSets);
+            return _connection.ExecuteManyAsync(cypher, parameterSets, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<IReadOnlyList<IReadOnlyDictionary<string, object?>>>> ExecuteManyQueryAsync(
+            string cypher,
+            IReadOnlyList<IReadOnlyDictionary<string, object?>> parameterSets,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(cypher);
+            ArgumentNullException.ThrowIfNull(parameterSets);
+            return _connection.ExecuteManyAsync(
+                cypher,
+                parameterSets,
+                IReadOnlyList<IReadOnlyDictionary<string, object?>> (result) => Materialize(result),
+                cancellationToken);
+        }
+
         public ValueTask DisposeAsync()
         {
             if (_disposed)
@@ -2143,6 +2167,24 @@ public class LadybugPackageRuntimeTests
             return statement.Parameters.Count == 0
                 ? _connection.Query(statement.Query)
                 : _connection.Execute(statement.Query, statement.Parameters);
+        }
+
+        private static List<IReadOnlyDictionary<string, object?>> Materialize(QueryResult result)
+        {
+            var columns = result.ColumnNames;
+            var records = new List<IReadOnlyDictionary<string, object?>>((int)result.RowCount);
+            foreach (var row in result.Rows())
+            {
+                var record = new Dictionary<string, object?>(columns.Count, StringComparer.Ordinal);
+                for (var i = 0; i < columns.Count; i++)
+                {
+                    record[columns[i]] = row[i];
+                }
+
+                records.Add(record);
+            }
+
+            return records;
         }
     }
 }

@@ -28,21 +28,33 @@ internal sealed class LadybugDbQueryExecutor : ILadybugQueryExecutor
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var result = ExecuteStatement(statement);
-        var columns = result.ColumnNames;
-        var records = new List<IReadOnlyDictionary<string, object?>>((int)result.RowCount);
-        foreach (var row in result.Rows())
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var record = new Dictionary<string, object?>(columns.Count, StringComparer.Ordinal);
-            for (var i = 0; i < columns.Count; i++)
-            {
-                record[columns[i]] = row[i];
-            }
+        return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>(
+            Materialize(result, cancellationToken));
+    }
 
-            records.Add(record);
-        }
+    public Task ExecuteManyAsync(
+        string cypher,
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> parameterSets,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(cypher);
+        ArgumentNullException.ThrowIfNull(parameterSets);
+        return _connection.ExecuteManyAsync(cypher, parameterSets, cancellationToken);
+    }
 
-        return Task.FromResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>(records);
+    public Task<IReadOnlyList<IReadOnlyList<IReadOnlyDictionary<string, object?>>>> ExecuteManyQueryAsync(
+        string cypher,
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> parameterSets,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(cypher);
+        ArgumentNullException.ThrowIfNull(parameterSets);
+        return _connection.ExecuteManyAsync(
+            cypher,
+            parameterSets,
+            IReadOnlyList<IReadOnlyDictionary<string, object?>> (result) =>
+                Materialize(result, cancellationToken),
+            cancellationToken);
     }
 
     public ValueTask DisposeAsync()
@@ -63,5 +75,26 @@ internal sealed class LadybugDbQueryExecutor : ILadybugQueryExecutor
         return statement.Parameters.Count == 0
             ? _connection.Query(statement.Query)
             : _connection.Execute(statement.Query, statement.Parameters);
+    }
+
+    private static List<IReadOnlyDictionary<string, object?>> Materialize(
+        QueryResult result,
+        CancellationToken cancellationToken)
+    {
+        var columns = result.ColumnNames;
+        var records = new List<IReadOnlyDictionary<string, object?>>((int)result.RowCount);
+        foreach (var row in result.Rows())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var record = new Dictionary<string, object?>(columns.Count, StringComparer.Ordinal);
+            for (var i = 0; i < columns.Count; i++)
+            {
+                record[columns[i]] = row[i];
+            }
+
+            records.Add(record);
+        }
+
+        return records;
     }
 }

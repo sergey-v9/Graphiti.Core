@@ -155,42 +155,57 @@ internal sealed class LadybugGraphDriver : GraphDriverBase, ISearchGraphDriver, 
         ArgumentNullException.ThrowIfNull(embedder);
 
         var episodeList = MaterializeWithCancellation(episodicNodes, cancellationToken);
-        for (var i = 0; i < episodeList.Count; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            await _executor.ExecuteAsync(
-                LadybugStatementBuilder.BuildEpisodicNodeSave(episodeList[i]),
-                cancellationToken).ConfigureAwait(false);
-        }
+        await SaveSameShapeAsync(
+            episodeList,
+            LadybugStatementBuilder.BuildEpisodicNodeSave,
+            cancellationToken).ConfigureAwait(false);
 
         var entityList = MaterializeWithCancellation(entityNodes, cancellationToken);
         await EnsureEntityNodeEmbeddingsAsync(entityList, embedder, cancellationToken).ConfigureAwait(false);
-        for (var i = 0; i < entityList.Count; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            await _executor.ExecuteAsync(
-                LadybugStatementBuilder.BuildEntityNodeSave(entityList[i]),
-                cancellationToken).ConfigureAwait(false);
-        }
+        await SaveSameShapeAsync(
+            entityList,
+            LadybugStatementBuilder.BuildEntityNodeSave,
+            cancellationToken).ConfigureAwait(false);
 
         var episodicEdgeList = MaterializeWithCancellation(episodicEdges, cancellationToken);
-        for (var i = 0; i < episodicEdgeList.Count; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            await _executor.ExecuteAsync(
-                LadybugStatementBuilder.BuildEpisodicEdgeSave(episodicEdgeList[i]),
-                cancellationToken).ConfigureAwait(false);
-        }
+        await SaveSameShapeAsync(
+            episodicEdgeList,
+            LadybugStatementBuilder.BuildEpisodicEdgeSave,
+            cancellationToken).ConfigureAwait(false);
 
         var entityEdgeList = MaterializeWithCancellation(entityEdges, cancellationToken);
         await EnsureEntityEdgeEmbeddingsAsync(entityEdgeList, embedder, cancellationToken).ConfigureAwait(false);
-        for (var i = 0; i < entityEdgeList.Count; i++)
+        await SaveSameShapeAsync(
+            entityEdgeList,
+            LadybugStatementBuilder.BuildEntityEdgeSave,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    // Prepare-once / bind-many for a list whose items all share one Cypher shape. Each item's
+    // LadybugStatement is built exactly as the per-item save path would (identical Cypher + identical
+    // bound parameter map), so the only behavioral change is that the shared Cypher is prepared a single
+    // time instead of once per item. Fail-fast in input order matches the previous sequential loop.
+    private async Task SaveSameShapeAsync<TItem>(
+        IReadOnlyList<TItem> items,
+        Func<TItem, LadybugStatement> builder,
+        CancellationToken cancellationToken)
+    {
+        if (items.Count == 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            await _executor.ExecuteAsync(
-                LadybugStatementBuilder.BuildEntityEdgeSave(entityEdgeList[i]),
-                cancellationToken).ConfigureAwait(false);
+            return;
         }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        string? cypher = null;
+        var parameterSets = new List<IReadOnlyDictionary<string, object?>>(items.Count);
+        for (var i = 0; i < items.Count; i++)
+        {
+            var statement = builder(items[i]);
+            cypher ??= statement.Query;
+            parameterSets.Add(statement.Parameters);
+        }
+
+        await _executor.ExecuteManyAsync(cypher!, parameterSets, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

@@ -389,10 +389,55 @@ public class LadybugGraphDriverTests
                     : _queryResults.Dequeue());
         }
 
+        public Task ExecuteManyAsync(
+            string cypher,
+            IReadOnlyList<IReadOnlyDictionary<string, object?>> parameterSets,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // Record each prepared-once/bind-many parameter set as an individual executed statement so the
+            // per-item Cypher + parameter assertions hold identically to the old per-item ExecuteAsync loop.
+            foreach (var parameters in parameterSets)
+            {
+                Executed.Add(new LadybugStatement(cypher, Snapshot(parameters)));
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<IReadOnlyList<IReadOnlyDictionary<string, object?>>>> ExecuteManyQueryAsync(
+            string cypher,
+            IReadOnlyList<IReadOnlyDictionary<string, object?>> parameterSets,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var results = new List<IReadOnlyList<IReadOnlyDictionary<string, object?>>>(parameterSets.Count);
+            foreach (var parameters in parameterSets)
+            {
+                Queried.Add(new LadybugStatement(cypher, Snapshot(parameters)));
+                results.Add(_queryResults.Count == 0
+                    ? Array.Empty<IReadOnlyDictionary<string, object?>>()
+                    : _queryResults.Dequeue());
+            }
+
+            return Task.FromResult<IReadOnlyList<IReadOnlyList<IReadOnlyDictionary<string, object?>>>>(results);
+        }
+
         public ValueTask DisposeAsync()
         {
             Disposed = true;
             return ValueTask.CompletedTask;
+        }
+
+        private static Dictionary<string, object?> Snapshot(IReadOnlyDictionary<string, object?> parameters)
+        {
+            var snapshot = new Dictionary<string, object?>(StringComparer.Ordinal);
+            foreach (var pair in parameters)
+            {
+                snapshot[pair.Key] = pair.Value;
+            }
+
+            return snapshot;
         }
 
         private static bool TryCreateExistingFulltextIndexException(

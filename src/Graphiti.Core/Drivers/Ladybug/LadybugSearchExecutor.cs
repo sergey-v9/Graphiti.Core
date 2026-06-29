@@ -208,12 +208,12 @@ internal sealed class LadybugSearchExecutor
 
         var scores = BuildScoreMap(nodeUuids, defaultScore: 0);
 
-        foreach (var statement in LadybugSearchStatementBuilder.BuildNodeDistanceRankStatements(
-                     nodeUuids,
-                     centerNodeUuid))
+        var statements = LadybugSearchStatementBuilder.BuildNodeDistanceRankStatements(
+            nodeUuids,
+            centerNodeUuid);
+        foreach (var records in await ExecuteRankStatementsAsync(statements, cancellationToken)
+                     .ConfigureAwait(false))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var records = await _executor.QueryAsync(statement, cancellationToken).ConfigureAwait(false);
             foreach (var record in records)
             {
                 if (GetString(record, "uuid") is { Length: > 0 } uuid)
@@ -247,10 +247,10 @@ internal sealed class LadybugSearchExecutor
 
         var scores = BuildScoreMap(nodeUuids, defaultScore: float.PositiveInfinity);
 
-        foreach (var statement in LadybugSearchStatementBuilder.BuildNodeEpisodeMentionsRankStatements(nodeUuids))
+        var statements = LadybugSearchStatementBuilder.BuildNodeEpisodeMentionsRankStatements(nodeUuids);
+        foreach (var records in await ExecuteRankStatementsAsync(statements, cancellationToken)
+                     .ConfigureAwait(false))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var records = await _executor.QueryAsync(statement, cancellationToken).ConfigureAwait(false);
             foreach (var record in records)
             {
                 if (GetString(record, "uuid") is { Length: > 0 } uuid)
@@ -264,6 +264,34 @@ internal sealed class LadybugSearchExecutor
         }
 
         return SortRanksByAscendingScore(scores, minScore);
+    }
+
+    // Prepare-once / bind-many for the rank-per-uuid read loops: every statement these builders emit
+    // shares one constant Cypher (only $node_uuid / $center_uuid vary), so the shared Cypher is prepared
+    // a single time and re-executed against each statement's parameter map, materializing one record list
+    // per statement in input order. This is exactly the previous sequential per-statement QueryAsync loop
+    // with the redundant re-prepare removed; an empty statement list is a no-op returning no record lists.
+    private async Task<IReadOnlyList<IReadOnlyList<IReadOnlyDictionary<string, object?>>>>
+        ExecuteRankStatementsAsync(
+            IReadOnlyList<LadybugStatement> statements,
+            CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (statements.Count == 0)
+        {
+            return Array.Empty<IReadOnlyList<IReadOnlyDictionary<string, object?>>>();
+        }
+
+        var parameterSets = new List<IReadOnlyDictionary<string, object?>>(statements.Count);
+        for (var i = 0; i < statements.Count; i++)
+        {
+            parameterSets.Add(statements[i].Parameters);
+        }
+
+        return await _executor.ExecuteManyQueryAsync(
+            statements[0].Query,
+            parameterSets,
+            cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<IReadOnlyList<SearchHit<T>>> QueryHitsAsync<T>(
