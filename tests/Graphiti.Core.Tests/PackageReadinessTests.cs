@@ -67,8 +67,8 @@ public class PackageReadinessTests
         Assert.Contains("xunit.v3", packageVersions);
         Assert.DoesNotContain("xunit", testPackageReferences);
         Assert.Contains("xunit.v3", testPackageReferences);
-        Assert.Equal("0.17.1-dev.2.1.g53e5ab5", packageVersionsById["LadybugDB"]);
-        Assert.Equal("0.17.1-dev.2.1.g53e5ab5", packageVersionsById["LadybugDB.Native"]);
+        Assert.Equal("0.18.0-dev.18.1.eng-d8277a8e5", packageVersionsById["LadybugDB"]);
+        Assert.Equal("0.18.0-dev.18.1.eng-d8277a8e5", packageVersionsById["LadybugDB.Native"]);
         Assert.Equal("3.0.3", packageVersionsById["SQLitePCLRaw.bundle_e_sqlite3"]);
     }
 
