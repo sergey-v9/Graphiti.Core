@@ -17,7 +17,19 @@ Restores require a `read:packages` credential for source `github_ladybug` (passe
 API was unchanged 0.17.0→0.17.2. `LadybugDB.Extensions` is **not** adopted — Core already owns its DI
 helper, options, factory, and driver boundary, so it would add host-level abstraction without a
 demonstrated need. Bump the pin only when the binding repo publishes a newer dev version (see Self-service
-bindings).
+bindings). The repeatable bump/adopt/steer loop is `ladybug-sync-procedure.md`.
+
+**Recommended next bump (2026-06-29, pending a feed credential): `0.17.1-dev.14.1.gfe33adf`.** A
+2026-06-29 binding analysis (24 commits since our pin) found them overwhelmingly perf/allocation wins on
+the bind + row-materialization hot paths, with the **C API byte-identical** (interop-safe drop-in, same
+0.17.1 release natives). `fe33adf` is the newest *fully-published* version (binding commit 15 of 24);
+binding HEAD `d77c9de` switched to a source-built `0.18.0-dev.*` family that carries the engine fixes
+(double-free-on-destroy, CSR SIGSEGV) and `DROP_FTS_INDEX`, but it is **not published** — its Linux
+source-build CI is red (the top steering ask). The bump is verified-safe *by analysis* but was **not
+restore-verified** locally: this environment has no `github_ladybug` credential, so a fresh feed pull
+401s (prior builds used the cached old package). Apply + `Verify-GraphitiCore.ps1` where a valid
+credential exists. Engine-gated usage cleanups (FTS idempotency, `FLOAT[N]` CAST) stay deferred — see
+`ladybug-sync-procedure.md`.
 
 ## Native search — already taken, already faithful
 

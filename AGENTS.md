@@ -15,7 +15,9 @@ parity ground truth — update it in the same change that closes or reopens a ga
 `evolution.md` (milestone history for major divergences from Python). Start substantive work by
 reading the relevant note and update it in the same change when a standing fact changes.
 LadybugDB/Kuzu has its own focused handoff in `.agents/notes/kuzu-driver-port.md`. For C# submodule
-commit rules, read `.agents/notes/commit-policy.md`.
+commit rules, read `.agents/notes/commit-policy.md`. Two repeatable sync loops have their own procedures:
+`.agents/notes/upstream-sync-procedure.md` (Python `graphiti_core` → C#) and
+`.agents/notes/ladybug-sync-procedure.md` (the LadybugDB engine + our C# bindings → Graphiti).
 
 These notes are loaded into context every session, so keep them **lean**: summarize and prune, don't
 just append. Replace stale guidance in place; when a stream/plan completes, collapse its per-slice
