@@ -22,8 +22,9 @@ bindings toward what's convenient for us. This is the loop.
    is the real gate), ship. Perf/alloc wins ride along for free; no Graphiti code change.
 2. **GATE on publish reality.** Never pin to a binding HEAD whose dev-feed CI run is red — the package
    must be **published across all RIDs** first. *Newest published ≠ newest committed*: verify against the
-   actual feed, not `git log`. (2026-06-29: HEAD `d77c9de` is unpublishable — its source-built Linux
-   natives fail; the newest fully-published version is `0.17.1-dev.14.1.gfe33adf`.)
+   actual feed, not `git log`. (This bit us 2026-06-29: the first `0.18.0-dev` HEAD was unpublishable
+   while its source-built Linux native CI was red; once the fork fixed it, **`0.18.0-dev.18.1.eng-d8277a8e5`**
+   published green across all 5 RIDs and we pinned to it. Current pin lives in `kuzu-driver-port.md`.)
 3. **ADOPT** — the rare case, real work. Only when an engine/binding feature removes a *concrete* Graphiti
    workaround **and** the binding has round-trip test coverage for it **and** the consumer behavioral risk
    is checked (e.g. an FTS index DROP + re-index can shift BM25 scoring/ordering). Gated on the relevant

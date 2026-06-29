@@ -9,8 +9,8 @@ Ladybug label-filter syntax. The driver-facing provider value is `GraphProvider.
 
 ## Package pin & feed
 
-Graphiti pins the fork-published dev package family **`0.17.1-dev.2.1.g53e5ab5`** for both `LadybugDB`
-and `LadybugDB.Native`, from the `sergey-v9/ladybug-dotnet` GitHub Packages feed
+Graphiti pins the fork-published dev package family **`0.18.0-dev.18.1.eng-d8277a8e5`** for both
+`LadybugDB` and `LadybugDB.Native`, from the `sergey-v9/ladybug-dotnet` GitHub Packages feed
 (`https://nuget.pkg.github.com/sergey-v9/index.json`, via `NuGet.config` + `Directory.Packages.props`).
 Restores require a `read:packages` credential for source `github_ladybug` (passed as
 `NuGetPackageSourceCredentials_github_ladybug`); there is no local/offline fallback (intentional). The C
@@ -19,17 +19,17 @@ helper, options, factory, and driver boundary, so it would add host-level abstra
 demonstrated need. Bump the pin only when the binding repo publishes a newer dev version (see Self-service
 bindings). The repeatable bump/adopt/steer loop is `ladybug-sync-procedure.md`.
 
-**Recommended next bump (2026-06-29, pending a feed credential): `0.17.1-dev.14.1.gfe33adf`.** A
-2026-06-29 binding analysis (24 commits since our pin) found them overwhelmingly perf/allocation wins on
-the bind + row-materialization hot paths, with the **C API byte-identical** (interop-safe drop-in, same
-0.17.1 release natives). `fe33adf` is the newest *fully-published* version (binding commit 15 of 24);
-binding HEAD `d77c9de` switched to a source-built `0.18.0-dev.*` family that carries the engine fixes
-(double-free-on-destroy, CSR SIGSEGV) and `DROP_FTS_INDEX`, but it is **not published** — its Linux
-source-build CI is red (the top steering ask). The bump is verified-safe *by analysis* but was **not
-restore-verified** locally: this environment has no `github_ladybug` credential, so a fresh feed pull
-401s (prior builds used the cached old package). Apply + `Verify-GraphitiCore.ps1` where a valid
-credential exists. Engine-gated usage cleanups (FTS idempotency, `FLOAT[N]` CAST) stay deferred — see
-`ladybug-sync-procedure.md`.
+**Bumped to `0.18.0-dev.18.1.eng-d8277a8e5` (2026-06-29, verified green).** The binding fork addressed all
+six 2026-06-29 consumer wishes (`GRAPHITI_SEARCH_EXTENSIONS_FEEDBACK.md`) and shipped the first green
+`0.18.0-dev` source-built publish across all 5 RIDs. Per its `upstream-engine.pin` `consumer_impact`:
+**interop=none, fts_scoring=unchanged-from-v0.17.1**; it brings the engine fixes (double-free-on-destroy,
+delete/checkpoint CSR SIGSEGV) and new DDL (`DROP_FTS_INDEX`, `DROP INDEX IF EXISTS`). The earlier Linux
+ABI-mismatch (`INSTALL fts` pulling a 0.17.0 extension against a 0.18.0 engine) is fixed: the dev track
+now source-builds the fts/vector extensions and **pre-seeds the engine's `~/.lbdb` extension cache** at
+load, so `INSTALL/LOAD` works with no Graphiti change. Two new binding capabilities are now adoptable:
+`Connection.ExecuteMany` (prepare-once/bind-many) and `DROP_FTS_INDEX` (lets the FTS-idempotency
+message-catch become an explicit drop-then-create + missing-index guard). `FLOAT[N]` binding stays
+engine-gated. See `ladybug-sync-procedure.md`.
 
 ## Native search — already taken, already faithful
 
