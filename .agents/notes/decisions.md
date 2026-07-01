@@ -542,6 +542,19 @@ the impact grows.
   no cap. The tie-break and threshold logic match exactly, so results are identical for normal inputs;
   the cap only differs for a graph that genuinely never converges (C# truncates; Python would hang). It
   is intentional infinite-loop protection — keep it.
+- **Fuzzy node-dedup MinHash uses a different hash family than Python** (`XxHash64` vs `blake2b`).
+  `EntityNodeDeduplication.HashShingle` hashes each `"{seed}:{shingle}"` with `XxHash64.HashToUInt64`;
+  Python `dedup_helpers._hash_shingle` uses `blake2b(..., digest_size=8)` big-endian. The two families
+  produce different MinHash signatures, so the LSH *candidate buckets* differ between ports. This is **not**
+  a correctness divergence: LSH here is only a candidate generator, and the actual dedup decision is an
+  exact Jaccard ≥ threshold over the real shingle sets, which is byte-identical on both sides
+  (`JaccardSimilarity` == `_jaccard_similarity`). Any genuinely ≥-threshold-similar pair co-buckets with
+  high probability under either min-wise hash, so normal-input dedup results match; only rare
+  near-threshold pairs can band-collide in one port but not the other. Kept as-is deliberately: matching
+  `blake2b` would require adding a Blake2b implementation (not in the .NET BCL) purely to align probabilistic
+  candidate-generation margins, for no observable benefit. `XxHash64` is the defensible C# choice
+  (dependency-free, deterministic, allocation-light). The golden dedup tests were authored against the
+  `XxHash64` signatures, so the green suite cannot see this — it is a cross-port margin difference only.
 
 ## Public-surface decisions settled while still alpha (2026-06-27)
 
