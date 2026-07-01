@@ -54,20 +54,17 @@ green cross-RID publish exists.
 
 ## Standing steering backlog (we are the reference consumer)
 
-- **TOP: ship a green `0.18.0-dev` feed** — fix the failing linux-x64 / linux-arm64 *from-source* native
-  builds in the fork's `github-packages-dev.yml`. Until it exists, Graphiti can adopt **no** engine-level
-  fix. (macOS RIDs already pass; Linux source build is the only blocker.)
-- Add a binding `DROP_FTS_INDEX` round-trip test to `SearchExtensionsTests` *before* Graphiti rewrites its
-  FTS-idempotency workaround (the engine `DROP_FTS_INDEX` throws on a missing index and must clean the
-  auxiliary docs/terms tables — pin that behavior first).
-- First-class fixed-size `FLOAT[N]` parameter binding to drop Graphiti's inline
-  `CAST($v AS FLOAT[<dim>])` (3 sites). This is really an **engine** ask: `lbug.h` exposes only
-  `lbug_value_create_list` (no fixed-ARRAY constructor) — so the request is a fixed-ARRAY value
-  constructor in the C API, then a typed binding helper.
-- A prepare-once / bind-many convenience on the binding's `Connection` (an `ExecuteMany`) so the bulk-save
-  / rank-loop optimization is the obvious default and exercises the pooled-bind perf work.
-- A one-line **consumer-impact** note per bump in `upstream-engine.pin` (interop-safe? FTS scoring
-  touched? new DDL?) so "bump + verify" can be trusted without re-deriving it each cycle.
+Nearly all of the 2026-06-29 wishes shipped in the fork's `0.18.0-dev` line and are **done**: the green
+cross-RID `0.18.0-dev` publish; a `DROP_FTS_INDEX` round-trip contract test; the prepare-once/bind-many
+`Connection.ExecuteMany` (adopted in Graphiti's driver hot loops, commit `c987158`); and the one-line
+`consumer_impact` note now maintained in `upstream-engine.pin` on every bump (it made the 2026-07-01
+`23.1` bump a trusted-but-independently-verified `interop=none` cycle). The single remaining ask is an
+**engine** one:
+
+- First-class fixed-size `FLOAT[N]` parameter binding to drop Graphiti's inline `CAST($v AS FLOAT[<dim>])`
+  (3 sites). `lbug.h` exposes only `lbug_value_create_list` (no fixed-ARRAY constructor), and the C API is
+  byte-identical v0.17.1→v0.18.0, so this stays engine-gated: it needs a fixed-ARRAY value constructor in
+  the C API first, then a typed binding helper.
 
 ## Deferred / not actionable (recorded so they are not re-litigated each cycle)
 
