@@ -9,7 +9,7 @@ Ladybug label-filter syntax. The driver-facing provider value is `GraphProvider.
 
 ## Package pin & feed
 
-Graphiti pins the fork-published dev package family **`0.18.0-dev.23.1.eng-0cda4fffc`** for both
+Graphiti pins the fork-published dev package family **`0.18.0-dev.25.1.eng-0cda4fffc`** for both
 `LadybugDB` and `LadybugDB.Native`, from the `sergey-v9/ladybug-dotnet` GitHub Packages feed
 (`https://nuget.pkg.github.com/sergey-v9/index.json`, via `NuGet.config` + `Directory.Packages.props`).
 Restores require a `read:packages` credential for source `github_ladybug` (passed as
@@ -19,9 +19,11 @@ helper, options, factory, and driver boundary, so it would add host-level abstra
 demonstrated need. Bump the pin only when the binding repo publishes a newer dev version (see Self-service
 bindings). The repeatable bump/adopt/steer loop is `ladybug-sync-procedure.md`.
 
-**Bumped to `0.18.0-dev.23.1.eng-0cda4fffc` (2026-07-01, verified green).** This tracks the engine at
+**Bumped to `0.18.0-dev.25.1.eng-0cda4fffc` (2026-07-01, verified green).** This tracks the engine at
 the **v0.18.0 release** commit (`0cda4fff`), advancing 13 engine commits over the prior `d8277a8e5` dev
-pin. The bump is **interop-safe and feature-neutral, independently verified, not just trusted**: the
+pin. (`25.1` is the **same engine source** as the earlier `23.1` build, with the RID natives
+**recompiled through a changed Windows build toolchain** — ccache-wrapped MSVC — then re-verified green
+here, so the rebuilt binaries are proven by the native runtime tests, not assumed.) The bump is **interop-safe and feature-neutral, independently verified, not just trusted**: the
 binding's C# source is byte-unchanged since the prior consumed pin (`git diff 270cb6c..HEAD --
 'src/**/*.cs'` is empty — only CI, docs, `upstream-engine.pin`, and `version.txt` moved), and the C API
 header is byte-identical v0.17.1→v0.18.0, so **no new binding capabilities appeared to adopt** this cycle.
