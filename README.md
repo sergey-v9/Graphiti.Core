@@ -75,8 +75,8 @@ and the first-class LadybugDB backend. The LadybugDB code lives under
 ### LadybugDB GitHub Packages feed
 
 `Graphiti.Core` depends on the `LadybugDB` / `LadybugDB.Native` packages. On this branch those
-packages are restored from the `sergey-v9/ladybug-dotnet` GitHub Packages feed configured in
-[`NuGet.config`](NuGet.config):
+packages are restored from GitHub Packages published by our custom fork,
+`sergey-v9/ladybug-dotnet`, through the feed configured in [`NuGet.config`](NuGet.config):
 
 ```xml
 <add key="github_ladybug" value="https://nuget.pkg.github.com/sergey-v9/index.json" />
@@ -94,11 +94,11 @@ Even InMemory-only consumers restore these native packages, although they do not
 runtime unless a Ladybug driver is constructed. The current pinned Ladybug package family is:
 
 ```text
-LadybugDB        0.17.1-dev.2.1.g53e5ab5
-LadybugDB.Native 0.17.1-dev.2.1.g53e5ab5
+LadybugDB        0.19.1-dev.26.1.eng-554c1e711
+LadybugDB.Native 0.19.1-dev.26.1.eng-554c1e711
 ```
 
-Those packages were published by the fork's `dev` branch workflow at
+Those packages were published by our custom fork's `dev` branch workflow at
 `sergey-v9/ladybug-dotnet`; future binding repairs can be pushed there and consumed by bumping the
 central versions in [`Directory.Packages.props`](Directory.Packages.props).
 

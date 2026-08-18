@@ -9,33 +9,28 @@ Ladybug label-filter syntax. The driver-facing provider value is `GraphProvider.
 
 ## Package pin & feed
 
-Graphiti pins the fork-published dev package family **`0.18.0-dev.25.1.eng-0cda4fffc`** for both
+Graphiti pins the custom-fork-published dev package family **`0.19.1-dev.26.1.eng-554c1e711`** for both
 `LadybugDB` and `LadybugDB.Native`, from the `sergey-v9/ladybug-dotnet` GitHub Packages feed
 (`https://nuget.pkg.github.com/sergey-v9/index.json`, via `NuGet.config` + `Directory.Packages.props`).
 Restores require a `read:packages` credential for source `github_ladybug` (passed as
 `NuGetPackageSourceCredentials_github_ladybug`); there is no local/offline fallback (intentional). The C
-API header is byte-identical v0.17.1→v0.18.0 (interop unchanged). `LadybugDB.Extensions` is **not** adopted — Core already owns its DI
-helper, options, factory, and driver boundary, so it would add host-level abstraction without a
-demonstrated need. Bump the pin only when the binding repo publishes a newer dev version (see Self-service
-bindings). The repeatable bump/adopt/steer loop is `ladybug-sync-procedure.md`.
+API now adds `lbug_connection_get_pushed_sql`, exposed as `Connection.GetPushedSql`; Graphiti has no
+workaround that depends on pushed-SQL inspection, so this additive API is not adopted. `LadybugDB.Extensions`
+is **not** adopted — Core already owns its DI helper, options, factory, and driver boundary, so it would
+add host-level abstraction without a demonstrated need. The repeatable bump/adopt/steer loop is
+`ladybug-sync-procedure.md`.
 
-**Bumped to `0.18.0-dev.25.1.eng-0cda4fffc` (2026-07-01, verified green).** This tracks the engine at
-the **v0.18.0 release** commit (`0cda4fff`), advancing 13 engine commits over the prior `d8277a8e5` dev
-pin. (`25.1` is the **same engine source** as the earlier `23.1` build, with the RID natives
-**recompiled through a changed Windows build toolchain** — ccache-wrapped MSVC — then re-verified green
-here, so the rebuilt binaries are proven by the native runtime tests, not assumed.) The bump is **interop-safe and feature-neutral, independently verified, not just trusted**: the
-binding's C# source is byte-unchanged since the prior consumed pin (`git diff 270cb6c..HEAD --
-'src/**/*.cs'` is empty — only CI, docs, `upstream-engine.pin`, and `version.txt` moved), and the C API
-header is byte-identical v0.17.1→v0.18.0, so **no new binding capabilities appeared to adopt** this cycle.
-Per `upstream-engine.pin` `consumer_impact`: **interop=none, fts_scoring=unchanged, new_ddl=NONE** (only
-`SHOW_INDEXES` now also lists built-in primary-key indexes). Engine fixes carried: ANY-graph INSERT crash
-on property strings >12 chars, and overflow-page / hash-index storage-accounting fixes. One behavioral
-flag, handled by verification: the extension ABI moved 0.17.0→0.18.0, so the FTS index **rebuilds on
-first 0.18.0 open** — the native FTS/vector runtime tests confirm BM25 ordering is unchanged. The prior
-`0.18.0-dev.18.1` cycle's adoptable capabilities are unchanged: `Connection.ExecuteMany`
-(prepare-once/bind-many) is adopted in the driver hot loops; `DROP_FTS_INDEX` remains deliberately not
-adopted. `FLOAT[N]` binding stays engine-gated (the byte-identical C API still exposes no fixed-ARRAY
-value constructor). See `ladybug-sync-procedure.md`.
+**Bumped to `0.19.1-dev.26.1.eng-554c1e711` (2026-08-18, verified green).** This tracks the engine at
+the **v0.19.1 release** commit (`554c1e711`), advancing 110 engine commits over the prior `0cda4fff`
+pin. The C API structs and enums are unchanged; the only declared interop addition is pushed-SQL
+inspection above. `upstream-engine.pin` records no new DDL and calls out fixes in attach/foreign-scan
+routing, Arrow UUID/MAP export, COPY auto-checkpointing, read-only checkpoint open, forward-compatible
+WAL replay, and recursive-shortest node filtering. The extension ABI moved to 0.19.0, so native behavior
+was rechecked rather than inferred: a no-cache restore, win-x64 FTS warmup, the full 1,077-test suite,
+pack, and isolated package-consumer smoke all passed. The gated Linux smoke was not rerun in this bump.
+`Connection.ExecuteMany` remains adopted in driver hot loops; `DROP_FTS_INDEX` and
+`Connection.GetPushedSql` remain deliberately unused. `FLOAT[N]` binding stays engine-gated because
+the C API still exposes no fixed-ARRAY value constructor. See `ladybug-sync-procedure.md`.
 
 ## Native search — already taken, already faithful
 

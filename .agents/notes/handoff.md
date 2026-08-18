@@ -183,11 +183,12 @@ boundary. Active Ladybug full-text search builds Python Kuzu-style raw whitespac
 `Drivers/Ladybug/LadybugFulltextQuery`, and active Ladybug node-label search filters are built by
 `Drivers/Ladybug/LadybugSearchFilter`; the generic `SearchUtilities` and `CompiledSearchFilter` no
 longer carry separate `GraphProvider.Kuzu` compatibility branches.
-Graphiti now consumes the fork-published LadybugDB package family
-`0.17.1-dev.2.1.g53e5ab5` from the `sergey-v9/ladybug-dotnet` GitHub Packages feed via
+Graphiti now consumes the custom-fork-published LadybugDB package family
+`0.19.1-dev.26.1.eng-554c1e711` from the `sergey-v9/ladybug-dotnet` GitHub Packages feed via
 `NuGet.config`; that binding supports Graphiti's list/array/empty-list/null parameters directly, so
-the former `LadybugStatementNormalizer` workaround has been removed. Restores that include the
-Ladybug driver require a NuGet credential for source `github_ladybug` with `read:packages`.
+the former `LadybugStatementNormalizer` workaround has been removed. Its additive pushed-SQL
+inspection API is not needed by Graphiti. Restores that include the Ladybug driver require a NuGet
+credential for source `github_ladybug` with `read:packages`.
 
 Plan 07 linux-x64 proof is complete. The original failure was an FTS extension undefined-symbol error
 because the binding resolver did not globally load the NuGet `runtimes/linux-x64/native/liblbug.so`
@@ -211,7 +212,8 @@ added. This section holds the single authoritative live count and the standing v
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
 **Current verifier checkpoint (2026-08-18):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1073` passed, `4` skipped, `1077` total. The verifier
+Packages credentials for custom-fork Ladybug package `0.19.1-dev.26.1.eng-554c1e711` — `1073` passed,
+`4` skipped, `1077` total. The verifier
 covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
 shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
 LadybugDB through the packed package. The skips are the env-gated

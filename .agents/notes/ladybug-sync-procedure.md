@@ -16,10 +16,10 @@ bindings toward what's convenient for us. This is the loop.
 ## The loop (clear seam between cheap "bump+verify" and rare "adopt")
 
 1. **BUMP + VERIFY** — the common case, low effort. When the binding publishes a new *fully restorable*
-   version on the feed: bump both `Directory.Packages.props` lines, trust the **byte-identical C-API**
-   guarantee in `upstream-engine.pin` (spot-check the binding's interop dir — `Native*.cs` / `NativeTypes`
-   — for any *non-test-seam* change), run `.\eng\Verify-GraphitiCore.ps1` (the native-gated Ladybug suite
-   is the real gate), ship. Perf/alloc wins ride along for free; no Graphiti code change.
+   version on the feed: bump both `Directory.Packages.props` lines, read the declared C-API delta in
+   `upstream-engine.pin` (spot-check the binding's interop dir — `Native*.cs` / `NativeTypes` — for any
+   *non-test-seam* change), run `.\eng\Verify-GraphitiCore.ps1` (the native-gated Ladybug suite is the
+   real gate), ship. Perf/alloc wins ride along for free; no Graphiti code change.
 2. **GATE on publish reality.** Never pin to a binding HEAD whose dev-feed CI run is red — the package
    must be **published across all RIDs** first. *Newest published ≠ newest committed*: verify against the
    actual feed, not `git log`. (This bit us 2026-06-29: the first `0.18.0-dev` HEAD was unpublishable
@@ -47,32 +47,31 @@ git -C W:/code/ladybug log --oneline <oldEngineCommit>..<newEngineCommit>
 ```
 
 Version-scheme note: the **old** family is `0.17.1-dev.<run>.<attempt>.g<sha>` built from *downloaded*
-v0.17.1 release natives. HEAD switched the dev feed to build natives **from source** at the pinned engine
-commit and restamps as `0.18.0-dev.<run>.<attempt>.eng-<short>`. The new family carries the engine fixes
-(double-free-on-destroy, delete/checkpoint CSR SIGSEGV) and new DDL (`DROP_FTS_INDEX`) — but only once a
-green cross-RID publish exists.
+v0.17.1 release natives. Current dev packages build natives **from source** at the pinned engine commit
+and use `<engine-version>-dev.<run>.<attempt>.eng-<short-engine-sha>`; the current green family is
+`0.19.1-dev.26.1.eng-554c1e711`.
 
 ## Standing steering backlog (we are the reference consumer)
 
 Nearly all of the 2026-06-29 wishes shipped in the fork's `0.18.0-dev` line and are **done**: the green
 cross-RID `0.18.0-dev` publish; a `DROP_FTS_INDEX` round-trip contract test; the prepare-once/bind-many
 `Connection.ExecuteMany` (adopted in Graphiti's driver hot loops, commit `c987158`); and the one-line
-`consumer_impact` note now maintained in `upstream-engine.pin` on every bump (it made the 2026-07-01
-`23.1` bump a trusted-but-independently-verified `interop=none` cycle). The single remaining ask is an
-**engine** one:
+`consumer_impact` note now maintained in `upstream-engine.pin` on every bump. The 0.19.1 binding also
+exposes `Connection.GetPushedSql`, but Graphiti has no concrete use for it. The single remaining ask is
+an **engine** one:
 
 - First-class fixed-size `FLOAT[N]` parameter binding to drop Graphiti's inline `CAST($v AS FLOAT[<dim>])`
-  (3 sites). `lbug.h` exposes only `lbug_value_create_list` (no fixed-ARRAY constructor), and the C API is
-  byte-identical v0.17.1→v0.18.0, so this stays engine-gated: it needs a fixed-ARRAY value constructor in
-  the C API first, then a typed binding helper.
+  (3 sites). `lbug.h` still exposes only `lbug_value_create_list` (no fixed-ARRAY constructor), so this
+  stays engine-gated: it needs a fixed-ARRAY value constructor in the C API first, then a typed binding
+  helper.
 
 ## Deferred / not actionable (recorded so they are not re-litigated each cycle)
 
 - **FTS-idempotency cleanup** (replace the `"Index … already exists"` string-catch in
   `LadybugGraphDriver.ExecuteFulltextIndexStatementsAsync` / `IsDuplicateFulltextIndexError` with an
-  explicit `CALL DROP_FTS_INDEX`-then-create): gated on a published `0.18.0-dev`; and even then it's not
-  free idempotency (`DROP_FTS_INDEX` throws on missing), so it still needs a guard. The current catch is
-  correct — keep it until then. Lateral clarity win, not a fix.
+  explicit `CALL DROP_FTS_INDEX`-then-create): the DDL is available, but this is not free idempotency
+  (`DROP_FTS_INDEX` throws on missing), so it still needs a guard. The current catch is correct. Lateral
+  clarity win, not a fix.
 - **`FLOAT[N]` CAST drop**: engine ask above; the `List<float>` + `CAST` path is the supported,
   vector-test-pinned path. No change.
 - **`ORDER BY` by projected alias**: standard parity-safe Cypher; reverting is pure risk.

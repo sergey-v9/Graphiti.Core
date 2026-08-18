@@ -5,8 +5,9 @@
 
   <ItemGroup>
     <PackageVersion Include="JsonSchema.Net" Version="9.2.1" />
-    <PackageVersion Include="LadybugDB" Version="0.18.0-dev.25.1.eng-0cda4fffc" />
-    <PackageVersion Include="LadybugDB.Native" Version="0.18.0-dev.25.1.eng-0cda4fffc" />
+    <!-- LadybugDB packages are published from our custom sergey-v9/ladybug-dotnet fork. -->
+    <PackageVersion Include="LadybugDB" Version="0.19.1-dev.26.1.eng-554c1e711" />
+    <PackageVersion Include="LadybugDB.Native" Version="0.19.1-dev.26.1.eng-554c1e711" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.6.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.6.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.6.0" />
