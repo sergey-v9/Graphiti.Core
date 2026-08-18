@@ -27,6 +27,21 @@ library work needed porting, so this anchor was advanced.
 - `DIVERGENT` — deliberate, documented C# difference (see `decisions.md`); not a gap.
 - `N/A` — intentionally out of scope for C#.
 
+## 2026-08-18 upstream sync in progress (anchor `b59d4ba` → `10374d6`)
+
+The FalkorDB fixes were treated as provider-capability signals and probed against the real LadybugDB
+package before classification. A two-group runtime fixture proved that LadybugDB accepts a
+backtick-wrapped code identifier, safely completes stopword-only and punctuation-only full-text
+queries, and preserves single-/multi-group isolation for both search and typed reads.
+
+| Upstream commit | C# disposition | Evidence |
+|---|---|---|
+| `e6c3af9` FalkorDB all-stopword full-text fix | N/A, runtime-aligned | Ladybug query completed without parser failure; no RediSearch syntax is shared |
+| `7db4031` FalkorDB backtick/empty-token full-text fix | N/A, runtime-aligned | `` `add_episode` `` found the stored entity; punctuation-only input completed safely |
+| `4674e1e` FalkorDB single-group graph routing | Already aligned | Ladybug predicates returned only the requested group and both requested groups |
+| `3bb2d0b` FalkorDB namespace/read routing | Already aligned | Typed Ladybug group reads passed the same single-/multi-group runtime fixture |
+| `abc0017` retain/cancel FalkorDB/Neo4j background initialization | Already aligned | C# drivers perform explicit/synchronous initialization and own no unobserved initialization task |
+
 ## 2026-06-13 parity-hardening pass + follow-ups (summary)
 
 An adversarial Python-vs-C# review of the 2026-06-11 agent work (every flagged issue independently

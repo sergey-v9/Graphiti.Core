@@ -1333,6 +1333,71 @@ public class LadybugPackageRuntimeTests
     }
 
     [Fact]
+    public async Task PackageRuntime_FtsHandlesCodeTokensAndGroupRouting()
+    {
+        await using var executor = new PackageLadybugExecutor();
+        var driver = new LadybugGraphDriver(executor);
+        var search = Assert.IsAssignableFrom<ISearchGraphDriver>(driver);
+        var createdAt = new DateTime(2026, 8, 18, 9, 10, 11, DateTimeKind.Utc);
+        var first = new EntityNode
+        {
+            Uuid = "fts-code-first",
+            Name = "add_episode",
+            GroupId = "group-a",
+            Labels = ["Function"],
+            CreatedAt = createdAt,
+            Summary = "Code identifier from a fenced example"
+        };
+        var second = new EntityNode
+        {
+            Uuid = "fts-code-second",
+            Name = "add_episode",
+            GroupId = "group-b",
+            Labels = ["Function"],
+            CreatedAt = createdAt,
+            Summary = "Code identifier from another group"
+        };
+
+        await driver.BuildIndicesAndConstraintsAsync();
+        await driver.SaveNodeAsync(first);
+        await driver.SaveNodeAsync(second);
+
+        var codeHits = await search.SearchEntityNodesFulltextAsync(
+            "`add_episode`",
+            new SearchFilters(),
+            ["group-a"],
+            limit: 10);
+        var stopwordHits = await search.SearchEntityNodesFulltextAsync(
+            "the and is",
+            new SearchFilters(),
+            ["group-a"],
+            limit: 10);
+        var punctuationHits = await search.SearchEntityNodesFulltextAsync(
+            "!!!...???",
+            new SearchFilters(),
+            ["group-a"],
+            limit: 10);
+        var multiGroupHits = await search.SearchEntityNodesFulltextAsync(
+            "add_episode",
+            new SearchFilters(),
+            ["group-a", "group-b"],
+            limit: 10);
+        var firstGroupRead = await driver.GetNodesByGroupIdsAsync<EntityNode>(["group-a"]);
+        var multiGroupRead = await driver.GetNodesByGroupIdsAsync<EntityNode>(["group-a", "group-b"]);
+
+        Assert.Equal(first.Uuid, Assert.Single(codeHits).Item.Uuid);
+        Assert.All(stopwordHits, hit => Assert.Equal("group-a", hit.Item.GroupId));
+        Assert.All(punctuationHits, hit => Assert.Equal("group-a", hit.Item.GroupId));
+        Assert.Equal(
+            new[] { first.Uuid, second.Uuid },
+            multiGroupHits.Select(hit => hit.Item.Uuid).Order(StringComparer.Ordinal));
+        Assert.Equal(first.Uuid, Assert.Single(firstGroupRead).Uuid);
+        Assert.Equal(
+            new[] { first.Uuid, second.Uuid },
+            multiGroupRead.Select(node => node.Uuid).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public async Task PackageRuntime_SearchExecutorRunsNonEmptySearchFilters()
     {
         await using var executor = new PackageLadybugExecutor();
