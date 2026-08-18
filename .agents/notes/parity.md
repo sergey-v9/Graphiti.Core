@@ -41,6 +41,8 @@ queries, and preserves single-/multi-group isolation for both search and typed r
 | `4674e1e` FalkorDB single-group graph routing | Already aligned | Ladybug predicates returned only the requested group and both requested groups |
 | `3bb2d0b` FalkorDB namespace/read routing | Already aligned | Typed Ladybug group reads passed the same single-/multi-group runtime fixture |
 | `abc0017` retain/cancel FalkorDB/Neo4j background initialization | Already aligned | C# drivers perform explicit/synchronous initialization and own no unobserved initialization task |
+| `784782c` group-scoped community cleanup | ADOPTED | Explicit group rebuilds delete only those groups' communities; `null`/empty still clear all |
+| `d9a2db9` provider/search consolidation | Partially adopted | Its community-cleanup hunk is adopted here; remaining hunks are classified in later slices |
 
 ## 2026-06-13 parity-hardening pass + follow-ups (summary)
 
@@ -172,7 +174,7 @@ call sites): `extract_nodes.classify_nodes`, `extract_nodes.extract_summary`,
 |---|---|---|---|---|
 | Lifecycle | `close` | `CloseAsync` / `DisposeAsync` | DIVERGENT | C# closes only owned drivers; explicit/DI drivers are caller/container-owned |
 | Episode retrieval | `retrieve_episodes` | `RetrieveEpisodesAsync` | OK | Saga-scoped InMemory retrieval follows membership rows directly, including linked episodes from other groups and duplicate membership rows |
-| Communities | `build_communities` | `BuildCommunitiesAsync` | OK | Community summary reduction preserves raw entity summaries, including blank strings, like Python. Omitted group IDs discover all entity groups, including the default empty-string group; explicit `[]` clears existing communities and builds none like Python. Explicit group order and intra-group read order are preserved for returned communities and membership edges |
+| Communities | `build_communities` | `BuildCommunitiesAsync` | OK | Community summary reduction preserves raw entity summaries, including blank strings, like Python. Omitted group IDs discover all entity groups, including the default empty-string group; explicit `[]` clears existing communities and builds none like Python. Rebuilding a non-empty group selection removes and recreates only those groups' communities, preserving unrelated groups. Explicit group order and intra-group read order are preserved for returned communities and membership edges |
 | Basic fact search | `search` | `SearchAsync(query, ...)` | OK | |
 | Advanced graph search | `search_` | `SearchAdvancedAsync` / `SearchAsync(query, SearchConfig, ...)` | OK | Idiomatic C# names; Python-style aliases intentionally not added |
 | Episode contribution lookup | `get_nodes_and_edges_by_episode` | `GetNodesAndEdgesByEpisodeAsync` | OK + DIVERGENT | Per-episode entity-edge loads use bounded fan-out like Python `semaphore_gather`, then flatten in episode order. Bulk episodes own entity-edge UUIDs in C#, so bulk episode contribution lookup is more complete than Python |

@@ -89,25 +89,25 @@ recreating the parent repository's single hookup commit on current upstream `mai
 - Consumes: `Graphiti.BuildCommunitiesAsync(IReadOnlyList<string>? groupIds, ...)`.
 - Produces: selected-group cleanup while retaining `null`/empty-list full-rebuild behavior.
 
-- [ ] **Step 1: Reverse the stale regression expectation**
+- [x] **Step 1: Reverse the stale regression expectation**
 
   Change `BuildCommunities_RebuildRemovesCommunitiesAcrossAllGroups` into a test that first builds two
   groups, rebuilds only `group-a`, and asserts the existing `group-b` community and membership edges
   remain. Add an empty-group-list assertion proving the established full-rebuild semantics remain.
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
   Run the class/method filter for `GraphitiCommunityTests`; expected failure is that `group-b` has been
   deleted by the current unscoped cleanup.
 
-- [ ] **Step 3: Scope community cleanup**
+- [x] **Step 3: Scope community cleanup**
 
   Pass the original `groupIds` into `RemoveCommunitiesAsync`. For a non-empty list, load and delete only
   `CommunityNode`s in those groups. For `null` or an empty list, retain discovery and deletion of every
   existing community. Use existing typed node deletion so membership edges follow current driver
   cascade behavior without changing `IGraphDriver`.
 
-- [ ] **Step 4: Verify GREEN and commit**
+- [x] **Step 4: Verify GREEN and commit**
 
   Run focused community tests, zero-warning Release build, full suite, and format verification. Update
   `parity.md` for `784782c`/the applicable `d9a2db9` hunk and commit the slice.

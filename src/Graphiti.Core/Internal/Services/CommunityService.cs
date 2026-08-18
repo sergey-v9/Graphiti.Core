@@ -22,7 +22,7 @@ internal sealed class CommunityService(
         try
         {
             driver ??= driverAccessor();
-            await RemoveCommunitiesAsync(driver, cancellationToken).ConfigureAwait(false);
+            await RemoveCommunitiesAsync(driver, groupIds, cancellationToken).ConfigureAwait(false);
 
             var resolvedGroupIds = await ResolveCommunityGroupIdsAsync(driver, groupIds, cancellationToken).ConfigureAwait(false);
             var clusters = await GetCommunityClustersAsync(driver, resolvedGroupIds, cancellationToken).ConfigureAwait(false);
@@ -117,9 +117,14 @@ internal sealed class CommunityService(
 
     private static async Task RemoveCommunitiesAsync(
         IGraphDriver driver,
+        IReadOnlyList<string>? groupIds,
         CancellationToken cancellationToken)
     {
-        var existing = await GetCommunityNodesAsync(driver, cancellationToken).ConfigureAwait(false);
+        var existing = groupIds is { Count: > 0 }
+            ? await driver.GetNodesByGroupIdsAsync<CommunityNode>(
+                groupIds,
+                cancellationToken: cancellationToken).ConfigureAwait(false)
+            : await GetCommunityNodesAsync(driver, cancellationToken).ConfigureAwait(false);
         if (existing.Count == 0)
         {
             return;

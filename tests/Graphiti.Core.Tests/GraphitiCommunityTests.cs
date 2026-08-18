@@ -449,7 +449,7 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
-    public async Task BuildCommunities_RebuildRemovesCommunitiesAcrossAllGroups()
+    public async Task BuildCommunities_ScopedRebuildPreservesCommunitiesInOtherGroups()
     {
         var driver = new InMemoryGraphDriver();
         var graphiti = new Graphiti(graphDriver: driver);
@@ -467,11 +467,24 @@ public class GraphitiCommunityTests
         await Relates(carol, dana, "group-b", now).SaveAsync(driver);
         await graphiti.BuildCommunitiesAsync();
 
+        var groupBCommunityBefore = Assert.Single(
+            await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group-b" }));
+        var groupBEdgeUuidsBefore = (await CommunityEdge.GetByGroupIdsAsync(driver, new[] { "group-b" }))
+            .Select(edge => edge.Uuid)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
         await graphiti.BuildCommunitiesAsync(new[] { "group-a" });
 
         Assert.Single(await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group-a" }));
-        Assert.Empty(await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group-b" }));
-        Assert.Empty(await CommunityEdge.GetByGroupIdsAsync(driver, new[] { "group-b" }));
+        Assert.Equal(
+            groupBCommunityBefore.Uuid,
+            Assert.Single(await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group-b" })).Uuid);
+        Assert.Equal(
+            groupBEdgeUuidsBefore,
+            (await CommunityEdge.GetByGroupIdsAsync(driver, new[] { "group-b" }))
+                .Select(edge => edge.Uuid)
+                .Order(StringComparer.Ordinal));
     }
 
     [Fact]
