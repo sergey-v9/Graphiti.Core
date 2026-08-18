@@ -962,7 +962,7 @@ public class SearchEngineDriverBackedTests
     }
 
     [Fact]
-    public async Task EdgeSearch_CrossEncoderRanksOnlyLimitedPreliminaryCandidates()
+    public async Task EdgeSearch_CrossEncoderRanksRrfShortlistUpToTwiceLimit()
     {
         var first = new EntityEdge { Uuid = "edge-first", Fact = "first fact", GroupId = "group" };
         var second = new EntityEdge { Uuid = "edge-second", Fact = "second fact", GroupId = "group" };
@@ -995,31 +995,40 @@ public class SearchEngineDriverBackedTests
             new SearchFilters(),
             limit: 2);
 
-        Assert.Equal(new[] { "first fact", "second fact" }, crossEncoder.LastPassages);
-        Assert.Equal(new[] { "edge-first", "edge-second" }, ranked.Select(item => item.Item.Uuid));
+        Assert.Equal(new[] { "first fact", "second fact", "rescued fact" }, crossEncoder.LastPassages);
+        Assert.Equal(new[] { "edge-rescued", "edge-first" }, ranked.Select(item => item.Item.Uuid));
     }
 
     [Fact]
-    public async Task EdgeSearch_CrossEncoderWindowUsesRetrievalOrderAcrossMethods()
+    public async Task EdgeSearch_CrossEncoderRrfShortlistIncludesVectorAndBfsCandidates()
     {
         var textFirst = new EntityEdge { Uuid = "edge-text-first", Fact = "text first fact", GroupId = "group" };
         var textSecond = new EntityEdge { Uuid = "edge-text-second", Fact = "text second fact", GroupId = "group" };
+        var textThird = new EntityEdge { Uuid = "edge-text-third", Fact = "text third fact", GroupId = "group" };
+        var textFourth = new EntityEdge { Uuid = "edge-text-fourth", Fact = "text fourth fact", GroupId = "group" };
         var vectorOnly = new EntityEdge { Uuid = "edge-vector-only", Fact = "vector only fact", GroupId = "group" };
+        var bfsOnly = new EntityEdge { Uuid = "edge-bfs-only", Fact = "bfs only fact", GroupId = "group" };
         var driver = new DriverBackedSearchDriver
         {
             EdgeFulltextHits =
             {
                 new SearchHit<EntityEdge>(textFirst, 0.1f),
-                new SearchHit<EntityEdge>(textSecond, 0.2f)
+                new SearchHit<EntityEdge>(textSecond, 0.2f),
+                new SearchHit<EntityEdge>(textThird, 0.3f),
+                new SearchHit<EntityEdge>(textFourth, 0.4f)
             },
             EdgeVectorHits =
             {
                 new SearchHit<EntityEdge>(vectorOnly, 99f)
+            },
+            EdgeBfsHits =
+            {
+                new SearchHit<EntityEdge>(bfsOnly, 1f)
             }
         };
         var crossEncoder = new RecordingCrossEncoder
         {
-            IndexedScores = new List<float> { 0.7f, 0.6f }
+            IndexedScores = new List<float> { 0.1f, 0.2f, 0.99f, 0.3f }
         };
 
         var ranked = await SearchEngine.EdgeSearchAsync(
@@ -1030,14 +1039,17 @@ public class SearchEngineDriverBackedTests
             new[] { "group" },
             new EdgeSearchConfig
             {
-                SearchMethods = { EdgeSearchMethod.Bm25, EdgeSearchMethod.CosineSimilarity },
+                SearchMethods = { EdgeSearchMethod.Bm25, EdgeSearchMethod.CosineSimilarity, EdgeSearchMethod.Bfs },
                 Reranker = EdgeReranker.CrossEncoder
             },
             new SearchFilters(),
-            limit: 2);
+            limit: 2,
+            bfsOriginNodeUuids: new[] { "origin" });
 
-        Assert.Equal(new[] { "text first fact", "text second fact" }, crossEncoder.LastPassages);
-        Assert.Equal(new[] { "edge-text-first", "edge-text-second" }, ranked.Select(item => item.Item.Uuid));
+        Assert.Equal(
+            new[] { "text first fact", "vector only fact", "bfs only fact", "text second fact" },
+            crossEncoder.LastPassages);
+        Assert.Equal(new[] { "edge-bfs-only", "edge-text-second" }, ranked.Select(item => item.Item.Uuid));
     }
 
     [Fact]

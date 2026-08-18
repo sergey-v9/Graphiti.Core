@@ -124,23 +124,23 @@ recreating the parent repository's single hookup commit on current upstream `mai
 - Produces: an RRF-fused shortlist capped at `2 * limit`, followed by existing cross-encoder ranking and
   final `limit` truncation.
 
-- [ ] **Step 1: Replace obsolete shortlist tests**
+- [x] **Step 1: Replace obsolete shortlist tests**
 
   Use BM25-heavy and cosine/BFS fixtures with `limit = 2`. Record the passages given to the cross
   encoder, score the non-BM25 candidate highest, and assert that it reaches the four-candidate shortlist
   and ranks first. Keep duplicate-fact behavior covered.
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+- [x] **Step 2: Run the focused tests and verify RED**
 
   Expected failure: current first-seen merge truncates to two BM25 candidates before cross-encoding.
 
-- [ ] **Step 3: Implement the upstream shortlist semantics**
+- [x] **Step 3: Implement the upstream shortlist semantics**
 
   In the edge cross-encoder branch only, call `SearchResultComposer.FuseRanks` over text, vector, and BFS
   lists with `2 * limit` and `rerankerMinScore`. Keep MMR on first-seen order and keep all other rerankers
   unchanged. Preserve final cross-encoder score filtering and result limit.
 
-- [ ] **Step 4: Verify GREEN and commit**
+- [x] **Step 4: Verify GREEN and commit**
 
   Run focused search tests, zero-warning Release build, full suite, and format verification. Update
   `parity.md` for `d40da88` and commit the slice.

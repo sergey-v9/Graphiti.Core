@@ -701,17 +701,22 @@ internal static class SearchEngine
                 cancellationToken).ConfigureAwait(false)
             : EmptyRanked<EntityEdge>();
 
-        var fusionLimit = config.Reranker == EdgeReranker.Rrf ? limit : int.MaxValue;
+        var fusionLimit = config.Reranker switch
+        {
+            EdgeReranker.Rrf => limit,
+            EdgeReranker.CrossEncoder => limit * 2,
+            _ => int.MaxValue
+        };
         var ranked = config.Reranker switch
         {
-            EdgeReranker.Rrf or EdgeReranker.NodeDistance or EdgeReranker.EpisodeMentions => SearchResultComposer.FuseRanks(
+            EdgeReranker.Rrf or EdgeReranker.CrossEncoder or EdgeReranker.NodeDistance or EdgeReranker.EpisodeMentions => SearchResultComposer.FuseRanks(
                 textRanked,
                 vectorRanked,
                 bfsRanked,
                 edge => edge.Uuid,
                 fusionLimit,
                 minScore),
-            EdgeReranker.CrossEncoder or EdgeReranker.Mmr => SearchResultComposer.MergeCandidatesInFirstSeenOrder(
+            EdgeReranker.Mmr => SearchResultComposer.MergeCandidatesInFirstSeenOrder(
                 textRanked,
                 vectorRanked,
                 bfsRanked,
@@ -730,7 +735,6 @@ internal static class SearchEngine
 
         if (config.Reranker == EdgeReranker.CrossEncoder && ranked.Count > 0)
         {
-            ranked = SearchResultComposer.LimitRanked(ranked, limit);
             ranked = await SearchResultComposer.ApplyCrossEncoderRerankerAsync(
                 crossEncoder,
                 query,
