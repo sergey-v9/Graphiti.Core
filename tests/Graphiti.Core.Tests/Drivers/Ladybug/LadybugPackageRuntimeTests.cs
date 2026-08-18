@@ -1394,8 +1394,8 @@ public class LadybugPackageRuntimeTests
         var multiGroupRead = await driver.GetNodesByGroupIdsAsync<EntityNode>(["group-a", "group-b"]);
 
         Assert.Equal(first.Uuid, Assert.Single(codeHits).Item.Uuid);
-        Assert.All(stopwordHits, hit => Assert.Equal("group-a", hit.Item.GroupId));
-        Assert.All(punctuationHits, hit => Assert.Equal("group-a", hit.Item.GroupId));
+        Assert.Empty(stopwordHits);
+        Assert.Empty(punctuationHits);
         Assert.Equal(
             new[] { first.Uuid, second.Uuid },
             multiGroupHits.Select(hit => hit.Item.Uuid).Order(StringComparer.Ordinal));
@@ -1720,8 +1720,18 @@ public class LadybugPackageRuntimeTests
         Assert.Contains(nodeBfs, hit => hit.Item.Uuid == far.Uuid);
         Assert.Contains(episodeNodeBfs, hit => hit.Item.Uuid == center.Uuid);
         Assert.Contains(episodeNodeBfs, hit => hit.Item.Uuid == near.Uuid);
-        Assert.Equal("edge-far", Assert.Single(edgeBfs).Item.Uuid);
-        Assert.Equal("edge-near", Assert.Single(episodeEdgeBfs).Item.Uuid);
+        var farEdge = Assert.Single(edgeBfs).Item;
+        Assert.Equal("edge-far", farEdge.Uuid);
+        Assert.Equal(near.Uuid, farEdge.SourceNodeUuid);
+        Assert.Equal(far.Uuid, farEdge.TargetNodeUuid);
+        Assert.Equal("Near links to Far", farEdge.Fact);
+        Assert.Equal(createdAt.AddMinutes(1), farEdge.ReferenceTime);
+        var nearEdge = Assert.Single(episodeEdgeBfs).Item;
+        Assert.Equal("edge-near", nearEdge.Uuid);
+        Assert.Equal(center.Uuid, nearEdge.SourceNodeUuid);
+        Assert.Equal(near.Uuid, nearEdge.TargetNodeUuid);
+        Assert.Equal("Center links to Near", nearEdge.Fact);
+        Assert.Equal(createdAt, nearEdge.ReferenceTime);
         Assert.Equal(new[] { center.Uuid, near.Uuid, far.Uuid }, distanceRanks.Select(rank => rank.Uuid));
         Assert.Equal(new[] { 10f, 1f, 0f }, distanceRanks.Select(rank => rank.Score));
         Assert.Equal(center.Uuid, mentionRanks[0].Uuid);

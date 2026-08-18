@@ -15,8 +15,14 @@ public class LadybugSearchExecutorTests
             new SearchFilters(),
             groupIds: null,
             limit: 5);
+        var punctuationOnly = await search.SearchEntityNodesFulltextAsync(
+            "!!!...???",
+            new SearchFilters(),
+            groupIds: null,
+            limit: 5);
 
         Assert.Empty(empty);
+        Assert.Empty(punctuationOnly);
         Assert.Empty(recorder.Queried);
 
         recorder.EnqueueQuery(EntityRecord("entity-1", "Alice", score: 0.91f));

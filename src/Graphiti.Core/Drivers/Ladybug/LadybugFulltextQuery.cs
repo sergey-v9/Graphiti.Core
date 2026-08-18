@@ -8,12 +8,14 @@ internal static class LadybugFulltextQuery
 
         // LadybugDB only supports simple full-text queries. The word count is taken by splitting on
         // a SINGLE space character; if it exceeds MaxQueryLength the search is skipped (empty string
-        // = no search), otherwise the query is returned VERBATIM with no normalization.
+        // = no search), otherwise searchable queries are returned VERBATIM with no normalization.
         //
         // Whitespace-only queries are guarded here as "no search": the search entry point already
         // skips blank queries before this point, so returning empty avoids issuing an index query
         // for nothing.
-        if (string.IsNullOrWhiteSpace(query))
+        // The FTS extension can interpret punctuation-only input as a broad match. Such input has no
+        // searchable token, so skip it instead of returning unrelated candidates.
+        if (string.IsNullOrWhiteSpace(query) || !HasSearchableToken(query))
         {
             return string.Empty;
         }
@@ -25,6 +27,19 @@ internal static class LadybugFulltextQuery
         }
 
         return query;
+    }
+
+    private static bool HasSearchableToken(string query)
+    {
+        foreach (var ch in query)
+        {
+            if (char.IsLetterOrDigit(ch))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

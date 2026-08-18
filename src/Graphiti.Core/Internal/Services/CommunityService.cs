@@ -136,7 +136,11 @@ internal sealed class CommunityService(
             communityUuids[i] = existing[i].Uuid;
         }
 
-        await Node.DeleteByUuidsAsync(driver, communityUuids, cancellationToken: cancellationToken).ConfigureAwait(false);
+        await TypedNodeDeletion.DeleteNodesByUuidsAsync<CommunityNode>(
+            driver,
+            communityUuids,
+            batchSize: 100,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<IReadOnlyList<string>> ResolveCommunityGroupIdsAsync(

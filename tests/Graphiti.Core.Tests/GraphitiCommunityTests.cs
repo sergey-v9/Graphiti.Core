@@ -488,6 +488,32 @@ public class GraphitiCommunityTests
     }
 
     [Fact]
+    public async Task BuildCommunities_RebuildDeletesOnlyCommunityNodesWhenUuidsCollide()
+    {
+        var driver = new InMemoryGraphDriver();
+        var graphiti = new Graphiti(graphDriver: driver);
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var alice = Entity("Alice", "group-a", now);
+        var bob = Entity("Bob", "group-a", now);
+        await alice.SaveAsync(driver);
+        await bob.SaveAsync(driver);
+        await Relates(alice, bob, "group-a", now).SaveAsync(driver);
+        await graphiti.BuildCommunitiesAsync(new[] { "group-a" });
+
+        var community = Assert.Single(
+            await CommunityNode.GetByGroupIdsAsync(driver, new[] { "group-a" }));
+        var collidingEntity = Entity("Unrelated", "group-b", now);
+        collidingEntity.Uuid = community.Uuid;
+        await collidingEntity.SaveAsync(driver);
+
+        await graphiti.BuildCommunitiesAsync(new[] { "group-a" });
+
+        var preservedEntity = await EntityNode.GetByUuidAsync(driver, collidingEntity.Uuid);
+        Assert.Equal(collidingEntity.Name, preservedEntity.Name);
+        Assert.Equal(collidingEntity.GroupId, preservedEntity.GroupId);
+    }
+
+    [Fact]
     public async Task BuildCommunities_NoGroupIdsUsesDriverDiscoveredEntityGroups()
     {
         var inner = new InMemoryGraphDriver();
