@@ -103,6 +103,8 @@ re-audited. The adopted changes are typed group-scoped community cleanup, Ladybu
 full-text suppression, and an RRF-bounded edge cross-encoder shortlist; Ladybug/InMemory runtime
 coverage pins group routing, edge direction, BFS edge identity, and reference-time hydration. No
 prompt, public API, ingestion, schema/cache, default, or wire changes occurred in the range. The
+parent local `csharp-port` branch was recreated as upstream `10374d6` plus one hookup commit and was
+not pushed. The
 current concrete search-filter drift is now closed:
 the reference/materialized matcher requires every requested non-empty node label like the Ladybug/Kuzu
 `list_has_all` provider predicate, including on both edge endpoints. The empty-node-label hardening
