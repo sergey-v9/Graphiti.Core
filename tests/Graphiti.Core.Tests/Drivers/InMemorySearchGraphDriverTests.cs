@@ -600,6 +600,7 @@ public class InMemorySearchGraphDriverTests
         var b = Entity("b", now);
         var c = Entity("c", now);
         var e1 = Edge(a, b, "a to b", now);
+        e1.ReferenceTime = now.AddMinutes(1);
         var e2 = Edge(b, c, "b to c", now);
         var mention = new EpisodicEdge
         {
@@ -631,14 +632,19 @@ public class InMemorySearchGraphDriverTests
         var mentionRanks = await searchDriver.RankNodeEpisodeMentionsAsync(
             new[] { b.Uuid, a.Uuid });
 
-        Assert.Equal(new[] { e1.Uuid }, bfsEdges.Select(hit => hit.Item.Uuid));
+        var bfsEdge = Assert.Single(bfsEdges).Item;
+        Assert.Equal(e1.Uuid, bfsEdge.Uuid);
+        Assert.Equal(a.Uuid, bfsEdge.SourceNodeUuid);
+        Assert.Equal(b.Uuid, bfsEdge.TargetNodeUuid);
+        Assert.Equal("a to b", bfsEdge.Fact);
+        Assert.Equal(now.AddMinutes(1), bfsEdge.ReferenceTime);
         Assert.Equal(new[] { a.Uuid, b.Uuid, c.Uuid }, distanceRanks.Select(rank => rank.Uuid));
         Assert.Equal(new[] { 10f, 1f, 0f }, distanceRanks.Select(rank => rank.Score));
         Assert.Equal(new[] { a.Uuid, b.Uuid }, mentionRanks.Select(rank => rank.Uuid));
         Assert.Equal(1, mentionRanks[0].Score);
         Assert.True(float.IsPositiveInfinity(mentionRanks[1].Score));
 
-        bfsEdges[0].Item.Fact = "mutated";
+        bfsEdge.Fact = "mutated";
         var stored = await EntityEdge.GetByUuidAsync(driver, e1.Uuid);
         Assert.Equal("a to b", stored.Fact);
     }

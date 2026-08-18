@@ -367,7 +367,7 @@ public class LadybugPackageRuntimeTests
             Fact = "Carol supports Alice",
             CreatedAt = referenceTime,
             ValidAt = referenceTime,
-            ReferenceTime = referenceTime
+            ReferenceTime = referenceTime.AddMinutes(1)
         });
         await driver.SaveEdgeAsync(new EntityEdge
         {
@@ -387,6 +387,14 @@ public class LadybugPackageRuntimeTests
         Assert.Equal(
             new[] { "edge-incident-incoming", "edge-incident-outgoing" },
             incidentEdges.Select(edge => edge.Uuid).Order(StringComparer.Ordinal));
+        var incoming = Assert.Single(incidentEdges, edge => edge.Uuid == "edge-incident-incoming");
+        Assert.Equal(carol.Uuid, incoming.SourceNodeUuid);
+        Assert.Equal(alice.Uuid, incoming.TargetNodeUuid);
+        Assert.Equal(referenceTime.AddMinutes(1), incoming.ReferenceTime);
+        var outgoing = Assert.Single(incidentEdges, edge => edge.Uuid == "edge-incident-outgoing");
+        Assert.Equal(alice.Uuid, outgoing.SourceNodeUuid);
+        Assert.Equal(bob.Uuid, outgoing.TargetNodeUuid);
+        Assert.Equal(referenceTime, outgoing.ReferenceTime);
     }
 
     [Fact]

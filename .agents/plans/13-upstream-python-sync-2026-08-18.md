@@ -156,13 +156,13 @@ recreating the parent repository's single hookup commit on current upstream `mai
 - Consumes: incident-edge reads and BFS edge search.
 - Produces: regression proof for stored source/target direction and `ReferenceTime` hydration.
 
-- [ ] **Step 1: Strengthen existing runtime assertions**
+- [x] **Step 1: Strengthen existing runtime assertions**
 
   Assert that a target-side incident read returns the original source/target order and reference time.
   Assert that an InMemory BFS hit preserves the stored endpoints, fact, and reference time. These should
   pass without production edits; investigate any failure before changing code.
 
-- [ ] **Step 2: Verify and commit the proof slice**
+- [x] **Step 2: Verify and commit the proof slice**
 
   Run the focused Ladybug and InMemory tests, build, full suite, and format verification. Record
   `a96309b`, `2453209`, `b0ec6d9`, and the remaining `d9a2db9` hunk as already aligned, then commit.
