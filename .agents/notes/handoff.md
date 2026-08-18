@@ -97,9 +97,12 @@ Plan 06 merge then moved the Ladybug driver into `Graphiti.Core`, folded the opt
 and Ladybug package refs into Core, collapsed the public API snapshot to one assembly, retired
 `GraphitiCoreOnlyTests` / `eng\Verify-GraphitiCoreOnly.ps1` / `.github/workflows/core-only.yml`, and
 changed the package smoke to exercise both InMemory and LadybugDB from the packed `Graphiti.Core`
-package. Latest 2026-06-28 upstream audit: `Check-PythonUpstreamDelta.ps1 -Fetch` reported no
-`graphiti_core/` upstream delta from anchor `0ed90b7` to target
-`b59d4ba01118a91708fd6a6892200016168eeb5d`; `parity.md` now uses that target as the next anchor. The
+package. Latest 2026-08-18 upstream sync: all 11 `graphiti_core/` commits from `b59d4ba` through
+`10374d6044f91b9ecae3586828abb1ecbf022c4f` were implemented or dispositioned and independently
+re-audited. The adopted changes are typed group-scoped community cleanup, Ladybug punctuation-only
+full-text suppression, and an RRF-bounded edge cross-encoder shortlist; Ladybug/InMemory runtime
+coverage pins group routing, edge direction, BFS edge identity, and reference-time hydration. No
+prompt, public API, ingestion, schema/cache, default, or wire changes occurred in the range. The
 current concrete search-filter drift is now closed:
 the reference/materialized matcher requires every requested non-empty node label like the Ladybug/Kuzu
 `list_has_all` provider predicate, including on both edge endpoints. The empty-node-label hardening
@@ -205,8 +208,8 @@ Rerun verification before claiming the tree is green; historical test counts dri
 added. This section holds the single authoritative live count and the standing verify commands — do
 not turn it back into a per-checkpoint changelog (git history holds the slice-by-slice detail).
 
-**Current verifier checkpoint (2026-06-28):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
-Packages credentials for the Ladybug feed — `1071` passed, `4` skipped, `1075` total. The verifier
+**Current verifier checkpoint (2026-08-18):** `.\eng\Verify-GraphitiCore.ps1` is green with GitHub
+Packages credentials for the Ladybug feed — `1073` passed, `4` skipped, `1077` total. The verifier
 covers restore, format verification, warning-clean build, full tests, `dotnet pack` for the single
 shippable `Graphiti.Core` package, and a fresh package-consumer smoke that exercises both InMemory and
 LadybugDB through the packed package. The skips are the env-gated

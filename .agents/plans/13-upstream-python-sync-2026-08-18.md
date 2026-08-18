@@ -180,18 +180,18 @@ recreating the parent repository's single hookup commit on current upstream `mai
 - Produces: parity anchor `10374d6044f91b9ecae3586828abb1ecbf022c4f` and a local parent
   `csharp-port` branch consisting of current upstream `main` plus one hookup commit.
 
-- [ ] **Step 1: Run adversarial completeness review**
+- [x] **Step 1: Run adversarial completeness review**
 
   Re-read every upstream commit and the net `graphiti_core/` diff. Confirm each change is adopted,
   already aligned, or N/A with evidence; verify no prompt/pipeline/public API changes were missed.
 
-- [ ] **Step 2: Run the authoritative C# gate**
+- [x] **Step 2: Run the authoritative C# gate**
 
   Run `./eng/Verify-GraphitiCore.ps1`, `dotnet format --verify-no-changes --no-restore`, and
   `git diff --check`. Require zero warnings, a green full suite, successful pack, and package-consumer
   smoke.
 
-- [ ] **Step 3: Update and compact current-state documentation**
+- [x] **Step 3: Update and compact current-state documentation**
 
   Advance `parity.md` to the target SHA with one concise per-commit table. Replace the stale latest-audit
   paragraph in `handoff.md`; do not append a changelog. Collapse this completed plan to a short DONE

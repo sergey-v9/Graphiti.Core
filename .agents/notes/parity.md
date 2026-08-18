@@ -5,19 +5,17 @@ same change that closes or reopens a gap. Do not claim parity from memory — ve
 Python file before flipping a status.
 
 **Python baseline:** `graphiti_core/` synced to upstream `origin/main` HEAD
-`b59d4ba01118a91708fd6a6892200016168eeb5d` (we track HEAD, not tagged releases). The local
-parent-repo mirror still equals `origin/main` for `graphiti_core/`; no parent checkout commit was
-needed for the 2026-06-28 sweep because the library tree is unchanged since the prior mirror commit
-`e36c387` (`0ed90b7`). The five library commits since the previous content-changing anchor
-(`34f56e6`) were reviewed + adversarially verified in the 2026-06-14 upstream sync below (none touched
-prompts/search/pipeline). **To pull the next batch, follow
+`10374d6044f91b9ecae3586828abb1ecbf022c4f` (we track HEAD, not tagged releases). The 11
+`graphiti_core/` commits since `b59d4ba01118a91708fd6a6892200016168eeb5d` were reviewed,
+implemented or dispositioned, and independently re-audited in the 2026-08-18 sync below. **To pull
+the next batch, follow
 `upstream-sync-procedure.md`**: diff `graphiti_core/` against this anchor, disposition each change,
 verify, then move the anchor to the new `origin/main` HEAD.
 
-**Latest upstream check:** 2026-06-28 `.\eng\Check-PythonUpstreamDelta.ps1 -Fetch` found
-`origin/main` at `b59d4ba01118a91708fd6a6892200016168eeb5d`; `git log`, `git diff --stat`, and
-`git diff --name-status` over `0ed90b7..origin/main -- graphiti_core` were empty. No new Python
-library work needed porting, so this anchor was advanced.
+**Latest upstream check:** 2026-08-18 `git fetch origin main` found `origin/main` at
+`10374d6044f91b9ecae3586828abb1ecbf022c4f`, with no later `graphiti_core/` delta beyond the audited
+target. The range changed no prompts, public signatures, ingestion flow, schema/cache identity,
+defaults, or external wire values.
 
 **Statuses**
 - `OK` — behavior and (for prompts) instruction text faithfully ported; divergences documented.
@@ -27,7 +25,7 @@ library work needed porting, so this anchor was advanced.
 - `DIVERGENT` — deliberate, documented C# difference (see `decisions.md`); not a gap.
 - `N/A` — intentionally out of scope for C#.
 
-## 2026-08-18 upstream sync in progress (anchor `b59d4ba` → `10374d6`)
+## 2026-08-18 upstream sync (anchor `b59d4ba` → `10374d6`)
 
 The FalkorDB fixes were treated as provider-capability signals and probed against the real LadybugDB
 package before classification. A two-group runtime fixture proved that LadybugDB accepts a

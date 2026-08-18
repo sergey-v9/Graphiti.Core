@@ -1,9 +1,8 @@
 # Upstream Python sync — repeatable procedure
 
 How to chase the upstream Python `graphiti_core` and fold its improvements into the C# port. Run this
-whenever we want to pull newer upstream work. The last execution (2026-06-14, anchor `34f56e6` →
-`origin/main` `0ed90b7`) is the worked example; its dispositions live in `parity.md`
-("upstream sync") and `decisions.md` ("Deliberate divergences from the … upstream sync").
+whenever we want to pull newer upstream work. The last execution (2026-08-18, anchor `b59d4ba` →
+`origin/main` `10374d6`) is the worked example; its per-commit dispositions live in `parity.md`.
 
 > **Parent-repo context.** This C# port is a git submodule of a local-only checkout of upstream
 > `getzep/graphiti`. The parent keeps `main` as a pristine mirror of `origin/main` and carries our
